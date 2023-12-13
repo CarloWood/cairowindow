@@ -18,9 +18,6 @@ Layer::Layer(cairo_surface_t* x11_surface, Rectangle const& rectangle, cairo_con
 
     // Fill surface with background color.
     cairo_paint(drawing_cr_);
-
-    // Send a redraw event for the entire layer (because of the background color).
-    window_->update_from(*this, rectangle);
   }
   else if (color.alpha() > 0)
   {
@@ -29,9 +26,6 @@ Layer::Layer(cairo_surface_t* x11_surface, Rectangle const& rectangle, cairo_con
 
     // Fill surface with background color.
     cairo_paint(drawing_cr_);
-
-    // Send a redraw event for the entire layer (because of the background color).
-    window_->update_from(*this, rectangle);
   }
 }
 
@@ -53,7 +47,7 @@ void Layer::draw(std::function<Rectangle(cairo_t*)> user_draw)
 
   cairo_restore(drawing_cr_);
 
-  window_->update_from(*this, changed_area);
+  window_->redraw(changed_area);
 }
 
 } // namespace cairowindow

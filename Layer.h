@@ -21,6 +21,8 @@ class Layer
   Layer(cairo_surface_t* x11_surface, Rectangle const& rectangle, cairo_content_t content, Color color, Window* window);
   ~Layer();
 
+  Layer(Layer const& layer) = delete;
+
   void draw(std::function<Rectangle(cairo_t*)> user_draw);
 
   cairo_surface_t* drawing_surface() const { return drawing_surface_; }

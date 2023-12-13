@@ -45,27 +45,36 @@ Window::~Window()
   XCloseDisplay(display_);
 }
 
-Layer Window::create_background_layer(Rectangle rectangle, Color background_color)
+Layer& Window::create_background_layer(Rectangle rectangle, Color background_color)
 {
   if (!background_color.is_opaque())
     THROW_FALERT("The background layer can not have transparency.");
-  return {x11_surface_, rectangle, CAIRO_CONTENT_COLOR, background_color, this};
+  layers_.emplace_back(x11_surface_, rectangle, CAIRO_CONTENT_COLOR, background_color, this);
+  // Send a redraw event for the entire layer (because of the background color).
+  redraw(rectangle);
+  return layers_.back();
 }
 
-Layer Window::create_layer(Rectangle rectangle)
+Layer& Window::create_layer(Rectangle rectangle)
 {
-  return {x11_surface_, rectangle, CAIRO_CONTENT_COLOR_ALPHA, {0, 0, 0, 0}, this};
+  layers_.emplace_back(x11_surface_, rectangle, CAIRO_CONTENT_COLOR_ALPHA, Color{0, 0, 0, 0}, this);
+  // Send a redraw event for the entire layer (because of the background color).
+  redraw(rectangle);
+  return layers_.back();
 }
 
-void Window::update_from(Layer const& layer, Rectangle const& rect)
+void Window::redraw(Rectangle const& rect)
 {
   cairo_save(offscreen_cr_);
   cairo_rectangle(offscreen_cr_, rect.offset_x(), rect.offset_y(), rect.width(), rect.height());
   cairo_clip(offscreen_cr_);
   {
     std::lock_guard<std::mutex> lock(offscreen_surface_mutex_);
-    cairo_set_source_surface(offscreen_cr_, layer.drawing_surface(), layer.offset_x(), layer.offset_y());
-    cairo_paint(offscreen_cr_);
+    for (Layer& layer : layers_)
+    {
+      cairo_set_source_surface(offscreen_cr_, layer.drawing_surface(), layer.offset_x(), layer.offset_y());
+      cairo_paint(offscreen_cr_);
+    }
   }
   cairo_restore(offscreen_cr_);
 
@@ -153,10 +162,7 @@ void Window::event_loop()
       }
       case KeyPress:
       {
-  //      if (keypress_events == 0)
-  //        draw_green_line(drawing_surface, drawing_cr, offscreen_cr, offscreen_surface_mutex, display, window);
-  //      else
-          break; // Exit on any key press.
+        running_ = false;       // Exit on any key press.
         ++keypress_events;
         break;
       }
