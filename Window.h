@@ -3,8 +3,11 @@
 #include "Layer.h"
 #include "Rectangle.h"
 #include "EventLoop.h"
+#include "LayerArgs.h"
+#include "utils/AIAlert.h"
 #include <cairo/cairo-xlib.h>
 #include <X11/Xlib.h>
+#include <boost/intrusive_ptr.hpp>
 #include <mutex>
 #include <string>
 #include <atomic>
@@ -15,6 +18,9 @@ namespace cairowindow {
 using X11Window = ::Window;
 
 class Layer;
+
+template<typename Type>
+concept LayerType = std::is_base_of_v<Layer, Type>;
 
 class Window
 {
@@ -33,7 +39,7 @@ class Window
   std::atomic_bool running_;
   Atom wm_delete_window_;
 
-  std::list<Layer> layers_;
+  std::list<boost::intrusive_ptr<Layer>> layers_;
 
  public:
   Window(std::string title, int width, int height);
@@ -46,10 +52,38 @@ class Window
   void close();
 
   Rectangle get_rect() const { return {0, 0, static_cast<double>(width_), static_cast<double>(height_)}; }
-  Layer& create_background_layer(Rectangle rectangle, Color background_color);
-  Layer& create_background_layer(Color background_color) { return create_background_layer(get_rect(), background_color); }
-  Layer& create_layer(Rectangle rectangle);
-  Layer& create_layer() { return create_layer(get_rect()); }
+
+  template<LayerType LT, typename... ARGS>
+  boost::intrusive_ptr<LT> create_layer(LayerArgs la, ARGS&&... args)
+  {
+    Rectangle rectangle = la.has_rectangle() ? la.rectangle() : get_rect();
+    boost::intrusive_ptr<LT> layer = new LT(x11_surface_, rectangle, CAIRO_CONTENT_COLOR_ALPHA,
+        Color{0, 0, 0, 0}, this, std::forward<ARGS>(args)...);
+    layers_.push_back(layer);
+    // Send a redraw event for the entire layer (because of the background color).
+    redraw(rectangle);
+    return layer;
+  }
+
+  template<LayerType LT>
+  boost::intrusive_ptr<LT> create_layer()
+  {
+    return create_layer<LT>({});
+  }
+
+  template<LayerType LT, typename... ARGS>
+  boost::intrusive_ptr<LT> create_background_layer(BackgroundLayerArgs la, ARGS&&... args)
+  {
+    if (!la.background_color().is_opaque())
+      THROW_FALERT("The background layer can not have transparency.");
+    Rectangle rectangle = la.has_rectangle() ? la.rectangle() : get_rect();
+    boost::intrusive_ptr<LT> layer = new LT(x11_surface_, rectangle, CAIRO_CONTENT_COLOR,
+        la.background_color(), this, std::forward<ARGS>(args)...);
+    layers_.push_back(layer);
+    // Send a redraw event for the entire layer (because of the background color).
+    redraw(rectangle);
+    return layer;
+  }
 
   void redraw(Rectangle const& rect);
 

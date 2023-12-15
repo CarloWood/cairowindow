@@ -45,24 +45,6 @@ Window::~Window()
   XCloseDisplay(display_);
 }
 
-Layer& Window::create_background_layer(Rectangle rectangle, Color background_color)
-{
-  if (!background_color.is_opaque())
-    THROW_FALERT("The background layer can not have transparency.");
-  layers_.emplace_back(x11_surface_, rectangle, CAIRO_CONTENT_COLOR, background_color, this);
-  // Send a redraw event for the entire layer (because of the background color).
-  redraw(rectangle);
-  return layers_.back();
-}
-
-Layer& Window::create_layer(Rectangle rectangle)
-{
-  layers_.emplace_back(x11_surface_, rectangle, CAIRO_CONTENT_COLOR_ALPHA, Color{0, 0, 0, 0}, this);
-  // Send a redraw event for the entire layer (because of the background color).
-  redraw(rectangle);
-  return layers_.back();
-}
-
 void Window::redraw(Rectangle const& rect)
 {
   cairo_save(offscreen_cr_);
@@ -70,9 +52,9 @@ void Window::redraw(Rectangle const& rect)
   cairo_clip(offscreen_cr_);
   {
     std::lock_guard<std::mutex> lock(offscreen_surface_mutex_);
-    for (Layer& layer : layers_)
+    for (auto const& layer : layers_)
     {
-      cairo_set_source_surface(offscreen_cr_, layer.drawing_surface(), layer.offset_x(), layer.offset_y());
+      cairo_set_source_surface(offscreen_cr_, layer->drawing_surface(), layer->offset_x(), layer->offset_y());
       cairo_paint(offscreen_cr_);
     }
   }

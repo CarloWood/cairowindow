@@ -2,6 +2,7 @@
 
 #include "Color.h"
 #include "Rectangle.h"
+#include "utils/AIRefCount.h"
 #include <cairo/cairo.h>
 #include <functional>
 
@@ -9,7 +10,7 @@ namespace cairowindow {
 
 class Window;
 
-class Layer
+class Layer : public AIRefCount
 {
  private:
   Window* window_;
