@@ -1,17 +1,18 @@
 #pragma once
 
-#include "Layer.h"
 #include "Rectangle.h"
 #include "EventLoop.h"
 #include "LayerArgs.h"
 #include "utils/AIAlert.h"
 #include <cairo/cairo-xlib.h>
-#include <X11/Xlib.h>
 #include <boost/intrusive_ptr.hpp>
 #include <mutex>
 #include <string>
 #include <atomic>
-#include <list>
+
+#include <X11/Xlib.h>
+#undef True
+#undef False
 
 namespace cairowindow {
 
@@ -39,7 +40,7 @@ class Window
   std::atomic_bool running_;
   Atom wm_delete_window_;
 
-  std::list<boost::intrusive_ptr<Layer>> layers_;
+  std::vector<boost::intrusive_ptr<Layer>> layers_;
 
  public:
   Window(std::string title, int width, int height);
@@ -51,17 +52,17 @@ class Window
 
   void close();
 
-  Rectangle get_rect() const { return {0, 0, static_cast<double>(width_), static_cast<double>(height_)}; }
+  Rectangle get_rectangle() const { return {0, 0, static_cast<double>(width_), static_cast<double>(height_)}; }
 
   template<LayerType LT, typename... ARGS>
   boost::intrusive_ptr<LT> create_layer(LayerArgs la, ARGS&&... args)
   {
-    Rectangle rectangle = la.has_rectangle() ? la.rectangle() : get_rect();
+    Rectangle rectangle = la.has_rectangle() ? la.rectangle() : get_rectangle();
     boost::intrusive_ptr<LT> layer = new LT(x11_surface_, rectangle, CAIRO_CONTENT_COLOR_ALPHA,
         Color{0, 0, 0, 0}, this, std::forward<ARGS>(args)...);
     layers_.push_back(layer);
-    // Send a redraw event for the entire layer (because of the background color).
-    redraw(rectangle);
+    // Send an update request for the size of the entire layer (because of the background color).
+    update(rectangle);
     return layer;
   }
 
@@ -76,16 +77,17 @@ class Window
   {
     if (!la.background_color().is_opaque())
       THROW_FALERT("The background layer can not have transparency.");
-    Rectangle rectangle = la.has_rectangle() ? la.rectangle() : get_rect();
+    Rectangle rectangle = la.has_rectangle() ? la.rectangle() : get_rectangle();
     boost::intrusive_ptr<LT> layer = new LT(x11_surface_, rectangle, CAIRO_CONTENT_COLOR,
         la.background_color(), this, std::forward<ARGS>(args)...);
+    layer->add_area(rectangle.area());
     layers_.push_back(layer);
-    // Send a redraw event for the entire layer (because of the background color).
-    redraw(rectangle);
+    // Send an update request for the size of the entire layer (because of the background color).
+    update(rectangle);
     return layer;
   }
 
-  void redraw(Rectangle const& rect);
+  void update(Rectangle const& rectangle);
 
  private:
   void send_close_event();

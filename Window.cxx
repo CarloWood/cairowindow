@@ -1,6 +1,7 @@
 #include "sys.h"
 #include "utils/AIAlert.h"
 #include "Window.h"
+#include "Layer.h"
 #include <X11/Xatom.h>
 #include <mutex>
 #include "debug.h"
@@ -23,7 +24,7 @@ Window::Window(std::string title, int width, int height) : width_(width), height
   XStoreName(display_, x11window_, title.c_str());
 
   // Register for WM_DELETE_WINDOW messages.
-  wm_delete_window_ = XInternAtom(display_, "WM_DELETE_WINDOW", False);
+  wm_delete_window_ = XInternAtom(display_, "WM_DELETE_WINDOW", false);
   XSetWMProtocols(display_, x11window_, &wm_delete_window_, 1);
 
   // Create an X11 surface for the window.
@@ -45,17 +46,23 @@ Window::~Window()
   XCloseDisplay(display_);
 }
 
-void Window::redraw(Rectangle const& rect)
+void Window::update(Rectangle const& rectangle)
 {
+  double area_limit = rectangle.area() / 4;
   cairo_save(offscreen_cr_);
-  cairo_rectangle(offscreen_cr_, rect.offset_x(), rect.offset_y(), rect.width(), rect.height());
+  cairo_rectangle(offscreen_cr_, rectangle.offset_x(), rectangle.offset_y(), rectangle.width(), rectangle.height());
   cairo_clip(offscreen_cr_);
   {
     std::lock_guard<std::mutex> lock(offscreen_surface_mutex_);
     for (auto const& layer : layers_)
     {
-      cairo_set_source_surface(offscreen_cr_, layer->drawing_surface(), layer->offset_x(), layer->offset_y());
-      cairo_paint(offscreen_cr_);
+      if (area_limit > layer->area())
+        layer->redraw(offscreen_cr_, rectangle);
+      else
+      {
+        cairo_set_source_surface(offscreen_cr_, layer->surface(), layer->offset_x(), layer->offset_y());
+        cairo_paint(offscreen_cr_);
+      }
     }
   }
   cairo_restore(offscreen_cr_);
@@ -65,13 +72,13 @@ void Window::redraw(Rectangle const& rect)
   ev.type = Expose;
   ev.display = display_;
   ev.window = x11window_;
-  ev.x = rect.offset_x();
-  ev.y = rect.offset_y();
-  ev.width = rect.width();
-  ev.height = rect.height();
+  ev.x = rectangle.offset_x();
+  ev.y = rectangle.offset_y();
+  ev.width = rectangle.width();
+  ev.height = rectangle.height();
   ev.count = 0; // No more Expose events to follow.
 
-  XSendEvent(display_, x11window_, False, ExposureMask, (XEvent*)&ev);
+  XSendEvent(display_, x11window_, false, ExposureMask, (XEvent*)&ev);
   XFlush(display_);
 }
 
@@ -163,12 +170,12 @@ void Window::send_close_event()
   XEvent event = {};
   event.type = ClientMessage;
   event.xclient.window = x11window_;
-  event.xclient.message_type = XInternAtom(display_, "WM_PROTOCOLS", True);
+  event.xclient.message_type = XInternAtom(display_, "WM_PROTOCOLS", true);
   event.xclient.format = 32;
   event.xclient.data.l[0] = wm_delete_window_;
   event.xclient.data.l[1] = CurrentTime;
 
-  XSendEvent(display_, x11window_, False, NoEventMask, &event);
+  XSendEvent(display_, x11window_, false, NoEventMask, &event);
   XFlush(display_);
 }
 

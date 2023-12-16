@@ -37,12 +37,15 @@ target_sources(cairowindow_ObjLib
     "Layer.cxx"
     "Window.cxx"
     "EventLoop.cxx"
+    "LayerRegion.cxx"
 
     "Color.h"
     "Rectangle.h"
     "Layer.h"
     "Window.h"
     "EventLoop.h"
+    "LayerRegion.h"
+
 )
 
 # Required include search-paths.
@@ -55,6 +58,12 @@ target_include_directories(cairowindow_ObjLib
 # Require support for C++20.
 target_compile_features(cairowindow_ObjLib
   PUBLIC cxx_std_20
+)
+
+# Set link dependencies.
+target_link_libraries(cairowindow_ObjLib
+  PUBLIC
+    AICxx::utils
 )
 
 # Create an ALIAS target.

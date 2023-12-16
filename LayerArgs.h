@@ -11,14 +11,10 @@ class LayerArgs
   Rectangle rectangle_;
 
  public:
-  LayerArgs() : rectangle_(0.0, 0.0, 0.0, 0.0) { }
+  LayerArgs() { }
   LayerArgs(Rectangle rectangle) : rectangle_(rectangle) { }
 
-  bool has_rectangle() const
-  {
-    return rectangle_.width() > 0 && rectangle_.height() > 0;
-  }
-
+  bool has_rectangle() const { return rectangle_.is_defined(); }
   Rectangle const& rectangle() const { return rectangle_; }
 };
 
