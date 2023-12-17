@@ -23,33 +23,33 @@ class Color
 
 namespace color {
 
-constexpr Color red{255, 0, 0};
-constexpr Color green{0, 255, 0};
-constexpr Color blue{0, 0, 255};
-constexpr Color yellow{255, 255, 0};
-constexpr Color magenta{255, 0, 255};
-constexpr Color cyan{0, 255, 255};
-constexpr Color black{0, 0, 0};
-constexpr Color white{255, 255, 255};
-constexpr Color gray{128, 128, 128};
-constexpr Color orange{255, 165, 0};
-constexpr Color brown{165, 42, 42};
-constexpr Color pink{255, 192, 203};
-constexpr Color violet{238, 130, 238};
-constexpr Color indigo{75, 0, 130};
-constexpr Color maroon{128, 0, 0};
-constexpr Color turquoise{64, 224, 208};
-constexpr Color tan{210, 180, 140};
-constexpr Color gold{255, 215, 0};
-constexpr Color beige{245, 245, 220};
-constexpr Color lavender{230, 230, 250};
-constexpr Color peach{255, 218, 185};
-constexpr Color lime{0, 255, 0};
-constexpr Color olive{128, 128, 0};
-constexpr Color teal{0, 128, 128};
-constexpr Color navy{0, 0, 128};
-constexpr Color coral{255, 127, 80};
-constexpr Color salmon{250, 128, 114};
+constexpr Color red{1.0, 0.0, 0.0};
+constexpr Color green{0.0, 1.0, 0.0};
+constexpr Color blue{0.0, 0.0, 1.0};
+constexpr Color yellow{1.0, 1.0, 0.0};
+constexpr Color magenta{1.0, 0.0, 1.0};
+constexpr Color cyan{0.0, 1.0, 1.0};
+constexpr Color black{0.0, 0.0, 0.0};
+constexpr Color white{1.0, 1.0, 1.0};
+constexpr Color gray{0.5, 0.5, 0.5};
+constexpr Color orange{1.0, 0.647, 0.0};
+constexpr Color brown{0.647, 0.165, 0.165};
+constexpr Color pink{1.0, 0.753, 0.796};
+constexpr Color violet{0.933, 0.51, 0.933};
+constexpr Color indigo{0.294, 0.0, 0.51};
+constexpr Color maroon{0.502, 0.0, 0.0};
+constexpr Color turquoise{0.251, 0.878, 0.816};
+constexpr Color tan{0.824, 0.706, 0.549};
+constexpr Color gold{1.0, 0.843, 0.0};
+constexpr Color beige{0.961, 0.961, 0.863};
+constexpr Color lavender{0.902, 0.902, 0.980};
+constexpr Color peach{1.0, 0.855, 0.725};
+constexpr Color lime{0.0, 1.0, 0.0};
+constexpr Color olive{0.502, 0.502, 0.0};
+constexpr Color teal{0.0, 0.502, 0.502};
+constexpr Color navy{0.0, 0.0, 0.502};
+constexpr Color coral{1.0, 0.498, 0.314};
+constexpr Color salmon{0.980, 0.502, 0.447};
 
 } // namespace color
 
