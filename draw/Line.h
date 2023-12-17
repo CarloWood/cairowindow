@@ -1,12 +1,14 @@
 #pragma once
 
-#include "LayerRegion.h"
-#include "Color.h"
+#include "cairowindow/LayerRegion.h"
+#include "cairowindow/Color.h"
 
 namespace cairowindow::draw {
 
 class Line : public LayerRegion
 {
+  using Rectangle = cairowindow::Rectangle;
+
  private:
   Rectangle geometry_;
   Color color_;
