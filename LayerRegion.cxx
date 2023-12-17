@@ -5,10 +5,8 @@
 
 namespace cairowindow {
 
-void LayerRegion::draw(std::function<Rectangle(cairo_t*)> user_draw)
+void LayerRegion::draw()
 {
-  draw_ = user_draw;
-
   cairo_t* cr = layer_->cr();
   cairo_save(cr);
   // Apply layer offset, if any.
@@ -19,16 +17,11 @@ void LayerRegion::draw(std::function<Rectangle(cairo_t*)> user_draw)
   // multiple draw calls could accidently cause large rectangles with a lot of empty space.
   ASSERT(!rectangle_.is_defined());
   // Call the drawing function of the user.
-  rectangle_ = user_draw(cr);
+  rectangle_ = redraw(cr);
 
   cairo_restore(cr);
   layer_->add_area(rectangle_.area());
   layer_->window_update(rectangle_);
-}
-
-void LayerRegion::redraw(cairo_t* cr)
-{
-  draw_(cr);
 }
 
 } // namespace cairowindow
