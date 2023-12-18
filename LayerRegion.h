@@ -21,6 +21,7 @@ class LayerRegion : public AIRefCount
 
  public:
   LayerRegion(Layer* layer) : layer_(layer) { }
+  virtual ~LayerRegion();
 
   void draw();
   void draw(std::function<Rectangle(cairo_t*)> user_draw)
@@ -31,6 +32,8 @@ class LayerRegion : public AIRefCount
 
   Rectangle redraw(cairo_t* cr)
   {
+    DoutEntering(dc::notice, "LayerRegion::redraw(cr) [" << this << "]");
+
     if (draw_)
       return draw_(cr);
 

@@ -4,15 +4,18 @@
 #include "EventLoop.h"
 #include "LayerArgs.h"
 #include "utils/AIAlert.h"
-#include <cairo/cairo-xlib.h>
 #include <boost/intrusive_ptr.hpp>
 #include <mutex>
 #include <string>
 #include <atomic>
+#ifdef CAIROWINDOW_DEBUGWINDOW
+#include "DebugWindow.h"
+#endif
 
-#include <X11/Xlib.h>
+#include <cairo/cairo-xlib.h>
 #undef True
 #undef False
+#undef Status
 
 namespace cairowindow {
 
@@ -42,6 +45,10 @@ class Window
 
   std::vector<boost::intrusive_ptr<Layer>> layers_;
 
+#ifdef CAIROWINDOW_DEBUGWINDOW
+  DebugWindow debug_window_;
+#endif
+
  public:
   Window(std::string title, int width, int height);
   ~Window();
@@ -57,6 +64,8 @@ class Window
   template<LayerType LT, typename... ARGS>
   boost::intrusive_ptr<LT> create_layer(LayerArgs la, ARGS&&... args)
   {
+    DoutEntering(dc::notice, "Window::create_layer<" << libcwd::type_info_of<LT>().demangled_name() << ">(" << la <<
+        join_more(", ", args...) << ") [" << this << "]");
     Rectangle rectangle = la.has_rectangle() ? la.rectangle() : get_rectangle();
     boost::intrusive_ptr<LT> layer = new LT(x11_surface_, rectangle, CAIRO_CONTENT_COLOR_ALPHA,
         Color{0, 0, 0, 0}, this, std::forward<ARGS>(args)...);
@@ -75,6 +84,8 @@ class Window
   template<LayerType LT, typename... ARGS>
   boost::intrusive_ptr<LT> create_background_layer(BackgroundLayerArgs la, ARGS&&... args)
   {
+    DoutEntering(dc::notice, "Window::create_background_layer<" << libcwd::type_info_of<LT>().demangled_name() << ">(" << la <<
+        join_more(", ", args...) << ") [" << this << "]");
     if (!la.background_color().is_opaque())
       THROW_FALERT("The background layer can not have transparency.");
     Rectangle rectangle = la.has_rectangle() ? la.rectangle() : get_rectangle();

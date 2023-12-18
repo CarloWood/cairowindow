@@ -1,6 +1,13 @@
 #pragma once
 
+#ifdef CWDEBUG
+#include "utils/has_print_on.h"
+#include <iostream>
+#endif
+
 namespace cairowindow {
+// This class defines a print_on method.
+using utils::has_print_on::operator<<;
 
 class Color
 {
@@ -11,14 +18,22 @@ class Color
   double alpha_;
 
  public:
-  constexpr Color(double red, double green, double blue, double alpha = 1.0f) : red_(red), green_(green), blue_(blue), alpha_(alpha) { }
+  constexpr Color(double red, double green, double blue, double alpha = 1.0) : red_(red), green_(green), blue_(blue), alpha_(alpha) { }
 
   double red() const { return red_; }
   double green() const { return green_; }
   double blue() const { return blue_; }
   double alpha() const { return alpha_; }
 
-  bool is_opaque() const { return alpha_ == 1.0f; }
+  bool is_opaque() const { return alpha_ == 1.0; }
+  void set_opaque() { alpha_ = 1.0; }
+
+#ifdef CWDEBUG
+  void print_on(std::ostream& os) const
+  {
+    os << "{red_:" << red_ << ", green_:" << green_ << ", blue_:" << blue_ << ", alpha_:" << alpha_ << '}';
+  }
+#endif
 };
 
 namespace color {

@@ -1,0 +1,12 @@
+#pragma once
+
+namespace config {
+
+// CAIROWINDOW_DEBUGWINDOW
+//
+// Open a window for the double buffer surface and a window for the surface of each Layer object.
+// This seems to not be 100% reliable unfortunately.
+
+#cmakedefine CAIROWINDOW_DEBUGWINDOW 1
+
+} // namespace config

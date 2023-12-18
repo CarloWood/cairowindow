@@ -34,10 +34,16 @@ Window::Window(std::string title, int width, int height) : width_(width), height
   // Create an off-screen surface for double buffering.
   offscreen_surface_ = cairo_surface_create_similar(x11_surface_, CAIRO_CONTENT_COLOR, width, height);
   offscreen_cr_ = cairo_create(offscreen_surface_);
+#ifdef CAIROWINDOW_DEBUGWINDOW
+  debug_window_.start(offscreen_surface_, width, height, "offscreen_surface_");
+#endif
 }
 
 Window::~Window()
 {
+#ifdef CAIROWINDOW_DEBUGWINDOW
+  debug_window_.terminate();
+#endif
   cairo_destroy(offscreen_cr_);
   cairo_surface_destroy(offscreen_surface_);
   cairo_destroy(win_cr_);
@@ -48,6 +54,8 @@ Window::~Window()
 
 void Window::update(Rectangle const& rectangle)
 {
+  DoutEntering(dc::notice, "Window::update(" << rectangle << ")");
+
   double area_limit = rectangle.area() / 4;
   cairo_save(offscreen_cr_);
   cairo_rectangle(offscreen_cr_, rectangle.offset_x(), rectangle.offset_y(), rectangle.width(), rectangle.height());
@@ -63,6 +71,9 @@ void Window::update(Rectangle const& rectangle)
         cairo_set_source_surface(offscreen_cr_, layer->surface(), layer->offset_x(), layer->offset_y());
         cairo_paint(offscreen_cr_);
       }
+#ifdef CAIROWINDOW_DEBUGWINDOW
+      debug_window_.update(rectangle);
+#endif
     }
   }
   cairo_restore(offscreen_cr_);

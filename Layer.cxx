@@ -5,33 +5,32 @@
 
 namespace cairowindow {
 
-Layer::Layer(cairo_surface_t* x11_surface, Rectangle const& rectangle, cairo_content_t content, Color color, Window* window) :
-  window_(window), rectangle_(rectangle), region_areas_(0.0)
+Layer::Layer(cairo_surface_t* x11_surface, Rectangle const& rectangle, cairo_content_t content, Color color, Window* window
+    COMMA_DEBUG_ONLY(std::string debug_name)) :
+  color_(color), window_(window), rectangle_(rectangle), region_areas_(0.0)
 {
   // Create an off-screen surface for tripple buffering.
   surface_ = cairo_surface_create_similar(x11_surface, content, rectangle.width(), rectangle.height());
   cr_ = cairo_create(surface_);
+#ifdef CAIROWINDOW_DEBUGWINDOW
+  debug_window_.start(surface_, rectangle.width(), rectangle.height(), debug_name);
+#endif
 
   if (content == CAIRO_CONTENT_COLOR)
-  {
-    // Set background color for off-screen surface.
-    cairo_set_source_rgb(cr_, color.red(), color.green(), color.blue());
+    color_.set_opaque();
 
-    // Fill surface with background color.
-    cairo_paint(cr_);
-  }
-  else if (color.alpha() > 0)
-  {
-    // Set background color for off-screen surface.
-    cairo_set_source_rgba(cr_, color.red(), color.green(), color.blue(), color.alpha());
+  // Set background color for off-screen surface.
+  cairo_set_source_rgba(cr_, color_.red(), color_.green(), color_.blue(), color_.alpha());
 
-    // Fill surface with background color.
-    cairo_paint(cr_);
-  }
+  // Fill surface with background color.
+  cairo_paint(cr_);
 }
 
 Layer::~Layer()
 {
+#ifdef CAIROWINDOW_DEBUGWINDOW
+  debug_window_.terminate();
+#endif
   // Clean up.
   cairo_destroy(cr_);
   cairo_surface_destroy(surface_);
@@ -39,9 +38,29 @@ Layer::~Layer()
 
 void Layer::redraw(cairo_t* cr, Rectangle const& rectangle)
 {
-  for (auto const& region_ptr : regions_)
+  DoutEntering(dc::notice, "Layer::redraw(ct, " << rectangle << ") [" << this << "]");
+  for (LayerRegion* region_ptr : regions_)
+  {
+    Dout(dc::notice, "Testing region " << region_ptr);
     if (rectangle.overlaps(region_ptr->rectangle()))
       region_ptr->redraw(cr);
+  }
+}
+
+void Layer::remove(LayerRegion* region)
+{
+  regions_.erase(std::remove(regions_.begin(), regions_.end(), region), regions_.end());
+  // Replace rectangle with background color.
+  cairo_save(cr_);
+  cairo_translate(cr_, -rectangle_.offset_x(), -rectangle_.offset_y());
+  cairo_set_operator(cr_, CAIRO_OPERATOR_SOURCE);
+  cairo_set_source_rgba(cr_, color_.red(), color_.green(), color_.blue(), color_.alpha());
+  Rectangle const& rectangle = region->rectangle();
+  cairo_rectangle(cr_, rectangle.offset_x(), rectangle.offset_y(), rectangle.width(), rectangle.height());
+  cairo_fill(cr_);
+  cairo_set_operator(cr_, CAIRO_OPERATOR_OVER);
+  redraw(cr_, rectangle);
+  cairo_restore(cr_);
 }
 
 } // namespace cairowindow

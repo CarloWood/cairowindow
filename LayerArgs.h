@@ -7,7 +7,7 @@ namespace cairowindow {
 
 class LayerArgs
 {
- private:
+ protected:
   Rectangle rectangle_;
 
  public:
@@ -16,6 +16,13 @@ class LayerArgs
 
   bool has_rectangle() const { return rectangle_.is_defined(); }
   Rectangle const& rectangle() const { return rectangle_; }
+
+#ifdef CWDEBUG
+  void print_on(std::ostream& os) const
+  {
+    os << "{rectangle_:" << rectangle_ << '}';
+  }
+#endif
 };
 
 class BackgroundLayerArgs : public LayerArgs
@@ -28,6 +35,13 @@ class BackgroundLayerArgs : public LayerArgs
   BackgroundLayerArgs(Rectangle rectangle, Color background_color) : LayerArgs(rectangle), background_color_(background_color) { }
 
   Color const& background_color() const { return background_color_; }
+
+#ifdef CWDEBUG
+  void print_on(std::ostream& os) const
+  {
+    os << "{background_color_:" << background_color_ << ", rectangle_:" << rectangle_ << '}';
+  }
+#endif
 };
 
 } // namespace cairowindow

@@ -7,6 +7,8 @@ namespace cairowindow {
 
 void LayerRegion::draw()
 {
+  DoutEntering(dc::notice, "LayerRegion::draw() [" << this << "]");
+
   cairo_t* cr = layer_->cr();
   cairo_save(cr);
   // Apply layer offset, if any.
@@ -21,6 +23,13 @@ void LayerRegion::draw()
 
   cairo_restore(cr);
   layer_->add_area(rectangle_.area());
+  layer_->window_update(rectangle_);
+}
+
+LayerRegion::~LayerRegion()
+{
+  DoutEntering(dc::notice, "~LayerRegion() [" << this << "]");
+  layer_->remove(this);
   layer_->window_update(rectangle_);
 }
 

@@ -21,6 +21,8 @@ class Line : public LayerRegion
  private:
   Rectangle do_draw(cairo_t* cr) override
   {
+    DoutEntering(dc::notice, "draw::Line::do_draw(cr) [" << this << "]");
+
     cairo_set_source_rgb(cr, color_.red(), color_.green(), color_.blue());
     cairo_set_line_width(cr, line_width_);
     cairo_move_to(cr, geometry_.offset_x(),                     geometry_.offset_y());

@@ -1,8 +1,13 @@
 #pragma once
 
 #include "debug.h"
+#ifdef CWDEBUG
+#include "utils/has_print_on.h"
+#endif
 
 namespace cairowindow {
+// This class defines a print_on method.
+using utils::has_print_on::operator<<;
 
 class Rectangle
 {
@@ -42,6 +47,13 @@ class Rectangle
     if (a_top < b_bottom || b_top < a_bottom) return false;
     return true;
   }
+
+#ifdef CWDEBUG
+  void print_on(std::ostream& os) const
+  {
+    os << '{' << offset_x_ << ", " << offset_y_ << ", " << width_ << ", " << height_ << '}';
+  }
+#endif
 };
 
 } // namespace cairowindow
