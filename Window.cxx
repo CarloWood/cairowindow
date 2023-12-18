@@ -56,20 +56,27 @@ void Window::update(Rectangle const& rectangle)
 {
   DoutEntering(dc::notice, "Window::update(" << rectangle << ")");
 
-  double area_limit = rectangle.area() / 4;
+  double const area_limit = rectangle.area() / 4;
   cairo_save(offscreen_cr_);
   cairo_rectangle(offscreen_cr_, rectangle.offset_x(), rectangle.offset_y(), rectangle.width(), rectangle.height());
   cairo_clip(offscreen_cr_);
   {
     std::lock_guard<std::mutex> lock(offscreen_surface_mutex_);
+    bool first_layer = true;
+    cairo_set_operator(offscreen_cr_, CAIRO_OPERATOR_SOURCE);
     for (auto const& layer : layers_)
     {
-      if (area_limit > layer->area())
+      if (layer->area() < area_limit)
         layer->redraw(offscreen_cr_, rectangle);
       else
       {
         cairo_set_source_surface(offscreen_cr_, layer->surface(), layer->offset_x(), layer->offset_y());
         cairo_paint(offscreen_cr_);
+      }
+      if (first_layer)
+      {
+        first_layer = false;
+        cairo_set_operator(offscreen_cr_, CAIRO_OPERATOR_OVER);
       }
 #ifdef CAIROWINDOW_DEBUGWINDOW
       debug_window_.update(rectangle);
