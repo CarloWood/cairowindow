@@ -47,15 +47,15 @@ class Layer : public AIRefCount
 
   void remove(LayerRegion* region);
 
-  void window_update(Rectangle const& rectangle)
+  void window_update(StrokeExtents const& stroke_extents)
   {
 #ifdef CAIROWINDOW_DEBUGWINDOW
-    debug_window_.update(rectangle);
+    debug_window_.update(stroke_extents);
 #endif
-    window_->update(rectangle);
+    window_->update(stroke_extents);
   }
 
-  void redraw(cairo_t* cr, Rectangle const& rectangle);
+  void redraw(cairo_t* cr, StrokeExtents const& stroke_extents);
   void add_area(double area) { region_areas_ += area; }
 
   cairo_surface_t* surface() const { return surface_; }

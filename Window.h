@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Rectangle.h"
+#include "StrokeExtents.h"
 #include "EventLoop.h"
 #include "LayerArgs.h"
 #include "utils/AIAlert.h"
@@ -98,7 +99,7 @@ class Window
     return layer;
   }
 
-  void update(Rectangle const& rectangle);
+  void update(StrokeExtents const& rectangle_list);
 
  private:
   void send_close_event();

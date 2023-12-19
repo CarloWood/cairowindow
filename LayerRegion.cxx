@@ -17,20 +17,20 @@ void LayerRegion::draw()
   // For now only a single user_draw() call per region is allowed.
   // The reason for this is that a region is supposed to a single rectangle, so doing
   // multiple draw calls could accidently cause large rectangles with a lot of empty space.
-  ASSERT(!rectangle_.is_defined());
+  ASSERT(!stroke_extents_.is_defined());
   // Call the drawing function of the user.
-  rectangle_ = redraw(cr);
+  stroke_extents_ = std::move(redraw(cr));
 
   cairo_restore(cr);
-  layer_->add_area(rectangle_.area());
-  layer_->window_update(rectangle_);
+  layer_->add_area(stroke_extents_.area());
+  layer_->window_update(stroke_extents_);
 }
 
 LayerRegion::~LayerRegion()
 {
   DoutEntering(dc::notice, "~LayerRegion() [" << this << "]");
   layer_->remove(this);
-  layer_->window_update(rectangle_);
+  layer_->window_update(stroke_extents_);
 }
 
 } // namespace cairowindow

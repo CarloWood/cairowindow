@@ -17,7 +17,7 @@ class Rectangle : public LayerRegion
     LayerRegion(layer), geometry_(geometry), color_(color), line_width_(line_width) { }
 
  private:
-  cairowindow::Rectangle do_draw(cairo_t* cr) override
+  cairowindow::StrokeExtents do_draw(cairo_t* cr) override
   {
     DoutEntering(dc::notice, "draw::Rectangle::do_draw(cr) [" << this << "]");
 
@@ -28,9 +28,11 @@ class Rectangle : public LayerRegion
     cairo_line_to(cr, geometry_.offset_x() + geometry_.width(), geometry_.offset_y() + geometry_.height());
     cairo_line_to(cr, geometry_.offset_x(),                     geometry_.offset_y() + geometry_.height());
     cairo_line_to(cr, geometry_.offset_x(),                     geometry_.offset_y());
+    double x1, y1;
+    double x2, y2;
+    cairo_stroke_extents(cr, &x1, &y1, &x2, &y2);
     cairo_stroke(cr);
-    return {geometry_.offset_x() - 0.5 * line_width_, geometry_.offset_y() - 0.5 * line_width_,
-            geometry_.width() + line_width_, geometry_.height() + line_width_};
+    return {x1, y1, x2, y2};
   }
 };
 

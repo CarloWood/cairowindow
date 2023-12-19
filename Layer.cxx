@@ -36,13 +36,13 @@ Layer::~Layer()
   cairo_surface_destroy(surface_);
 }
 
-void Layer::redraw(cairo_t* cr, Rectangle const& rectangle)
+void Layer::redraw(cairo_t* cr, StrokeExtents const& stroke_extents)
 {
-  DoutEntering(dc::notice, "Layer::redraw(ct, " << rectangle << ") [" << this << "]");
+  DoutEntering(dc::notice, "Layer::redraw(ct, " << stroke_extents << ") [" << this << "]");
   for (LayerRegion* region_ptr : regions_)
   {
     Dout(dc::notice, "Testing region " << region_ptr);
-    if (rectangle.overlaps(region_ptr->rectangle()))
+    if (stroke_extents.overlaps(region_ptr->stroke_extents()))
       region_ptr->redraw(cr);
   }
 }
@@ -55,11 +55,11 @@ void Layer::remove(LayerRegion* region)
   cairo_translate(cr_, -rectangle_.offset_x(), -rectangle_.offset_y());
   cairo_set_operator(cr_, CAIRO_OPERATOR_SOURCE);
   cairo_set_source_rgba(cr_, color_.red(), color_.green(), color_.blue(), color_.alpha());
-  Rectangle const& rectangle = region->rectangle();
-  cairo_rectangle(cr_, rectangle.offset_x(), rectangle.offset_y(), rectangle.width(), rectangle.height());
+  StrokeExtents const& stroke_extents = region->stroke_extents();
+  stroke_extents.set_path(cr_);
   cairo_fill(cr_);
   cairo_set_operator(cr_, CAIRO_OPERATOR_OVER);
-  redraw(cr_, rectangle);
+  redraw(cr_, stroke_extents);
   cairo_restore(cr_);
 }
 

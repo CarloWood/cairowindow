@@ -2,6 +2,7 @@
 
 #include "cairowindow/LayerRegion.h"
 #include "cairowindow/Color.h"
+#include "cairowindow/StrokeExtents.h"
 
 namespace cairowindow::draw {
 
@@ -19,7 +20,7 @@ class Line : public LayerRegion
     LayerRegion(layer), geometry_(geometry), color_(color), line_width_(line_width) { }
 
  private:
-  Rectangle do_draw(cairo_t* cr) override
+  StrokeExtents do_draw(cairo_t* cr) override
   {
     DoutEntering(dc::notice, "draw::Line::do_draw(cr) [" << this << "]");
 
@@ -29,7 +30,7 @@ class Line : public LayerRegion
     cairo_line_to(cr, geometry_.offset_x() + geometry_.width(), geometry_.offset_y() + geometry_.height());
     cairo_stroke(cr);
     return {geometry_.offset_x() - 0.5 * line_width_, geometry_.offset_y() - 0.5 * line_width_,
-            geometry_.width() + line_width_, geometry_.height() + line_width_};
+      geometry_.offset_x() + geometry_.width() + 0.5 * line_width_, geometry_.offset_y() + geometry_.height() + 0.5 * line_width_};
   }
 };
 

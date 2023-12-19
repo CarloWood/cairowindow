@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Rectangle.h"
+#include "StrokeExtents.h"
 #include "utils/AIRefCount.h"
 #include <cairo/cairo.h>
 #include <functional>
@@ -13,24 +14,24 @@ class LayerRegion : public AIRefCount
 {
  private:
   Layer* layer_;                                // The Layer that this is a region of. Drawing happens to the surface of this layer.
-  Rectangle rectangle_;                         // The region area (as returned by draw).
-  std::function<Rectangle(cairo_t*)> draw_;     // A copy the argument of draw; used to redraw the region when necessary.
+  StrokeExtents stroke_extents_;                // The region area (as returned by draw).
+  std::function<StrokeExtents(cairo_t*)> draw_; // A copy the argument of draw; used to redraw the region when necessary.
 
  private:
-  virtual Rectangle do_draw(cairo_t* cr) { Dout(dc::warning, "Calling unimplemented do_draw()"); return {}; }
+  virtual StrokeExtents do_draw(cairo_t* cr) { Dout(dc::warning, "Calling unimplemented do_draw()"); return {}; }
 
  public:
   LayerRegion(Layer* layer) : layer_(layer) { }
   virtual ~LayerRegion();
 
   void draw();
-  void draw(std::function<Rectangle(cairo_t*)> user_draw)
+  void draw(std::function<StrokeExtents(cairo_t*)> user_draw)
   {
     draw_ = user_draw;
     draw();
   }
 
-  Rectangle redraw(cairo_t* cr)
+  StrokeExtents redraw(cairo_t* cr)
   {
     DoutEntering(dc::notice, "LayerRegion::redraw(cr) [" << this << "]");
 
@@ -40,7 +41,7 @@ class LayerRegion : public AIRefCount
     return do_draw(cr);
   }
 
-  Rectangle const& rectangle() const { return rectangle_; }
+  StrokeExtents const& stroke_extents() const { return stroke_extents_; }
 };
 
 } // namespace cairowindow

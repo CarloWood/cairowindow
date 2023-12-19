@@ -52,13 +52,13 @@ Window::~Window()
   XCloseDisplay(display_);
 }
 
-void Window::update(Rectangle const& rectangle)
+void Window::update(StrokeExtents const& stroke_extents)
 {
-  DoutEntering(dc::notice, "Window::update(" << rectangle << ")");
+  DoutEntering(dc::notice, "Window::update(" << stroke_extents << ")");
 
-  double const area_limit = rectangle.area() / 4;
+  double const area_limit = stroke_extents.area() / 4;
   cairo_save(offscreen_cr_);
-  cairo_rectangle(offscreen_cr_, rectangle.offset_x(), rectangle.offset_y(), rectangle.width(), rectangle.height());
+  stroke_extents.set_path(offscreen_cr_);
   cairo_clip(offscreen_cr_);
   {
     std::lock_guard<std::mutex> lock(offscreen_surface_mutex_);
@@ -67,7 +67,7 @@ void Window::update(Rectangle const& rectangle)
     for (auto const& layer : layers_)
     {
       if (layer->area() < area_limit)
-        layer->redraw(offscreen_cr_, rectangle);
+        layer->redraw(offscreen_cr_, stroke_extents);
       else
       {
         cairo_set_source_surface(offscreen_cr_, layer->surface(), layer->offset_x(), layer->offset_y());
@@ -79,7 +79,7 @@ void Window::update(Rectangle const& rectangle)
         cairo_set_operator(offscreen_cr_, CAIRO_OPERATOR_OVER);
       }
 #ifdef CAIROWINDOW_DEBUGWINDOW
-      debug_window_.update(rectangle);
+      debug_window_.update(stroke_extents);
 #endif
     }
   }
@@ -90,11 +90,9 @@ void Window::update(Rectangle const& rectangle)
   ev.type = Expose;
   ev.display = display_;
   ev.window = x11window_;
-  ev.x = rectangle.offset_x();
-  ev.y = rectangle.offset_y();
-  ev.width = rectangle.width();
-  ev.height = rectangle.height();
-  ev.count = 0; // No more Expose events to follow.
+
+  stroke_extents.unpack(ev.x, ev.y, ev.width, ev.height);
+  ev.count = 0;
 
   XSendEvent(display_, x11window_, false, ExposureMask, (XEvent*)&ev);
   XFlush(display_);
