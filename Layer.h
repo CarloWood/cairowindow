@@ -3,10 +3,12 @@
 #include "Color.h"
 #include "Rectangle.h"
 #include "LayerRegion.h"
+#include "MultiRegion.h"
 #include "Window.h"
 #include "utils/AIRefCount.h"
 #include <cairo/cairo.h>
 #include <vector>
+#include <memory>
 #include "debug.h"
 
 namespace cairowindow {
@@ -35,17 +37,25 @@ class Layer : public AIRefCount
 
   Layer(Layer const& layer) = delete;
 
-  template<LayerRegionType LRT, typename... ARGS>
-  boost::intrusive_ptr<LRT> create_layer_region(ARGS&&... args)
+ void draw(LayerRegion* layer_region)
   {
-    DoutEntering(dc::notice, "Layer::create_layer_region<" <<
-        libcwd::type_info_of<LRT>().demangled_name() << ">(" << join(", ", args...) << ") [" << this << "]");
-    boost::intrusive_ptr<LRT> region = new LRT(this, std::forward<ARGS>(args)...);
-    regions_.push_back(region.get());
-    return region;
+    layer_region->set_layer(this);
+    regions_.push_back(layer_region);
+    layer_region->draw();
   }
 
-  void remove(LayerRegion* region);
+  template<LayerRegionType LRT>
+  void draw(std::unique_ptr<LRT> const& layer_region)
+  {
+    draw(layer_region.get());
+  }
+
+  void draw(MultiRegion* multi_region)
+  {
+    multi_region->draw_regions_on(this);
+  }
+
+  void remove(LayerRegion* layer_region);
 
   void window_update(StrokeExtents const& stroke_extents)
   {

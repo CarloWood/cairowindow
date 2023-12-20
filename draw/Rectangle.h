@@ -13,8 +13,8 @@ class Rectangle : public LayerRegion
   double line_width_;
 
  public:
-  Rectangle(Layer* layer, cairowindow::Rectangle const& geometry, Color const& color, double line_width = 2.0) :
-    LayerRegion(layer), geometry_(geometry), color_(color), line_width_(line_width) { }
+  Rectangle(cairowindow::Rectangle const& geometry, Color const& color, double line_width = 2.0) :
+    geometry_(geometry), color_(color), line_width_(line_width) { }
 
  private:
   cairowindow::StrokeExtents do_draw(cairo_t* cr) override

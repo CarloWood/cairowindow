@@ -8,6 +8,7 @@ namespace cairowindow::draw {
 
 class Line : public LayerRegion
 {
+  // Lets not get confused with draw::Rectangle (in case that is #include-d).
   using Rectangle = cairowindow::Rectangle;
 
  private:
@@ -16,8 +17,8 @@ class Line : public LayerRegion
   double line_width_;
 
  public:
-  Line(Layer* layer, Rectangle const& geometry, Color const& color, double line_width = 2.0) :
-    LayerRegion(layer), geometry_(geometry), color_(color), line_width_(line_width) { }
+  Line(Rectangle const& geometry, Color const& color, double line_width = 2.0) :
+    geometry_(geometry), color_(color), line_width_(line_width) { }
 
  private:
   StrokeExtents do_draw(cairo_t* cr) override

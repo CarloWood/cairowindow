@@ -2,7 +2,6 @@
 
 #include "Rectangle.h"
 #include "StrokeExtents.h"
-#include "utils/AIRefCount.h"
 #include <cairo/cairo.h>
 #include <functional>
 
@@ -10,7 +9,7 @@ namespace cairowindow {
 
 class Layer;
 
-class LayerRegion : public AIRefCount
+class LayerRegion
 {
  private:
   Layer* layer_;                                // The Layer that this is a region of. Drawing happens to the surface of this layer.
@@ -21,8 +20,15 @@ class LayerRegion : public AIRefCount
   virtual StrokeExtents do_draw(cairo_t* cr) { Dout(dc::warning, "Calling unimplemented do_draw()"); return {}; }
 
  public:
-  LayerRegion(Layer* layer) : layer_(layer) { }
-  virtual ~LayerRegion();
+  LayerRegion() : layer_(nullptr) { }
+  ~LayerRegion();
+
+  void set_layer(Layer* layer)
+  {
+    // Only set a layer once.
+    ASSERT(!layer_);
+    layer_ = layer;
+  }
 
   void draw();
   void draw(std::function<StrokeExtents(cairo_t*)> user_draw)

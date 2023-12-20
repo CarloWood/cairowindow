@@ -39,23 +39,20 @@ Layer::~Layer()
 void Layer::redraw(cairo_t* cr, StrokeExtents const& stroke_extents)
 {
   DoutEntering(dc::notice, "Layer::redraw(ct, " << stroke_extents << ") [" << this << "]");
-  for (LayerRegion* region_ptr : regions_)
-  {
-    Dout(dc::notice, "Testing region " << region_ptr);
-    if (stroke_extents.overlaps(region_ptr->stroke_extents()))
-      region_ptr->redraw(cr);
-  }
+  for (LayerRegion* layer_region : regions_)
+    if (stroke_extents.overlaps(layer_region->stroke_extents()))
+      layer_region->redraw(cr);
 }
 
-void Layer::remove(LayerRegion* region)
+void Layer::remove(LayerRegion* layer_region)
 {
-  regions_.erase(std::remove(regions_.begin(), regions_.end(), region), regions_.end());
+  regions_.erase(std::remove(regions_.begin(), regions_.end(), layer_region), regions_.end());
   // Replace rectangle with background color.
   cairo_save(cr_);
   cairo_translate(cr_, -rectangle_.offset_x(), -rectangle_.offset_y());
   cairo_set_operator(cr_, CAIRO_OPERATOR_SOURCE);
   cairo_set_source_rgba(cr_, color_.red(), color_.green(), color_.blue(), color_.alpha());
-  StrokeExtents const& stroke_extents = region->stroke_extents();
+  StrokeExtents const& stroke_extents = layer_region->stroke_extents();
   stroke_extents.set_path(cr_);
   cairo_fill(cr_);
   cairo_set_operator(cr_, CAIRO_OPERATOR_OVER);
