@@ -14,7 +14,10 @@ class Axes : public MultiRegion
 
  private:
   Rectangle geometry_;          // The geometry passed to the constructor. This is the path that is used for the large rectangle of the axes.
-  LayerRegion region_;
+  LayerRegion top_axis_;
+  LayerRegion bottom_axis_;
+  LayerRegion left_axis_;
+  LayerRegion right_axis_;
 
  public:
   Axes(Rectangle const& geometry, Color const& color, double line_width = 1.0) :
