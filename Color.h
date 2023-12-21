@@ -6,8 +6,10 @@
 #endif
 
 namespace cairowindow {
+#ifdef CWDEBUG
 // This class defines a print_on method.
 using utils::has_print_on::operator<<;
+#endif
 
 class Color
 {
