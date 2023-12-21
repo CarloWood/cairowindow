@@ -39,9 +39,8 @@ class Layer : public AIRefCount
 
  void draw(LayerRegion* layer_region)
   {
-    layer_region->set_layer(this);
     regions_.push_back(layer_region);
-    layer_region->draw();
+    layer_region->draw(this);
   }
 
   template<LayerRegionType LRT>

@@ -23,6 +23,7 @@ class MultiRegion
   {
     cairo_set_source_rgb(cr, color_.red(), color_.green(), color_.blue());
     cairo_set_line_width(cr, line_width_);
+    cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
   }
 
   StrokeExtents stroke(cairo_t* cr) const

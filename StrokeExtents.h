@@ -19,11 +19,21 @@ class StrokeExtents
  public:
   // Construct an "undefined" StrokeExtents object (with half_width_ and half_height_ zero).
   StrokeExtents() : half_width_(0.0), half_height_(0.0) { }
-  // The +1 is to include the anti-alias area into the extents.
-  StrokeExtents(double x1, double y1, double x2, double y2) :
-    half_width_(0.5 * (x2 - x1 + 1)), half_height_(0.5 * (y2 - y1 + 1)), center_x_(0.5 * (x2 + x1)), center_y_(0.5 * (y2 + y1)) { }
-  StrokeExtents(Rectangle const& rectangle) : half_width_(0.5 * rectangle.width()), half_height_(0.5 * rectangle.height()),
-    center_x_(rectangle.offset_x() + half_width_), center_y_(rectangle.offset_y() + half_height_) { }
+  StrokeExtents(double x1, double y1, double x2, double y2)
+  {
+    // Include anti-aliasing pixels in extent.
+    x1 = std::floor(x1);
+    y1 = std::floor(y1);
+    x2 = std::ceil(x2);
+    y2 = std::ceil(y2);
+
+    half_width_ = 0.5 * (x2 - x1);
+    half_height_ = 0.5 * (y2 - y1);
+    center_x_ = 0.5 * (x2 + x1);
+    center_y_ = 0.5 * (y2 + y1);
+  }
+  StrokeExtents(Rectangle const& rectangle) : StrokeExtents(rectangle.offset_x(), rectangle.offset_y(),
+      rectangle.offset_x() + rectangle.width(), rectangle.offset_y() + rectangle.height()) { }
 
   bool is_defined() const { return half_width_ != 0.0 || half_height_ != 0.0; }
   double area() const { return 4.0 * half_width_ * half_height_; }

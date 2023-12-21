@@ -23,18 +23,11 @@ class LayerRegion
   LayerRegion() : layer_(nullptr) { }
   ~LayerRegion();
 
-  void set_layer(Layer* layer)
-  {
-    // Only set a layer once.
-    ASSERT(!layer_);
-    layer_ = layer;
-  }
-
-  void draw();
-  void draw(std::function<StrokeExtents(cairo_t*)> user_draw)
+  void draw(Layer* layer);
+  void draw(Layer* layer, std::function<StrokeExtents(cairo_t*)> user_draw)
   {
     draw_ = user_draw;
-    draw();
+    draw(layer);
   }
 
   StrokeExtents redraw(cairo_t* cr)
