@@ -126,10 +126,9 @@ struct ExposeEventRect
   int height;
 };
 
-std::vector<ExposeEventRect> expose_events;
-
 void Window::event_loop()
 {
+  std::vector<ExposeEventRect> expose_events;
   int keypress_events = 0;
   // Event loop.
   XEvent event;
@@ -147,14 +146,13 @@ void Window::event_loop()
         else
         {
           cairo_save(win_cr_);
-          if (expose_events.empty())
-            cairo_rectangle(win_cr_, expose_event->x, expose_event->y, expose_event->width, expose_event->height);
-          else
+          if (!expose_events.empty())
           {
             for (ExposeEventRect const& rect : expose_events)
               cairo_rectangle(win_cr_, rect.x, rect.y, rect.width, rect.height);
             expose_events.clear();
           }
+          cairo_rectangle(win_cr_, expose_event->x, expose_event->y, expose_event->width, expose_event->height);
           cairo_clip(win_cr_);
           {
             std::lock_guard<std::mutex> lock(offscreen_surface_mutex_);
