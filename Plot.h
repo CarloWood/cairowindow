@@ -47,13 +47,13 @@ class Plot
 
  public:
   Plot(Rectangle const& geometry, draw::PlotAreaStyle plot_area_style, std::string title, TitleStyle title_style) :
-    plot_area_(axes_geometry(geometry), plot_area_style),
+    plot_area_(axes_geometry(geometry, plot_area_style.axes_line_width), plot_area_style),
     title_(title, plot_area_.geometry().offset_x() + 0.5 * plot_area_.geometry().width(),
         plot_area_.geometry().offset_y() - title_style.offset, title_style) { }
 
   Plot(Rectangle const& geometry, draw::PlotAreaStyle plot_area_style, std::string title, TitleStyle title_style,
       std::string xlabel, XLabelStyle xlabel_style, std::string ylabel, YLabelStyle ylabel_style) :
-    plot_area_(axes_geometry(geometry), plot_area_style),
+    plot_area_(axes_geometry(geometry, plot_area_style.axes_line_width), plot_area_style),
     title_(title, plot_area_.geometry().offset_x() + 0.5 * plot_area_.geometry().width(),
         plot_area_.geometry().offset_y() - 0.5 * plot_area_.geometry().offset_y() - title_style.offset, title_style),
     xlabel_(xlabel, plot_area_.geometry().offset_x() + 0.5 * plot_area_.geometry().width(),
@@ -62,7 +62,7 @@ class Plot
         plot_area_.geometry().offset_y() + 0.5 * plot_area_.geometry().height(), ylabel_style) { }
 
   Plot(Rectangle const& geometry, draw::PlotAreaStyle plot_area_style) :
-    plot_area_(axes_geometry(geometry), plot_area_style) { }
+    plot_area_(axes_geometry(geometry, plot_area_style.axes_line_width), plot_area_style) { }
 
   void set_xrange(Range x_range)
   {
@@ -83,7 +83,7 @@ class Plot
   void add_to(boost::intrusive_ptr<Layer> const& layer);
 
  private:
-  Rectangle axes_geometry(Rectangle const& geometry);
+  Rectangle axes_geometry(Rectangle const& geometry, double axes_line_width);
 };
 
 } // namespace cairowindow::plot
