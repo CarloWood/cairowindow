@@ -18,6 +18,12 @@ constexpr int max_range = 1;
 
 namespace cairowindow::draw {
 
+struct PlotAreaStyle
+{
+  Color axes_color = color::black;
+  double axes_line_width = 1.0;
+};
+
 class PlotArea : public MultiRegion
 {
   // Lets not get confused with draw::Rectangle (in case that is #include-d).
@@ -37,10 +43,12 @@ class PlotArea : public MultiRegion
   std::array<std::array<double, 2>, number_of_axes> range_{{{0, 1}, {0, 1}}};
 
  public:
-  PlotArea(Rectangle const& geometry, Color const& color, double line_width = 1.0) :
-    MultiRegion(color, line_width), geometry_(geometry), tick_length_(geometry.width() / 100.0) { }
+  PlotArea(Rectangle const& geometry, PlotAreaStyle style) :
+    MultiRegion(style.axes_color, style.axes_line_width), geometry_(geometry), tick_length_(geometry.width() / 100.0) { }
 
   void set_range(int axis, double range_min, double range_max);
+
+  Rectangle const& geometry() const { return geometry_; }
 
  private:
   void draw_axis(cairo_t* cr, double x1, double y1, double x2, double y2, int k);

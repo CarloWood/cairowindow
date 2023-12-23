@@ -85,7 +85,7 @@ void DebugWindow::terminate()
   debug_window_.join();
 }
 
-void DebugWindow::update(Rectangle const& rectangle)
+void DebugWindow::update(StrokeExtents const& stroke_extents)
 {
   variables_type::wat variables_w(variables_);
   variables_w->trigger_expose_event();

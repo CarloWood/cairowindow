@@ -60,14 +60,14 @@ class Window
 
   void close();
 
-  Rectangle get_rectangle() const { return {0, 0, static_cast<double>(width_), static_cast<double>(height_)}; }
+  Rectangle geometry() const { return {0, 0, static_cast<double>(width_), static_cast<double>(height_)}; }
 
   template<LayerType LT, typename... ARGS>
   boost::intrusive_ptr<LT> create_layer(LayerArgs la, ARGS&&... args)
   {
     DoutEntering(dc::notice, "Window::create_layer<" << libcwd::type_info_of<LT>().demangled_name() << ">(" << la <<
         join_more(", ", args...) << ") [" << this << "]");
-    Rectangle rectangle = la.has_rectangle() ? la.rectangle() : get_rectangle();
+    Rectangle rectangle = la.has_rectangle() ? la.rectangle() : geometry();
     boost::intrusive_ptr<LT> layer = new LT(x11_surface_, rectangle, CAIRO_CONTENT_COLOR_ALPHA,
         Color{0, 0, 0, 0}, this, std::forward<ARGS>(args)...);
     layers_.push_back(layer);
@@ -89,7 +89,7 @@ class Window
         join_more(", ", args...) << ") [" << this << "]");
     if (!la.background_color().is_opaque())
       THROW_FALERT("The background layer can not have transparency.");
-    Rectangle rectangle = la.has_rectangle() ? la.rectangle() : get_rectangle();
+    Rectangle rectangle = la.has_rectangle() ? la.rectangle() : geometry();
     boost::intrusive_ptr<LT> layer = new LT(x11_surface_, rectangle, CAIRO_CONTENT_COLOR,
         la.background_color(), this, std::forward<ARGS>(args)...);
     layer->add_area(rectangle.area());

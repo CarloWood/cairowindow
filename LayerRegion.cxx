@@ -33,8 +33,11 @@ void LayerRegion::draw(Layer* layer)
 LayerRegion::~LayerRegion()
 {
   DoutEntering(dc::notice, "~LayerRegion() [" << this << "]");
-  layer_->remove(this);
-  layer_->window_update(stroke_extents_);
+  if (layer_)
+  {
+    layer_->remove(this);
+    layer_->window_update(stroke_extents_);
+  }
 }
 
 } // namespace cairowindow

@@ -4,6 +4,7 @@
 #error "Do not include DebugWindow.h without setting cmake option -DEnableDebugWindow:BOOL=ON"
 #endif
 
+#include "StrokeExtents.h"
 #include "threadsafe/threadsafe.h"
 #include "utils/threading/Gate.h"
 #include <cairo/cairo.h>
@@ -57,7 +58,7 @@ struct DebugWindow
   void start(cairo_surface_t* shared_surface, double width, double height, std::string debug_name);
   void terminate();
 
-  void update(Rectangle const& rectangle);
+  void update(StrokeExtents const& stroke_extents);
 };
 
 } // namespace cairowindow

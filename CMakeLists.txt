@@ -63,6 +63,7 @@ target_sources(cairowindow_ObjLib
     "Window.cxx"
     "EventLoop.cxx"
     "LayerRegion.cxx"
+    "Plot.cxx"
     "draw/PlotArea.cxx"
 
     "Color.h"
