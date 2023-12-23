@@ -21,7 +21,7 @@ In namespace `cairowindow::draw` we currently have:
 
 * ``Line`` : A line.
 * ``Rectangle`` : A rectangle.
-* ``Text.h`` : Some text.
+* ``Text`` : Some text.
 * ``PlotArea`` : The axes and ticks of a plot.
 
 The root project should be using
