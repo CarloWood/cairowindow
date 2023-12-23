@@ -1,5 +1,6 @@
 #include "sys.h"
 #include "PlotArea.h"
+#include "cairowindow/Range.h"
 #include "utils/almost_equal.h"
 #include <algorithm>
 #include "debug.h"
@@ -26,23 +27,30 @@ void PlotArea::draw_axis(cairo_t* cr, double x1, double y1, double x2, double y2
   }
 }
 
+//static
+int PlotArea::calculate_range_ticks(plot::Range& range)
+{
+  double diff = range.max() - range.min();
+  double order = std::floor(std::log10(diff) + 1e-6);
+  double spacing = std::pow(10.0, order);
+  double ticks = diff / spacing;
+  if (ticks < 1.00001)
+    spacing *= 0.1;
+  else if (ticks < 2.00001)
+    spacing *= 0.2;
+  else if (ticks < 5.00001)
+    spacing *= 0.5;
+  range.round_to(spacing);
+  return std::round((range.max() - range.min()) / spacing);
+}
+
 void PlotArea::draw_regions_on(Layer* layer)
 {
   std::array<int, number_of_axes> k;
   for (int axis = 0; axis < 2; ++axis)
   {
-    double range = range_[axis][max_range] - range_[axis][min_range];
-    double order = std::floor(std::log10(range));
-    double spacing = std::pow(10.0, order);
-    double ticks = range / spacing;
-    if (ticks < 2.0)
-      spacing *= 0.2;
-    else if (ticks < 5.0)
-      spacing *= 0.5;
-    // The range that is set must already be preprocessed to be an integer times the spacing that we calculated here.
-    ASSERT(utils::almost_equal(std::round(range_[axis][min_range] / spacing), range_[axis][min_range] / spacing, 10e-4));
-    ASSERT(utils::almost_equal(std::round(range_[axis][max_range] / spacing), range_[axis][max_range] / spacing, 10e-4));
-    k[axis] = std::round(range / spacing);
+    plot::Range range{range_[axis][min_range], range_[axis][max_range]};
+    k[axis] = calculate_range_ticks(range);
   }
 
   auto x_axis_min = [this, k = k[x_axis]](cairo_t* cr) -> StrokeExtents

@@ -14,6 +14,8 @@ constexpr int y_axis = 1;
 constexpr int min_range = 0;
 constexpr int max_range = 1;
 
+class Range;
+
 } // namespace cairowindow::plot
 
 namespace cairowindow::draw {
@@ -49,6 +51,8 @@ class PlotArea : public MultiRegion
   void set_range(int axis, double range_min, double range_max);
 
   Rectangle const& geometry() const { return geometry_; }
+
+  static int calculate_range_ticks(plot::Range& range);
 
  private:
   void draw_axis(cairo_t* cr, double x1, double y1, double x2, double y2, int k);

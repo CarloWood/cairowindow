@@ -1,6 +1,7 @@
 #include "sys.h"
 #include "Layer.h"
 #include "Plot.h"
+#include <cmath>
 
 namespace cairowindow::plot {
 
@@ -19,6 +20,8 @@ Rectangle Plot::axes_geometry(Rectangle const& geometry)
 
 void Plot::add_to(boost::intrusive_ptr<Layer> const& layer)
 {
+  plot_area_.set_range(x_axis, x_range_.min(), x_range_.max());
+  plot_area_.set_range(y_axis, y_range_.min(), y_range_.max());
   layer->draw(&plot_area_);
   if (title_.is_defined())
     layer->draw(&title_);

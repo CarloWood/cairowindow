@@ -17,6 +17,8 @@ class Plot
   draw::Text ylabel_;
   Range x_range_;
   Range y_range_;
+  int x_range_ticks_{10};
+  int y_range_ticks_{10};
 
   struct TitleStyleDefaults : draw::DefaultTextStyleDefaults
   {
@@ -64,12 +66,18 @@ class Plot
 
   void set_xrange(Range x_range)
   {
+    DoutEntering(dc::notice, "Plot::set_xrange(" << x_range << ")");
     x_range_ = x_range;
+    x_range_ticks_ = draw::PlotArea::calculate_range_ticks(x_range_);
+    Dout(dc::notice, "x_range_ = " << x_range_ << "; x_range_ticks_ = " << x_range_ticks_);
   }
 
   void set_yrange(Range y_range)
   {
+    DoutEntering(dc::notice, "Plot::set_yrange(" << y_range << ")");
     y_range_ = y_range;
+    y_range_ticks_ = draw::PlotArea::calculate_range_ticks(y_range_);
+    Dout(dc::notice, "y_range_ = " << y_range_ << "; y_range_ticks_ = " << y_range_ticks_);
   }
 
   void add_to(boost::intrusive_ptr<Layer> const& layer);
