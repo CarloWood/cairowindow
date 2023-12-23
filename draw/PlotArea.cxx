@@ -1,6 +1,7 @@
 #include "sys.h"
 #include "PlotArea.h"
 #include "cairowindow/Range.h"
+#include "cairowindow/Layer.h"
 #include "utils/almost_equal.h"
 #include <algorithm>
 #include "debug.h"
@@ -51,6 +52,12 @@ void PlotArea::draw_regions_on(Layer* layer)
   {
     plot::Range range{range_[axis][min_range], range_[axis][max_range]};
     k[axis] = calculate_range_ticks(range);
+  }
+
+  if (draw_grid_)
+  {
+    grid_.set_ticks(k);
+    layer->draw(&grid_);
   }
 
   auto x_axis_min = [this, k = k[x_axis]](cairo_t* cr) -> StrokeExtents

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Grid.h"
 #include "cairowindow/MultiRegion.h"
 #include "cairowindow/LayerRegion.h"
 #include "cairowindow/Rectangle.h"
@@ -24,6 +25,7 @@ struct PlotAreaStyle
 {
   Color axes_color = color::black;
   double axes_line_width = 1.0;
+  GridStyle grid{};
 };
 
 class PlotArea : public MultiRegion
@@ -36,18 +38,21 @@ class PlotArea : public MultiRegion
   static constexpr int y_axis = plot::y_axis;
   static constexpr int min_range = plot::min_range;
   static constexpr int max_range = plot::max_range;
-  static constexpr int number_of_axes = 2;
+  static constexpr int number_of_axes = Grid::number_of_axes;
 
  private:
   Rectangle geometry_;          // The geometry passed to the constructor. This is the path used for the large rectangle around the plot area.
   double tick_length_;
+  bool draw_grid_;
+  draw::Grid grid_;
 
   std::array<std::array<LayerRegion, 2>, number_of_axes> axes_;
   std::array<std::array<double, 2>, number_of_axes> range_{{{0, 1}, {0, 1}}};
 
  public:
   PlotArea(Rectangle const& geometry, PlotAreaStyle style) :
-    MultiRegion(style.axes_color, style.axes_line_width), geometry_(geometry), tick_length_(geometry.width() / 100.0) { }
+    MultiRegion(style.axes_color, style.axes_line_width), geometry_(geometry), tick_length_(geometry.width() / 100.0),
+    draw_grid_(!style.grid.color.is_transparent()), grid_(geometry, style.grid) { }
 
   void set_range(int axis, double range_min, double range_max);
 

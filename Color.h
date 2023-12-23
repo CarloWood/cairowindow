@@ -27,6 +27,7 @@ class Color
   double blue() const { return blue_; }
   double alpha() const { return alpha_; }
 
+  bool is_transparent() const { return alpha_ == 0.0; }
   bool is_opaque() const { return alpha_ == 1.0; }
   void set_opaque() { alpha_ = 1.0; }
 
@@ -67,6 +68,8 @@ constexpr Color teal{0.0, 0.502, 0.502};
 constexpr Color navy{0.0, 0.0, 0.502};
 constexpr Color coral{1.0, 0.498, 0.314};
 constexpr Color salmon{0.980, 0.502, 0.447};
+
+constexpr Color transparent{0.0, 0.0, 0.0, 0.0};
 
 } // namespace color
 

@@ -65,6 +65,7 @@ target_sources(cairowindow_ObjLib
     "LayerRegion.cxx"
     "Plot.cxx"
     "draw/PlotArea.cxx"
+    "draw/Grid.cxx"
 
     "Color.h"
     "Rectangle.h"

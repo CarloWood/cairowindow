@@ -19,7 +19,10 @@ class Rectangle
 
  public:
   Rectangle() : geometry_{} { }
-  Rectangle(double offset_x, double offset_y, double width, double height) : geometry_{offset_x, offset_y, width, height} { }
+  Rectangle(double offset_x, double offset_y, double width, double height) : geometry_{offset_x, offset_y, width, height}
+  {
+    ASSERT(width >= 0.0 && height >= 0.0);
+  }
 
   double offset_x() const { return geometry_.x; }
   double offset_y() const { return geometry_.y; }
