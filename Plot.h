@@ -62,6 +62,16 @@ class Plot
   Plot(Rectangle const& geometry, draw::PlotAreaStyle plot_area_style) :
     plot_area_(axes_geometry(geometry), plot_area_style) { }
 
+  void set_xrange(Range x_range)
+  {
+    x_range_ = x_range;
+  }
+
+  void set_yrange(Range y_range)
+  {
+    y_range_ = y_range;
+  }
+
   void add_to(boost::intrusive_ptr<Layer> const& layer);
 
  private:
