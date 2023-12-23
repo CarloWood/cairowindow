@@ -5,8 +5,24 @@ providing C++ classes for larger projects, including (all in namespace cairowind
 
 * ``Window`` : A new native window, assuming you are on X11. Full support for tripple buffering to allow seamless, non-stop updating.
 * ``Layer`` : Abstraction of a layer. Represents a drawing surface, can be smaller than and have an offset relative to the Window.
+* ``LayerRegion`` : A rectangular portion of a layer that has a `draw` function associated with it (base class to all drawable objects).
+* ``MultiRegion`` : Convenience base class for drawable objects that exist of more than one layer region.
+* ``EventLoop`` : Returned by Window::run(). Causes the window to be opened and everything that was added to it to be drawn. Destructing the returned `EventLoop` blocks until the window was closed. You want to destroy the `EventLoop` before destroying any of the above objects, because destroying those will make them disappear (no longer being drawn).
 * ``Color`` : A color object.
-* ``Rectangle`` : A rectangle object with an (optional) offset relative to the main Window.
+* ``Rectangle`` : Describes a rectangle with an (optional) offset relative to the main Window.
+* ``StrokeExtents`` : Another rectangle object, used to keep track of what area needs to be redrawn for a given `LayerRegion` upon expose.
+
+In namespace `cairowindow::plot` we currently have:
+
+* ``Plot`` : An object representing a plot chart with title, axes, data points etc.
+* ``Range`` : Describes the minimum and maximum values of the axes of a plot.
+
+In namespace `cairowindow::draw` we currently have:
+
+* ``Line`` : A line.
+* ``Rectangle`` : A rectangle.
+* ``Text.h`` : Some text.
+* ``PlotArea`` : The axes and ticks of a plot.
 
 The root project should be using
 [cmake](https://cmake.org/overview/)
