@@ -30,6 +30,7 @@ class Range
   // Accessors.
   double min() const { return min_; }
   double max() const { return max_; }
+  double size() const { return max_ - min_; }
 
 #ifdef CWDEBUG
   void print_on(std::ostream& os) const

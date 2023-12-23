@@ -35,6 +35,10 @@ class StrokeExtents
   StrokeExtents(Rectangle const& rectangle) : StrokeExtents(rectangle.offset_x(), rectangle.offset_y(),
       rectangle.offset_x() + rectangle.width(), rectangle.offset_y() + rectangle.height()) { }
 
+  // Accessors.
+  double width() const { return 2.0 * half_width_; }
+  double height() const { return 2.0 * half_height_; }
+
   bool is_defined() const { return half_width_ != 0.0 || half_height_ != 0.0; }
   double area() const { return 4.0 * half_width_ * half_height_; }
 

@@ -10,12 +10,12 @@ namespace cairowindow::draw {
 
 enum TextPosition
 {
-  above_right_off,
-  above_left_off,
-  below_right_off,
-  below_left_off,
-  centered_right_off,
-  centered_left_off,
+  above_right_of,
+  above_left_of,
+  below_right_of,
+  below_left_of,
+  centered_right_of,
+  centered_left_of,
   centered_above,
   centered_below,
   centered
@@ -30,11 +30,11 @@ DECLARE_DEFAULTS_HAS_MEMBER(rotation)
 
 struct DefaultTextStyleDefaults
 {
-  static constexpr draw::TextPosition position = draw::above_right_off;
+  static constexpr draw::TextPosition position = draw::above_right_of;
   static constexpr double font_size = 12.0;
   static constexpr Color color = color::black;
   static constexpr char const* font_family = "sans-serif";
-  static constexpr double offset = 10.0;
+  static constexpr double offset = 0.0;
   static constexpr double rotation = 0.0;        // Clock-wise rotation in radians.
 };
 
@@ -85,6 +85,13 @@ class Text : public LayerRegion
   Text(std::string const& text, double pos_x, double pos_y, TextStyleNoDefault style) :
     style_(style), text_(text), pos_x_(pos_x), pos_y_(pos_y) { }
 
+  // Allow moving the text after construction (but before adding it to a layer!).
+  void move_pos(double delta_x, double delta_y)
+  {
+    pos_x_ += delta_x;
+    pos_y_ += delta_y;
+  }
+
   bool is_defined() const
   {
     return !text_.empty();
@@ -100,38 +107,38 @@ class Text : public LayerRegion
     cairo_translate(cr, pos_x_, pos_y_);
     cairo_rotate(cr, style_.rotation);
     double tx = 0;
-    double ty = 0;
+    double ty = -style_.offset;
     switch (style_.position)
     {
-      case above_right_off:
+      case above_right_of:
         break;
-      case above_left_off:
-        tx = -extents.x_advance;
+      case above_left_of:
+        tx -= extents.x_advance;
         break;
-      case below_right_off:
-        ty = -extents.y_bearing;
+      case below_right_of:
+        ty -= extents.y_bearing;
         break;
-      case below_left_off:
-        tx = -extents.x_advance;
-        ty = -extents.y_bearing;
+      case below_left_of:
+        tx -= extents.x_advance;
+        ty -= extents.y_bearing;
         break;
-      case centered_right_off:
-        ty = -0.5 * extents.y_bearing;
+      case centered_right_of:
+        ty -= 0.5 * extents.y_bearing;
         break;
-      case centered_left_off:
-        tx = -extents.x_advance;
-        ty = -0.5 * extents.y_bearing;
+      case centered_left_of:
+        tx -= extents.x_advance;
+        ty -= 0.5 * extents.y_bearing;
         break;
       case centered_above:
-        tx = -extents.x_bearing - 0.5 * extents.width;
+        tx -= extents.x_bearing + 0.5 * extents.width;
         break;
       case centered_below:
-        tx = -extents.x_bearing - 0.5 * extents.width;
-        ty = -extents.y_bearing;
+        tx -= extents.x_bearing + 0.5 * extents.width;
+        ty -= extents.y_bearing;
         break;
       case centered:
-        tx = -extents.x_bearing - 0.5 * extents.width;
-        ty = -0.5 * extents.y_bearing;
+        tx -= extents.x_bearing + 0.5 * extents.width;
+        ty -= 0.5 * extents.y_bearing;
     }
     cairo_translate(cr, tx, ty);
     cairo_show_text(cr, text_.c_str());
