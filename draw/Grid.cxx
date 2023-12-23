@@ -31,7 +31,8 @@ void Grid::draw_regions_on(Layer* layer)
         y1 -= delta;
         y2 -= delta;
       }
-      lines_.emplace_back(std::make_unique<Line>(Rectangle{x1, y2, x2 - x1, y1 - y2}, color_, line_width_));
+      lines_.emplace_back(std::make_unique<Line>(
+            Rectangle{x1, y2, x2 - x1, y1 - y2}, LineStyle{.line_color = color_, .line_width = line_width_}));
       layer->draw(lines_.back());
     }
   }

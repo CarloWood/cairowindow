@@ -6,6 +6,12 @@
 
 namespace cairowindow::draw {
 
+struct LineStyle
+{
+  Color line_color = color::indigo;
+  double line_width = 2.0;
+};
+
 class Line : public LayerRegion
 {
   // Lets not get confused with draw::Rectangle (in case that is #include-d).
@@ -13,25 +19,23 @@ class Line : public LayerRegion
 
  private:
   Rectangle geometry_;
-  Color color_;
-  double line_width_;
+  LineStyle style_;
 
  public:
-  Line(Rectangle const& geometry, Color const& color, double line_width = 2.0) :
-    geometry_(geometry), color_(color), line_width_(line_width) { }
+  Line(Rectangle const& geometry, LineStyle style) : geometry_(geometry), style_(style) { }
 
  private:
   StrokeExtents do_draw(cairo_t* cr) override
   {
     DoutEntering(dc::notice, "draw::Line::do_draw(cr) [" << this << "]");
 
-    cairo_set_source_rgb(cr, color_.red(), color_.green(), color_.blue());
-    cairo_set_line_width(cr, line_width_);
+    cairo_set_source_rgba(cr, style_.line_color.red(), style_.line_color.green(), style_.line_color.blue(), style_.line_color.alpha());
+    cairo_set_line_width(cr, style_.line_width);
     cairo_move_to(cr, geometry_.offset_x(),                     geometry_.offset_y());
     cairo_line_to(cr, geometry_.offset_x() + geometry_.width(), geometry_.offset_y() + geometry_.height());
     cairo_stroke(cr);
-    return {geometry_.offset_x() - 0.5 * line_width_, geometry_.offset_y() - 0.5 * line_width_,
-      geometry_.offset_x() + geometry_.width() + 0.5 * line_width_, geometry_.offset_y() + geometry_.height() + 0.5 * line_width_};
+    return {geometry_.offset_x() - 0.5 * style_.line_width, geometry_.offset_y() - 0.5 * style_.line_width,
+      geometry_.offset_x() + geometry_.width() + 0.5 * style_.line_width, geometry_.offset_y() + geometry_.height() + 0.5 * style_.line_width};
   }
 };
 
