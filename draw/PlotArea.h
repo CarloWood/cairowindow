@@ -30,9 +30,6 @@ struct PlotAreaStyle
 
 class PlotArea : public MultiRegion
 {
-  // Lets not get confused with draw::Rectangle (in case that is #include-d).
-  using Rectangle = cairowindow::Rectangle;
-
  public:
   static constexpr int x_axis = plot::x_axis;
   static constexpr int y_axis = plot::y_axis;

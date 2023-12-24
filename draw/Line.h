@@ -14,9 +14,6 @@ struct LineStyle
 
 class Line : public LayerRegion
 {
-  // Lets not get confused with draw::Rectangle (in case that is #include-d).
-  using Rectangle = cairowindow::Rectangle;
-
  private:
   Rectangle geometry_;
   LineStyle style_;

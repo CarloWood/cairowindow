@@ -16,9 +16,6 @@ struct GridStyle
 class Grid : public MultiRegion
 {
  public:
-  // Lets not get confused with draw::Rectangle (in case that is #include-d).
-  using Rectangle = cairowindow::Rectangle;
-
   static constexpr int number_of_axes = 2;
 
  private:

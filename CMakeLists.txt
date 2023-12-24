@@ -59,6 +59,7 @@ set_property(
 # The list of source files.
 target_sources(cairowindow_ObjLib
   PRIVATE
+    "Color.cxx"
     "Layer.cxx"
     "Window.cxx"
     "EventLoop.cxx"
@@ -66,6 +67,7 @@ target_sources(cairowindow_ObjLib
     "Plot.cxx"
     "draw/PlotArea.cxx"
     "draw/Grid.cxx"
+    "draw/Shape.cxx"
 
     "Color.h"
     "Rectangle.h"

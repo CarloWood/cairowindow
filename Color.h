@@ -31,6 +31,10 @@ class Color
   bool is_opaque() const { return alpha_ == 1.0; }
   void set_opaque() { alpha_ = 1.0; }
 
+  // Get the (next) color from a color pool.
+  static Color get_color(int color_index);
+  static Color next_color();
+
 #ifdef CWDEBUG
   void print_on(std::ostream& os) const
   {
