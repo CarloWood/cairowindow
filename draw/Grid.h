@@ -34,6 +34,11 @@ class Grid : public MultiRegion
   {
     ticks_ = k;
   }
+
+  void set_geometry(Rectangle const& geometry)
+  {
+    geometry_ = geometry;
+  }
 };
 
 } // namespace cairowindow::draw

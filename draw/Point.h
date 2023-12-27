@@ -5,8 +5,7 @@
 
 namespace cairowindow::draw {
 
-class Point
-{
+struct PointStyle {
  public:
   struct FilledShape
   {
@@ -34,31 +33,49 @@ class Point
   }};
 
  private:
+  int color_index_;
+  int filled_shape_;
+
+ public:
+  PointStyle(int color_index, int filled_shape) : color_index_(color_index), filled_shape_(filled_shape) { }
+
+  bool is_filled() const
+  {
+    return filled_shapes[filled_shape_ % number_of_shapes].filled;
+  }
+
+  ShapeEnum get_shape() const
+  {
+    return filled_shapes[filled_shape_ % number_of_shapes].shape;
+  }
+
+  Color line_color() const
+  {
+    return is_filled() ? color::transparent : Color::get_color(color_index_);
+  };
+
+  Color fill_color() const
+  {
+    return is_filled() ? Color::get_color(color_index_) : color::transparent;
+  }
+};
+
+class Point
+{
+ private:
   Shape shape_;
 
  public:
-  Point(double x, double y, int color_index, int filled_shape) :
-    shape_({x, y, is_filled(filled_shape) ? 5.0 : 4.0, is_filled(filled_shape) ? 5.0 : 4.0}, {
-        .line_color = is_filled(filled_shape) ? color::transparent : Color::get_color(color_index),
-        .fill_color = is_filled(filled_shape) ? Color::get_color(color_index) : color::transparent,
-        .shape = get_shape(filled_shape), .at_corner = true })
+  Point(double x, double y, PointStyle style) :
+    shape_({x, y, style.is_filled() ? 5.0 : 4.0, style.is_filled() ? 5.0 : 4.0}, {
+        .line_color = style.line_color(), .fill_color = style.fill_color(),
+        .shape = style.get_shape(), .at_corner = true })
   {
   }
 
   operator LayerRegion*()
   {
     return &shape_;
-  }
-
- private:
-  bool is_filled(int filled_shape)
-  {
-    return filled_shapes[filled_shape % number_of_shapes].filled;
-  }
-
-  ShapeEnum get_shape(int filled_shape)
-  {
-    return filled_shapes[filled_shape % number_of_shapes].shape;
   }
 };
 

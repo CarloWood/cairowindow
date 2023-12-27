@@ -52,6 +52,11 @@ class PlotArea : public MultiRegion
     draw_grid_(!style.grid.color.is_transparent()), grid_(geometry, style.grid) { }
 
   void set_range(int axis, double range_min, double range_max);
+  void set_geometry(Rectangle const& geometry)
+  {
+    geometry_ = geometry;
+    grid_.set_geometry(geometry);
+  }
 
   Rectangle const& geometry() const { return geometry_; }
 

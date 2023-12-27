@@ -85,11 +85,23 @@ class Text : public LayerRegion
   Text(std::string const& text, double pos_x, double pos_y, TextStyleNoDefault style) :
     style_(style), text_(text), pos_x_(pos_x), pos_y_(pos_y) { }
 
+  // Accessors.
+  TextStyleNoDefault const& style() const { return style_; }
+  std::string const& text() const { return text_; }
+  double pos_x() const { return pos_x_; }
+  double pos_y() const { return pos_y_; }
+
   // Allow moving the text after construction (but before adding it to a layer!).
-  void move_pos(double delta_x, double delta_y)
+  void rel_move_to(double delta_x, double delta_y)
   {
     pos_x_ += delta_x;
     pos_y_ += delta_y;
+  }
+
+  void move_to(double x, double y)
+  {
+    pos_x_ = x;
+    pos_y_ = y;
   }
 
   bool is_defined() const

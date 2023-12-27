@@ -2,12 +2,22 @@
 
 #include "draw/PlotArea.h"
 #include "draw/Text.h"
+#include "draw/Point.h"
 #include "Range.h"
+#include "Point.h"
 #include <boost/intrusive_ptr.hpp>
 #include <string>
 #include <vector>
 
 namespace cairowindow::plot {
+
+enum class LineExtend
+{
+  none = 0,
+  from = 1,
+  to = 2,
+  both = from|to
+};
 
 class Plot
 {
@@ -20,7 +30,10 @@ class Plot
   draw::Text ylabel_;
   std::array<Range, number_of_axes> range_;
   std::array<int, number_of_axes> range_ticks_{{10, 10}};
-  std::array<std::vector<std::unique_ptr<draw::Text>>, number_of_axes> labels;
+  std::array<std::vector<std::unique_ptr<draw::Text>>, number_of_axes> labels_;
+  std::vector<std::unique_ptr<draw::Point>> points_;
+  std::vector<std::unique_ptr<draw::Line>> lines_;
+  std::vector<std::unique_ptr<draw::Text>> text_;
 
   struct TitleStyleDefaults : draw::DefaultTextStyleDefaults
   {
@@ -57,7 +70,7 @@ class Plot
   Plot(Rectangle const& geometry, draw::PlotAreaStyle plot_area_style, std::string title, TitleStyle title_style) :
     plot_area_(axes_geometry(geometry, plot_area_style.axes_line_width), plot_area_style),
     title_(title, plot_area_.geometry().offset_x() + 0.5 * plot_area_.geometry().width(),
-        plot_area_.geometry().offset_y() - title_style.offset, title_style) { }
+        plot_area_.geometry().offset_y() - 0.5 * plot_area_.geometry().offset_y() - title_style.offset, title_style) { }
 
   Plot(Rectangle const& geometry, draw::PlotAreaStyle plot_area_style, std::string title, TitleStyle title_style,
       std::string xlabel, XLabelStyle xlabel_style, std::string ylabel, YLabelStyle ylabel_style) :
@@ -83,7 +96,17 @@ class Plot
   void set_xrange(Range x_range) { set_range(x_axis, x_range); }
   void set_yrange(Range y_range) { set_range(y_axis, y_range); }
 
-  void add_to(boost::intrusive_ptr<Layer> const& layer);
+  double convert_x(double x) const;
+  double convert_y(double y) const;
+
+  void add_point(boost::intrusive_ptr<Layer> const& layer, double x, double y, draw::PointStyle point_style);
+  void add_curve(boost::intrusive_ptr<Layer> const& layer, std::vector<Point> const& points, draw::LineStyle line_style);
+  void add_text(boost::intrusive_ptr<Layer> const& layer, double x, double y, std::string const& text, draw::TextStyle<> text_style);
+  void add_line(boost::intrusive_ptr<Layer> const& layer, Point const& from, Point const& to,
+      draw::LineStyle line_style, LineExtend line_extend = LineExtend::none);
+  void add_line(boost::intrusive_ptr<Layer> const& layer, double nx, double ny, Point const& point, draw::LineStyle line_style);
+
+  void add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio = false);
 
  private:
   Rectangle axes_geometry(Rectangle const& geometry, double axes_line_width);
