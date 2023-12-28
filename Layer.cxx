@@ -41,7 +41,11 @@ void Layer::redraw(cairo_t* cr, StrokeExtents const& stroke_extents)
   DoutEntering(dc::notice, "Layer::redraw(ct, " << stroke_extents << ") [" << this << "]");
   for (LayerRegion* layer_region : regions_)
     if (stroke_extents.overlaps(layer_region->stroke_extents()))
+    {
+      cairo_save(cr);
       layer_region->redraw(cr);
+      cairo_restore(cr);
+    }
 }
 
 void Layer::remove(LayerRegion* layer_region)

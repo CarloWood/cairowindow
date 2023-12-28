@@ -69,7 +69,7 @@ class Point
   Point(double x, double y, PointStyle style) :
     shape_({x, y, style.is_filled() ? 5.0 : 4.0, style.is_filled() ? 5.0 : 4.0}, {
         .line_color = style.line_color(), .fill_color = style.fill_color(),
-        .shape = style.get_shape(), .at_corner = true })
+        .at_corner = true, .shape = style.get_shape() })
   {
   }
 

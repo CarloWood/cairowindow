@@ -3,6 +3,7 @@
 #include "draw/PlotArea.h"
 #include "draw/Text.h"
 #include "draw/Point.h"
+#include "draw/Circle.h"
 #include "Range.h"
 #include "Point.h"
 #include <boost/intrusive_ptr.hpp>
@@ -33,7 +34,8 @@ class Plot
   std::array<std::vector<std::unique_ptr<draw::Text>>, number_of_axes> labels_;
   std::vector<std::unique_ptr<draw::Point>> points_;
   std::vector<std::unique_ptr<draw::Line>> lines_;
-  std::vector<std::unique_ptr<draw::Text>> text_;
+  std::vector<std::unique_ptr<draw::Text>> texts_;
+  std::vector<std::unique_ptr<draw::Circle>> circles_;
 
   struct TitleStyleDefaults : draw::DefaultTextStyleDefaults
   {
@@ -105,8 +107,34 @@ class Plot
   void add_line(boost::intrusive_ptr<Layer> const& layer, Point const& from, Point const& to,
       draw::LineStyle line_style, LineExtend line_extend = LineExtend::none);
   void add_line(boost::intrusive_ptr<Layer> const& layer, double nx, double ny, Point const& point, draw::LineStyle line_style);
+  void add_circle(boost::intrusive_ptr<Layer> const& layer, Point const& center, double radius, draw::CircleStyle circle_style);
+  void add_circle(boost::intrusive_ptr<Layer> const& layer, Point const& center, double radius, draw::LineStyle line_style)
+  {
+    add_circle(layer, center, radius, draw::CircleStyle{.line_color = line_style.line_color,
+        .line_width = line_style.line_width});
+  }
 
   void add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio = false);
+
+  void remove_points()
+  {
+    points_.clear();
+  }
+
+  void remove_texts()
+  {
+    texts_.clear();
+  }
+
+  void remove_lines()
+  {
+    lines_.clear();
+  }
+
+  void remove_circles()
+  {
+    circles_.clear();
+  }
 
  private:
   Rectangle axes_geometry(Rectangle const& geometry, double axes_line_width);

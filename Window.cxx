@@ -67,7 +67,11 @@ void Window::update(StrokeExtents const& stroke_extents)
     for (auto const& layer : layers_)
     {
       if (layer->area() < area_limit)
+      {
+        cairo_save(offscreen_cr_);
         layer->redraw(offscreen_cr_, stroke_extents);
+        cairo_restore(offscreen_cr_);
+      }
       else
       {
         cairo_set_source_surface(offscreen_cr_, layer->surface(), layer->offset_x(), layer->offset_y());

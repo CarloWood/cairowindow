@@ -57,8 +57,10 @@ void DebugWindow::main_loop(cairo_surface_t* shared_surface, std::string title)
       if (event.type == Expose)
       {
         std::lock_guard<std::mutex> lock(surface_mutex_);
+        cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
         cairo_set_source_surface(cr, shared_surface, 0, 0);
         cairo_paint(cr);
+        cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
       }
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(200)); // Limit CPU usage.

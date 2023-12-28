@@ -170,8 +170,8 @@ void Plot::add_curve(boost::intrusive_ptr<Layer> const& layer, std::vector<Point
 
 void Plot::add_text(boost::intrusive_ptr<Layer> const& layer, double x, double y, std::string const& text, draw::TextStyle<> text_style)
 {
-  text_.emplace_back(std::make_unique<draw::Text>(text, convert_x(x), convert_y(y), text_style));
-  layer->draw(text_.back());
+  texts_.emplace_back(std::make_unique<draw::Text>(text, convert_x(x), convert_y(y), text_style));
+  layer->draw(texts_.back());
 }
 
 void Plot::add_line(boost::intrusive_ptr<Layer> const& layer, Point const& from, Point const& to,
@@ -216,6 +216,14 @@ void Plot::add_line(boost::intrusive_ptr<Layer> const& layer, double nx, double 
 
   lines_.emplace_back(std::make_unique<draw::Line>(convert_x(x1), convert_y(y1), convert_x(x2), convert_y(y2), line_style));
   layer->draw(lines_.back());
+}
+
+void Plot::add_circle(boost::intrusive_ptr<Layer> const& layer, Point const& center, double radius, draw::CircleStyle circle_style)
+{
+  circles_.emplace_back(std::make_unique<draw::Circle>(
+        Rectangle{convert_x(center.x()), convert_y(center.y()), convert_x(radius) - convert_x(0), convert_y(0) - convert_y(radius)},
+        circle_style));
+  layer->draw(circles_.back());
 }
 
 } // namespace cairowindow::plot

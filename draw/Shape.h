@@ -27,16 +27,18 @@ ShapeEnum next_shape();
 
 struct ShapeStyle
 {
+  // Must start with the same style variables as CircleStyle, because we do a reinterpret_cast between the two!
   Color line_color = color::transparent;
   Color fill_color = color::transparent;
   double line_width = 2.0;
-  ShapeEnum shape = rectangle;
   bool at_corner = false;
+  // This only exists in ShapeStyle.
+  ShapeEnum shape = rectangle;
 };
 
 class Shape : public LayerRegion
 {
- private:
+ protected:
   Rectangle geometry_;
   ShapeStyle style_;
 
