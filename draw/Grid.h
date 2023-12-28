@@ -4,6 +4,7 @@
 #include "cairowindow/MultiRegion.h"
 #include <array>
 #include <vector>
+#include <memory>
 
 namespace cairowindow::draw {
 

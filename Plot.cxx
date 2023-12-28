@@ -3,6 +3,7 @@
 #include "Plot.h"
 #include "intersection_points.h"
 #include <cmath>
+#include <iomanip>
 
 namespace cairowindow::plot {
 
