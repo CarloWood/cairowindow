@@ -36,10 +36,42 @@ void DebugWindowVars::close_window(cairo_t* cr)
 
 void DebugWindow::main_loop(cairo_surface_t* shared_surface, std::string title)
 {
-  Debug(NAMESPACE_DEBUG::init_thread(title));
-
-  cairo_t* cr = variables_type::wat{variables_}->open_window(title);
+  cairo_t* cr;
+  double width;
+  double height;
+  {
+    variables_type::wat variables_w{variables_};
+    cr = variables_w->open_window(title);
+    width = variables_w->width_;
+    height = variables_w->height_;
+  }
   until_window_opened_.open();
+
+  // Define the size of the tiles in the checkerboard pattern.
+  int const tileSize = 20;
+  double const lightGray = 0.8; // Light gray for one set of tiles.
+  double const darkGray = 0.5;  // Dark gray for the other set of tiles.
+
+  // Create a pattern surface to draw the checkerboard pattern.
+  cairo_surface_t* pattern_surface = cairo_surface_create_similar(cairo_get_target(cr), CAIRO_CONTENT_COLOR, tileSize * 2, tileSize * 2);
+  cairo_t* pattern_cr = cairo_create(pattern_surface);
+
+  // Draw the checkerboard pattern.
+  // Light gray squares.
+  cairo_set_source_rgb(pattern_cr, lightGray, lightGray, lightGray);
+  cairo_rectangle(pattern_cr, 0, 0, tileSize, tileSize);
+  cairo_rectangle(pattern_cr, tileSize, tileSize, tileSize, tileSize);
+  cairo_fill(pattern_cr);
+
+  // Dark gray squares.
+  cairo_set_source_rgb(pattern_cr, darkGray, darkGray, darkGray);
+  cairo_rectangle(pattern_cr, tileSize, 0, tileSize, tileSize);
+  cairo_rectangle(pattern_cr, 0, tileSize, tileSize, tileSize);
+  cairo_fill(pattern_cr);
+
+  // Set the pattern as the source for the main context.
+  cairo_pattern_t* pattern = cairo_pattern_create_for_surface(pattern_surface);
+  cairo_pattern_set_extend(pattern, CAIRO_EXTEND_REPEAT);
 
   running_ = true;
   while (running_)
@@ -57,14 +89,20 @@ void DebugWindow::main_loop(cairo_surface_t* shared_surface, std::string title)
       if (event.type == Expose)
       {
         std::lock_guard<std::mutex> lock(surface_mutex_);
-        cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
+        cairo_set_source(cr, pattern);
+        cairo_rectangle(cr, 0, 0, width, height);
+        cairo_fill(cr);
         cairo_set_source_surface(cr, shared_surface, 0, 0);
         cairo_paint(cr);
-        cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
       }
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(200)); // Limit CPU usage.
   }
+
+  // Clean up.
+  cairo_pattern_destroy(pattern);
+  cairo_destroy(pattern_cr);
+  cairo_surface_destroy(pattern_surface);
 
   variables_type::wat{variables_}->close_window(cr);
 }

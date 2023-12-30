@@ -24,7 +24,7 @@ class Layer : public AIRefCount
   cairo_surface_t* surface_;
   cairo_t* cr_;
   Rectangle rectangle_;
-  std::vector<LayerRegion*> regions_;
+  std::vector<std::weak_ptr<LayerRegion>> regions_;
   double region_areas_; // Total area of all regions_.
 #ifdef CAIROWINDOW_DEBUGWINDOW
   DebugWindow debug_window_;
@@ -37,16 +37,10 @@ class Layer : public AIRefCount
 
   Layer(Layer const& layer) = delete;
 
- void draw(LayerRegion* layer_region)
+  void draw(std::shared_ptr<LayerRegion> const& layer_region)
   {
-    regions_.push_back(layer_region);
+    regions_.emplace_back(layer_region);
     layer_region->draw(this);
-  }
-
-  template<LayerRegionType LRT>
-  void draw(std::unique_ptr<LRT> const& layer_region)
-  {
-    draw(layer_region.get());
   }
 
   void draw(MultiRegion* multi_region)
@@ -54,7 +48,7 @@ class Layer : public AIRefCount
     multi_region->draw_regions_on(this);
   }
 
-  void remove(LayerRegion* layer_region);
+  void remove(LayerRegion const* layer_region);
 
   void window_update(StrokeExtents const& stroke_extents)
   {

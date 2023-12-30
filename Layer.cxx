@@ -39,18 +39,44 @@ Layer::~Layer()
 void Layer::redraw(cairo_t* cr, StrokeExtents const& stroke_extents)
 {
   DoutEntering(dc::notice, "Layer::redraw(ct, " << stroke_extents << ") [" << this << "]");
-  for (LayerRegion* layer_region : regions_)
-    if (stroke_extents.overlaps(layer_region->stroke_extents()))
+  bool clip_rectangle_set = false;
+  auto last = regions_.end();
+  for (auto it = regions_.begin(); it != last;)
+  {
+    auto layer_region = it->lock();
+    if (!layer_region)
     {
-      cairo_save(cr);
-      layer_region->redraw(cr);
-      cairo_restore(cr);
+      if (it == --last)
+        break;
+      std::iter_swap(it, last);
     }
+    else
+    {
+      if (stroke_extents.overlaps(layer_region->stroke_extents()))
+      {
+        if (!clip_rectangle_set)
+        {
+          cairo_save(cr);
+          stroke_extents.set_path(cr);
+          cairo_clip(cr);
+          clip_rectangle_set = true;
+        }
+        cairo_save(cr);
+        layer_region->redraw(cr);
+        cairo_restore(cr);
+      }
+      ++it;
+    }
+  }
+  if (clip_rectangle_set)
+    cairo_restore(cr);
+  regions_.erase(last, regions_.end());
 }
 
-void Layer::remove(LayerRegion* layer_region)
+void Layer::remove(LayerRegion const* layer_region)
 {
-  regions_.erase(std::remove(regions_.begin(), regions_.end(), layer_region), regions_.end());
+  regions_.erase(std::remove_if(regions_.begin(), regions_.end(),
+        [](std::weak_ptr<LayerRegion> const& wp){ return wp.expired(); }), regions_.end());
   // Replace rectangle with background color.
   cairo_save(cr_);
   cairo_translate(cr_, -rectangle_.offset_x(), -rectangle_.offset_y());

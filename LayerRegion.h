@@ -21,13 +21,14 @@ class LayerRegion
 
  public:
   LayerRegion() : layer_(nullptr) { }
+  LayerRegion(std::function<StrokeExtents(cairo_t*)> user_draw) : layer_(nullptr), draw_(user_draw) { }
   ~LayerRegion();
 
   void draw(Layer* layer);
-  void draw(Layer* layer, std::function<StrokeExtents(cairo_t*)> user_draw)
+
+  void set_draw_function(std::function<StrokeExtents(cairo_t*)> user_draw)
   {
     draw_ = user_draw;
-    draw(layer);
   }
 
   StrokeExtents redraw(cairo_t* cr)

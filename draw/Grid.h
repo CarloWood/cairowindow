@@ -22,7 +22,7 @@ class Grid : public MultiRegion
  private:
   Rectangle geometry_;          // The geometry passed to the constructor. This is the path used for the large rectangle around the plot area.
   std::array<int, number_of_axes> ticks_;
-  std::vector<std::unique_ptr<Line>> lines_;
+  std::vector<std::shared_ptr<Line>> lines_;
 
   // Implementation of MultiRegion.
   void draw_regions_on(Layer* layer) override;

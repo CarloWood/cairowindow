@@ -60,22 +60,19 @@ struct PointStyle {
   }
 };
 
-class Point
+class Point : public Shape
 {
- private:
-  Shape shape_;
-
  public:
   Point(double x, double y, PointStyle style) :
-    shape_({x, y, style.is_filled() ? 5.0 : 4.0, style.is_filled() ? 5.0 : 4.0}, {
-        .line_color = style.line_color(), .fill_color = style.fill_color(),
-        .at_corner = true, .shape = style.get_shape() })
+    Shape({x, y, style.is_filled() ? 5.0 : 4.0, style.is_filled() ? 5.0 : 4.0},
+          { .line_color = style.line_color(), .fill_color = style.fill_color(), .at_corner = true, .shape = style.get_shape() })
   {
+    DoutEntering(dc::notice, "Point(" << x << ", " << y << ", style) [" << this << "]");
   }
 
-  operator LayerRegion*()
+  ~Point()
   {
-    return &shape_;
+    DoutEntering(dc::notice, "~Point() [" << this << "]");
   }
 };
 

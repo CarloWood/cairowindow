@@ -92,10 +92,15 @@ void PlotArea::draw_regions_on(Layer* layer)
     return stroke(cr);
   };
 
-  axes_[x_axis][min_range].draw(layer, x_axis_min);
-  axes_[x_axis][max_range].draw(layer, x_axis_max);
-  axes_[y_axis][min_range].draw(layer, y_axis_min);
-  axes_[y_axis][max_range].draw(layer, y_axis_max);
+  axes_[x_axis][min_range] = std::make_shared<LayerRegion>(x_axis_min);
+  axes_[x_axis][max_range] = std::make_shared<LayerRegion>(x_axis_max);
+  axes_[y_axis][min_range] = std::make_shared<LayerRegion>(y_axis_min);
+  axes_[y_axis][max_range] = std::make_shared<LayerRegion>(y_axis_max);
+
+  layer->draw(axes_[x_axis][min_range]);
+  layer->draw(axes_[x_axis][max_range]);
+  layer->draw(axes_[y_axis][min_range]);
+  layer->draw(axes_[y_axis][max_range]);
 }
 
 void PlotArea::set_range(int axis, double range_min, double range_max)

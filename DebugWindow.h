@@ -32,7 +32,7 @@ struct DebugWindowVars
   double width_;
   double height_;
 
-  cairo_t* open_window(std::string const& title);
+  [[nodiscard]] cairo_t* open_window(std::string const& title);
   void close_window(cairo_t* cr);
 
   void trigger_expose_event();
@@ -52,6 +52,7 @@ struct DebugWindow
 
   static void thread_function(DebugWindow* self, cairo_surface_t* shared_surface, std::string title)
   {
+    Debug(NAMESPACE_DEBUG::init_thread(title));
     self->main_loop(shared_surface, title);
   }
 

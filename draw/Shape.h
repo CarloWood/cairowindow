@@ -34,6 +34,10 @@ struct ShapeStyle
   bool at_corner = false;
   // This only exists in ShapeStyle.
   ShapeEnum shape = rectangle;
+
+#ifdef CWDEBUG
+  void print_on(std::ostream& os) const;
+#endif
 };
 
 class Shape : public LayerRegion
@@ -52,6 +56,7 @@ class Shape : public LayerRegion
   StrokeExtents do_draw(cairo_t* cr) override
   {
     DoutEntering(dc::notice, "draw::Shape::do_draw(cr) [" << this << "]");
+    Dout(dc::notice, "geometry_ = " << geometry_ << "; style_ = " << style_);
 
     bool do_stroke = !style_.line_color.is_transparent();
     bool do_fill = !style_.fill_color.is_transparent();

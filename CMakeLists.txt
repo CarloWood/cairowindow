@@ -60,6 +60,7 @@ set_property(
 target_sources(cairowindow_ObjLib
   PRIVATE
     "Color.cxx"
+    "Direction.cxx"
     "Layer.cxx"
     "Window.cxx"
     "EventLoop.cxx"
@@ -68,6 +69,7 @@ target_sources(cairowindow_ObjLib
     "draw/PlotArea.cxx"
     "draw/Grid.cxx"
     "draw/Shape.cxx"
+    "draw/Curve.cxx"
 
     "Color.h"
     "Rectangle.h"

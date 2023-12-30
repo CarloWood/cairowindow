@@ -43,7 +43,7 @@ class PlotArea : public MultiRegion
   bool draw_grid_;
   draw::Grid grid_;
 
-  std::array<std::array<LayerRegion, 2>, number_of_axes> axes_;
+  std::array<std::array<std::shared_ptr<LayerRegion>, 2>, number_of_axes> axes_;
   std::array<std::array<double, 2>, number_of_axes> range_{{{0, 1}, {0, 1}}};
 
  public:
