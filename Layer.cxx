@@ -2,6 +2,9 @@
 #include "Layer.h"
 #include "Window.h"
 #include "debug.h"
+#ifdef CWDEBUG
+#include "cairowindow/debugcairo.h"
+#endif
 
 namespace cairowindow {
 
@@ -9,9 +12,16 @@ Layer::Layer(cairo_surface_t* x11_surface, Rectangle const& rectangle, cairo_con
     COMMA_DEBUG_ONLY(std::string debug_name)) :
   color_(color), window_(window), rectangle_(rectangle), region_areas_(0.0)
 {
+  DoutEntering(dc::notice, "Layer::Layer(" << x11_surface << ", " << rectangle << ", " << content << ", " << color << ", " << window <<
+      ", \"" << debug_name << "\") [" << this << "]");
+#ifdef CWDEBUG
+  using namespace debugcairo;
+#endif
   // Create an off-screen surface for tripple buffering.
-  surface_ = cairo_surface_create_similar(x11_surface, content, rectangle.width(), rectangle.height());
-  cr_ = cairo_create(surface_);
+  surface_ = cairo_surface_create_similar(x11_surface, content, rectangle.width(), rectangle.height()
+      COMMA_CWDEBUG_ONLY("Layer::surface_:\"" + debug_name + "\""));
+  cr_ = cairo_create(surface_
+      COMMA_CWDEBUG_ONLY("Layer::cr_:\"" + debug_name + "\""));
 #ifdef CAIROWINDOW_DEBUGWINDOW
   debug_window_.start(surface_, rectangle.width(), rectangle.height(), debug_name);
 #endif
@@ -28,6 +38,10 @@ Layer::Layer(cairo_surface_t* x11_surface, Rectangle const& rectangle, cairo_con
 
 Layer::~Layer()
 {
+  DoutEntering(dc::notice, "Layer::~Layer() [" << this << "]");
+#ifdef CWDEBUG
+  using namespace debugcairo;
+#endif
 #ifdef CAIROWINDOW_DEBUGWINDOW
   debug_window_.terminate();
 #endif
@@ -38,7 +52,10 @@ Layer::~Layer()
 
 void Layer::redraw(cairo_t* cr, StrokeExtents const& stroke_extents)
 {
-  DoutEntering(dc::notice, "Layer::redraw(ct, " << stroke_extents << ") [" << this << "]");
+  DoutEntering(dc::notice, "Layer::redraw(" << cr << ", " << stroke_extents << ") [" << this << "]");
+#ifdef CWDEBUG
+  using namespace debugcairo;
+#endif
   bool clip_rectangle_set = false;
   auto last = regions_.end();
   for (auto it = regions_.begin(); it != last;)
@@ -75,6 +92,10 @@ void Layer::redraw(cairo_t* cr, StrokeExtents const& stroke_extents)
 
 void Layer::remove(LayerRegion const* layer_region)
 {
+  DoutEntering(dc::notice, "Layer::remove(" << layer_region << ") [" << this << "]");
+#ifdef CWDEBUG
+  using namespace debugcairo;
+#endif
   regions_.erase(std::remove_if(regions_.begin(), regions_.end(),
         [](std::weak_ptr<LayerRegion> const& wp){ return wp.expired(); }), regions_.end());
   // Replace rectangle with background color.

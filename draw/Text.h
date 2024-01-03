@@ -5,11 +5,15 @@
 #include "cairowindow/StrokeExtents.h"
 #include "cairowindow/Defaults.h"
 #include <string>
+#ifdef CWDEBUG
+#include "cairowindow/debugcairo.h"
+#endif
 
 namespace cairowindow::draw {
 
 enum TextPosition
 {
+  undefined,
   above_right_of,
   above_left_of,
   below_right_of,
@@ -38,6 +42,19 @@ struct DefaultTextStyleDefaults
   static constexpr double rotation = 0.0;        // Clock-wise rotation in radians.
 };
 
+struct TextStyleDelta
+{
+  static constexpr double undefined_offset_magic = 12345678.9;
+  static constexpr double undefined_rotation_magic = -3000000.0;
+
+  TextPosition position   = undefined;
+  double font_size        = -1.0;
+  Color color{};
+  std::string font_family{};
+  double offset           = undefined_offset_magic;
+  double rotation         = undefined_rotation_magic;
+};
+
 template<typename Defaults = DefaultTextStyleDefaults>
 struct TextStyle
 {
@@ -50,10 +67,40 @@ struct TextStyle
 
   void setup(cairo_t* cr)
   {
+    DoutEntering(dc::notice, "TextStyle<" << libcwd::type_info_of<Defaults>().demangled_name() << ">::setup(" << cr << ") [" << this << "]");
+#ifdef CWDEBUG
+    using namespace debugcairo;
+#endif
     cairo_select_font_face(cr, font_family.c_str(), CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
     cairo_set_font_size(cr, font_size);
     cairo_set_source_rgb(cr, color.red(), color.green(), color.blue());
   }
+
+  TextStyle operator()(TextStyleDelta delta)
+  {
+    TextStyle result{*this};
+    if (delta.position != undefined)
+      result.position = delta.position;
+    if (delta.font_size != -1.0)
+      result.font_size = delta.font_size;
+    if (delta.color.is_defined())
+      result.color = delta.color;
+    if (!delta.font_family.empty())
+      result.font_family = delta.font_family;
+    if (delta.offset != TextStyleDelta::undefined_offset_magic)
+      result.offset = delta.offset;
+    if (delta.rotation != TextStyleDelta::undefined_rotation_magic)
+      result.rotation = delta.rotation;
+    return result;
+  }
+
+#ifdef CWDEBUG
+  friend std::ostream& operator<<(std::ostream& os, TextStyle const* text_style_ptr)
+  {
+    os << "TextStyle*";
+    return os;
+  }
+#endif
 };
 
 struct TextStyleNoDefault : TextStyle<>
@@ -112,45 +159,60 @@ class Text : public LayerRegion
  private:
   StrokeExtents do_draw(cairo_t* cr) override
   {
-    DoutEntering(dc::notice, "Text::do_draw(cr)");
+    DoutEntering(dc::notice, "Text::do_draw(" << cr << ") [" << this << "]");
+#ifdef CWDEBUG
+    using namespace debugcairo;
+#endif
     style_.setup(cr);
     cairo_text_extents_t extents;
+    Dout(dc::notice, "Drawing \"" << text_ << "\" at position (" << pos_x_ << ", " << pos_y_ << ")");
     cairo_text_extents(cr, text_.c_str(), &extents);
     cairo_translate(cr, pos_x_, pos_y_);
     cairo_rotate(cr, style_.rotation);
     double tx = 0;
-    double ty = -style_.offset;
+    double ty = 0;
     switch (style_.position)
     {
+      case undefined:
+        ASSERT(false);
       case above_right_of:
+        tx += style_.offset;
         break;
       case above_left_of:
+        tx -= style_.offset;
         tx -= extents.x_advance;
         break;
       case below_right_of:
+        tx += style_.offset;
         ty -= extents.y_bearing;
         break;
       case below_left_of:
+        tx -= style_.offset;
         tx -= extents.x_advance;
         ty -= extents.y_bearing;
         break;
       case centered_right_of:
+        tx += style_.offset;
         ty -= 0.5 * extents.y_bearing;
         break;
       case centered_left_of:
+        tx -= style_.offset;
         tx -= extents.x_advance;
         ty -= 0.5 * extents.y_bearing;
         break;
       case centered_above:
+        ty -= style_.offset;
         tx -= extents.x_bearing + 0.5 * extents.width;
         break;
       case centered_below:
+        ty += style_.offset;
         tx -= extents.x_bearing + 0.5 * extents.width;
         ty -= extents.y_bearing;
         break;
       case centered:
         tx -= extents.x_bearing + 0.5 * extents.width;
         ty -= 0.5 * extents.y_bearing;
+        break;
     }
     cairo_translate(cr, tx, ty);
     cairo_show_text(cr, text_.c_str());
@@ -163,6 +225,13 @@ class Text : public LayerRegion
     cairo_get_matrix(cr, &m);
     cairo_matrix_transform_point(&m, &x1, &y1);
     cairo_matrix_transform_point(&m, &x2, &y2);
+    // Due to (90 degree) rotation the coordinates are possibly no longer ordered.
+    // The second coordinate must be the largest.
+    if (x2 < x1)
+      std::swap(x1, x2);
+    if (y2 < y1)
+      std::swap(y1, y2);
+    Dout(dc::notice, "Returning (" << x1 << ", " << y1 << ", " << x2 << ", " << y2 << ")");
     return { x1, y1, x2, y2 };
   }
 };

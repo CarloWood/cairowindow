@@ -5,12 +5,18 @@
 #include <X11/Xatom.h>
 #include <mutex>
 #include "debug.h"
+#ifdef CWDEBUG
+#include "cairowindow/debugcairo.h"
+#endif
 
 namespace cairowindow {
 
 Window::Window(std::string title, int width, int height) : width_(width), height_(height), running_(false)
 {
-  DoutEntering(dc::notice, "cairowindow::Window(\"" << title << "\", " << width << ", " << height << ")");
+  DoutEntering(dc::notice, "cairowindow::Window(\"" << title << "\", " << width << ", " << height << ") [" << this << "]");
+#ifdef CWDEBUG
+  using namespace debugcairo;
+#endif
 
   display_ = XOpenDisplay(nullptr);
   if (!display_)
@@ -28,12 +34,16 @@ Window::Window(std::string title, int width, int height) : width_(width), height
   XSetWMProtocols(display_, x11window_, &wm_delete_window_, 1);
 
   // Create an X11 surface for the window.
-  x11_surface_ = cairo_xlib_surface_create(display_, x11window_, DefaultVisual(display_, screen), width, height);
-  win_cr_ = cairo_create(x11_surface_);
+  x11_surface_ = cairo_xlib_surface_create(display_, x11window_, DefaultVisual(display_, screen), width, height
+    COMMA_CWDEBUG_ONLY("Window::x11_surface_:\"" + title + "\""));
+  win_cr_ = cairo_create(x11_surface_
+    COMMA_CWDEBUG_ONLY("Window::win_cr_:\"" + title + "\""));
 
   // Create an off-screen surface for double buffering.
-  offscreen_surface_ = cairo_surface_create_similar(x11_surface_, CAIRO_CONTENT_COLOR, width, height);
-  offscreen_cr_ = cairo_create(offscreen_surface_);
+  offscreen_surface_ = cairo_surface_create_similar(x11_surface_, CAIRO_CONTENT_COLOR, width, height
+      COMMA_CWDEBUG_ONLY("Window::offscreen_surface_:\"" + title + "\""));
+  offscreen_cr_ = cairo_create(offscreen_surface_
+      COMMA_CWDEBUG_ONLY("Window::offscreen_cr_:\"" + title + "\""));
 #ifdef CAIROWINDOW_DEBUGWINDOW
   debug_window_.start(offscreen_surface_, width, height, "offscreen_surface_");
 #endif
@@ -41,6 +51,10 @@ Window::Window(std::string title, int width, int height) : width_(width), height
 
 Window::~Window()
 {
+  DoutEntering(dc::notice, "Window::~Window() [" << this << "]");
+#ifdef CWDEBUG
+  using namespace debugcairo;
+#endif
 #ifdef CAIROWINDOW_DEBUGWINDOW
   debug_window_.terminate();
 #endif
@@ -54,7 +68,10 @@ Window::~Window()
 
 void Window::update(StrokeExtents const& stroke_extents)
 {
-  DoutEntering(dc::notice, "Window::update(" << stroke_extents << ")");
+  DoutEntering(dc::notice, "Window::update(" << stroke_extents << ") [" << this << "]");
+#ifdef CWDEBUG
+  using namespace debugcairo;
+#endif
 
   double const area_limit = stroke_extents.area() / 4;
   cairo_save(offscreen_cr_);
@@ -132,6 +149,10 @@ struct ExposeEventRect
 
 void Window::event_loop()
 {
+  DoutEntering(dc::notice, "Window::event_loop() [" << this << "]");
+#ifdef CWDEBUG
+  using namespace debugcairo;
+#endif
   std::vector<ExposeEventRect> expose_events;
   int keypress_events = 0;
   // Event loop.
@@ -157,6 +178,7 @@ void Window::event_loop()
             expose_events.clear();
           }
           cairo_rectangle(win_cr_, expose_event->x, expose_event->y, expose_event->width, expose_event->height);
+          ASSERT(expose_event->x >= 0 && expose_event->y >= 0 && expose_event->x + expose_event->width <= 1200 && expose_event->y + expose_event->height <= 900);
           cairo_clip(win_cr_);
           {
             std::lock_guard<std::mutex> lock(offscreen_surface_mutex_);

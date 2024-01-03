@@ -2,12 +2,18 @@
 #include "LayerRegion.h"
 #include "Layer.h"
 #include "debug.h"
+#ifdef CWDEBUG
+#include "cairowindow/debugcairo.h"
+#endif
 
 namespace cairowindow {
 
 void LayerRegion::draw(Layer* layer)
 {
   DoutEntering(dc::notice, "LayerRegion::draw(" << layer << ") [" << this << "]");
+#ifdef CWDEBUG
+  using namespace debugcairo;
+#endif
 
   // Only call draw once.
   ASSERT(!layer_);

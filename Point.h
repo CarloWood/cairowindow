@@ -2,6 +2,8 @@
 
 namespace cairowindow {
 
+class Direction;
+
 class Point
 {
  private:
@@ -13,6 +15,8 @@ class Point
 
   double x() const { return x_; }
   double y() const { return y_; }
+
+  Point operator+(Direction const& direction);
 };
 
 } // namespace cairowindow

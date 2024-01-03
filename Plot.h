@@ -5,6 +5,7 @@
 #include "draw/Point.h"
 #include "draw/Circle.h"
 #include "draw/Curve.h"
+#include "draw/Connector.h"
 #include "Range.h"
 #include "Point.h"
 #include "Circle.h"
@@ -12,6 +13,7 @@
 #include "LinePiece.h"
 #include "Line.h"
 #include "Curve.h"
+#include "Connector.h"
 #include <boost/intrusive_ptr.hpp>
 #include <string>
 #include <vector>
@@ -24,8 +26,8 @@ class Point : public cairowindow::Point
 {
  public:
   using cairowindow::Point::Point;
-  Point(double x, double y, std::shared_ptr<draw::Point> const& draw_object) :
-    cairowindow::Point(x, y), draw_object_(draw_object) { }
+  Point(cairowindow::Point const& point, std::shared_ptr<draw::Point> const& draw_object) :
+    cairowindow::Point(point), draw_object_(draw_object) { }
 
  private:
   friend class Plot;
@@ -72,8 +74,8 @@ class Line : public cairowindow::Line
 {
  public:
   using cairowindow::Line::Line;
-  Line(cairowindow::Direction normal, cairowindow::Point point, std::shared_ptr<draw::Line> const& draw_object) :
-    cairowindow::Line(normal, point), draw_object_(draw_object) { }
+  Line(cairowindow::Direction direction, cairowindow::Point point, std::shared_ptr<draw::Line> const& draw_object) :
+    cairowindow::Line(direction, point), draw_object_(draw_object) { }
 
  public:
   friend class Plot;
@@ -92,6 +94,25 @@ class Curve : public cairowindow::Curve
  public:
   friend class Plot;
   mutable std::shared_ptr<draw::Curve> draw_object_;
+};
+
+class Connector : public cairowindow::Connector
+{
+ public:
+  using cairowindow::Connector::Connector;
+  Connector(Point const& from, Point const& to, ArrowHeadShape head_from, ArrowHeadShape head_to,
+      std::shared_ptr<draw::Connector> const& draw_object) :
+    cairowindow::Connector(from, to, head_from, head_to), draw_object_(draw_object) { }
+
+  Connector(Point const& from, Point const& to, ArrowHeadShape head_to, std::shared_ptr<draw::Connector> const& draw_object) :
+    cairowindow::Connector(from, to, head_to), draw_object_(draw_object) { }
+
+  Connector(Point const& from, Point const& to, std::shared_ptr<draw::Connector> const& draw_object) :
+    cairowindow::Connector(from, to), draw_object_(draw_object) { }
+
+ public:
+  friend class Plot;
+  mutable std::shared_ptr<draw::Connector> draw_object_;
 };
 
 enum class LineExtend
@@ -130,14 +151,14 @@ class Plot
 
   struct XLabelStyleDefaults : LabelStyleDefaults
   {
-    static constexpr double offset = -10.0;
+    static constexpr double offset = 10.0;
   };
 
   struct YLabelStyleDefaults : LabelStyleDefaults
   {
     static constexpr draw::TextPosition position = draw::centered_above;
     static constexpr double rotation = -0.5 * M_PI;
-    static constexpr double offset = -XLabelStyleDefaults::offset;
+    static constexpr double offset = XLabelStyleDefaults::offset;
   };
 
  public:
@@ -158,7 +179,7 @@ class Plot
     title_(std::make_shared<draw::Text>(title, plot_area_.geometry().offset_x() + 0.5 * plot_area_.geometry().width(),
         plot_area_.geometry().offset_y() - 0.5 * plot_area_.geometry().offset_y() - title_style.offset, title_style)),
     xlabel_(std::make_shared<draw::Text>(xlabel, plot_area_.geometry().offset_x() + 0.5 * plot_area_.geometry().width(),
-        plot_area_.geometry().offset_y() + plot_area_.geometry().height() - XLabelStyleDefaults::offset, xlabel_style)),
+        plot_area_.geometry().offset_y() + plot_area_.geometry().height() + XLabelStyleDefaults::offset, xlabel_style)),
     ylabel_(std::make_shared<draw::Text>(ylabel, plot_area_.geometry().offset_x() - YLabelStyleDefaults::offset,
         plot_area_.geometry().offset_y() + 0.5 * plot_area_.geometry().height(), ylabel_style)) { }
 
@@ -167,7 +188,7 @@ class Plot
 
   void set_range(int axis, Range range)
   {
-    DoutEntering(dc::notice, "Plot::set_range(" << axis << ", " << range << ")");
+    DoutEntering(dc::notice, "Plot::set_range(" << axis << ", " << range << ") [" << this << "]");
     range_[axis] = range;
     range_ticks_[axis] = draw::PlotArea::calculate_range_ticks(range_[axis]);
     Dout(dc::notice, "range_[" << axis << "] = " << range_[axis] << "; range_ticks_[" << axis << "] = " << range_ticks_[axis]);
@@ -181,49 +202,70 @@ class Plot
 
   // Create and draw a point on layer at x,y using point_style.
   [[nodiscard]] Point create_point(boost::intrusive_ptr<Layer> const& layer,
-      double x, double y, draw::PointStyle point_style);
+      cairowindow::Point const& point, draw::PointStyle const& point_style);
 
   // Create and draw a circle on layer with center and radius using circle_style.
   [[nodiscard]] Circle create_circle(boost::intrusive_ptr<Layer> const& layer,
-      cairowindow::Point const& center, double radius, draw::CircleStyle circle_style);
+      cairowindow::Point const& center, double radius, draw::CircleStyle const& circle_style);
 
   // Same as above but use line_style (no fill_color).
   [[nodiscard]] Circle create_circle(boost::intrusive_ptr<Layer> const& layer,
-      cairowindow::Point const& center, double radius, draw::LineStyle line_style)
+      cairowindow::Point const& center, double radius, draw::LineStyle const& line_style)
   {
     return create_circle(layer, center, radius, draw::CircleStyle{.line_color = line_style.line_color, .line_width = line_style.line_width});
   }
 
   // Create and draw text on layer at position using text_style.
   [[nodiscard]] Text create_text(boost::intrusive_ptr<Layer> const& layer,
-      cairowindow::Point const& position, std::string const& text, draw::TextStyle<> text_style);
+      cairowindow::Point const& position, std::string const& text, draw::TextStyle<> const& text_style);
 
   // Create and draw a line piece between points from and to using line_style and line_extend.
   [[nodiscard]] LinePiece create_line(boost::intrusive_ptr<Layer> const& layer,
-      cairowindow::Point const& from, cairowindow::Point const& to, draw::LineStyle line_style, LineExtend line_extend = LineExtend::none);
+      cairowindow::Point const& from, cairowindow::Point const& to, draw::LineStyle const& line_style,
+      LineExtend line_extend = LineExtend::none);
 
-  // Create and draw a line perpendicular to normal and through point using line_style.
+  // Create and draw a line through point in direction using line_style.
   [[nodiscard]] Line create_line(boost::intrusive_ptr<Layer> const& layer,
-      cairowindow::Point const& point, cairowindow::Direction const& normal, draw::LineStyle line_style);
+      cairowindow::Point const& point, cairowindow::Direction const& direction, draw::LineStyle const& line_style);
+
+  // Create and draw a line according to Line using line_style.
+  [[nodiscard]] Line create_line(boost::intrusive_ptr<Layer> const& layer,
+      cairowindow::Line const& line, draw::LineStyle const& line_style)
+  {
+    return create_line(layer, line.point(), line.direction(), line_style);
+  }
 
   [[nodiscard]] Curve create_curve(boost::intrusive_ptr<Layer> const& layer,
-      std::vector<cairowindow::Point>&& points, draw::LineStyle line_style);
+      std::vector<cairowindow::Point>&& points, draw::LineStyle const& line_style);
 
   // Same, but pass an already existing plot_point. If plot_point was added before
   // then it will be removed from the plot and then added to the new coordinates.
   void add_point(boost::intrusive_ptr<Layer> const& layer,
-      Point const& plot_point, draw::PointStyle point_style);
+      Point const& plot_point, draw::PointStyle const& point_style);
 
   void add_text(boost::intrusive_ptr<Layer> const& layer,
-      Text const& text, draw::TextStyle<> text_style);
+      Text const& text, draw::TextStyle<> const& text_style);
 
-  void add_line(boost::intrusive_ptr<Layer> const& layer, LinePiece const& plot_line_piece, draw::LineStyle line_style, LineExtend line_extend = LineExtend::none);
+  void add_line(boost::intrusive_ptr<Layer> const& layer, LinePiece const& plot_line_piece,
+      draw::LineStyle const& line_style, LineExtend line_extend = LineExtend::none);
+
+  void add_connector(boost::intrusive_ptr<Layer> const& layer, Connector const& plot_connector,
+      draw::LineStyle const& line_style, Color fill_color = color::white);
 
   void add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio = false);
 
  private:
   Rectangle axes_geometry(Rectangle const& geometry, double axes_line_width);
   void apply_line_extend(double& x1, double& y1, double& x2, double& y2, LineExtend line_extend);
+
+ public:
+#ifdef CWDEBUG
+  friend std::ostream& operator<<(std::ostream& os, Plot const* plot_ptr)
+  {
+    os << "Plot*";
+    return os;
+  }
+#endif
 };
 
 } // namespace cairowindow::plot

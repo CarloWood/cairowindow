@@ -9,6 +9,7 @@
 #include <mutex>
 #include <string>
 #include <atomic>
+#include "debug.h"
 #ifdef CAIROWINDOW_DEBUGWINDOW
 #include "DebugWindow.h"
 #endif
@@ -100,6 +101,14 @@ class Window
   }
 
   void update(StrokeExtents const& rectangle_list);
+
+#ifdef CWDEBUG
+  friend std::ostream& operator<<(std::ostream& os, Window const* window_ptr)
+  {
+    os << "Window*";
+    return os;
+  }
+#endif
 
  private:
   void send_close_event();

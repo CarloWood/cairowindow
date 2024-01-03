@@ -82,9 +82,9 @@ void Plot::add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio)
     double x = plot_area_.geometry().offset_x();
     double y = plot_area_.geometry().offset_y() + plot_area_.geometry().height();
     if (axis == x_axis)
-      y -= XLabelStyleDefaults::offset;
+      y += XLabelStyleDefaults::offset;
     else
-      x += XLabelStyleDefaults::offset;
+      x -= XLabelStyleDefaults::offset;
     for (int tick = 0; tick <= range_ticks_[axis]; ++tick)
     {
       std::ostringstream label_str;
@@ -140,14 +140,14 @@ double Plot::convert_y(double y) const
 }
 
 void Plot::add_point(boost::intrusive_ptr<Layer> const& layer,
-    Point const& plot_point, draw::PointStyle point_style)
+    Point const& plot_point, draw::PointStyle const& point_style)
 {
   plot_point.draw_object_ = std::make_shared<draw::Point>(convert_x(plot_point.x()), convert_y(plot_point.y()), point_style);
   layer->draw(plot_point.draw_object_);
 }
 
 void Plot::add_text(boost::intrusive_ptr<Layer> const& layer,
-    Text const& text, draw::TextStyle<> text_style)
+    Text const& text, draw::TextStyle<> const& text_style)
 {
   text.draw_object_ = std::make_shared<draw::Text>(text.text(), convert_x(text.position().x()), convert_y(text.position().y()), text_style);
   layer->draw(text.draw_object_);
@@ -179,7 +179,7 @@ void Plot::apply_line_extend(double& x1, double& y1, double& x2, double& y2, Lin
 }
 
 void Plot::add_line(boost::intrusive_ptr<Layer> const& layer,
-    LinePiece const& plot_line_piece, draw::LineStyle line_style, LineExtend line_extend)
+    LinePiece const& plot_line_piece, draw::LineStyle const& line_style, LineExtend line_extend)
 {
   double x1 = plot_line_piece.from().x();
   double y1 = plot_line_piece.from().y();
@@ -191,39 +191,53 @@ void Plot::add_line(boost::intrusive_ptr<Layer> const& layer,
   layer->draw(plot_line_piece.draw_object_);
 }
 
-Line Plot::create_line(boost::intrusive_ptr<Layer> const& layer,
-    cairowindow::Point const& point, cairowindow::Direction const& normal, draw::LineStyle line_style)
+void Plot::add_connector(boost::intrusive_ptr<Layer> const& layer,
+    Connector const& plot_connector, draw::LineStyle const& line_style, Color fill_color)
 {
-  double nx = normal.x();
-  double ny = normal.y();
-  intersections::HyperPlane<double, 2> line({nx, ny}, -point.x() * nx - point.y() * ny);
+  double x1 = plot_connector.from().x();
+  double y1 = plot_connector.from().y();
+  double x2 = plot_connector.to().x();
+  double y2 = plot_connector.to().y();
+
+  plot_connector.draw_object_ = std::make_shared<draw::Connector>(convert_x(x1), convert_y(y1), convert_x(x2), convert_y(y2), line_style,
+      fill_color, plot_connector.arrow_head_shape_from(), plot_connector.arrow_head_shape_to());
+  layer->draw(plot_connector.draw_object_);
+  plot_connector.draw_object_->draw_arrow_heads(layer);
+}
+
+Line Plot::create_line(boost::intrusive_ptr<Layer> const& layer,
+    cairowindow::Point const& point, cairowindow::Direction const& direction, draw::LineStyle const& line_style)
+{
+  double normal_x = -direction.y();
+  double normal_y = direction.x();
+  intersections::HyperPlane<double, 2> line({normal_x, normal_y}, -point.x() * normal_x - point.y() * normal_y);
   intersections::HyperBlock<double, 2> rectangle({range_[x_axis].min(), range_[y_axis].min()}, {range_[x_axis].max(), range_[y_axis].max()});
   auto intersections = rectangle.intersection_points(line);
 
   // Is the line outside the plot area?
   if (intersections.empty())
-    return {normal, point};
+    return {direction, point};
 
   double x1 = intersections[0][0];
   double y1 = intersections[0][1];
   double x2 = intersections[1][0];
   double y2 = intersections[1][1];
 
-  Line plot_line(normal, point, std::make_shared<draw::Line>(convert_x(x1), convert_y(y1), convert_x(x2), convert_y(y2), line_style));
+  Line plot_line(direction, point, std::make_shared<draw::Line>(convert_x(x1), convert_y(y1), convert_x(x2), convert_y(y2), line_style));
   layer->draw(plot_line.draw_object_);
   return plot_line;
 }
 
 Point Plot::create_point(boost::intrusive_ptr<Layer> const& layer,
-    double x, double y, draw::PointStyle point_style)
+    cairowindow::Point const& point, draw::PointStyle const& point_style)
 {
-  Point plot_point(x, y, std::make_shared<draw::Point>(convert_x(x), convert_y(y), point_style));
+  Point plot_point(point, std::make_shared<draw::Point>(convert_x(point.x()), convert_y(point.y()), point_style));
   layer->draw(plot_point.draw_object_);
   return plot_point;
 }
 
 Circle Plot::create_circle(boost::intrusive_ptr<Layer> const& layer,
-    cairowindow::Point const& center, double radius, draw::CircleStyle circle_style)
+    cairowindow::Point const& center, double radius, draw::CircleStyle const& circle_style)
 {
   Circle plot_circle(center, radius, std::make_shared<draw::Circle>(
         Rectangle{convert_x(center.x()), convert_y(center.y()), convert_x(radius) - convert_x(0), convert_y(0) - convert_y(radius)},
@@ -233,7 +247,7 @@ Circle Plot::create_circle(boost::intrusive_ptr<Layer> const& layer,
 }
 
 Text Plot::create_text(boost::intrusive_ptr<Layer> const& layer,
-    cairowindow::Point const& position, std::string const& text, draw::TextStyle<> text_style)
+    cairowindow::Point const& position, std::string const& text, draw::TextStyle<> const& text_style)
 {
   Text plot_text(position, text, std::make_shared<draw::Text>(text, convert_x(position.x()), convert_y(position.y()), text_style));
   layer->draw(plot_text.draw_object_);
@@ -241,7 +255,7 @@ Text Plot::create_text(boost::intrusive_ptr<Layer> const& layer,
 }
 
 LinePiece Plot::create_line(boost::intrusive_ptr<Layer> const& layer,
-    cairowindow::Point const& from, cairowindow::Point const& to, draw::LineStyle line_style, LineExtend line_extend)
+    cairowindow::Point const& from, cairowindow::Point const& to, draw::LineStyle const& line_style, LineExtend line_extend)
 {
   double x1 = from.x();
   double y1 = from.y();
@@ -255,7 +269,7 @@ LinePiece Plot::create_line(boost::intrusive_ptr<Layer> const& layer,
 }
 
 Curve Plot::create_curve(boost::intrusive_ptr<Layer> const& layer,
-    std::vector<cairowindow::Point>&& points, draw::LineStyle line_style)
+    std::vector<cairowindow::Point>&& points, draw::LineStyle const& line_style)
 {
   Curve plot_curve(std::move(points), std::make_shared<draw::Curve>(line_style));
 

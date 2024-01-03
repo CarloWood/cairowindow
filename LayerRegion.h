@@ -42,6 +42,14 @@ class LayerRegion
   }
 
   StrokeExtents const& stroke_extents() const { return stroke_extents_; }
+
+#ifdef CWDEBUG
+  friend std::ostream& operator<<(std::ostream& os, LayerRegion const* layer_region_ptr)
+  {
+    os << "LayerRegion*";
+    return os;
+  }
+#endif
 };
 
 } // namespace cairowindow

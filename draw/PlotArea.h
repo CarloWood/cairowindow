@@ -65,6 +65,15 @@ class PlotArea : public MultiRegion
  private:
   void draw_axis(cairo_t* cr, double x1, double y1, double x2, double y2, int k);
   void draw_regions_on(Layer* layer) override;
+
+ public:
+#ifdef CWDEBUG
+  friend std::ostream& operator<<(std::ostream& os, PlotArea const* plot_area_ptr)
+  {
+    os << "PlotArea*";
+    return os;
+  }
+#endif
 };
 
 } // namespace cairowindow::draw

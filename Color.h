@@ -20,6 +20,8 @@ class Color
   double alpha_;
 
  public:
+  // Construct an "undefined" color.
+  constexpr Color() : red_(2.0), green_(2.0), blue_(2.0), alpha_(2.0) { }
   constexpr Color(double red, double green, double blue, double alpha = 1.0) : red_(red), green_(green), blue_(blue), alpha_(alpha) { }
 
   double red() const { return red_; }
@@ -27,6 +29,7 @@ class Color
   double blue() const { return blue_; }
   double alpha() const { return alpha_; }
 
+  bool is_defined() const { return alpha_ != 2.0; }
   bool is_transparent() const { return alpha_ == 0.0; }
   bool is_opaque() const { return alpha_ == 1.0; }
   void set_opaque() { alpha_ = 1.0; }
@@ -45,6 +48,7 @@ class Color
 
 namespace color {
 
+constexpr Color undefined;
 constexpr Color red{1.0, 0.0, 0.0};
 constexpr Color green{0.0, 1.0, 0.0};
 constexpr Color blue{0.0, 0.0, 1.0};

@@ -4,6 +4,10 @@
 #include "utils/has_print_on.h"
 #include <cairo/cairo.h>
 #include <cmath>
+#include "debug.h"
+#ifdef CWDEBUG
+#include "cairowindow/debugcairo.h"
+#endif
 
 namespace cairowindow {
 using utils::has_print_on::operator<<;
@@ -27,6 +31,8 @@ class StrokeExtents
     x2 = std::ceil(x2);
     y2 = std::ceil(y2);
 
+    ASSERT(x2 >= x1 && y2 >= y1);
+
     half_width_ = 0.5 * (x2 - x1);
     half_height_ = 0.5 * (y2 - y1);
     center_x_ = 0.5 * (x2 + x1);
@@ -44,8 +50,12 @@ class StrokeExtents
 
   void set_path(cairo_t* cr) const
   {
-    Dout(dc::notice, "StrokeExtents::set_path: [" << (center_x_ - half_width_) << ", " << (center_y_ - half_height_) << ", " <<
-        (2.0 * half_width_) << ", " << (2.0 * half_height_) << "]");
+//    DoutEntering(dc::notice, "StrokeExtents::set_path(" << cr << ": [" <<
+//        (center_x_ - half_width_) << ", " << (center_y_ - half_height_) << ", " <<
+//        (2.0 * half_width_) << ", " << (2.0 * half_height_) << "] [" << this << "]");
+#ifdef CWDEBUG
+    using namespace debugcairo;
+#endif
     cairo_rectangle(cr, center_x_ - half_width_, center_y_ - half_height_, 2.0 * half_width_, 2.0 * half_height_);
   }
 

@@ -62,6 +62,8 @@ target_sources(cairowindow_ObjLib
     "Color.cxx"
     "Direction.cxx"
     "Layer.cxx"
+    "Line.cxx"
+    "Point.cxx"
     "Window.cxx"
     "EventLoop.cxx"
     "LayerRegion.cxx"
@@ -70,6 +72,8 @@ target_sources(cairowindow_ObjLib
     "draw/Grid.cxx"
     "draw/Shape.cxx"
     "draw/Curve.cxx"
+    "draw/ArrowHead.cxx"
+    "draw/Connector.cxx"
 
     "Color.h"
     "Rectangle.h"
@@ -84,6 +88,13 @@ if (OptionEnableDebugWindow)
     PRIVATE
       "DebugWindow.cxx"
       "DebugWindow.h"
+  )
+endif ()
+
+if (OptionEnableLibcwd)
+  target_sources(cairowindow_ObjLib
+    PRIVATE
+      "debugcairo.cxx"
   )
 endif ()
 

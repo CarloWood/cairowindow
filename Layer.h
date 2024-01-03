@@ -66,6 +66,14 @@ class Layer : public AIRefCount
   double offset_x() const { return rectangle_.offset_x(); }
   double offset_y() const { return rectangle_.offset_y(); }
   double area() const { return region_areas_; }
+
+#ifdef CWDEBUG
+  friend std::ostream& operator<<(std::ostream& os, Layer const* layer_ptr)
+  {
+    os << "Layer*";
+    return os;
+  }
+#endif
 };
 
 } // namespace cairowindow
