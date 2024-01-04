@@ -32,8 +32,22 @@ void LayerRegion::draw(Layer* layer)
   stroke_extents_ = std::move(redraw(cr));
 
   cairo_restore(cr);
-  layer->add_area(stroke_extents_.area());
-  layer->window_update(stroke_extents_);
+
+  if (stroke_extents_.is_defined())
+  {
+    layer->add_area(stroke_extents_.area());
+    layer->window_update(stroke_extents_);
+  }
+}
+
+StrokeExtents LayerRegion::redraw(cairo_t* cr)
+{
+  DoutEntering(dc::notice, "LayerRegion::redraw(cr) [" << this << "]");
+
+  StrokeExtents result = draw_ ? draw_(cr) : do_draw(cr);
+  if (!result.clip(layer_->geometry()))
+    return {};
+  return result;
 }
 
 LayerRegion::~LayerRegion()

@@ -39,6 +39,9 @@ class Vector
   // Return the length of the vector.
   double length() const { return std::sqrt(x_ * x_ + y_ * y_); }
 
+  // Convert the vector to a Point.
+  Point point() const { return {x_, y_}; }
+
  public:
   // Return the vector rotated 90 degrees counter-clockwise.
   Vector rotate_90_degrees() const { return { -y_, x_ }; }
@@ -58,6 +61,11 @@ inline Vector operator*(double length, Vector const& v2)
 inline Point operator+(Point const& point, Vector const& v2)
 {
   return {point.x() + v2.x(), point.y() + v2.y()};
+}
+
+inline Vector operator+(Vector const& v1, Vector const& v2)
+{
+  return {v1.x() + v2.x(), v1.y() + v2.y()};
 }
 
 } // namespace cairowindow

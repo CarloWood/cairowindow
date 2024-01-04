@@ -178,6 +178,9 @@ void debug_cairo_rectangle(cairo_t* cr, double x, double y, double width, double
 {
   Dout(dc::cairo, "cairo_rectangle(" << cr << ", " << x << ", " << y << ", " << width << ", " << height << ")");
   ASSERT(width >= 0.0 && height >= 0.0);
+  // If a negative value sneaks through, it is possible that it gets converted to
+  // an unsigned short and ends up as 65536 - value.
+  ASSERT(x >= 0.0 && y >= 0.0 && x < 32768.0 && y < 32768.0);
   cairo_rectangle(cr, x, y, width, height);
 }
 

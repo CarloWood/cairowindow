@@ -100,14 +100,17 @@ class Connector : public cairowindow::Connector
 {
  public:
   using cairowindow::Connector::Connector;
-  Connector(Point const& from, Point const& to, ArrowHeadShape head_from, ArrowHeadShape head_to,
+  Connector(cairowindow::Point const& from, cairowindow::Point const& to,
+      ArrowHeadShape head_from, ArrowHeadShape head_to,
       std::shared_ptr<draw::Connector> const& draw_object) :
     cairowindow::Connector(from, to, head_from, head_to), draw_object_(draw_object) { }
 
-  Connector(Point const& from, Point const& to, ArrowHeadShape head_to, std::shared_ptr<draw::Connector> const& draw_object) :
+  Connector(cairowindow::Point const& from, cairowindow::Point const& to,
+      ArrowHeadShape head_to, std::shared_ptr<draw::Connector> const& draw_object) :
     cairowindow::Connector(from, to, head_to), draw_object_(draw_object) { }
 
-  Connector(Point const& from, Point const& to, std::shared_ptr<draw::Connector> const& draw_object) :
+  Connector(cairowindow::Point const& from, cairowindow::Point const& to,
+      std::shared_ptr<draw::Connector> const& draw_object) :
     cairowindow::Connector(from, to), draw_object_(draw_object) { }
 
  public:
@@ -233,6 +236,27 @@ class Plot
       cairowindow::Line const& line, draw::LineStyle const& line_style)
   {
     return create_line(layer, line.point(), line.direction(), line_style);
+  }
+
+  // Create and draw a connector from point to point using line_style and fill_color for the arrow heads if appropriate.
+  [[nodiscard]] Connector create_connector(boost::intrusive_ptr<Layer> const& layer,
+      cairowindow::Point const& from, cairowindow::Point const& to,
+      Connector::ArrowHeadShape arrow_head_shape_from, Connector::ArrowHeadShape arrow_head_shape_to,
+      draw::LineStyle const& line_style, Color fill_color = color::white);
+
+  [[nodiscard]] Connector create_connector(boost::intrusive_ptr<Layer> const& layer,
+      cairowindow::Point const& from, cairowindow::Point const& to,
+      Connector::ArrowHeadShape arrow_head_shape_to,
+      draw::LineStyle const& line_style, Color fill_color = color::white)
+  {
+    return create_connector(layer, from, to, Connector::no_arrow, arrow_head_shape_to, line_style, fill_color);
+  }
+
+  [[nodiscard]] Connector create_connector(boost::intrusive_ptr<Layer> const& layer,
+      cairowindow::Point const& from, cairowindow::Point const& to,
+      draw::LineStyle const& line_style, Color fill_color = color::white)
+  {
+    return create_connector(layer, from, to, Connector::no_arrow, Connector::open_arrow, line_style, fill_color);
   }
 
   [[nodiscard]] Curve create_curve(boost::intrusive_ptr<Layer> const& layer,

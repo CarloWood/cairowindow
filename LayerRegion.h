@@ -31,15 +31,7 @@ class LayerRegion
     draw_ = user_draw;
   }
 
-  StrokeExtents redraw(cairo_t* cr)
-  {
-    DoutEntering(dc::notice, "LayerRegion::redraw(cr) [" << this << "]");
-
-    if (draw_)
-      return draw_(cr);
-
-    return do_draw(cr);
-  }
+  StrokeExtents redraw(cairo_t* cr);
 
   StrokeExtents const& stroke_extents() const { return stroke_extents_; }
 

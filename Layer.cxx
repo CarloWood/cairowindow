@@ -10,7 +10,7 @@ namespace cairowindow {
 
 Layer::Layer(cairo_surface_t* x11_surface, Rectangle const& rectangle, cairo_content_t content, Color color, Window* window
     COMMA_DEBUG_ONLY(std::string debug_name)) :
-  color_(color), window_(window), rectangle_(rectangle), region_areas_(0.0)
+  color_(color), window_(window), geometry_(rectangle), region_areas_(0.0)
 {
   DoutEntering(dc::notice, "Layer::Layer(" << x11_surface << ", " << rectangle << ", " << content << ", " << color << ", " << window <<
       ", \"" << debug_name << "\") [" << this << "]");
@@ -100,7 +100,7 @@ void Layer::remove(LayerRegion const* layer_region)
         [](std::weak_ptr<LayerRegion> const& wp){ return wp.expired(); }), regions_.end());
   // Replace rectangle with background color.
   cairo_save(cr_);
-  cairo_translate(cr_, -rectangle_.offset_x(), -rectangle_.offset_y());
+  cairo_translate(cr_, -geometry_.offset_x(), -geometry_.offset_y());
   cairo_set_operator(cr_, CAIRO_OPERATOR_SOURCE);
   cairo_set_source_rgba(cr_, color_.red(), color_.green(), color_.blue(), color_.alpha());
   StrokeExtents const& stroke_extents = layer_region->stroke_extents();

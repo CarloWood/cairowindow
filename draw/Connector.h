@@ -39,6 +39,9 @@ class Connector : public Line
 
   void draw_arrow_heads(boost::intrusive_ptr<Layer> const& layer);
 
+  void update_from(double overshoot);
+  void update_to(double overshoot);
+
  private:
   StrokeExtents do_draw(cairo_t* cr) override
   {

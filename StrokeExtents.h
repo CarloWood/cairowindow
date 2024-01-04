@@ -12,6 +12,34 @@
 namespace cairowindow {
 using utils::has_print_on::operator<<;
 
+class StrokeExtents;
+
+class IntersectRectangle
+{
+ private:
+  double x1_;
+  double y1_;
+  double x2_;
+  double y2_;
+
+ public:
+  IntersectRectangle() = default;
+  inline IntersectRectangle(StrokeExtents const& stroke_extents);
+
+  IntersectRectangle(Rectangle const& rectangle) :
+    x1_(rectangle.offset_x()), y1_(rectangle.offset_y()),
+    x2_(rectangle.offset_x() + rectangle.width()), y2_(rectangle.offset_y() + rectangle.height()) { }
+
+  double x1() const { return x1_; }
+  double x2() const { return x2_; }
+  double y1() const { return y1_; }
+  double y2() const { return y2_; }
+
+  IntersectRectangle(IntersectRectangle rect1, IntersectRectangle rect2) :
+    x1_(std::max(rect1.x1_, rect2.x1_)), y1_(std::max(rect1.y1_, rect2.y1_)),
+    x2_(std::min(rect1.x2_, rect2.x2_)), y2_(std::min(rect1.y2_, rect2.y2_)) { }
+};
+
 class StrokeExtents
 {
  private:
@@ -31,6 +59,9 @@ class StrokeExtents
     x2 = std::ceil(x2);
     y2 = std::ceil(y2);
 
+    // It is acceptable that a StrokeExtents falls outside of the window;
+    // this will be tested upon return. However, it is not ok to have reversed
+    // x or y coordinates.
     ASSERT(x2 >= x1 && y2 >= y1);
 
     half_width_ = 0.5 * (x2 - x1);
@@ -41,18 +72,33 @@ class StrokeExtents
   StrokeExtents(Rectangle const& rectangle) : StrokeExtents(rectangle.offset_x(), rectangle.offset_y(),
       rectangle.offset_x() + rectangle.width(), rectangle.offset_y() + rectangle.height()) { }
 
+  bool clip(Rectangle const& rectangle)
+  {
+    IntersectRectangle intersection(rectangle, *this);
+    double width = intersection.x2() - intersection.x1();
+    double height = intersection.y2() - intersection.y1();
+    if (width <= 0.0 || height <= 0.0)
+      return false;
+    half_width_ = 0.5 * width;
+    half_height_ = 0.5 * height;
+    center_x_ = 0.5 * (intersection.x1() + intersection.x2());
+    center_y_ = 0.5 * (intersection.y1() + intersection.y2());
+    return true;
+  }
+
   // Accessors.
+  double center_x() const { return center_x_; }
+  double center_y() const { return center_y_; }
   double width() const { return 2.0 * half_width_; }
   double height() const { return 2.0 * half_height_; }
+  double x1() const { return center_x_ - half_width_; }
+  double y1() const { return center_y_ - half_height_; }
 
   bool is_defined() const { return half_width_ != 0.0 || half_height_ != 0.0; }
   double area() const { return 4.0 * half_width_ * half_height_; }
 
   void set_path(cairo_t* cr) const
   {
-//    DoutEntering(dc::notice, "StrokeExtents::set_path(" << cr << ": [" <<
-//        (center_x_ - half_width_) << ", " << (center_y_ - half_height_) << ", " <<
-//        (2.0 * half_width_) << ", " << (2.0 * half_height_) << "] [" << this << "]");
 #ifdef CWDEBUG
     using namespace debugcairo;
 #endif
@@ -81,5 +127,9 @@ class StrokeExtents
            std::abs(center_y_ - stroke_extents.center_y_) < half_height_ + stroke_extents.half_height_;
   }
 };
+
+IntersectRectangle::IntersectRectangle(StrokeExtents const& stroke_extents) :
+  x1_(stroke_extents.x1()), y1_(stroke_extents.y1()),
+  x2_(x1_ + stroke_extents.width()), y2_(y1_ + stroke_extents.height()) { }
 
 } // namespace cairowindow

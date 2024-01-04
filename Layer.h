@@ -23,7 +23,7 @@ class Layer : public AIRefCount
   Window* window_;
   cairo_surface_t* surface_;
   cairo_t* cr_;
-  Rectangle rectangle_;
+  Rectangle geometry_;
   std::vector<std::weak_ptr<LayerRegion>> regions_;
   double region_areas_; // Total area of all regions_.
 #ifdef CAIROWINDOW_DEBUGWINDOW
@@ -63,9 +63,11 @@ class Layer : public AIRefCount
 
   cairo_surface_t* surface() const { return surface_; }
   cairo_t* cr() const { return cr_; }
-  double offset_x() const { return rectangle_.offset_x(); }
-  double offset_y() const { return rectangle_.offset_y(); }
+  double offset_x() const { return geometry_.offset_x(); }
+  double offset_y() const { return geometry_.offset_y(); }
   double area() const { return region_areas_; }
+  // Return the geometry of the layer.
+  Rectangle const& geometry() const { return geometry_; }
 
 #ifdef CWDEBUG
   friend std::ostream& operator<<(std::ostream& os, Layer const* layer_ptr)

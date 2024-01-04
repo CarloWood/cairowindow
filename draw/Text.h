@@ -44,11 +44,12 @@ struct DefaultTextStyleDefaults
 
 struct TextStyleDelta
 {
+  static constexpr double undefined_font_size_magic = -1.0;
   static constexpr double undefined_offset_magic = 12345678.9;
   static constexpr double undefined_rotation_magic = -3000000.0;
 
   TextPosition position   = undefined;
-  double font_size        = -1.0;
+  double font_size        = undefined_font_size_magic;
   Color color{};
   std::string font_family{};
   double offset           = undefined_offset_magic;
@@ -81,7 +82,7 @@ struct TextStyle
     TextStyle result{*this};
     if (delta.position != undefined)
       result.position = delta.position;
-    if (delta.font_size != -1.0)
+    if (delta.font_size != TextStyleDelta::undefined_font_size_magic)
       result.font_size = delta.font_size;
     if (delta.color.is_defined())
       result.color = delta.color;

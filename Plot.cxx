@@ -53,9 +53,17 @@ void Plot::add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio)
     double pixels_per_y_unit = geometry.height() / range_[y_axis].size();
     double required_scale = pixels_per_y_unit / pixels_per_x_unit;
     if (required_scale < 1.0)
+    {
+      if (xlabel_)
+        xlabel_->rel_move_to(-0.5 * geometry.width() * (1.0 - required_scale), 0.0);
       plot_area_.set_geometry({ geometry.offset_x(), geometry.offset_y(), geometry.width() * required_scale, geometry.height() });
+    }
     else
+    {
+      if (ylabel_)
+        ylabel_->rel_move_to(0.0, -0.5 * geometry.height() * (1.0 - 1.0 / required_scale));
       plot_area_.set_geometry({ geometry.offset_x(), geometry.offset_y(), geometry.width(), geometry.height() / required_scale });
+    }
   }
 
   // Set a title.
@@ -226,6 +234,19 @@ Line Plot::create_line(boost::intrusive_ptr<Layer> const& layer,
   Line plot_line(direction, point, std::make_shared<draw::Line>(convert_x(x1), convert_y(y1), convert_x(x2), convert_y(y2), line_style));
   layer->draw(plot_line.draw_object_);
   return plot_line;
+}
+
+Connector Plot::create_connector(boost::intrusive_ptr<Layer> const& layer,
+    cairowindow::Point const& from, cairowindow::Point const& to,
+    Connector::ArrowHeadShape arrow_head_shape_from, Connector::ArrowHeadShape arrow_head_shape_to,
+    draw::LineStyle const& line_style, Color fill_color)
+{
+  Connector plot_connector(from, to, arrow_head_shape_from, arrow_head_shape_to,
+      std::make_shared<draw::Connector>(convert_x(from.x()), convert_y(from.y()), convert_x(to.x()), convert_y(to.y()),
+        line_style, fill_color, arrow_head_shape_from, arrow_head_shape_to));
+  layer->draw(plot_connector.draw_object_);
+  plot_connector.draw_object_->draw_arrow_heads(layer);
+  return plot_connector;
 }
 
 Point Plot::create_point(boost::intrusive_ptr<Layer> const& layer,

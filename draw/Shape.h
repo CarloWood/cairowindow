@@ -2,6 +2,7 @@
 
 #include "cairowindow/LayerRegion.h"
 #include "cairowindow/Color.h"
+#include "utils/square.h"
 
 namespace cairowindow::draw {
 
@@ -60,12 +61,33 @@ class Shape : public LayerRegion
   Rectangle geometry_;
   ShapeStyle style_;
   double rotation_;
+  double arrow_overshoot_;
 
  public:
-  Shape(Rectangle const& geometry, ShapeStyle style, double rotation = {}) : geometry_(geometry), style_(style), rotation_(rotation) { }
+  Shape(Rectangle const& geometry, ShapeStyle style, double rotation = {}) :
+    geometry_(geometry), style_(style), rotation_(rotation)
+    {
+      switch (style.shape)
+      {
+        case open_arrow_shape:
+        case filled_arrow_shape:
+          arrow_overshoot_ = 0.5 * style_.line_width * std::sqrt(::utils::square(2.0 * geometry_.width() / geometry_.height()) + 1.0);
+          break;
+        case diamond_arrow_shape:
+          arrow_overshoot_ = 0.25 * style_.line_width * std::sqrt(::utils::square(geometry_.width() / geometry_.height()) + 1.0);
+          break;
+        case circle_arrow_shape:
+          arrow_overshoot_ = 0.5 * style_.line_width;
+          break;
+        default:        // Stop compiler from complaining.
+          break;
+      }
+    }
 
   ShapeStyle& style() { return style_; }
   ShapeStyle const& style() const { return style_; }
+
+  double arrow_overshoot() const { return arrow_overshoot_; }
 
  private:
   StrokeExtents do_draw(cairo_t* cr) override;

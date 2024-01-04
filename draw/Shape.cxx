@@ -71,6 +71,7 @@ StrokeExtents Shape::do_draw(cairo_t* cr)
   {
     cairo_translate(cr, geometry_.offset_x() + geometry_.width(), geometry_.offset_y() + 0.5 * geometry_.height());
     cairo_rotate(cr, rotation_);
+    cairo_translate(cr, -arrow_overshoot_, 0.0);
     cairo_scale(cr, geometry_.width(), geometry_.height());
   }
   switch (style_.shape)
