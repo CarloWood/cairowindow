@@ -2,6 +2,9 @@
 #include "Grid.h"
 #include "PlotArea.h"
 #include "cairowindow/Layer.h"
+#ifdef CWDEBUG
+#include "cairowindow/debug_channel.h"
+#endif
 
 namespace cairowindow::draw {
 
@@ -18,7 +21,7 @@ void Grid::draw_regions_on(Layer* layer)
       y2 -= geometry_.height();
     else
       x2 += geometry_.width();
-    Dout(dc::notice, "axis = " << axis << "; ticks_[axis] = " << ticks_[axis]);
+    Dout(dc::cairowindow, "axis = " << axis << "; ticks_[axis] = " << ticks_[axis]);
     for (int tick = 1; tick < ticks_[axis]; ++tick)
     {
       if (axis == plot::x_axis)

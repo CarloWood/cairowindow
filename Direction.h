@@ -20,7 +20,7 @@ class Direction
 
   // Construct a Direction from two points. If the second point is not given it defaults to the origin.
   // The direction is from the second argument (or origin) to the first argument.
-  Direction(Point const& to, Point const& from = Point{0.0, 0.0}) : x_(to.x() - from.x()), y_(to.y() - from.y())
+  explicit Direction(Point const& to, Point const& from = Point{0.0, 0.0}) : x_(to.x() - from.x()), y_(to.y() - from.y())
   {
     double len = std::sqrt(x_ * x_ + y_ * y_);
     x_ /= len;
@@ -51,6 +51,9 @@ class Direction
 
   // Return the direction rotated 180 degrees.
   Direction inverse() const { return { -x_, -y_ }; }
+
+  // Return the direction rotated 270 degrees.
+  Direction normal_inverse() const { return { y_, -x_ }; }
 
   static Direction const up;
   static Direction const down;

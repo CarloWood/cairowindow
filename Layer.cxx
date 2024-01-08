@@ -12,7 +12,7 @@ Layer::Layer(cairo_surface_t* x11_surface, Rectangle const& rectangle, cairo_con
     COMMA_DEBUG_ONLY(std::string debug_name)) :
   color_(color), window_(window), geometry_(rectangle), region_areas_(0.0)
 {
-  DoutEntering(dc::notice, "Layer::Layer(" << x11_surface << ", " << rectangle << ", " << content << ", " << color << ", " << window <<
+  DoutEntering(dc::cairowindow, "Layer::Layer(" << x11_surface << ", " << rectangle << ", " << content << ", " << color << ", " << window <<
       ", \"" << debug_name << "\") [" << this << "]");
 #ifdef CWDEBUG
   using namespace debugcairo;
@@ -38,7 +38,7 @@ Layer::Layer(cairo_surface_t* x11_surface, Rectangle const& rectangle, cairo_con
 
 Layer::~Layer()
 {
-  DoutEntering(dc::notice, "Layer::~Layer() [" << this << "]");
+  DoutEntering(dc::cairowindow, "Layer::~Layer() [" << this << "]");
 #ifdef CWDEBUG
   using namespace debugcairo;
 #endif
@@ -52,7 +52,7 @@ Layer::~Layer()
 
 void Layer::redraw(cairo_t* cr, StrokeExtents const& stroke_extents)
 {
-  DoutEntering(dc::notice, "Layer::redraw(" << cr << ", " << stroke_extents << ") [" << this << "]");
+  DoutEntering(dc::cairowindow, "Layer::redraw(" << cr << ", " << stroke_extents << ") [" << this << "]");
 #ifdef CWDEBUG
   using namespace debugcairo;
 #endif
@@ -92,7 +92,7 @@ void Layer::redraw(cairo_t* cr, StrokeExtents const& stroke_extents)
 
 void Layer::remove(LayerRegion const* layer_region)
 {
-  DoutEntering(dc::notice, "Layer::remove(" << layer_region << ") [" << this << "]");
+  DoutEntering(dc::cairowindow, "Layer::remove(" << layer_region << ") [" << this << "]");
 #ifdef CWDEBUG
   using namespace debugcairo;
 #endif

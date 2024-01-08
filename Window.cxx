@@ -6,14 +6,21 @@
 #include <mutex>
 #include "debug.h"
 #ifdef CWDEBUG
+#include "cairowindow/debug_channel.h"
 #include "cairowindow/debugcairo.h"
+#endif
+
+#ifdef CWDEBUG
+NAMESPACE_DEBUG_CHANNELS_START
+channel_ct cairowindow("CAIROWINDOW");
+NAMESPACE_DEBUG_CHANNELS_END
 #endif
 
 namespace cairowindow {
 
 Window::Window(std::string title, int width, int height) : width_(width), height_(height), running_(false)
 {
-  DoutEntering(dc::notice, "cairowindow::Window(\"" << title << "\", " << width << ", " << height << ") [" << this << "]");
+  DoutEntering(dc::cairowindow, "cairowindow::Window(\"" << title << "\", " << width << ", " << height << ") [" << this << "]");
 #ifdef CWDEBUG
   using namespace debugcairo;
 #endif
@@ -51,7 +58,7 @@ Window::Window(std::string title, int width, int height) : width_(width), height
 
 Window::~Window()
 {
-  DoutEntering(dc::notice, "Window::~Window() [" << this << "]");
+  DoutEntering(dc::cairowindow, "Window::~Window() [" << this << "]");
 #ifdef CWDEBUG
   using namespace debugcairo;
 #endif
@@ -68,7 +75,7 @@ Window::~Window()
 
 void Window::update(StrokeExtents const& stroke_extents)
 {
-  DoutEntering(dc::notice, "Window::update(" << stroke_extents << ") [" << this << "]");
+  DoutEntering(dc::cairowindow, "Window::update(" << stroke_extents << ") [" << this << "]");
 #ifdef CWDEBUG
   using namespace debugcairo;
 #endif
@@ -149,7 +156,7 @@ struct ExposeEventRect
 
 void Window::event_loop()
 {
-  DoutEntering(dc::notice, "Window::event_loop() [" << this << "]");
+  DoutEntering(dc::cairowindow, "Window::event_loop() [" << this << "]");
 #ifdef CWDEBUG
   using namespace debugcairo;
 #endif

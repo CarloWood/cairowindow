@@ -2,10 +2,22 @@
 
 #include "Shape.h"
 #include <array>
+#ifdef CWDEBUG
+#include "cairowindow/debug_channel.h"
+#endif
 
 namespace cairowindow::draw {
 
-struct PointStyle {
+struct PointStyleDelta
+{
+  static constexpr int undefined_magic = -1;
+
+  int color_index = undefined_magic;
+  int filled_shape = undefined_magic;
+};
+
+struct PointStyle
+{
  public:
   struct FilledShape
   {
@@ -32,31 +44,38 @@ struct PointStyle {
     { star, false }
   }};
 
- private:
-  int color_index_;
-  int filled_shape_;
-
  public:
-  PointStyle(int color_index, int filled_shape) : color_index_(color_index), filled_shape_(filled_shape) { }
+  int color_index;
+  int filled_shape;
 
   bool is_filled() const
   {
-    return filled_shapes[filled_shape_ % number_of_shapes].filled;
+    return filled_shapes[filled_shape % number_of_shapes].filled;
   }
 
   ShapeEnum get_shape() const
   {
-    return filled_shapes[filled_shape_ % number_of_shapes].shape;
+    return filled_shapes[filled_shape % number_of_shapes].shape;
   }
 
   Color line_color() const
   {
-    return is_filled() ? color::transparent : Color::get_color(color_index_);
+    return is_filled() ? color::transparent : Color::get_color(color_index);
   };
 
   Color fill_color() const
   {
-    return is_filled() ? Color::get_color(color_index_) : color::transparent;
+    return is_filled() ? Color::get_color(color_index) : color::transparent;
+  }
+
+  PointStyle operator()(PointStyleDelta delta)
+  {
+    PointStyle result{*this};
+    if (delta.color_index != PointStyleDelta::undefined_magic)
+      result.color_index = delta.color_index;
+    if (delta.filled_shape != PointStyleDelta::undefined_magic)
+      result.filled_shape = delta.filled_shape;
+    return result;
   }
 };
 
@@ -67,12 +86,12 @@ class Point : public Shape
     Shape({x, y, style.is_filled() ? 5.0 : 4.0, style.is_filled() ? 5.0 : 4.0},
           { .line_color = style.line_color(), .fill_color = style.fill_color(), .position = at_corner, .shape = style.get_shape() })
   {
-    DoutEntering(dc::notice, "Point(" << x << ", " << y << ", style) [" << this << "]");
+    DoutEntering(dc::cairowindow, "Point(" << x << ", " << y << ", style) [" << this << "]");
   }
 
   ~Point()
   {
-    DoutEntering(dc::notice, "~Point() [" << this << "]");
+    DoutEntering(dc::cairowindow, "~Point() [" << this << "]");
   }
 };
 

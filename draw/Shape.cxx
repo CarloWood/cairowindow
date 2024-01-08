@@ -1,6 +1,7 @@
 #include "sys.h"
 #include "Shape.h"
 #ifdef CWDEBUG
+#include "cairowindow/debug_channel.h"
 #include "cairowindow/debugcairo.h"
 #endif
 
@@ -17,11 +18,11 @@ ShapeEnum next_shape()
 
 StrokeExtents Shape::do_draw(cairo_t* cr)
 {
-  DoutEntering(dc::notice, "draw::Shape::do_draw(cr) [" << this << "]");
+  DoutEntering(dc::cairowindow, "draw::Shape::do_draw(cr) [" << this << "]");
 #ifdef CWDEBUG
     using namespace debugcairo;
 #endif
-  Dout(dc::notice, "geometry_ = " << geometry_ << "; style_ = " << style_);
+  Dout(dc::cairowindow, "geometry_ = " << geometry_ << "; style_ = " << style_);
 
   bool do_stroke = !style_.line_color.is_transparent();
   bool do_fill = !style_.fill_color.is_transparent();

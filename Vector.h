@@ -34,7 +34,7 @@ class Vector
   double dot(Vector const& v2) const { return x_ * v2.x_ + y_ * v2.y_; }
 
   // Construct a Direction from this vector.
-  Direction direction() const { return Point{x_, y_}; }
+  Direction direction() const { return Direction{Point{x_, y_}}; }
 
   // Return the length of the vector.
   double length() const { return std::sqrt(x_ * x_ + y_ * y_); }
@@ -66,6 +66,11 @@ inline Point operator+(Point const& point, Vector const& v2)
 inline Vector operator+(Vector const& v1, Vector const& v2)
 {
   return {v1.x() + v2.x(), v1.y() + v2.y()};
+}
+
+inline Vector operator-(Vector const& v1, Vector const& v2)
+{
+  return {v1.x() - v2.x(), v1.y() - v2.y()};
 }
 
 } // namespace cairowindow

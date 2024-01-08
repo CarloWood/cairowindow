@@ -16,7 +16,7 @@ EventLoop::~EventLoop()
     window_->close();
   if (event_loop_thread_.joinable())
   {
-    Dout(dc::notice, "Waiting for the window to be closed.");
+    Dout(dc::cairowindow, "Waiting for the window to be closed.");
     event_loop_thread_.join();
   }
 }

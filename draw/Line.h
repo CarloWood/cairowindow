@@ -4,6 +4,7 @@
 #include "cairowindow/Color.h"
 #include "cairowindow/StrokeExtents.h"
 #ifdef CWDEBUG
+#include "cairowindow/debug_channel.h"
 #include "cairowindow/debugcairo.h"
 #endif
 
@@ -60,7 +61,7 @@ class Line : public LayerRegion
  protected:
   void draw_line(cairo_t* cr)
   {
-    DoutEntering(dc::notice, "draw::Line(" << cr << ") [" << this << "]");
+    DoutEntering(dc::cairowindow, "draw::Line(" << cr << ") [" << this << "]");
 #ifdef CWDEBUG
     using namespace debugcairo;
 #endif
@@ -76,7 +77,7 @@ class Line : public LayerRegion
  private:
   StrokeExtents do_draw(cairo_t* cr) override
   {
-    DoutEntering(dc::notice, "draw::Line::do_draw(cr) [" << this << "]");
+    DoutEntering(dc::cairowindow, "draw::Line::do_draw(cr) [" << this << "]");
 
     draw_line(cr);
 

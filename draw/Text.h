@@ -6,6 +6,7 @@
 #include "cairowindow/Defaults.h"
 #include <string>
 #ifdef CWDEBUG
+#include "cairowindow/debug_channel.h"
 #include "cairowindow/debugcairo.h"
 #endif
 
@@ -68,7 +69,7 @@ struct TextStyle
 
   void setup(cairo_t* cr)
   {
-    DoutEntering(dc::notice, "TextStyle<" << libcwd::type_info_of<Defaults>().demangled_name() << ">::setup(" << cr << ") [" << this << "]");
+    DoutEntering(dc::cairowindow, "TextStyle<" << libcwd::type_info_of<Defaults>().demangled_name() << ">::setup(" << cr << ") [" << this << "]");
 #ifdef CWDEBUG
     using namespace debugcairo;
 #endif
@@ -160,13 +161,13 @@ class Text : public LayerRegion
  private:
   StrokeExtents do_draw(cairo_t* cr) override
   {
-    DoutEntering(dc::notice, "Text::do_draw(" << cr << ") [" << this << "]");
+    DoutEntering(dc::cairowindow, "Text::do_draw(" << cr << ") [" << this << "]");
 #ifdef CWDEBUG
     using namespace debugcairo;
 #endif
     style_.setup(cr);
     cairo_text_extents_t extents;
-    Dout(dc::notice, "Drawing \"" << text_ << "\" at position (" << pos_x_ << ", " << pos_y_ << ")");
+    Dout(dc::cairowindow, "Drawing \"" << text_ << "\" at position (" << pos_x_ << ", " << pos_y_ << ")");
     cairo_text_extents(cr, text_.c_str(), &extents);
     cairo_translate(cr, pos_x_, pos_y_);
     cairo_rotate(cr, style_.rotation);
@@ -232,7 +233,7 @@ class Text : public LayerRegion
       std::swap(x1, x2);
     if (y2 < y1)
       std::swap(y1, y2);
-    Dout(dc::notice, "Returning (" << x1 << ", " << y1 << ", " << x2 << ", " << y2 << ")");
+    Dout(dc::cairowindow, "Returning (" << x1 << ", " << y1 << ", " << x2 << ", " << y2 << ")");
     return { x1, y1, x2, y2 };
   }
 };

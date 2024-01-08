@@ -17,6 +17,10 @@
 #include <boost/intrusive_ptr.hpp>
 #include <string>
 #include <vector>
+#include "debug.h"
+#ifdef CWDEBUG
+#include "debug_channel.h"
+#endif
 
 namespace cairowindow::plot {
 
@@ -191,10 +195,10 @@ class Plot
 
   void set_range(int axis, Range range)
   {
-    DoutEntering(dc::notice, "Plot::set_range(" << axis << ", " << range << ") [" << this << "]");
+    DoutEntering(dc::cairowindow, "Plot::set_range(" << axis << ", " << range << ") [" << this << "]");
     range_[axis] = range;
     range_ticks_[axis] = draw::PlotArea::calculate_range_ticks(range_[axis]);
-    Dout(dc::notice, "range_[" << axis << "] = " << range_[axis] << "; range_ticks_[" << axis << "] = " << range_ticks_[axis]);
+    Dout(dc::cairowindow, "range_[" << axis << "] = " << range_[axis] << "; range_ticks_[" << axis << "] = " << range_ticks_[axis]);
   }
 
   void set_xrange(Range x_range) { set_range(x_axis, x_range); }

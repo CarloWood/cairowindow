@@ -3,6 +3,7 @@
 #include "Color.h"
 #include "StrokeExtents.h"
 #ifdef CWDEBUG
+#include "cairowindow/debug_channel.h"
 #include "cairowindow/debugcairo.h"
 #endif
 
@@ -24,7 +25,7 @@ class MultiRegion
  protected:
   void set_line_style(cairo_t* cr) const
   {
-    DoutEntering(dc::notice, "MultiRegion::set_line_style(" << cr << ") [" << this << "]");
+    DoutEntering(dc::cairowindow, "MultiRegion::set_line_style(" << cr << ") [" << this << "]");
 #ifdef CWDEBUG
     using namespace debugcairo;
 #endif
@@ -35,14 +36,14 @@ class MultiRegion
 
   StrokeExtents stroke(cairo_t* cr) const
   {
-    DoutEntering(dc::notice, "MultiRegion::stroke(" << cr << ") [" << this << "]");
+    DoutEntering(dc::cairowindow, "MultiRegion::stroke(" << cr << ") [" << this << "]");
 #ifdef CWDEBUG
     using namespace debugcairo;
 #endif
     double x1, y1;
     double x2, y2;
     cairo_stroke_extents(cr, &x1, &y1, &x2, &y2);
-    Dout(dc::notice, "cairo_stroke_extents returned " << x1 << ", " << y1 << ", " << x2 << ", " << y2);
+    Dout(dc::cairowindow, "cairo_stroke_extents returned " << x1 << ", " << y1 << ", " << x2 << ", " << y2);
     cairo_stroke(cr);
     return {x1, y1, x2, y2};
   }

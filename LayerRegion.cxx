@@ -10,7 +10,7 @@ namespace cairowindow {
 
 void LayerRegion::draw(Layer* layer)
 {
-  DoutEntering(dc::notice, "LayerRegion::draw(" << layer << ") [" << this << "]");
+  DoutEntering(dc::cairowindow, "LayerRegion::draw(" << layer << ") [" << this << "]");
 #ifdef CWDEBUG
   using namespace debugcairo;
 #endif
@@ -42,7 +42,7 @@ void LayerRegion::draw(Layer* layer)
 
 StrokeExtents LayerRegion::redraw(cairo_t* cr)
 {
-  DoutEntering(dc::notice, "LayerRegion::redraw(cr) [" << this << "]");
+  DoutEntering(dc::cairowindow, "LayerRegion::redraw(cr) [" << this << "]");
 
   StrokeExtents result = draw_ ? draw_(cr) : do_draw(cr);
   if (!result.clip(layer_->geometry()))
@@ -52,7 +52,7 @@ StrokeExtents LayerRegion::redraw(cairo_t* cr)
 
 LayerRegion::~LayerRegion()
 {
-  DoutEntering(dc::notice, "~LayerRegion() [" << this << "]");
+  DoutEntering(dc::cairowindow, "~LayerRegion() [" << this << "]");
   if (layer_)
   {
     layer_->remove(this);

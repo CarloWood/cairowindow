@@ -5,6 +5,9 @@
 #include "ArrowHead.h"
 #include "cairowindow/Connector.h"
 #include "cairowindow/Layer.h"
+#ifdef CWDEBUG
+#include "cairowindow/debug_channel.h"
+#endif
 
 namespace cairowindow::draw {
 
@@ -45,7 +48,7 @@ class Connector : public Line
  private:
   StrokeExtents do_draw(cairo_t* cr) override
   {
-    DoutEntering(dc::notice, "draw::Connector::do_draw(cr) [" << this << "]");
+    DoutEntering(dc::cairowindow, "draw::Connector::do_draw(cr) [" << this << "]");
 
     draw_line(cr);
 

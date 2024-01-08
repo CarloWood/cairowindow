@@ -6,6 +6,7 @@
 #include <algorithm>
 #include "debug.h"
 #ifdef CWDEBUG
+#include "cairowindow/debug_channel.h"
 #include "cairowindow/debugcairo.h"
 #endif
 
@@ -14,7 +15,7 @@ namespace cairowindow::draw {
 // Draw a line from x1,y1 to x2,y2 and draw k ticks perpendicular to that line, pointing clockwise.
 void PlotArea::draw_axis(cairo_t* cr, double x1, double y1, double x2, double y2, int k)
 {
-  DoutEntering(dc::notice,
+  DoutEntering(dc::cairowindow,
       "PlotArea::draw_axis(" << cr << ", " << x1 << ", " << y1 << ", " << x2 << ", " << y2 << ", " << k << ") [" << this << "]");
 #ifdef CWDEBUG
   using namespace debugcairo;
