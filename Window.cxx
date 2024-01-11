@@ -113,17 +113,34 @@ void Window::update(StrokeExtents const& stroke_extents)
   }
   cairo_restore(offscreen_cr_);
 
-  // Trigger an Expose event.
-  XExposeEvent ev = {0};
-  ev.type = Expose;
-  ev.display = display_;
-  ev.window = x11window_;
+  expose_events.push_back(stroke_extents);
 
-  stroke_extents.unpack(ev.x, ev.y, ev.width, ev.height);
-  ev.count = 0;
+  if (send_expose_events_)
+    set_send_expose_events(true);
+}
 
-  XSendEvent(display_, x11window_, false, ExposureMask, (XEvent*)&ev);
-  XFlush(display_);
+void Window::set_send_expose_events(bool send_expose_events)
+{
+  send_expose_events_ = send_expose_events;
+
+  if (send_expose_events_)
+  {
+    // Trigger an Expose event.
+    XExposeEvent ev = {0};
+    ev.type = Expose;
+    ev.display = display_;
+    ev.window = x11window_;
+
+    for (int event = expose_events.size() - 1; event >= 0; --event)
+    {
+      expose_events[event].unpack(ev.x, ev.y, ev.width, ev.height);
+      ev.count = event;
+      XSendEvent(display_, x11window_, false, ExposureMask, (XEvent*)&ev);
+    }
+    expose_events.clear();
+
+    XFlush(display_);
+  }
 }
 
 EventLoop Window::run()

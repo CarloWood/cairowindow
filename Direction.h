@@ -19,16 +19,18 @@ class Direction
   Direction(double theta) : x_(std::cos(theta)), y_(std::sin(theta)) { }
 
   // Construct a Direction from two points. If the second point is not given it defaults to the origin.
-  // The direction is from the second argument (or origin) to the first argument.
-  explicit Direction(Point const& to, Point const& from = Point{0.0, 0.0}) : x_(to.x() - from.x()), y_(to.y() - from.y())
+  explicit Direction(Point const& from, Point const& to) : x_(to.x() - from.x()), y_(to.y() - from.y())
   {
     double len = std::sqrt(x_ * x_ + y_ * y_);
     x_ /= len;
     y_ /= len;
   }
 
+  // If only one point is give, the direction is from the origin to that point.
+  explicit Direction(Point const& to) : Direction(Point{0.0, 0.0}, to) { }
+
   // Construct a Direction from a LinePiece, pointing from the first point to the second point.
-  Direction(LinePiece const& line_piece) : Direction(line_piece.to(), line_piece.from()) { }
+  Direction(LinePiece const& line_piece) : Direction(line_piece.from(), line_piece.to()) { }
 
   // Construct a Direction from a Line.
   Direction(Line const& line);

@@ -6,6 +6,7 @@
 #include "draw/Circle.h"
 #include "draw/Curve.h"
 #include "draw/Connector.h"
+#include "draw/Arc.h"
 #include "Range.h"
 #include "Point.h"
 #include "Circle.h"
@@ -14,6 +15,7 @@
 #include "Line.h"
 #include "Curve.h"
 #include "Connector.h"
+#include "Arc.h"
 #include <boost/intrusive_ptr.hpp>
 #include <string>
 #include <vector>
@@ -122,6 +124,27 @@ class Connector : public cairowindow::Connector
   mutable std::shared_ptr<draw::Connector> draw_object_;
 };
 
+class Arc : public cairowindow::Arc
+{
+ public:
+  using cairowindow::Arc::Arc;
+  Arc(Point const& center, double start_angle, double end_angle, double radius,
+      std::shared_ptr<draw::Arc> const& draw_object) :
+    cairowindow::Arc(center, start_angle, end_angle, radius), draw_object_(draw_object) { }
+
+  Arc(Point const& center, Direction const& start, Direction const& end, double radius,
+      std::shared_ptr<draw::Arc> const& draw_object) :
+    cairowindow::Arc(center, start, end, radius), draw_object_(draw_object) { }
+
+  Arc(Line const& line1, Line const& line2, double radius,
+      std::shared_ptr<draw::Arc> const& draw_object) :
+    cairowindow::Arc(line1, line2, radius), draw_object_(draw_object) { }
+
+ public:
+  friend class Plot;
+  mutable std::shared_ptr<draw::Arc> draw_object_;
+};
+
 enum class LineExtend
 {
   none = 0,
@@ -222,6 +245,10 @@ class Plot
     return create_circle(layer, center, radius, draw::CircleStyle{.line_color = line_style.line_color, .line_width = line_style.line_width});
   }
 
+  // Create and drw an arc on layer width center, radius and start- and end_angle, using arc_style.
+  [[nodiscard]] Arc create_arc(boost::intrusive_ptr<Layer> const& layer,
+      cairowindow::Point const& center, double start_angle, double end_angle, double radius, draw::ArcStyle const& arc_style);
+
   // Create and draw text on layer at position using text_style.
   [[nodiscard]] Text create_text(boost::intrusive_ptr<Layer> const& layer,
       cairowindow::Point const& position, std::string const& text, draw::TextStyle<> const& text_style);
@@ -230,6 +257,14 @@ class Plot
   [[nodiscard]] LinePiece create_line(boost::intrusive_ptr<Layer> const& layer,
       cairowindow::Point const& from, cairowindow::Point const& to, draw::LineStyle const& line_style,
       LineExtend line_extend = LineExtend::none);
+
+  // Create and draw a line piece between points from and to using line_style and line_extend.
+  [[nodiscard]] LinePiece create_line(boost::intrusive_ptr<Layer> const& layer,
+      cairowindow::LinePiece const& line_piece, draw::LineStyle const& line_style,
+      LineExtend line_extend = LineExtend::none)
+  {
+    return create_line(layer, line_piece.from(), line_piece.to(), line_style, line_extend);
+  }
 
   // Create and draw a line through point in direction using line_style.
   [[nodiscard]] Line create_line(boost::intrusive_ptr<Layer> const& layer,
@@ -279,6 +314,9 @@ class Plot
 
   void add_connector(boost::intrusive_ptr<Layer> const& layer, Connector const& plot_connector,
       draw::LineStyle const& line_style, Color fill_color = color::white);
+
+  void add_arc(boost::intrusive_ptr<Layer> const& layer, Arc const& plot_arc,
+      draw::ArcStyle const& arc_style);
 
   void add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio = false);
 

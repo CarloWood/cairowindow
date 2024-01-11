@@ -50,6 +50,9 @@ class Window
 
   std::vector<boost::intrusive_ptr<Layer>> layers_;
 
+  bool send_expose_events_{true};
+  std::vector<StrokeExtents> expose_events;
+
 #ifdef CAIROWINDOW_DEBUGWINDOW
   DebugWindow debug_window_;
 #endif
@@ -103,6 +106,8 @@ class Window
     return layer;
   }
 
+  // send_expose_events_ must be true for update to send expose events.
+  void set_send_expose_events(bool send_expose_events);
   void update(StrokeExtents const& rectangle_list);
 
 #ifdef CWDEBUG

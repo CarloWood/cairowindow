@@ -213,6 +213,20 @@ void Plot::add_connector(boost::intrusive_ptr<Layer> const& layer,
   plot_connector.draw_object_->draw_arrow_heads(layer);
 }
 
+void Plot::add_arc(boost::intrusive_ptr<Layer> const& layer, Arc const& plot_arc,
+    draw::ArcStyle const& arc_style)
+{
+  double center_x = plot_arc.center().x();
+  double center_y = plot_arc.center().y();
+  double radius = plot_arc.radius();
+
+  plot_arc.draw_object_ = std::make_shared<draw::Arc>(convert_x(center_x), convert_y(center_y),
+      // Negate and swap start and end angles in order to mirror in the x-axis.
+      -plot_arc.end_angle(), -plot_arc.start_angle(), std::max(convert_x(radius) - convert_x(0), convert_y(radius) - convert_y(0)),
+      arc_style);
+  layer->draw(plot_arc.draw_object_);
+}
+
 Line Plot::create_line(boost::intrusive_ptr<Layer> const& layer,
     cairowindow::Point const& point, cairowindow::Direction const& direction, draw::LineStyle const& line_style)
 {

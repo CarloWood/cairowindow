@@ -28,6 +28,14 @@ class Arc
   double start_angle() const { return start_angle_; }
   double end_angle() const { return end_angle_; }
   double radius() const { return radius_; }
+
+  Direction bisector_direction() const
+  {
+    double angle_diff = end_angle_ - start_angle_;
+    if (angle_diff < 0.0)
+      angle_diff += 2 * M_PI;
+    return {start_angle_ + 0.5 * angle_diff};
+  }
 };
 
 } // namespace cairowindow
