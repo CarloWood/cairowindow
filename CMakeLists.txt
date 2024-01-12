@@ -11,8 +11,18 @@ include(AICxxProject)
 # DEPENDENCIES
 #
 
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(CAIRO REQUIRED cairo)
+pkg_check_modules(X11 REQUIRED x11)
+
 #==============================================================================
 # OPTIONS
+
+# Option 'EnableCairoWindowTests' is OFF by default.
+cw_option(EnableCairoWindowTests
+  "Compile the tests" OFF
+  "" ON
+)
 
 # Option 'EnableDebugWindow' is OFF by default.
 cw_option(EnableDebugWindow
@@ -26,7 +36,6 @@ endif ()
 if (OptionEnableDebugWindow)
   set(CAIROWINDOW_DEBUGWINDOW 1)
 endif ()
-
 
 #==============================================================================
 # PLATFORM SPECIFIC CHECKS
@@ -48,6 +57,11 @@ add_library(cairowindow_ObjLib OBJECT)
 target_compile_definitions(cairowindow_ObjLib
   PUBLIC
     HAVE_CAIROWINDOW_CONFIG_H
+)
+
+target_compile_options(cairowindow_ObjLib
+  INTERFACE
+    ${CAIRO_CFLAGS} ${X11_CFLAGS}
 )
 
 # Set SOURCE_DIR to the current directory.
@@ -115,10 +129,13 @@ target_compile_features(cairowindow_ObjLib
 target_link_libraries(cairowindow_ObjLib
   PUBLIC
     AICxx::utils
+  INTERFACE
+    ${CAIRO_LDFLAGS} ${X11_LDFLAGS}
 )
 
 # Create an ALIAS target.
 add_library(AICxx::cairowindow ALIAS cairowindow_ObjLib)
 
-# Prepend this object library to the list.
-set(AICXX_OBJECTS_LIST AICxx::cairowindow ${AICXX_OBJECTS_LIST} CACHE INTERNAL "List of OBJECT libaries that this project uses.")
+if (OptionEnableCairoWindowTests)
+add_subdirectory(tests)
+endif ()
