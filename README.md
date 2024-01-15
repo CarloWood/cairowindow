@@ -9,9 +9,11 @@ providing C++ classes for larger projects, including (all in namespace cairowind
 * ``MultiRegion`` : Convenience base class for drawable objects that exist of more than one layer region.
 * ``EventLoop`` : Returned by Window::run(). Causes the window to be opened and everything that was added to it to be drawn. Destructing the returned `EventLoop` blocks until the window was closed. You want to destroy the `EventLoop` before destroying any of the above objects, because destroying those will make them disappear (no longer being drawn).
 
-* ``Color`` : A color object.
 * ``Vector`` : An x and y coordinate.
 * ``Matrix`` : A row-major 2x2 matrix.
+* ``Color`` : A color object.
+* ``StrokeExtents`` : A rectangle object, used to keep track of what area needs to be redrawn for a given `LayerRegion` upon expose.
+* ``IntersectRectangle`` : Another rectangle object, most suitable to find intersections between rectangles.
 
 And the following "mathematical" objects that can be used to construct plottable counter parts from:
 
@@ -23,8 +25,6 @@ And the following "mathematical" objects that can be used to construct plottable
 * ``LinePiece`` : Defined by two Point's (from and to).
 * ``Point`` : Defined by an x and y coordinate (double).
 * ``Rectangle`` : Describes a rectangle with an (optional) offset relative to the main Window.
-* ``StrokeExtents`` : Another rectangle object, used to keep track of what area needs to be redrawn for a given `LayerRegion` upon expose.
-* ``IntersectRectangle`` : Another rectangle object, most suitable to find intersections between rectangles.
 * ``Text`` : A Point and a std::string.
 
 In namespace `cairowindow::plot` we currently have:
