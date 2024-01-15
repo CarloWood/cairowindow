@@ -9,19 +9,50 @@ providing C++ classes for larger projects, including (all in namespace cairowind
 * ``MultiRegion`` : Convenience base class for drawable objects that exist of more than one layer region.
 * ``EventLoop`` : Returned by Window::run(). Causes the window to be opened and everything that was added to it to be drawn. Destructing the returned `EventLoop` blocks until the window was closed. You want to destroy the `EventLoop` before destroying any of the above objects, because destroying those will make them disappear (no longer being drawn).
 * ``Color`` : A color object.
+* ``Vector`` : An x and y coordinate.
+* ``Matrix`` : A row-major 2x2 matrix.
+
+And the following "mathematical" objects that can be used to construct plottable counter parts from:
+
+* ``Arc`` : A center point, begin and end angle, and a radius.
+* ``Circle`` : A center and a radius.
+* ``Connector`` : A LinePiece and two arrow head types (among which 'no_arrow').
+* ``Direction`` : A direction (unit) vector.
+* ``Line`` : Defined by a Point and a Direction (yes, the line has a direction "awareness").
+* ``LinePiece`` : Defined by two Point's (from and to).
+* ``Point`` : Defined by an x and y coordinate (double).
 * ``Rectangle`` : Describes a rectangle with an (optional) offset relative to the main Window.
 * ``StrokeExtents`` : Another rectangle object, used to keep track of what area needs to be redrawn for a given `LayerRegion` upon expose.
+* ``IntersectRectangle`` : Another rectangle object, most suitable to find intersections between rectangles.
+* ``Text`` : A Point and a std::string.
 
 In namespace `cairowindow::plot` we currently have:
 
 * ``Plot`` : An object representing a plot chart with title, axes, data points etc.
 * ``Range`` : Describes the minimum and maximum values of the axes of a plot.
 
-In namespace `cairowindow::draw` we currently have:
+The following classes in namespace `cairowindow::plot` are derived from the classes with the same
+name in namespace `cairowindow` but add a `shared_ptr` to a `draw::` object with the same name, that
+contain plot specific data. Objects of these types therefore correspond with an object drawn in the
+plot and destructing the object will erase it from the plot.
 
+* ``Point`` : Created with `Plot::create_point` from a `cairowindow::Point` and a `draw::PointStyle`.
+* ``Circle`` : Created with `Plot::create_circle` from a `cairowindow::Point center`, `double radius` and `draw::CircleStyle` (or `draw::LineStyle`).
+* ``Text`` : Created with `Plot::create_text` from a `cairowindow::Point position`, `std::string` and `draw::TextStyle<>`.
+* ``LinePiece`` : Created with `Plot::create_line` from two `cairowindow::Point` objects and `draw::LineStyle` (plus a `LineExtend` enum that allows to extend the line in zero or more directions).
+* ``Line`` : Created with `Plot::create_line` from a `cairowindow::Point`, cairowindow::Direction` and `draw::LineStyle`.
+* ``Connector`` : Created with `Plot::create_connector` from two `cairowindow::Point` objects, zero or more `Connector::ArrowHeadShape`, `draw::LineStyle` and a fill `Color` (for the arrow heads, if appropriate).
+* ``Arc`` : Created with `Plot::create_arc` from a `cairowindow::Point center`, `double start_angle`, `double end_angle`, `double radius` and `draw::ArcStyle`.
+
+The objects in namespace `cairowindow::draw` shouldn't be used by the user.
+It currently contains:
+
+* ``Arc`` : A piece of a circle.
+* ``Circle`` : A circle (or ellipse).
+* ``Connector`` : A line piece with optional arrow heads (open, closed, diamond or circle).
 * ``Line`` : A line.
 * ``Rectangle`` : A rectangle.
-* ``Text`` : Some text.
+* ``Text`` : Some text or label.
 * ``PlotArea`` : The axes and ticks of a plot.
 
 The root project should be using
