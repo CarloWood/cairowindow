@@ -8,6 +8,7 @@ providing C++ classes for larger projects, including (all in namespace cairowind
 * ``LayerRegion`` : A rectangular portion of a layer that has a `draw` function associated with it (base class to all drawable objects).
 * ``MultiRegion`` : Convenience base class for drawable objects that exist of more than one layer region.
 * ``EventLoop`` : Returned by Window::run(). Causes the window to be opened and everything that was added to it to be drawn. Destructing the returned `EventLoop` blocks until the window was closed. You want to destroy the `EventLoop` before destroying any of the above objects, because destroying those will make them disappear (no longer being drawn).
+
 * ``Color`` : A color object.
 * ``Vector`` : An x and y coordinate.
 * ``Matrix`` : A row-major 2x2 matrix.
