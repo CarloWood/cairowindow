@@ -40,7 +40,7 @@ plot and destructing the object will erase it from the plot.
 * ``Point`` : Created with `Plot::create_point` from a `cairowindow::Point` and a `draw::PointStyle`.
 * ``Circle`` : Created with `Plot::create_circle` from a `cairowindow::Point center`, `double radius` and `draw::CircleStyle` (or `draw::LineStyle`).
 * ``Text`` : Created with `Plot::create_text` from a `cairowindow::Point position`, `std::string` and `draw::TextStyle<>`.
-* ``LinePiece`` : Created with `Plot::create_line` from two `cairowindow::Point` objects and `draw::LineStyle` (plus a `LineExtend` enum that allows to extend the line in zero or more directions).
+* ``LinePiece`` : Created with `Plot::create_line` from two `cairowindow::Point` objects and `draw::LineStyle` (plus a `LineExtend` enum that allows to extend the line in zero, one or both directions).
 * ``Line`` : Created with `Plot::create_line` from a `cairowindow::Point`, cairowindow::Direction` and `draw::LineStyle`.
 * ``Connector`` : Created with `Plot::create_connector` from two `cairowindow::Point` objects, zero or more `Connector::ArrowHeadShape`, `draw::LineStyle` and a fill `Color` (for the arrow heads, if appropriate).
 * ``Arc`` : Created with `Plot::create_arc` from a `cairowindow::Point center`, `double start_angle`, `double end_angle`, `double radius` and `draw::ArcStyle`.
