@@ -113,18 +113,16 @@ int main()
 
       double subexpr = 0.5 * y_beta * (-1.0 * (-2.0 * x_beta + 2.0 * x_gamma) * y_gamma +
           std::sqrt(utils::square(-2.0 * x_beta + 2.0 * x_gamma) * utils::square(y_gamma) -
-            4.0 * y_gamma * (-y_beta + y_gamma) * (-x_gamma + utils::square(x_gamma) +
+            4.0 * y_gamma * (y_gamma - y_beta) * (-x_gamma + utils::square(x_gamma) +
               (x_beta * y_gamma)/y_beta - (utils::square(x_beta) * y_gamma)/y_beta)));
 
-      double z = x_beta + subexpr / (y_gamma * (-y_beta + y_gamma));
+      double z = x_beta + subexpr / (y_gamma * (y_gamma - y_beta));
       // The t^2 factor of x(t):
-      double m01 = -subexpr / (y_gamma * (-y_beta + y_gamma) * (z -1) * z);
-      // The t factor of y(t):
-      double m10 = -y_beta / ((z - 1) * (z));
+      double m01 = -subexpr / (y_gamma * (y_gamma - y_beta) * (z -1) * z);
 
 //      double z = x_beta + y_beta * tan_theta;
       // Define the matrix M.
-//      double m10 = y_beta / (z * (1.0 - z));
+      double m10 = y_beta / (z * (1.0 - z));
 //      double m01 = m10 * tan_theta;
       double m11 = -m10;
       double m00 = 1.0 - m01;
