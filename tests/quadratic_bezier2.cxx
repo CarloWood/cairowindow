@@ -103,22 +103,22 @@ int main()
       auto plot_P_gamma = plot.create_point(second_layer, P_gamma, point_style);
       auto P_gamma_label = plot.create_text(second_layer, P_gamma, "Pᵧ", label_style({.position = draw::centered_right_of}));
 
+      double y_span = y_gamma - y_beta;
 #if 0
       // Helper variables.
       double x_span = x_gamma - x_beta;
-      double y_span = y_gamma - y_beta;
       double subexpr50 = 4.0 * y_gamma * y_span * (x_gamma * (1.0 - x_gamma) - y_gamma * (1.0 - x_beta) * x_beta / y_beta);
       double tan_theta = std::sqrt(utils::square(2.0 * x_span * y_gamma) + subexpr50) - x_span / y_span;
 #endif
 
       double subexpr = 0.5 * y_beta * (-1.0 * (-2.0 * x_beta + 2.0 * x_gamma) * y_gamma +
           std::sqrt(utils::square(-2.0 * x_beta + 2.0 * x_gamma) * utils::square(y_gamma) -
-            4.0 * y_gamma * (y_gamma - y_beta) * (-x_gamma + utils::square(x_gamma) +
+            4.0 * y_gamma * y_span * (-x_gamma + utils::square(x_gamma) +
               (x_beta * y_gamma)/y_beta - (utils::square(x_beta) * y_gamma)/y_beta)));
 
-      double z = x_beta + subexpr / (y_gamma * (y_gamma - y_beta));
+      double z = x_beta + subexpr / (y_gamma * y_span);
       // The t^2 factor of x(t):
-      double m01 = -subexpr / (y_gamma * (y_gamma - y_beta) * (z -1) * z);
+      double m01 = subexpr / (y_gamma * y_span * (1.0 - z) * z);
 
 //      double z = x_beta + y_beta * tan_theta;
       // Define the matrix M.
