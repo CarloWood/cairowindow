@@ -111,8 +111,7 @@ int main()
       double tan_theta = std::sqrt(utils::square(2.0 * x_span * y_gamma) + subexpr50) - x_span / y_span;
 #endif
 
-      double subexpr = y_beta * (-1.0 * x_span * y_gamma +
-          0.5 * std::sqrt(utils::square(2.0 * x_span) * utils::square(y_gamma) + subexpr50));
+      double subexpr = y_beta * (-1.0 * x_span * y_gamma + 0.5 * std::sqrt(utils::square(2.0 * x_span * y_gamma) + subexpr50));
 
       double z = x_beta + subexpr / (y_gamma * y_span);
       // The t^2 factor of x(t):
