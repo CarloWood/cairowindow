@@ -105,16 +105,14 @@ int main()
 
       double x_span = x_gamma - x_beta;
       double y_span = y_gamma - y_beta;
-#if 0
       // Helper variables.
       double subexpr50 = 4.0 * y_gamma * y_span * (x_gamma * (1.0 - x_gamma) - y_gamma * (1.0 - x_beta) * x_beta / y_beta);
+#if 0
       double tan_theta = std::sqrt(utils::square(2.0 * x_span * y_gamma) + subexpr50) - x_span / y_span;
 #endif
 
       double subexpr = y_beta * (-1.0 * x_span * y_gamma +
-          0.5 * std::sqrt(utils::square(2.0 * x_span) * utils::square(y_gamma) -
-            4.0 * y_gamma * y_span * (x_gamma * (-1.0 + x_gamma) +
-              (x_beta * y_gamma) / y_beta - (utils::square(x_beta) * y_gamma) / y_beta)));
+          0.5 * std::sqrt(utils::square(2.0 * x_span) * utils::square(y_gamma) + subexpr50));
 
       double z = x_beta + subexpr / (y_gamma * y_span);
       // The t^2 factor of x(t):
