@@ -113,7 +113,7 @@ int main()
 
       double subexpr = y_beta * (-1.0 * x_span * y_gamma +
           0.5 * std::sqrt(utils::square(2.0 * x_span) * utils::square(y_gamma) -
-            4.0 * y_gamma * y_span * (-x_gamma + utils::square(x_gamma) +
+            4.0 * y_gamma * y_span * (x_gamma * (-1.0 + x_gamma) +
               (x_beta * y_gamma) / y_beta - (utils::square(x_beta) * y_gamma) / y_beta)));
 
       double z = x_beta + subexpr / (y_gamma * y_span);
