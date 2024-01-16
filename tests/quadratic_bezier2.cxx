@@ -75,49 +75,81 @@ int main()
 
       // P₁, the point at t=1.
       Point P1(1.0, 0.0);
-      Point rotated_P1 = (R * Vector{P1}).point();
-      auto plot_P1 = plot.create_point(second_layer, rotated_P1, point_style);
-      auto P1_label = plot.create_text(second_layer, rotated_P1, "P₁", label_style({.position = draw::centered_right_of}));
+      auto plot_P1 = plot.create_point(second_layer, P1, point_style);
+      auto P1_label = plot.create_text(second_layer, P1, "P₁", label_style({.position = draw::centered_right_of}));
 
-      // Pᵦ, a point at t < 0.
-      Point P_beta(0.25, 0.75);
-      Point rotated_P_beta = (R * Vector{P_beta}).point();
-      auto plot_P_beta = plot.create_point(second_layer, rotated_P_beta, point_style);
-      auto P_beta_label = plot.create_text(second_layer, rotated_P_beta, "Pᵦ", label_style({.position = draw::centered_right_of}));
+      // Draw a line through P₀ and P₁.
+      auto line_through_P0_and_P1 = plot.create_line(second_layer, plot_P0, P1, solid_line_style);
 
       // Draw a cirle around the midpoint of P₀P₁ with radius |P₀P₁|/2.
-      Vector P0P1(rotated_P1);
+      Vector P0P1(P1);
       Point P0P1_circle_center = (0.5 * P0P1).point();
       auto plot_P0P1_circle_center = plot.create_point(second_layer, P0P1_circle_center, point_style);
       double P0P1_circle_radius = 0.5 * P0P1.length();
       auto plot_P0P1_circle = plot.create_circle(second_layer, P0P1_circle_center, P0P1_circle_radius,
           line_style({.line_color = color::gray}));
 
+      // Pᵦ, a point at t < 0.
+      double x_beta = -0.5;
+      double y_beta = 0.25;
+      Point P_beta(x_beta, y_beta);
+      auto plot_P_beta = plot.create_point(second_layer, P_beta, point_style);
+      auto P_beta_label = plot.create_text(second_layer, P_beta, "Pᵦ", label_style({.position = draw::centered_right_of}));
+
+      // Pᵧ, a point at t > 1.
+      double x_gamma = 1.8;
+      double y_gamma = 0.15;
+      Point P_gamma(x_gamma, y_gamma);
+      auto plot_P_gamma = plot.create_point(second_layer, P_gamma, point_style);
+      auto P_gamma_label = plot.create_text(second_layer, P_gamma, "Pᵧ", label_style({.position = draw::centered_right_of}));
+
+#if 0
+      // Helper variables.
+      double x_span = x_gamma - x_beta;
+      double y_span = y_gamma - y_beta;
+      double subexpr50 = 4.0 * y_gamma * y_span * (x_gamma * (1.0 - x_gamma) - y_gamma * (1.0 - x_beta) * x_beta / y_beta);
+      double tan_theta = std::sqrt(utils::square(2.0 * x_span * y_gamma) + subexpr50) - x_span / y_span;
+#endif
+
+      double subexpr = 0.5 * y_beta * (-1.0 * (-2.0 * x_beta + 2.0 * x_gamma) * y_gamma +
+          std::sqrt(utils::square(-2.0 * x_beta + 2.0 * x_gamma) * utils::square(y_gamma) -
+            4.0 * y_gamma * (-y_beta + y_gamma) * (-x_gamma + utils::square(x_gamma) +
+              (x_beta * y_gamma)/y_beta - (utils::square(x_beta) * y_gamma)/y_beta)));
+
+      double z = x_beta + subexpr / (y_gamma * (-y_beta + y_gamma));
+      // The t^2 factor of x(t):
+      double m01 = -subexpr / (y_gamma * (-y_beta + y_gamma) * (z -1) * z);
+      // The t factor of y(t):
+      double m10 = -y_beta / ((z - 1) * (z));
+
+//      double z = x_beta + y_beta * tan_theta;
       // Define the matrix M.
-      double m00 = 1.0 + rsw * std::sin(theta);
-      double m01 = -rsw * std::sin(theta);
-      double m10 = -rsw * std::cos(theta);
-      double m11 = rsw * std::cos(theta);
-      Dout(dc::notice, "rsw = " << rsw << "; theta = " << theta);
+//      double m10 = y_beta / (z * (1.0 - z));
+//      double m01 = m10 * tan_theta;
+      double m11 = -m10;
+      double m00 = 1.0 - m01;
+
+#if 0   // The three point case - with free theta.
+      // Helper variable.
+      double z = x_beta + y_beta * std::tan(theta);
+      // Define the matrix M.
+      double m11 = y_beta / (z * (z - 1));
+      double m10 = -m11;
+      double m01 = m10 * std::tan(theta);
+      double m00 = 1.0 - m01;
+#endif
 
       auto xt = [=](double t){ return t * (m00 + m01 * t); };
       auto yt = [=](double t){ return t * (m10 + m11 * t); };
 
-      // Let t run from v-4 to 0, and then plot P₀ + t M [1 t].
-      double v = 0.5 * (1.0 + std::sin(theta) / rsw);
       std::vector<Point> curve_points;
-      for (int i = v - 40; i <= v + 40; ++i)
+      for (int i = -100; i <= 40; ++i)
       {
         double t = i * 0.1;
-        Vector v = R * Vector{xt(t), yt(t)};
-        Dout(dc::notice, "x(" << t << ") = " << v.x());
-        Dout(dc::notice, "y(" << t << ") = " << v.y());
+        Vector v{xt(t), yt(t)};
         curve_points.push_back(v.point());
       }
       auto curve = plot.create_curve(second_layer, std::move(curve_points), curve_line_style);
-
-      // Draw a line through P₀ and P₁.
-      auto line_through_P0_and_P1 = plot.create_line(second_layer, plot_P0, rotated_P1, solid_line_style);
 
       window.set_send_expose_events(true);
 
