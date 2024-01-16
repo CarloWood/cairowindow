@@ -111,8 +111,8 @@ int main()
       double tan_theta = std::sqrt(utils::square(2.0 * x_span * y_gamma) + subexpr50) - x_span / y_span;
 #endif
 
-      double subexpr = 0.5 * y_beta * (-2.0 * (x_gamma - x_beta) * y_gamma +
-          std::sqrt(utils::square(-2.0 * x_beta + 2.0 * x_gamma) * utils::square(y_gamma) -
+      double subexpr = y_beta * (-1.0 * (x_gamma - x_beta) * y_gamma +
+          0.5 * std::sqrt(utils::square(2.0 * (x_gamma - x_beta)) * utils::square(y_gamma) -
             4.0 * y_gamma * y_span * (-x_gamma + utils::square(x_gamma) +
               (x_beta * y_gamma)/y_beta - (utils::square(x_beta) * y_gamma)/y_beta)));
 
