@@ -16,6 +16,7 @@
 #include "Curve.h"
 #include "Connector.h"
 #include "Arc.h"
+#include "utils/Vector.h"
 #include <boost/intrusive_ptr.hpp>
 #include <string>
 #include <vector>
@@ -155,9 +156,12 @@ enum class LineExtend
 
 class Plot
 {
-  static constexpr int number_of_axes = draw::PlotArea::number_of_axes;
+ public:
+  using ClickableIndex = utils::VectorIndex<Rectangle>;
 
  private:
+  static constexpr int number_of_axes = draw::PlotArea::number_of_axes;
+
   draw::PlotArea plot_area_;
   std::shared_ptr<draw::Text> title_;
   std::shared_ptr<draw::Text> xlabel_;
@@ -165,6 +169,9 @@ class Plot
   std::array<Range, number_of_axes> range_;
   std::array<int, number_of_axes> range_ticks_{{10, 10}};
   std::array<std::vector<std::shared_ptr<draw::Text>>, number_of_axes> labels_;
+
+  utils::Vector<Rectangle, ClickableIndex> clickable_rectangles_;
+  utils::Vector<Point*, ClickableIndex> clickable_points_;
 
   struct TitleStyleDefaults : draw::DefaultTextStyleDefaults
   {
@@ -319,6 +326,22 @@ class Plot
       draw::ArcStyle const& arc_style);
 
   void add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio = false);
+
+  // Allow dragging of point with the mouse.
+  void drag_point(Point* point)
+  {
+    DoutEntering(dc::notice, "Plot::drag_point(@" << *point << ")");
+    clickable_rectangles_.push_back(point->draw_object_->geometry());
+    clickable_points_.push_back(point);
+    Dout(dc::notice, "Added " << clickable_rectangles_.back());
+  }
+
+  // Returns the Point that is closest to x, y (in pixels) - if any. Return nullptr if there no Point at x, y.
+  // The Point must have been added before with drag_point.
+  ClickableIndex grab_point(double x, double y);
+
+  // New mouse coordinates where received for the grabbed Point.
+  bool update_grabbed_point(boost::intrusive_ptr<Layer> const& layer, ClickableIndex grabbed_point, int mouse_x, int mouse_y);
 
  private:
   Rectangle axes_geometry(Rectangle const& geometry, double axes_line_width);

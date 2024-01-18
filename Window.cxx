@@ -40,6 +40,8 @@ Window::Window(std::string title, int width, int height) : width_(width), height
   wm_delete_window_ = XInternAtom(display_, "WM_DELETE_WINDOW", false);
   XSetWMProtocols(display_, x11window_, &wm_delete_window_, 1);
 
+  custom_mouse_event_ = XInternAtom(display_, "CUSTOM_MOUSE_EVENT", false);
+
   // Create an X11 surface for the window.
   x11_surface_ = cairo_xlib_surface_create(display_, x11window_, DefaultVisual(display_, screen), width, height
     COMMA_CWDEBUG_ONLY("Window::x11_surface_:\"" + title + "\""));
@@ -69,8 +71,30 @@ Window::~Window()
   cairo_surface_destroy(offscreen_surface_);
   cairo_destroy(win_cr_);
   cairo_surface_destroy(x11_surface_);
+  if (mouse_grabbed_by_ != -1)
+    release_mouse();
   XDestroyWindow(display_, x11window_);
   XCloseDisplay(display_);
+}
+
+// Called by XEventLoop thread.
+void Window::grab_mouse(unsigned int button)
+{
+  DoutEntering(dc::notice, "Window::grab_mouse(" << button << ")");
+  if ((mouse_button_mask_ & (1 << button)))
+  {
+    XGrabPointer(display_, x11window_, X11::x11_False,
+        PointerMotionMask | ButtonReleaseMask, GrabModeAsync, GrabModeAsync, None, None, CurrentTime);
+    mouse_grabbed_by_ = button;
+  }
+}
+
+// Called by XEventLoop thread.
+void Window::release_mouse()
+{
+  DoutEntering(dc::notice, "Window::release_mouse()");
+  XUngrabPointer(display_, CurrentTime);
+  mouse_grabbed_by_ = -1;
 }
 
 void Window::update(StrokeExtents const& stroke_extents)
@@ -113,7 +137,7 @@ void Window::update(StrokeExtents const& stroke_extents)
   }
   cairo_restore(offscreen_cr_);
 
-  expose_events.push_back(stroke_extents);
+  expose_events_.push_back(stroke_extents);
 
   if (send_expose_events_)
     set_send_expose_events(true);
@@ -131,13 +155,13 @@ void Window::set_send_expose_events(bool send_expose_events)
     ev.display = display_;
     ev.window = x11window_;
 
-    for (int event = expose_events.size() - 1; event >= 0; --event)
+    for (int event = expose_events_.size() - 1; event >= 0; --event)
     {
-      expose_events[event].unpack(ev.x, ev.y, ev.width, ev.height);
+      expose_events_[event].unpack(ev.x, ev.y, ev.width, ev.height);
       ev.count = event;
       XSendEvent(display_, x11window_, false, ExposureMask, (XEvent*)&ev);
     }
-    expose_events.clear();
+    expose_events_.clear();
 
     XFlush(display_);
   }
@@ -146,7 +170,7 @@ void Window::set_send_expose_events(bool send_expose_events)
 EventLoop Window::run()
 {
   // Select input events.
-  XSelectInput(display_, x11window_, ExposureMask | ButtonPressMask | KeyPressMask);
+  XSelectInput(display_, x11window_, ExposureMask | ButtonPressMask | ButtonReleaseMask | KeyPressMask);
 
   // Show the window.
   XMapWindow(display_, x11window_);
@@ -219,10 +243,63 @@ void Window::event_loop()
         ++keypress_events;
         break;
       }
+      case ButtonPress:
+      case ButtonRelease:
+      {
+        XButtonEvent* button_event = (XButtonEvent*)&event;
+        bool pressed = event.type == ButtonPress;
+
+        if (!pressed)
+        {
+          if (mouse_grabbed_by_ == event.xbutton.button)
+            release_mouse();
+          mouse_button_mask_ &= ~(1 << event.xbutton.button);
+          Message msg{MouseEvent::button_release, button_event->x, button_event->y, event.xbutton.button};
+          push_message(msg);
+        }
+        else
+        {
+          mouse_button_mask_ |= (1 << event.xbutton.button);
+          Message msg{MouseEvent::button_press, button_event->x, button_event->y, event.xbutton.button};
+          push_message(msg);
+        }
+
+        // Determine which button was pressed
+        int button = button_event->button;
+        Dout(dc::notice, "Button " << button << " was " << (pressed ? "pressed!" : "released!"));
+        Dout(dc::notice, "x = " << button_event->x << "; y = " << button_event->y);
+        Dout(dc::notice, "x_root = " << button_event->x_root << "; y_root = " << button_event->y_root);
+
+        // Get the coordinates
+        int x = button_event->x;
+        int y = button_event->y;
+
+        // Optionally, get root window coordinates
+        int x_root = button_event->x_root;
+        int y_root = button_event->y_root;
+
+        break;
+      }
+      case MotionNotify:
+      {
+        if (mouse_grabbed_by_ != -1)
+        {
+          // Pass the mouse movement event to the main thread.
+          Message msg{MouseEvent::drag, event.xmotion.x, event.xmotion.y};
+          push_message(msg);
+        }
+        break;
+      }
       case ClientMessage:
       {
         if (static_cast<unsigned long>(event.xclient.data.l[0]) == wm_delete_window_)
           running_ = false;
+        else if (static_cast<Atom>(event.xclient.message_type) == custom_mouse_event_)
+        {
+          Dout(dc::notice, "Received custom_mouse_event_");
+          if (event.xclient.data.l[0] == custom_event_grab_mouse)
+            grab_mouse(event.xclient.data.l[1]);
+        }
         break;
       }
     }
@@ -238,6 +315,20 @@ void Window::send_close_event()
   event.xclient.format = 32;
   event.xclient.data.l[0] = wm_delete_window_;
   event.xclient.data.l[1] = CurrentTime;
+
+  XSendEvent(display_, x11window_, false, NoEventMask, &event);
+  XFlush(display_);
+}
+
+void Window::send_custom_event(uint32_t data, unsigned int button)
+{
+  XEvent event = {};
+  event.xclient.type = ClientMessage;
+  event.xclient.window = x11window_;
+  event.xclient.message_type = custom_mouse_event_;
+  event.xclient.format = 32;
+  event.xclient.data.l[0] = data;
+  event.xclient.data.l[1] = button;
 
   XSendEvent(display_, x11window_, false, NoEventMask, &event);
   XFlush(display_);

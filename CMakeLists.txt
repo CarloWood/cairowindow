@@ -109,6 +109,7 @@ if (OptionEnableLibcwd)
   target_sources(cairowindow_ObjLib
     PRIVATE
       "debugcairo.cxx"
+      "Message.cxx"
   )
 endif ()
 

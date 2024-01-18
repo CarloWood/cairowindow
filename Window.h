@@ -4,7 +4,10 @@
 #include "StrokeExtents.h"
 #include "EventLoop.h"
 #include "LayerArgs.h"
+#include "Message.h"
 #include "utils/AIAlert.h"
+#include "utils/threading/Semaphore.h"
+#include "utils/threading/FIFOBuffer.h"
 #include <boost/intrusive_ptr.hpp>
 #include <mutex>
 #include <string>
@@ -18,11 +21,15 @@
 #endif
 
 #include <cairo/cairo-xlib.h>
+
+namespace cairowindow {
+namespace X11 {
+static constexpr auto x11_True = True;
+static constexpr auto x11_False = False;
 #undef True
 #undef False
 #undef Status
-
-namespace cairowindow {
+} // namespace X11
 
 using X11Window = ::Window;
 
@@ -30,6 +37,8 @@ class Layer;
 
 template<typename Type>
 concept LayerType = std::is_base_of_v<Layer, Type>;
+
+static const uint32_t custom_event_grab_mouse = 1;
 
 class Window
 {
@@ -47,11 +56,17 @@ class Window
 
   std::atomic_bool running_;
   Atom wm_delete_window_;
+  Atom custom_mouse_event_;
 
   std::vector<boost::intrusive_ptr<Layer>> layers_;
 
   bool send_expose_events_{true};
-  std::vector<StrokeExtents> expose_events;
+  std::vector<StrokeExtents> expose_events_;
+
+  int mouse_grabbed_by_{-1};
+  int mouse_button_mask_{0};
+  utils::threading::Semaphore message_semaphore_{0};
+  utils::threading::FIFOBuffer<1, Message> message_buffer_{64};
 
 #ifdef CAIROWINDOW_DEBUGWINDOW
   DebugWindow debug_window_;
@@ -110,6 +125,29 @@ class Window
   void set_send_expose_events(bool send_expose_events);
   void update(StrokeExtents const& rectangle_list);
 
+  bool push_message(Message const& message)
+  {
+    bool full = message_buffer_.push(&message);
+    message_semaphore_.post();
+    return full;
+  }
+
+  bool have_message(bool block)
+  {
+    if (block)
+    {
+      message_semaphore_.wait();
+      return true;
+    }
+
+    return message_semaphore_.try_wait();
+  }
+
+  Message const* pop_message()
+  {
+    return message_buffer_.pop();
+  }
+
 #ifdef CWDEBUG
   friend std::ostream& operator<<(std::ostream& os, Window const* window_ptr)
   {
@@ -118,8 +156,12 @@ class Window
   }
 #endif
 
+  void send_custom_event(uint32_t data, unsigned int button);
+
  private:
   void send_close_event();
+  void grab_mouse(unsigned int button);
+  void release_mouse();
 };
 
 } // namespace cairowindow

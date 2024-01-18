@@ -81,10 +81,14 @@ struct PointStyle
 
 class Point : public Shape
 {
+ private:
+  PointStyle point_style_;
+
  public:
   Point(double x, double y, PointStyle style) :
     Shape({x, y, style.is_filled() ? 5.0 : 4.0, style.is_filled() ? 5.0 : 4.0},
-          { .line_color = style.line_color(), .fill_color = style.fill_color(), .position = at_corner, .shape = style.get_shape() })
+          { .line_color = style.line_color(), .fill_color = style.fill_color(), .position = at_corner, .shape = style.get_shape() }),
+    point_style_(style)
   {
     DoutEntering(dc::cairowindow, "Point(" << x << ", " << y << ", style) [" << this << "]");
   }
@@ -93,6 +97,8 @@ class Point : public Shape
   {
     DoutEntering(dc::cairowindow, "~Point() [" << this << "]");
   }
+
+  PointStyle const& point_style() const { return point_style_; }
 };
 
 } // namespace cairowindow::draw

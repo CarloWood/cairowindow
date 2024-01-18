@@ -2,6 +2,8 @@
 #include "Layer.h"
 #include "Plot.h"
 #include "intersection_points.h"
+#include "utils/square.h"
+#include <limits>
 #include <cmath>
 #include <iomanip>
 
@@ -309,15 +311,15 @@ Curve Plot::create_curve(boost::intrusive_ptr<Layer> const& layer,
   Curve plot_curve(std::move(points), std::make_shared<draw::Curve>(line_style));
 
   Rectangle const& g = plot_area_.geometry();
-  double prev_point_x;
-  double prev_point_y;
+  double prev_point_x = std::numeric_limits<double>::quiet_NaN();
+  double prev_point_y = std::numeric_limits<double>::quiet_NaN();
   int count = 0;
   std::vector<std::shared_ptr<draw::Line>>& lines = plot_curve.draw_object_->lines();
   for (cairowindow::Point const& point : plot_curve.points())
   {
     double x = convert_x(point.x());
     double y = convert_y(point.y());
-    if (count > 0)
+    if (!std::isnan(prev_point_x) && !std::isnan(prev_point_y) && !std::isnan(x) && !std::isnan(y))
     {
       lines.emplace_back(std::make_shared<draw::Line>(prev_point_x, prev_point_y, x, y, line_style));
       layer->draw(lines.back());
@@ -328,6 +330,55 @@ Curve Plot::create_curve(boost::intrusive_ptr<Layer> const& layer,
   }
 
   return plot_curve;
+}
+
+Plot::ClickableIndex Plot::grab_point(double x, double y)
+{
+  DoutEntering(dc::notice, "Plot::grab_point(" << x << ", " << y << ")");
+  ClickableIndex found_index;
+  double min_dist_squared = std::numeric_limits<double>::max();
+  for (ClickableIndex index = clickable_rectangles_.ibegin(); index != clickable_rectangles_.iend(); ++index)
+  {
+    Rectangle const& geometry = clickable_rectangles_[index];
+    // A Point uses ShapePosition::at_corner.
+    double center_x = geometry.offset_x();
+    double center_y = geometry.offset_y();
+    double half_width = geometry.width();
+    double half_height = geometry.height();
+    if (center_x - half_width < x && x < center_x + half_width &&
+        center_y - half_width < y && y < center_y + half_height)
+    {
+      double dist_squared = utils::square(center_x - x) + utils::square(center_y - y);
+      if (dist_squared < min_dist_squared)
+      {
+        min_dist_squared = dist_squared;
+        found_index = index;
+      }
+    }
+  }
+  return found_index;
+}
+
+bool Plot::update_grabbed_point(boost::intrusive_ptr<Layer> const& layer, ClickableIndex grabbed_point, int mouse_x, int mouse_y)
+{
+  Rectangle const& g = plot_area_.geometry();
+  double x = mouse_x;
+  x -= g.offset_x();
+  x /= g.width();
+  x *= range_[x_axis].size();
+  x += range_[x_axis].min();
+
+  double y = mouse_y;
+  y -= g.offset_y();
+  y /= g.height();
+  y *= range_[y_axis].size();
+  y = range_[y_axis].max() - y;
+
+  Point* point = clickable_points_[grabbed_point];
+  *point = create_point(layer, {x, y}, point->draw_object_->point_style());
+  clickable_rectangles_[grabbed_point] = point->draw_object_->geometry();
+
+  return true;
 }
 
 } // namespace cairowindow::plot

@@ -61,47 +61,53 @@ int main()
     draw::LineStyle line_style{.line_color = color::black, .line_width = 1.0, .dashes = {10.0, 5.0}};
     draw::ArcStyle arc_style{.line_color = color::blue, .line_width = 1.0};
 
-    double rsw = 0.5;           // This is probably the reciprocal of the square of the "width" (see w in README.bezier).
-    for (int j = 0;; ++j)
+    // P₀, the point at t=0, was translated to the origin.
+    auto plot_P0 = plot.create_point(second_layer, {0, 0}, point_style);
+    auto P0_label = plot.create_text(second_layer, plot_P0, "P₀", label_style);
+
+    // P₁, the point at t=1.
+    Point P1(1.0, 0.0);
+    auto plot_P1 = plot.create_point(second_layer, P1, point_style);
+    auto P1_label = plot.create_text(second_layer, P1, "P₁", label_style({.position = draw::centered_right_of}));
+
+    // Draw a line through P₀ and P₁.
+    auto line_through_P0_and_P1 = plot.create_line(second_layer, plot_P0, P1, solid_line_style);
+
+    // Draw a cirle around the midpoint of P₀P₁ with radius |P₀P₁|/2.
+    Vector P0P1(P1);
+    Point P0P1_circle_center = (0.5 * P0P1).point();
+    auto plot_P0P1_circle_center = plot.create_point(second_layer, P0P1_circle_center, point_style);
+    double P0P1_circle_radius = 0.5 * P0P1.length();
+    auto plot_P0P1_circle = plot.create_circle(second_layer, P0P1_circle_center, P0P1_circle_radius,
+        line_style({.line_color = color::gray}));
+
+    // Initial position of Pᵦ, a point at t < 0.
+    auto plot_P_beta = plot.create_point(second_layer, {-0.5, 0.25}, point_style);
+    // Initial position of Pᵧ, a point at t > 1.
+    auto plot_P_gamma = plot.create_point(second_layer, {1.8, 0.15}, point_style);
+
+    // Allow dragging Pᵦ and Pᵧ.
+    plot.drag_point(&plot_P_beta);
+    plot.drag_point(&plot_P_gamma);
+
+    plot::Plot::ClickableIndex grabbed_point;
+    unsigned int grab_button;                   // Only valid when grabbed_point is not undefined.
+
+    while (true)
     {
-      double theta = j * M_PI / 32;
+      // Suppress immediate updating of the window for each create item, in order to avoid flickering.
+      window.set_send_expose_events(false);
 
-      // Create rotation matrix for rotating -theta.
-      Matrix R{std::cos(theta), std::sin(theta), -std::sin(theta), std::cos(theta)};
+      // Draw a label for Pᵦ.
+      auto P_beta_label = plot.create_text(second_layer, plot_P_beta, "Pᵦ", label_style({.position = draw::centered_right_of}));
 
-      // P₀, the point at t=0, was translated to the origin.
-      auto plot_P0 = plot.create_point(second_layer, {0, 0}, point_style);
-      auto P0_label = plot.create_text(second_layer, plot_P0, "P₀", label_style);
+      // Draw a label for Pᵧ.
+      auto P_gamma_label = plot.create_text(second_layer, plot_P_gamma, "Pᵧ", label_style({.position = draw::centered_right_of}));
 
-      // P₁, the point at t=1.
-      Point P1(1.0, 0.0);
-      auto plot_P1 = plot.create_point(second_layer, P1, point_style);
-      auto P1_label = plot.create_text(second_layer, P1, "P₁", label_style({.position = draw::centered_right_of}));
-
-      // Draw a line through P₀ and P₁.
-      auto line_through_P0_and_P1 = plot.create_line(second_layer, plot_P0, P1, solid_line_style);
-
-      // Draw a cirle around the midpoint of P₀P₁ with radius |P₀P₁|/2.
-      Vector P0P1(P1);
-      Point P0P1_circle_center = (0.5 * P0P1).point();
-      auto plot_P0P1_circle_center = plot.create_point(second_layer, P0P1_circle_center, point_style);
-      double P0P1_circle_radius = 0.5 * P0P1.length();
-      auto plot_P0P1_circle = plot.create_circle(second_layer, P0P1_circle_center, P0P1_circle_radius,
-          line_style({.line_color = color::gray}));
-
-      // Pᵦ, a point at t < 0.
-      double x_beta = -0.5;
-      double y_beta = 0.25;
-      Point P_beta(x_beta, y_beta);
-      auto plot_P_beta = plot.create_point(second_layer, P_beta, point_style);
-      auto P_beta_label = plot.create_text(second_layer, P_beta, "Pᵦ", label_style({.position = draw::centered_right_of}));
-
-      // Pᵧ, a point at t > 1.
-      double x_gamma = 1.8;
-      double y_gamma = 0.15;
-      Point P_gamma(x_gamma, y_gamma);
-      auto plot_P_gamma = plot.create_point(second_layer, P_gamma, point_style);
-      auto P_gamma_label = plot.create_text(second_layer, P_gamma, "Pᵧ", label_style({.position = draw::centered_right_of}));
+      double x_beta = plot_P_beta.x();
+      double y_beta = plot_P_beta.y();
+      double x_gamma = plot_P_gamma.x();
+      double y_gamma = plot_P_gamma.y();
 
       // Helper variables.
       double x_span = x_gamma - x_beta;
@@ -116,16 +122,6 @@ int main()
       double m11 = -m10;
       double m00 = 1.0 - m01;
 
-#if 0   // The three point case - with free theta.
-      // Helper variable.
-      double z = x_beta + y_beta * std::tan(theta);
-      // Define the matrix M.
-      double m11 = y_beta / (z * (z - 1));
-      double m10 = -m11;
-      double m01 = m10 * std::tan(theta);
-      double m00 = 1.0 - m01;
-#endif
-
       auto xt = [=](double t){ return t * (m00 + m01 * t); };
       auto yt = [=](double t){ return t * (m10 + m11 * t); };
 
@@ -138,12 +134,44 @@ int main()
       }
       auto curve = plot.create_curve(second_layer, std::move(curve_points), curve_line_style);
 
+      // Flush all expose events related to the above drawing.
       window.set_send_expose_events(true);
 
-      std::this_thread::sleep_for(std::chrono::milliseconds(20));
-      std::cin.get();
+      bool block = true;
+      while (window.have_message(block))
+      {
+        Message const* message = window.pop_message();
 
-      window.set_send_expose_events(false);
+        Dout(dc::notice, "Received message " << message->event << " (" << message->mouse_x << ", " << message->mouse_y << ")");
+        switch (message->event)
+        {
+          case MouseEvent::button_press:
+          {
+            Dout(dc::notice, "button: " << message->button);
+            auto index = plot.grab_point(message->mouse_x, message->mouse_y);
+            if (!index.undefined())
+            {
+              window.send_custom_event(custom_event_grab_mouse, message->button);
+              grabbed_point = index;
+              grab_button = message->button;
+            }
+            break;
+          }
+          case MouseEvent::button_release:
+            Dout(dc::notice, "button: " << message->button);
+            if (!grabbed_point.undefined() && message->button == grab_button)
+              grabbed_point.set_to_undefined();
+            break;
+          case MouseEvent::drag:
+            if (!grabbed_point.undefined())
+            {
+              // Update grabbed_point and return true if there was a change.
+              if (plot.update_grabbed_point(second_layer, grabbed_point, message->mouse_x, message->mouse_y))
+                block = false;  // We have to redraw a part of the graph.
+            }
+            break;
+        }
+      }
     }
 
     event_loop.join();

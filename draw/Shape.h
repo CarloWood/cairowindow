@@ -84,6 +84,7 @@ class Shape : public LayerRegion
       }
     }
 
+  Rectangle const& geometry() const { return geometry_; }
   ShapeStyle& style() { return style_; }
   ShapeStyle const& style() const { return style_; }
 
