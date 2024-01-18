@@ -359,7 +359,7 @@ Plot::ClickableIndex Plot::grab_point(double x, double y)
   return found_index;
 }
 
-bool Plot::update_grabbed_point(boost::intrusive_ptr<Layer> const& layer, ClickableIndex grabbed_point, int mouse_x, int mouse_y)
+bool Plot::update_grabbed(ClickableIndex grabbed_point, int mouse_x, int mouse_y)
 {
   Rectangle const& g = plot_area_.geometry();
   double x = mouse_x;
@@ -375,7 +375,7 @@ bool Plot::update_grabbed_point(boost::intrusive_ptr<Layer> const& layer, Clicka
   y = range_[y_axis].max() - y;
 
   Point* point = clickable_points_[grabbed_point];
-  *point = create_point(layer, {x, y}, point->draw_object_->point_style());
+  *point = create_point(point->draw_object_->layer(), {x, y}, point->draw_object_->point_style());
   clickable_rectangles_[grabbed_point] = point->draw_object_->geometry();
 
   return true;

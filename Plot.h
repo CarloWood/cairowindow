@@ -341,7 +341,7 @@ class Plot
   ClickableIndex grab_point(double x, double y);
 
   // New mouse coordinates where received for the grabbed Point.
-  bool update_grabbed_point(boost::intrusive_ptr<Layer> const& layer, ClickableIndex grabbed_point, int mouse_x, int mouse_y);
+  bool update_grabbed(ClickableIndex grabbed_point, int mouse_x, int mouse_y);
 
  private:
   Rectangle axes_geometry(Rectangle const& geometry, double axes_line_width);

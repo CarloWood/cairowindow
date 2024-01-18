@@ -33,6 +33,7 @@ class LayerRegion
 
   StrokeExtents redraw(cairo_t* cr);
 
+  Layer* layer() const { return layer_; }
   StrokeExtents const& stroke_extents() const { return stroke_extents_; }
 
 #ifdef CWDEBUG

@@ -90,8 +90,8 @@ int main()
     plot.drag_point(&plot_P_beta);
     plot.drag_point(&plot_P_gamma);
 
-    plot::Plot::ClickableIndex grabbed_point;
-    unsigned int grab_button;                   // Only valid when grabbed_point is not undefined.
+    plot::Plot::ClickableIndex grab_index;
+    unsigned int grab_button;                   // Only valid when grab_index is not undefined.
 
     while (true)
     {
@@ -152,21 +152,21 @@ int main()
             if (!index.undefined())
             {
               window.send_custom_event(custom_event_grab_mouse, message->button);
-              grabbed_point = index;
+              grab_index = index;
               grab_button = message->button;
             }
             break;
           }
           case MouseEvent::button_release:
             Dout(dc::notice, "button: " << message->button);
-            if (!grabbed_point.undefined() && message->button == grab_button)
-              grabbed_point.set_to_undefined();
+            if (!grab_index.undefined() && message->button == grab_button)
+              grab_index.set_to_undefined();
             break;
           case MouseEvent::drag:
-            if (!grabbed_point.undefined())
+            if (!grab_index.undefined())
             {
-              // Update grabbed_point and return true if there was a change.
-              if (plot.update_grabbed_point(second_layer, grabbed_point, message->mouse_x, message->mouse_y))
+              // Update the object with grab_index and return true if a redraw is necessary.
+              if (plot.update_grabbed(grab_index, message->mouse_x, message->mouse_y))
                 block = false;  // We have to redraw a part of the graph.
             }
             break;
