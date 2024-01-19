@@ -342,12 +342,12 @@ void Window::close()
   send_close_event();
 }
 
-void Window::register_draggable_point(plot::Plot& plot, plot::Point* point)
+void Window::register_draggable_point(plot::Plot& plot, plot::Point* point, std::function<Point (Point const&)> restriction)
 {
   DoutEntering(dc::notice, "Window::register_draggable_point(@" << *point << ")");
   clickable_rectangles_.push_back(point->draw_object_->geometry());
   clickable_plots_.push_back(&plot);
-  plot.register_draggable_point({}, point);
+  plot.register_draggable_point({}, point, std::move(restriction));
 }
 
 ClickableIndex Window::grab_point(double x, double y)

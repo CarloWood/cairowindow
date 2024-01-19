@@ -22,6 +22,7 @@
 #include <boost/intrusive_ptr.hpp>
 #include <string>
 #include <vector>
+#include <functional>
 #include "debug.h"
 #ifdef CWDEBUG
 #include "debug_channel.h"
@@ -174,6 +175,7 @@ class Plot
   std::array<std::vector<std::shared_ptr<draw::Text>>, number_of_axes> labels_;
 
   utils::Vector<Point*, ClickableIndex> clickable_points_;
+  utils::Vector<std::function<cairowindow::Point (cairowindow::Point const&)>, ClickableIndex> clickable_restrictions_;
 
   struct TitleStyleDefaults : draw::DefaultTextStyleDefaults
   {
@@ -235,6 +237,12 @@ class Plot
 
   void set_xrange(Range x_range) { set_range(x_axis, x_range); }
   void set_yrange(Range y_range) { set_range(y_axis, y_range); }
+
+  cairowindow::Point clamp_to_plot_area(cairowindow::Point const& point) const
+  {
+    return {std::clamp(point.x(), range_[x_axis].min(), range_[x_axis].max()),
+            std::clamp(point.y(), range_[y_axis].min(), range_[y_axis].max())};
+  }
 
   double convert_x(double x) const;
   double convert_y(double y) const;
@@ -330,7 +338,11 @@ class Plot
   void add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio = false);
 
   // Called from Window::register_draggable_point.
-  void register_draggable_point(utils::Badge<Window>, Point* point) { clickable_points_.push_back(point); }
+  void register_draggable_point(utils::Badge<Window>, Point* point, std::function<cairowindow::Point (cairowindow::Point const&)>&& restriction)
+  {
+    clickable_points_.push_back(point);
+    clickable_restrictions_.emplace_back(std::move(restriction));
+  }
   Rectangle update_grabbed(utils::Badge<Window>, ClickableIndex grabbed_point, int mouse_x, int mouse_y);
 
  private:

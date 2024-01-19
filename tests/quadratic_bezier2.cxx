@@ -81,6 +81,10 @@ int main()
     auto plot_P0P1_circle = plot.create_circle(second_layer, P0P1_circle_center, P0P1_circle_radius,
         line_style({.line_color = color::gray}));
 
+    // Create a point Q on the circle.
+    double phi = M_PI / 10;
+    auto plot_Q = plot.create_point(second_layer, P0P1_circle_center + 0.5 * Direction{phi}, point_style);
+
     // Initial position of Pᵦ, a point at t < 0.
     auto plot_P_beta = plot.create_point(second_layer, {-0.5, -0.25}, point_style);
     // Initial position of Pᵧ, a point at t > 1.
@@ -89,6 +93,11 @@ int main()
     // Allow dragging Pᵦ and Pᵧ.
     window.register_draggable_point(plot, &plot_P_beta);
     window.register_draggable_point(plot, &plot_P_gamma);
+    window.register_draggable_point(plot, &plot_Q, [&P0P1_circle_center](Point const& new_position)
+        {
+          return P0P1_circle_center + 0.5 * Direction{P0P1_circle_center, new_position};
+        }
+    );
 
     while (true)
     {
@@ -100,6 +109,20 @@ int main()
 
       // Draw a label for Pᵧ.
       auto P_gamma_label = plot.create_text(second_layer, plot_P_gamma, "Pᵧ", label_style({.position = draw::centered_right_of}));
+
+      // Draw a label for Q.
+      auto Q_label = plot.create_text(second_layer, plot_Q, "Q", label_style);
+
+      // Draw a line from P0 to Q.
+      auto plot_P0_Q = plot.create_connector(second_layer, plot_P0, plot_Q, line_style);
+      auto P0_Q_label = plot.create_text(second_layer, plot_P0 + 0.5 * Vector(plot_P0, plot_Q), "s²(1-2v)",
+          label_style({.font_size = 12, .offset = 5}));
+
+      // Draw a line between P₁ and Q.
+      auto line_P1_Q = plot.create_connector(second_layer,
+          P1, plot_Q, Connector::open_arrow, Connector::open_arrow, line_style({.line_color = color::coral, .dashes = {3.0, 3.0}}));
+      auto sw_label2 = plot.create_text(second_layer, plot_Q + 0.5 * Vector{plot_Q, P1},
+          "sw", label_style({.position = draw::centered_below, .font_size = 12, .offset = 5}));
 
       double x_beta = plot_P_beta.x();
       double y_beta = plot_P_beta.y();

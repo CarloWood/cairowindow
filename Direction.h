@@ -24,6 +24,7 @@ class Direction
     double len = std::sqrt(x_ * x_ + y_ * y_);
     x_ /= len;
     y_ /= len;
+    ASSERT(!std::isnan(x_) && !std::isnan(y_));
   }
 
   // If only one point is give, the direction is from the origin to that point.

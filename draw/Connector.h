@@ -27,6 +27,13 @@ class Connector : public Line
       cairowindow::Connector::ArrowHeadShape arrow_head_shape_from, cairowindow::Connector::ArrowHeadShape arrow_head_shape_to) :
     Line(x1, y1, x2, y2, style), arrow_head_shape_from_(arrow_head_shape_from), arrow_head_shape_to_(arrow_head_shape_to)
   {
+    // Don't draw arrow heads when the length of the Connector is near zero.
+    if (std::abs(x2 - x1) < 0.01 && std::abs(y2 - y1) < 0.01)
+    {
+      arrow_head_shape_from_ = cairowindow::Connector::no_arrow;
+      arrow_head_shape_to_ = cairowindow::Connector::no_arrow;
+      return;
+    }
     if (arrow_head_shape_from != cairowindow::Connector::no_arrow)
       arrow_head_from_ = std::make_shared<ArrowHead>(x1, y1, Direction{{x2, y2}, {x1, y1}}, // Pointing to the tip at x1,y1
           ArrowHeadStyle{.line_color = style.line_color, .fill_color = fill_color, .line_width = style.line_width,

@@ -84,10 +84,10 @@ int main()
       double phi = 2.52; // 0.01 * j;
       Point point_on_circle(P0P1_circle_center.x() + P0P1_circle_radius * cos(phi), P0P1_circle_center.y() + P0P1_circle_radius * sin(phi));
       auto plot_point_on_circle = plot.create_point(second_layer, point_on_circle, point_style);
-      Vector P1R_P1(point_on_circle, P1);
+      Vector Q_P1(point_on_circle, P1);
 
-      double sw = P1R_P1.length();
-      double sign = (P1R_P1.dot(P0P1.rotate_90_degrees()) > 0.0) ? -1.0 : 1.0;
+      double sw = Q_P1.length();
+      double sign = (Q_P1.dot(P0P1.rotate_90_degrees()) > 0.0) ? -1.0 : 1.0;
       double s_squared_times_one_minus_2v = sign * Vector(point_on_circle, P0).length();
 
       double s = 2.0;
@@ -95,7 +95,7 @@ int main()
       double v = 0.5 * (1 - s_squared_times_one_minus_2v / (s * s));
 
       // Determine the symmetry line direction.
-      Direction const perpendicular_to_symmetry_line_dir = P1R_P1.direction();
+      Direction const perpendicular_to_symmetry_line_dir = Q_P1.direction();
       Direction const symmetry_line_dir = perpendicular_to_symmetry_line_dir.normal();
       double theta = perpendicular_to_symmetry_line_dir.as_angle();
 
@@ -147,10 +147,10 @@ int main()
       auto plot_V1L = plot.create_point(second_layer, V1L, point_style({.color_index = color_index2}));
       auto plot_V1R = plot.create_point(second_layer, V1R, point_style({.color_index = color_index2}));
 
-      auto plot_P1R = plot.create_point(second_layer, P1 - sw * perpendicular_to_symmetry_line_dir, point_style({.color_index = color_index2}));
-//      auto P1R_label = plot.create_text(second_layer, plot_P1R, "P1R", label_style({.position = draw::centered_below}));
-      auto plot_P0_P1R = plot.create_connector(second_layer, P0, plot_P1R, line_style);
-      auto P0_P1R_label = plot.create_text(second_layer, P0 + 0.5 * Vector(P0, plot_P1R), "s²(1-2v)",
+      auto plot_Q = plot.create_point(second_layer, P1 - sw * perpendicular_to_symmetry_line_dir, point_style({.color_index = color_index2}));
+      auto Q_label = plot.create_text(second_layer, plot_Q, "Q", label_style({.position = draw::centered_above}));
+      auto plot_P0_Q = plot.create_connector(second_layer, P0, plot_Q, line_style);
+      auto P0_Q_label = plot.create_text(second_layer, P0 + 0.5 * Vector(P0, plot_Q), "s²(1-2v)",
           label_style({.font_size = 12, .offset = 5}));
 
       // Draw a line through P₀ and P₁.
@@ -168,14 +168,14 @@ int main()
           V1, V1L, Connector::open_arrow, Connector::open_arrow, line_style({.line_color = color::coral, .dashes = {3.0, 3.0}}));
       auto w_label = plot.create_text(second_layer, V1 + 0.5 * w * perpendicular_to_symmetry_line_dir,
           "w", label_style({.position = draw::centered_above, .font_size = 14, .offset = 5}));
-      // Draw a line between P₁ and P1R.
-      auto line_P1_P1R = plot.create_connector(second_layer,
-          P1, plot_P1R, Connector::open_arrow, Connector::open_arrow, line_style({.line_color = color::coral, .dashes = {3.0, 3.0}}));
-      auto sw_label2 = plot.create_text(second_layer, plot_P1R + 0.5 * sw * perpendicular_to_symmetry_line_dir,
+      // Draw a line between P₁ and Q.
+      auto line_P1_Q = plot.create_connector(second_layer,
+          P1, plot_Q, Connector::open_arrow, Connector::open_arrow, line_style({.line_color = color::coral, .dashes = {3.0, 3.0}}));
+      auto sw_label2 = plot.create_text(second_layer, plot_Q + 0.5 * sw * perpendicular_to_symmetry_line_dir,
           "sw", label_style({.position = draw::centered_below, .font_size = 12, .offset = 5}));
 
-      // Draw an arc between P1_P1R and P1_P0.
-      plot::Arc alpha_arc(P1, Direction{P1, plot_P1R}, Direction{P1, P0}, 0.1);
+      // Draw an arc between P1_Q and P1_P0.
+      plot::Arc alpha_arc(P1, Direction{P1, plot_Q}, Direction{P1, P0}, 0.1);
       plot.add_arc(second_layer, alpha_arc, arc_style({.line_color = color::blue}));
       auto alpha_label = plot.create_text(second_layer, P1 + 0.13 * alpha_arc.bisector_direction(),
           "α", label_style({.position = draw::centered, .font_size = 14}));

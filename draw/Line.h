@@ -54,7 +54,10 @@ class Line : public LayerRegion
   LineStyle style_;
 
  public:
-  Line(double x1, double y1, double x2, double y2, LineStyle const& style) : x1_(x1), y1_(y1), x2_(x2), y2_(y2), style_(style) { }
+  Line(double x1, double y1, double x2, double y2, LineStyle const& style) : x1_(x1), y1_(y1), x2_(x2), y2_(y2), style_(style)
+  {
+    ASSERT(!std::isnan(x1) && !std::isnan(y1) && !std::isnan(x2) && !std::isnan(y2));
+  }
 
   double length() const { return std::sqrt((x2_ - x1_) * (x2_ - x1_) + (y2_ - y1_) * (y2_ - y1_)); }
 

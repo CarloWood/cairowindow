@@ -6,6 +6,7 @@
 #include "LayerArgs.h"
 #include "Message.h"
 #include "ClickableIndex.h"
+#include "Point.h"
 #include "utils/AIAlert.h"
 #include "utils/threading/Semaphore.h"
 #include "utils/threading/FIFOBuffer.h"
@@ -14,6 +15,7 @@
 #include <mutex>
 #include <string>
 #include <atomic>
+#include <functional>
 #include "debug.h"
 #ifdef CAIROWINDOW_DEBUGWINDOW
 #include "DebugWindow.h"
@@ -172,7 +174,7 @@ class Window
   void send_custom_event(uint32_t data, unsigned int button);
 
   // Allow dragging of point with the mouse.
-  void register_draggable_point(plot::Plot& plot, plot::Point* point);
+  void register_draggable_point(plot::Plot& plot, plot::Point* point, std::function<Point (Point const&)> restriction = {});
 
   // Block until a point was dragged by the user.
   void handle_dragging();

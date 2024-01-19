@@ -347,8 +347,13 @@ Rectangle Plot::update_grabbed(utils::Badge<Window>, ClickableIndex grabbed_poin
   y *= range_[y_axis].size();
   y = range_[y_axis].max() - y;
 
+  cairowindow::Point new_position{x, y};
+
+  if (clickable_restrictions_[grabbed_point])
+    new_position = clickable_restrictions_[grabbed_point](new_position);
+
   Point* point = clickable_points_[grabbed_point];
-  *point = create_point(point->draw_object_->layer(), {x, y}, point->draw_object_->point_style());
+  *point = create_point(point->draw_object_->layer(), new_position, point->draw_object_->point_style());
   Window* window = point->draw_object_->layer()->window();
 
   return point->draw_object_->geometry();
