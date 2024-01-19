@@ -82,9 +82,9 @@ int main()
         line_style({.line_color = color::gray}));
 
     // Initial position of Pᵦ, a point at t < 0.
-    auto plot_P_beta = plot.create_point(second_layer, {-0.5, 0.25}, point_style);
+    auto plot_P_beta = plot.create_point(second_layer, {-0.5, -0.25}, point_style);
     // Initial position of Pᵧ, a point at t > 1.
-    auto plot_P_gamma = plot.create_point(second_layer, {1.8, 0.15}, point_style);
+    auto plot_P_gamma = plot.create_point(second_layer, {1.8, -0.15}, point_style);
 
     // Allow dragging Pᵦ and Pᵧ.
     window.register_draggable_point(plot, &plot_P_beta);
@@ -109,10 +109,10 @@ int main()
       // Helper variables.
       double x_span = x_gamma - x_beta;
       double y_span = y_gamma - y_beta;
-      double subexpr50 = 4.0 * y_gamma * y_span * (x_gamma * (1.0 - x_gamma) - y_gamma * (1.0 - x_beta) * x_beta / y_beta);
-      double tan_theta = (0.5 / (y_gamma * y_span)) * std::sqrt(utils::square(2.0 * x_span * y_gamma) + subexpr50) - x_span / y_span;
-
+      double subexpr50 = y_span * ((1.0 - x_gamma) * x_gamma / y_gamma - (1.0 - x_beta) * x_beta / y_beta);
+      double tan_theta = (std::sqrt(x_span * x_span + subexpr50) - x_span) / y_span;
       double z = x_beta + y_beta * tan_theta;
+
       // Define the matrix M.
       double m10 = y_beta / (z * (1.0 - z));
       double m01 = m10 * tan_theta;
