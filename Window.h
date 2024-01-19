@@ -5,9 +5,11 @@
 #include "EventLoop.h"
 #include "LayerArgs.h"
 #include "Message.h"
+#include "ClickableIndex.h"
 #include "utils/AIAlert.h"
 #include "utils/threading/Semaphore.h"
 #include "utils/threading/FIFOBuffer.h"
+#include "utils/Vector.h"
 #include <boost/intrusive_ptr.hpp>
 #include <mutex>
 #include <string>
@@ -30,6 +32,10 @@ static constexpr auto x11_False = False;
 #undef False
 #undef Status
 } // namespace X11
+namespace plot {
+class Plot;
+class Point;
+} // namespace plot
 
 using X11Window = ::Window;
 
@@ -63,10 +69,17 @@ class Window
   bool send_expose_events_{true};
   std::vector<StrokeExtents> expose_events_;
 
+  // Mouse events (accessed by the XEventLoop thread).
   int mouse_grabbed_by_{-1};
   int mouse_button_mask_{0};
   utils::threading::Semaphore message_semaphore_{0};
   utils::threading::FIFOBuffer<1, Message> message_buffer_{64};
+
+  // Dragging.
+  utils::Vector<Rectangle, ClickableIndex> clickable_rectangles_;
+  utils::Vector<plot::Plot*, ClickableIndex> clickable_plots_;
+  ClickableIndex grab_index_;           // The index of the object (Point) that was grabbed.
+  unsigned int grab_button_;            // The mouse button that did the grabbing (only valid when grab_index is not undefined).
 
 #ifdef CAIROWINDOW_DEBUGWINDOW
   DebugWindow debug_window_;
@@ -158,10 +171,19 @@ class Window
 
   void send_custom_event(uint32_t data, unsigned int button);
 
+  // Allow dragging of point with the mouse.
+  void register_draggable_point(plot::Plot& plot, plot::Point* point);
+
+  // Block until a point was dragged by the user.
+  void handle_dragging();
+
  private:
   void send_close_event();
   void grab_mouse(unsigned int button);
   void release_mouse();
+
+  ClickableIndex grab_point(double x, double y);
+  bool update_grabbed(ClickableIndex grabbed_point, int mouse_x, int mouse_y);
 };
 
 } // namespace cairowindow

@@ -2,12 +2,14 @@
 #include "utils/AIAlert.h"
 #include "Window.h"
 #include "Layer.h"
+#include "Plot.h"
+#include "ClickableIndex.h"
 #include <X11/Xatom.h>
 #include <mutex>
 #include "debug.h"
 #ifdef CWDEBUG
-#include "cairowindow/debug_channel.h"
-#include "cairowindow/debugcairo.h"
+#include "debug_channel.h"
+#include "debugcairo.h"
 #endif
 
 #ifdef CWDEBUG
@@ -338,6 +340,93 @@ void Window::close()
 {
   running_ = false;
   send_close_event();
+}
+
+void Window::register_draggable_point(plot::Plot& plot, plot::Point* point)
+{
+  DoutEntering(dc::notice, "Window::register_draggable_point(@" << *point << ")");
+  clickable_rectangles_.push_back(point->draw_object_->geometry());
+  clickable_plots_.push_back(&plot);
+  plot.register_draggable_point({}, point);
+}
+
+ClickableIndex Window::grab_point(double x, double y)
+{
+  DoutEntering(dc::notice, "Window::grab_point(" << x << ", " << y << ")");
+  ClickableIndex found_index;
+  double min_dist_squared = std::numeric_limits<double>::max();
+  for (ClickableIndex index = clickable_rectangles_.ibegin(); index != clickable_rectangles_.iend(); ++index)
+  {
+    Rectangle const& geometry = clickable_rectangles_[index];
+    // A Point uses ShapePosition::at_corner.
+    double center_x = geometry.offset_x();
+    double center_y = geometry.offset_y();
+    double half_width = geometry.width();
+    double half_height = geometry.height();
+    if (center_x - half_width < x && x < center_x + half_width &&
+        center_y - half_width < y && y < center_y + half_height)
+    {
+      double dist_squared = utils::square(center_x - x) + utils::square(center_y - y);
+      if (dist_squared < min_dist_squared)
+      {
+        min_dist_squared = dist_squared;
+        found_index = index;
+      }
+    }
+  }
+  return found_index;
+}
+
+bool Window::update_grabbed(ClickableIndex grabbed_point, int mouse_x, int mouse_y)
+{
+  plot::Plot* plot = clickable_plots_[grabbed_point];
+  Rectangle new_rectangle = plot->update_grabbed({}, grabbed_point, mouse_x, mouse_y);
+  if (new_rectangle.is_defined())
+  {
+    // Update the rectangle of a draggable Point, called after it was moved.
+    clickable_rectangles_[grabbed_point] = new_rectangle;
+    return true;
+  }
+  return false;
+}
+
+void Window::handle_dragging()
+{
+  bool block = true;
+  while (have_message(block))
+  {
+    Message const* message = pop_message();
+
+    Dout(dc::notice, "Received message " << message->event << " (" << message->mouse_x << ", " << message->mouse_y << ")");
+    switch (message->event)
+    {
+      case MouseEvent::button_press:
+      {
+        Dout(dc::cairowindow, "button: " << message->button);
+        auto index = grab_point(message->mouse_x, message->mouse_y);
+        if (!index.undefined())
+        {
+          send_custom_event(custom_event_grab_mouse, message->button);
+          grab_index_ = index;
+          grab_button_ = message->button;
+        }
+        break;
+      }
+      case MouseEvent::button_release:
+        Dout(dc::cairowindow, "button: " << message->button);
+        if (!grab_index_.undefined() && message->button == grab_button_)
+          grab_index_.set_to_undefined();
+        break;
+      case MouseEvent::drag:
+        if (!grab_index_.undefined())
+        {
+          // Update the object with grab_index_ and return true if a redraw is necessary.
+          if (update_grabbed(grab_index_, message->mouse_x, message->mouse_y))
+            block = false;  // We have to redraw a part of the graph.
+        }
+        break;
+    }
+  }
 }
 
 } // namespace cairowindow

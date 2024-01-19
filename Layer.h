@@ -61,6 +61,7 @@ class Layer : public AIRefCount
   void redraw(cairo_t* cr, StrokeExtents const& stroke_extents);
   void add_area(double area) { region_areas_ += area; }
 
+  Window* window() const { return window_; }
   cairo_surface_t* surface() const { return surface_; }
   cairo_t* cr() const { return cr_; }
   double offset_x() const { return geometry_.offset_x(); }

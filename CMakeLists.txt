@@ -70,6 +70,8 @@ set_property(
   PROPERTY SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
+file(GLOB HEADER_FILES "*.h" "draw/*.h")
+
 # The list of source files.
 target_sources(cairowindow_ObjLib
   PRIVATE
@@ -89,12 +91,7 @@ target_sources(cairowindow_ObjLib
     "draw/ArrowHead.cxx"
     "draw/Connector.cxx"
 
-    "Color.h"
-    "Rectangle.h"
-    "Layer.h"
-    "Window.h"
-    "EventLoop.h"
-    "LayerRegion.h"
+    ${HEADER_FILES}
 )
 
 if (OptionEnableDebugWindow)

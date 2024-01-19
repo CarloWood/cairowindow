@@ -332,34 +332,7 @@ Curve Plot::create_curve(boost::intrusive_ptr<Layer> const& layer,
   return plot_curve;
 }
 
-Plot::ClickableIndex Plot::grab_point(double x, double y)
-{
-  DoutEntering(dc::notice, "Plot::grab_point(" << x << ", " << y << ")");
-  ClickableIndex found_index;
-  double min_dist_squared = std::numeric_limits<double>::max();
-  for (ClickableIndex index = clickable_rectangles_.ibegin(); index != clickable_rectangles_.iend(); ++index)
-  {
-    Rectangle const& geometry = clickable_rectangles_[index];
-    // A Point uses ShapePosition::at_corner.
-    double center_x = geometry.offset_x();
-    double center_y = geometry.offset_y();
-    double half_width = geometry.width();
-    double half_height = geometry.height();
-    if (center_x - half_width < x && x < center_x + half_width &&
-        center_y - half_width < y && y < center_y + half_height)
-    {
-      double dist_squared = utils::square(center_x - x) + utils::square(center_y - y);
-      if (dist_squared < min_dist_squared)
-      {
-        min_dist_squared = dist_squared;
-        found_index = index;
-      }
-    }
-  }
-  return found_index;
-}
-
-bool Plot::update_grabbed(ClickableIndex grabbed_point, int mouse_x, int mouse_y)
+Rectangle Plot::update_grabbed(utils::Badge<Window>, ClickableIndex grabbed_point, int mouse_x, int mouse_y)
 {
   Rectangle const& g = plot_area_.geometry();
   double x = mouse_x;
@@ -376,9 +349,9 @@ bool Plot::update_grabbed(ClickableIndex grabbed_point, int mouse_x, int mouse_y
 
   Point* point = clickable_points_[grabbed_point];
   *point = create_point(point->draw_object_->layer(), {x, y}, point->draw_object_->point_style());
-  clickable_rectangles_[grabbed_point] = point->draw_object_->geometry();
+  Window* window = point->draw_object_->layer()->window();
 
-  return true;
+  return point->draw_object_->geometry();
 }
 
 } // namespace cairowindow::plot

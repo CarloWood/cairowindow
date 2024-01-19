@@ -3,8 +3,8 @@
 #include "Color.h"
 #include "StrokeExtents.h"
 #ifdef CWDEBUG
-#include "cairowindow/debug_channel.h"
-#include "cairowindow/debugcairo.h"
+#include "debug_channel.h"
+#include "debugcairo.h"
 #endif
 
 namespace cairowindow {

@@ -87,15 +87,12 @@ int main()
     auto plot_P_gamma = plot.create_point(second_layer, {1.8, 0.15}, point_style);
 
     // Allow dragging Pᵦ and Pᵧ.
-    plot.drag_point(&plot_P_beta);
-    plot.drag_point(&plot_P_gamma);
-
-    plot::Plot::ClickableIndex grab_index;
-    unsigned int grab_button;                   // Only valid when grab_index is not undefined.
+    window.register_draggable_point(plot, &plot_P_beta);
+    window.register_draggable_point(plot, &plot_P_gamma);
 
     while (true)
     {
-      // Suppress immediate updating of the window for each create item, in order to avoid flickering.
+      // Suppress immediate updating of the window for each created item, in order to avoid flickering.
       window.set_send_expose_events(false);
 
       // Draw a label for Pᵦ.
@@ -134,44 +131,11 @@ int main()
       }
       auto curve = plot.create_curve(second_layer, std::move(curve_points), curve_line_style);
 
-      // Flush all expose events related to the above drawing.
+      // Flush all expose events related to the drawing done above.
       window.set_send_expose_events(true);
 
-      bool block = true;
-      while (window.have_message(block))
-      {
-        Message const* message = window.pop_message();
-
-        Dout(dc::notice, "Received message " << message->event << " (" << message->mouse_x << ", " << message->mouse_y << ")");
-        switch (message->event)
-        {
-          case MouseEvent::button_press:
-          {
-            Dout(dc::notice, "button: " << message->button);
-            auto index = plot.grab_point(message->mouse_x, message->mouse_y);
-            if (!index.undefined())
-            {
-              window.send_custom_event(custom_event_grab_mouse, message->button);
-              grab_index = index;
-              grab_button = message->button;
-            }
-            break;
-          }
-          case MouseEvent::button_release:
-            Dout(dc::notice, "button: " << message->button);
-            if (!grab_index.undefined() && message->button == grab_button)
-              grab_index.set_to_undefined();
-            break;
-          case MouseEvent::drag:
-            if (!grab_index.undefined())
-            {
-              // Update the object with grab_index and return true if a redraw is necessary.
-              if (plot.update_grabbed(grab_index, message->mouse_x, message->mouse_y))
-                block = false;  // We have to redraw a part of the graph.
-            }
-            break;
-        }
-      }
+      // Block until the user moved a draggable object, then go to the top of loop for a redraw.
+      window.handle_dragging();
     }
 
     event_loop.join();
