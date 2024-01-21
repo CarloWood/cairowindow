@@ -3,8 +3,8 @@
 #include "Color.h"
 #include "Rectangle.h"
 #include "LayerRegion.h"
-#include "MultiRegion.h"
 #include "Window.h"
+#include "draw/MultiRegion.h"
 #include "utils/AIRefCount.h"
 #include <cairo/cairo.h>
 #include <vector>
@@ -43,7 +43,7 @@ class Layer : public AIRefCount
     layer_region->draw(this);
   }
 
-  void draw(MultiRegion* multi_region)
+  void draw(draw::MultiRegion* multi_region)
   {
     multi_region->draw_regions_on(this);
   }

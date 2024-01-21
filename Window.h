@@ -5,8 +5,8 @@
 #include "EventLoop.h"
 #include "LayerArgs.h"
 #include "Message.h"
-#include "ClickableIndex.h"
 #include "Point.h"
+#include "Draggable.h"
 #include "utils/AIAlert.h"
 #include "utils/threading/Semaphore.h"
 #include "utils/threading/FIFOBuffer.h"
@@ -36,7 +36,7 @@ static constexpr auto x11_False = False;
 } // namespace X11
 namespace plot {
 class Plot;
-class Point;
+class Draggable;
 } // namespace plot
 
 using X11Window = ::Window;
@@ -174,7 +174,7 @@ class Window
   void send_custom_event(uint32_t data, unsigned int button);
 
   // Allow dragging of point with the mouse.
-  void register_draggable_point(plot::Plot& plot, plot::Point* point, std::function<Point (Point const&)> restriction = {});
+  void register_draggable(plot::Plot& plot, plot::Draggable* draggable, std::function<Point (Point const&)> restriction = {});
 
   // Block until a point was dragged by the user.
   void handle_dragging();

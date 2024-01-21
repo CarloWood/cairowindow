@@ -90,6 +90,7 @@ target_sources(cairowindow_ObjLib
     "draw/Curve.cxx"
     "draw/ArrowHead.cxx"
     "draw/Connector.cxx"
+    "draw/Slider.cxx"
 
     ${HEADER_FILES}
 )

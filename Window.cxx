@@ -3,7 +3,7 @@
 #include "Window.h"
 #include "Layer.h"
 #include "Plot.h"
-#include "ClickableIndex.h"
+#include "Draggable.h"
 #include <X11/Xatom.h>
 #include <mutex>
 #include "debug.h"
@@ -342,12 +342,12 @@ void Window::close()
   send_close_event();
 }
 
-void Window::register_draggable_point(plot::Plot& plot, plot::Point* point, std::function<Point (Point const&)> restriction)
+void Window::register_draggable(plot::Plot& plot, plot::Draggable* draggable, std::function<Point (Point const&)> restriction)
 {
-  DoutEntering(dc::notice, "Window::register_draggable_point(@" << *point << ")");
-  clickable_rectangles_.push_back(point->draw_object_->geometry());
+  DoutEntering(dc::notice, "Window::register_draggable(@" << *draggable << ")");
+  clickable_rectangles_.push_back(draggable->geometry());
   clickable_plots_.push_back(&plot);
-  plot.register_draggable_point({}, point, std::move(restriction));
+  plot.register_draggable({}, draggable, std::move(restriction));
 }
 
 ClickableIndex Window::grab_point(double x, double y)

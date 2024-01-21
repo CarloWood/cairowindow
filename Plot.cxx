@@ -291,6 +291,16 @@ Text Plot::create_text(boost::intrusive_ptr<Layer> const& layer,
   return plot_text;
 }
 
+#if 0
+Text Plot::create_text(boost::intrusive_ptr<Layer> const& layer,
+    cairowindow::Pixel mouse_position, std::string const& text, draw::TextStyle<> const& text_style)
+{
+  Text plot_text(position, text, std::make_shared<draw::Text>(text, convert_x(position.x()), convert_y(position.y()), text_style));
+  layer->draw(plot_text.draw_object_);
+  return plot_text;
+}
+#endif
+
 LinePiece Plot::create_line(boost::intrusive_ptr<Layer> const& layer,
     cairowindow::Point const& from, cairowindow::Point const& to, draw::LineStyle const& line_style, LineExtend line_extend)
 {
@@ -303,6 +313,19 @@ LinePiece Plot::create_line(boost::intrusive_ptr<Layer> const& layer,
   LinePiece plot_line_piece(from, to, std::make_shared<draw::Line>(convert_x(x1), convert_y(y1), convert_x(x2), convert_y(y2), line_style));
   layer->draw(plot_line_piece.draw_object_);
   return plot_line_piece;
+}
+
+Slider Plot::create_slider(boost::intrusive_ptr<Layer> const& layer,
+    cairowindow::Rectangle const& geometry, double start_value, double min_value, double max_value)
+{
+  Slider plot_slider(geometry, min_value, max_value);
+  plot_slider.draw_object_ = std::make_shared<draw::Slider>(geometry.offset_x(), geometry.offset_y(), geometry.width(), geometry.height(),
+      std::clamp((start_value - min_value) / (max_value - min_value), 0.0, 1.0));
+  static_cast<draw::MultiRegion&>(*plot_slider.draw_object_).draw_regions_on(layer.get());
+  Window* window = layer->window();
+  std::shared_ptr<draw::Slider> slider_ptr = plot_slider.draw_object_;
+  window->register_draggable(*this, slider_ptr.get(), [slider_ptr](cairowindow::Point const& point) -> cairowindow::Point { return point; });
+  return plot_slider;
 }
 
 Curve Plot::create_curve(boost::intrusive_ptr<Layer> const& layer,
@@ -334,29 +357,41 @@ Curve Plot::create_curve(boost::intrusive_ptr<Layer> const& layer,
 
 Rectangle Plot::update_grabbed(utils::Badge<Window>, ClickableIndex grabbed_point, int mouse_x, int mouse_y)
 {
-  Rectangle const& g = plot_area_.geometry();
   double x = mouse_x;
-  x -= g.offset_x();
-  x /= g.width();
-  x *= range_[x_axis].size();
-  x += range_[x_axis].min();
-
   double y = mouse_y;
-  y -= g.offset_y();
-  y /= g.height();
-  y *= range_[y_axis].size();
-  y = range_[y_axis].max() - y;
+  Draggable* draggable = draggables_[grabbed_point];
+
+  if (draggable->convert())
+  {
+    Rectangle const& g = plot_area_.geometry();
+    x -= g.offset_x();
+    x /= g.width();
+    x *= range_[x_axis].size();
+    x += range_[x_axis].min();
+
+    y -= g.offset_y();
+    y /= g.height();
+    y *= range_[y_axis].size();
+    y = range_[y_axis].max() - y;
+  }
 
   cairowindow::Point new_position{x, y};
 
-  if (clickable_restrictions_[grabbed_point])
-    new_position = clickable_restrictions_[grabbed_point](new_position);
+  if (draggable_restrictions_[grabbed_point])
+    new_position = draggable_restrictions_[grabbed_point](new_position);
 
-  Point* point = clickable_points_[grabbed_point];
-  *point = create_point(point->draw_object_->layer(), new_position, point->draw_object_->point_style());
-  Window* window = point->draw_object_->layer()->window();
+  draggable->moved(this, new_position);
 
-  return point->draw_object_->geometry();
+  return draggable->geometry();
+}
+
+void Point::moved(Plot* plot, cairowindow::Point const& new_position)
+{
+  Layer* layer = draw_object_->layer();
+  Point plot_point(new_position,
+      std::make_shared<draw::Point>(plot->convert_x(new_position.x()), plot->convert_y(new_position.y()), draw_object_->point_style()));
+  *this = plot_point;
+  layer->draw(plot_point.draw_object_);
 }
 
 } // namespace cairowindow::plot

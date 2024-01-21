@@ -56,6 +56,7 @@ int main()
     int filled_shape = 1;
     draw::PointStyle point_style(color_index, filled_shape);
     draw::TextStyle<> label_style{.position = draw::centered_left_of, .font_size = 18.0, .offset = 10};
+    draw::TextStyle<> slider_style{.position = draw::centered_left_of, .font_size = 18.0, .color = color::red, .offset = 10};
     draw::LineStyle curve_line_style{.line_width = 1.0};
     draw::LineStyle solid_line_style{.line_color = color::black, .line_width = 1.0};
     draw::LineStyle line_style{.line_color = color::black, .line_width = 1.0, .dashes = {10.0, 5.0}};
@@ -90,10 +91,14 @@ int main()
     // Initial position of Pᵧ, a point at t > 1.
     auto plot_P_gamma = plot.create_point(second_layer, {1.8, -0.15}, point_style);
 
+    // Draw a slider.
+    auto slider = plot.create_slider(second_layer, {928, 83, 7, 400}, 0.4 * M_PI, 0.0, M_PI * 2);
+    auto slider_label = plot.create_text(second_layer, {928, 483}, "w", slider_style);
+
     // Allow dragging Pᵦ and Pᵧ.
-    window.register_draggable_point(plot, &plot_P_beta);
-    window.register_draggable_point(plot, &plot_P_gamma);
-    window.register_draggable_point(plot, &plot_Q, [&P0P1_circle_center](Point const& new_position)
+    window.register_draggable(plot, &plot_P_beta);
+    window.register_draggable(plot, &plot_P_gamma);
+    window.register_draggable(plot, &plot_Q, [&P0P1_circle_center](Point const& new_position)
         {
           return P0P1_circle_center + 0.5 * Direction{P0P1_circle_center, new_position};
         }

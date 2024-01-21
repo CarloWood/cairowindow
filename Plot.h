@@ -7,6 +7,7 @@
 #include "draw/Curve.h"
 #include "draw/Connector.h"
 #include "draw/Arc.h"
+#include "draw/Slider.h"
 #include "Range.h"
 #include "Point.h"
 #include "Circle.h"
@@ -16,13 +17,14 @@
 #include "Curve.h"
 #include "Connector.h"
 #include "Arc.h"
-#include "ClickableIndex.h"
+#include "Draggable.h"
 #include "utils/Vector.h"
 #include "utils/Badge.h"
 #include <boost/intrusive_ptr.hpp>
 #include <string>
 #include <vector>
 #include <functional>
+#include <algorithm>
 #include "debug.h"
 #ifdef CWDEBUG
 #include "debug_channel.h"
@@ -32,10 +34,11 @@ namespace cairowindow {
 class Window;
 
 namespace plot {
+using utils::has_print_on::operator<<;
 
 class Plot;
 
-class Point : public cairowindow::Point
+class Point : public cairowindow::Point, public Draggable
 {
  public:
   using cairowindow::Point::Point;
@@ -46,6 +49,14 @@ class Point : public cairowindow::Point
   friend class Plot;
   friend class cairowindow::Window;
   mutable std::shared_ptr<draw::Point> draw_object_;
+
+  // Implementation of Draggable.
+  Rectangle const& geometry() const override { return draw_object_->geometry(); }
+  void moved(Plot* plot, cairowindow::Point const& new_position) override;
+
+#ifdef CWDEBUG
+  void print_on(std::ostream& os) const override { cairowindow::Point::print_on(os); }
+#endif
 };
 
 class Circle : public cairowindow::Circle
@@ -153,6 +164,25 @@ class Arc : public cairowindow::Arc
   mutable std::shared_ptr<draw::Arc> draw_object_;
 };
 
+class Slider
+{
+ private:
+  Rectangle geometry_;
+  double min_val_;      // The value corresponding to position 0.
+  double max_val_;      // The value corresponding to position 1.
+
+ public:
+  Slider(Rectangle geometry, double min_val, double max_val) :
+    geometry_(geometry), min_val_(min_val), max_val_(max_val) { }
+
+  Rectangle const& geometry() const { return geometry_; }
+  double value() const { return min_val_ + draw_object_->value() * (max_val_ - min_val_); }
+
+ public:
+  friend class Plot;
+  mutable std::shared_ptr<draw::Slider> draw_object_;
+};
+
 enum class LineExtend
 {
   none = 0,
@@ -174,8 +204,8 @@ class Plot
   std::array<int, number_of_axes> range_ticks_{{10, 10}};
   std::array<std::vector<std::shared_ptr<draw::Text>>, number_of_axes> labels_;
 
-  utils::Vector<Point*, ClickableIndex> clickable_points_;
-  utils::Vector<std::function<cairowindow::Point (cairowindow::Point const&)>, ClickableIndex> clickable_restrictions_;
+  utils::Vector<Draggable*, ClickableIndex> draggables_;
+  utils::Vector<std::function<cairowindow::Point (cairowindow::Point const&)>, ClickableIndex> draggable_restrictions_;
 
   struct TitleStyleDefaults : draw::DefaultTextStyleDefaults
   {
@@ -315,6 +345,9 @@ class Plot
     return create_connector(layer, from, to, Connector::no_arrow, Connector::open_arrow, line_style, fill_color);
   }
 
+  [[nodiscard]] Slider create_slider(boost::intrusive_ptr<Layer> const& layer,
+      cairowindow::Rectangle const& geometry, double start_value, double min_value, double max_value);
+
   [[nodiscard]] Curve create_curve(boost::intrusive_ptr<Layer> const& layer,
       std::vector<cairowindow::Point>&& points, draw::LineStyle const& line_style);
 
@@ -337,11 +370,12 @@ class Plot
 
   void add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio = false);
 
-  // Called from Window::register_draggable_point.
-  void register_draggable_point(utils::Badge<Window>, Point* point, std::function<cairowindow::Point (cairowindow::Point const&)>&& restriction)
+  // Called from Window::register_draggable.
+  void register_draggable(utils::Badge<Window>, Draggable* draggable,
+      std::function<cairowindow::Point (cairowindow::Point const&)>&& restriction)
   {
-    clickable_points_.push_back(point);
-    clickable_restrictions_.emplace_back(std::move(restriction));
+    draggables_.push_back(draggable);
+    draggable_restrictions_.emplace_back(std::move(restriction));
   }
   Rectangle update_grabbed(utils::Badge<Window>, ClickableIndex grabbed_point, int mouse_x, int mouse_y);
 

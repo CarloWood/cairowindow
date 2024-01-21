@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Grid.h"
-#include "cairowindow/MultiRegion.h"
 #include "cairowindow/LayerRegion.h"
 #include "cairowindow/Rectangle.h"
 #include "cairowindow/Color.h"
