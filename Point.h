@@ -27,6 +27,7 @@ class Point
   Point& operator+=(Vector const& v);
   Point& operator-=(Vector const& v);
   friend Vector operator-(Point const& from, Point const& to);
+  friend bool operator!=(Point const& p1, Point const& p2);
 
 #ifdef CWDEBUG
   void print_on(std::ostream& os) const;

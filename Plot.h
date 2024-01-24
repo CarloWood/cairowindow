@@ -75,7 +75,7 @@ class Text : public cairowindow::Text
 {
  public:
   using cairowindow::Text::Text;
-  Text(cairowindow::Point const& position, std::string const& text, std::shared_ptr<draw::Text> const& draw_object) :
+  Text(cairowindow::Pixel position, std::string const& text, std::shared_ptr<draw::Text> const& draw_object) :
     cairowindow::Text(position, text), draw_object_(draw_object) { }
 
  private:
@@ -168,15 +168,19 @@ class Slider
 {
  private:
   Rectangle geometry_;
-  double min_val_;      // The value corresponding to position 0.
-  double max_val_;      // The value corresponding to position 1.
+  double min_value_;      // The value corresponding to position 0.
+  double max_value_;      // The value corresponding to position 1.
 
  public:
-  Slider(Rectangle geometry, double min_val, double max_val) :
-    geometry_(geometry), min_val_(min_val), max_val_(max_val) { }
+  Slider(Rectangle geometry, double min_value, double max_value) :
+    geometry_(geometry), min_value_(min_value), max_value_(max_value) { }
 
   Rectangle const& geometry() const { return geometry_; }
-  double value() const { return min_val_ + draw_object_->value() * (max_val_ - min_val_); }
+  double value() const { return min_value_ + draw_object_->rel_value() * (max_value_ - min_value_); }
+  double min_value() const { return min_value_; }
+  double max_value() const { return max_value_; }
+
+  void set_value(double value);
 
  public:
   friend class Plot;
@@ -276,6 +280,7 @@ class Plot
 
   double convert_x(double x) const;
   double convert_y(double y) const;
+  Pixel convert_to_pixel(cairowindow::Point const& point) const;
 
   // Create and draw a point on layer at x,y using point_style.
   [[nodiscard]] Point create_point(boost::intrusive_ptr<Layer> const& layer,
@@ -298,7 +303,11 @@ class Plot
 
   // Create and draw text on layer at position using text_style.
   [[nodiscard]] Text create_text(boost::intrusive_ptr<Layer> const& layer,
-      cairowindow::Point const& position, std::string const& text, draw::TextStyle<> const& text_style);
+      cairowindow::Point position, std::string const& text, draw::TextStyle<> const& text_style);
+
+  // Same, but using pixel coordinates.
+  [[nodiscard]] Text create_text(boost::intrusive_ptr<Layer> const& layer,
+      cairowindow::Pixel position, std::string const& text, draw::TextStyle<> const& text_style);
 
   // Create and draw a line piece between points from and to using line_style and line_extend.
   [[nodiscard]] LinePiece create_line(boost::intrusive_ptr<Layer> const& layer,
@@ -374,10 +383,12 @@ class Plot
   void register_draggable(utils::Badge<Window>, Draggable* draggable,
       std::function<cairowindow::Point (cairowindow::Point const&)>&& restriction)
   {
+    ClickableIndex next_index = draggables_.iend();
     draggables_.push_back(draggable);
+    draggable->set_index(next_index);
     draggable_restrictions_.emplace_back(std::move(restriction));
   }
-  Rectangle update_grabbed(utils::Badge<Window>, ClickableIndex grabbed_point, int mouse_x, int mouse_y);
+  Rectangle update_grabbed(utils::Badge<Window>, ClickableIndex grabbed_point, double pixel_x, double pixel_y);
 
  private:
   Rectangle axes_geometry(Rectangle const& geometry, double axes_line_width);

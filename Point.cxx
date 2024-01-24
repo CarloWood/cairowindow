@@ -46,6 +46,11 @@ Vector operator-(Point const& from, Point const& to)
   return {from, to};
 }
 
+bool operator!=(Point const& p1, Point const& p2)
+{
+  return p1.x_ != p2.x_ || p1.y_ != p2.y_;
+}
+
 #ifdef CWDEBUG
 void Point::print_on(std::ostream& os) const
 {

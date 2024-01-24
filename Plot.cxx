@@ -149,6 +149,26 @@ double Plot::convert_y(double y) const
   return y;
 }
 
+Pixel Plot::convert_to_pixel(cairowindow::Point const& point) const
+{
+  double x = point.x();
+  double y = point.y();
+
+  Rectangle const& g = plot_area_.geometry();
+
+  x -= g.offset_x();
+  x /= g.width();
+  x *= range_[x_axis].size();
+  x += range_[x_axis].min();
+
+  y -= g.offset_y();
+  y /= g.height();
+  y *= range_[y_axis].size();
+  y = range_[y_axis].max() - y;
+
+  return Pixel{x, y};
+}
+
 void Plot::add_point(boost::intrusive_ptr<Layer> const& layer,
     Point const& plot_point, draw::PointStyle const& point_style)
 {
@@ -284,22 +304,21 @@ Circle Plot::create_circle(boost::intrusive_ptr<Layer> const& layer,
 }
 
 Text Plot::create_text(boost::intrusive_ptr<Layer> const& layer,
-    cairowindow::Point const& position, std::string const& text, draw::TextStyle<> const& text_style)
+    cairowindow::Point position, std::string const& text, draw::TextStyle<> const& text_style)
 {
-  Text plot_text(position, text, std::make_shared<draw::Text>(text, convert_x(position.x()), convert_y(position.y()), text_style));
+  Text plot_text(convert_to_pixel(position), text,
+      std::make_shared<draw::Text>(text, convert_x(position.x()), convert_y(position.y()), text_style));
   layer->draw(plot_text.draw_object_);
   return plot_text;
 }
 
-#if 0
 Text Plot::create_text(boost::intrusive_ptr<Layer> const& layer,
-    cairowindow::Pixel mouse_position, std::string const& text, draw::TextStyle<> const& text_style)
+    cairowindow::Pixel position, std::string const& text, draw::TextStyle<> const& text_style)
 {
-  Text plot_text(position, text, std::make_shared<draw::Text>(text, convert_x(position.x()), convert_y(position.y()), text_style));
+  Text plot_text(position, text, std::make_shared<draw::Text>(text, position.x(), position.y(), text_style));
   layer->draw(plot_text.draw_object_);
   return plot_text;
 }
-#endif
 
 LinePiece Plot::create_line(boost::intrusive_ptr<Layer> const& layer,
     cairowindow::Point const& from, cairowindow::Point const& to, draw::LineStyle const& line_style, LineExtend line_extend)
@@ -320,7 +339,7 @@ Slider Plot::create_slider(boost::intrusive_ptr<Layer> const& layer,
 {
   Slider plot_slider(geometry, min_value, max_value);
   plot_slider.draw_object_ = std::make_shared<draw::Slider>(geometry.offset_x(), geometry.offset_y(), geometry.width(), geometry.height(),
-      std::clamp((start_value - min_value) / (max_value - min_value), 0.0, 1.0));
+      start_value, min_value, max_value);
   static_cast<draw::MultiRegion&>(*plot_slider.draw_object_).draw_regions_on(layer.get());
   Window* window = layer->window();
   std::shared_ptr<draw::Slider> slider_ptr = plot_slider.draw_object_;
@@ -355,10 +374,10 @@ Curve Plot::create_curve(boost::intrusive_ptr<Layer> const& layer,
   return plot_curve;
 }
 
-Rectangle Plot::update_grabbed(utils::Badge<Window>, ClickableIndex grabbed_point, int mouse_x, int mouse_y)
+Rectangle Plot::update_grabbed(utils::Badge<Window>, ClickableIndex grabbed_point, double pixel_x, double pixel_y)
 {
-  double x = mouse_x;
-  double y = mouse_y;
+  double x = pixel_x;
+  double y = pixel_y;
   Draggable* draggable = draggables_[grabbed_point];
 
   if (draggable->convert())
@@ -392,6 +411,13 @@ void Point::moved(Plot* plot, cairowindow::Point const& new_position)
       std::make_shared<draw::Point>(plot->convert_x(new_position.x()), plot->convert_y(new_position.y()), draw_object_->point_style()));
   *this = plot_point;
   layer->draw(plot_point.draw_object_);
+}
+
+void Slider::set_value(double value)
+{
+  min_value_ = std::min(min_value_, value);
+  max_value_ = std::max(max_value_, value);
+  draw_object_->set_value(value, min_value_, max_value_);
 }
 
 } // namespace cairowindow::plot

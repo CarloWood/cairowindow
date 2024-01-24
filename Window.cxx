@@ -350,9 +350,9 @@ void Window::register_draggable(plot::Plot& plot, plot::Draggable* draggable, st
   plot.register_draggable({}, draggable, std::move(restriction));
 }
 
-ClickableIndex Window::grab_point(double x, double y)
+ClickableIndex Window::grab_draggable(double x, double y)
 {
-  DoutEntering(dc::notice, "Window::grab_point(" << x << ", " << y << ")");
+  DoutEntering(dc::notice, "Window::grab_draggable(" << x << ", " << y << ")");
   ClickableIndex found_index;
   double min_dist_squared = std::numeric_limits<double>::max();
   for (ClickableIndex index = clickable_rectangles_.ibegin(); index != clickable_rectangles_.iend(); ++index)
@@ -377,10 +377,10 @@ ClickableIndex Window::grab_point(double x, double y)
   return found_index;
 }
 
-bool Window::update_grabbed(ClickableIndex grabbed_point, int mouse_x, int mouse_y)
+bool Window::update_grabbed(ClickableIndex grabbed_point, double pixel_x, double pixel_y)
 {
   plot::Plot* plot = clickable_plots_[grabbed_point];
-  Rectangle new_rectangle = plot->update_grabbed({}, grabbed_point, mouse_x, mouse_y);
+  Rectangle new_rectangle = plot->update_grabbed({}, grabbed_point, pixel_x, pixel_y);
   if (new_rectangle.is_defined())
   {
     // Update the rectangle of a draggable Point, called after it was moved.
@@ -403,7 +403,7 @@ void Window::handle_dragging()
       case MouseEvent::button_press:
       {
         Dout(dc::cairowindow, "button: " << message->button);
-        auto index = grab_point(message->mouse_x, message->mouse_y);
+        auto index = grab_draggable(message->mouse_x, message->mouse_y);
         if (!index.undefined())
         {
           send_custom_event(custom_event_grab_mouse, message->button);

@@ -1,17 +1,20 @@
 #pragma once
 
+#include "Pixel.h"
+#include <string>
+
 namespace cairowindow {
 
 class Text
 {
  private:
-  Point position_;
+  Pixel position_;
   std::string text_;
 
  public:
-  Text(Point const& position, std::string const& text) : position_(position), text_(text) { }
+  Text(Pixel position, std::string const& text) : position_(position), text_(text) { }
 
-  Point const& position() const { return position_; }
+  Pixel position() const { return position_; }
   std::string const& text() const { return text_; }
 };
 

@@ -80,6 +80,7 @@ target_sources(cairowindow_ObjLib
     "Layer.cxx"
     "Line.cxx"
     "Point.cxx"
+    "Pixel.cxx"
     "Window.cxx"
     "EventLoop.cxx"
     "LayerRegion.cxx"

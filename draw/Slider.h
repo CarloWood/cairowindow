@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Shape.h"
+#include "Text.h"
 #include "MultiRegion.h"
 #include "cairowindow/Color.h"
 #include "cairowindow/Draggable.h"
@@ -92,26 +93,34 @@ class Slider : public MultiRegion, public plot::Draggable
   static constexpr Color highlighted_color{0.098, 0.596, 0.596};
 
  private:
-  double value_;                                        // Slider value in the range of [0, 1].
+  double rel_value_;                                    // Slider value in the range of [0, 1].
+  double min_value_;                                    // The value corresponding to a rel_value of 0.
+  double max_value_;                                    // Idem 1.
   std::shared_ptr<SliderTrack> track_;
+  std::shared_ptr<Text> value_text_;
   std::shared_ptr<LayerRegion> highlighted_track_;
   std::shared_ptr<SliderHandle> handle_;
 
  public:
-  Slider(double x, double y, double width, double height, double starting_value) : MultiRegion(highlighted_color, 0.0),
-    value_(starting_value), track_(std::make_shared<SliderTrack>(x, y, width, height)), handle_(std::make_shared<SliderHandle>(this)) { }
+  Slider(double x, double y, double width, double height, double start_value, double min_value, double max_value) :
+    MultiRegion(highlighted_color, 0.0),
+    rel_value_(std::clamp((start_value - min_value) / (max_value - min_value), 0.0, 1.0)), min_value_(min_value), max_value_(max_value),
+    track_(std::make_shared<SliderTrack>(x, y, width, height)), handle_(std::make_shared<SliderHandle>(this)) { }
 
   SliderTrack const& track() const { return *track_; }
   SliderHandle const& handle() const { return *handle_; }
-  double value() const { return value_; }
+  double rel_value() const { return rel_value_; }
   double horizontal_position_pixels() const
   {
-    return SliderTrack::stop_offset + value_ * (track_->length() - 2.0 * SliderTrack::stop_offset);
+    return SliderTrack::stop_offset + rel_value_ * (track_->length() - 2.0 * SliderTrack::stop_offset);
   }
   double vertical_position_pixels() const
   {
-    return track_->length() - SliderTrack::stop_offset - value_ * (track_->length() - 2.0 * SliderTrack::stop_offset);
+    return track_->length() - SliderTrack::stop_offset - rel_value_ * (track_->length() - 2.0 * SliderTrack::stop_offset);
   }
+
+  // Adjust values.
+  void set_value(double value, double min_value, double max_value);
 
  private:
   friend struct DrawHighlightedTrack;
@@ -119,6 +128,9 @@ class Slider : public MultiRegion, public plot::Draggable
   StrokeExtents do_fill(cairo_t* cr) const { return fill(cr); }
 
  private:
+  void set_value_text();
+  void redraw();
+
   // Implementation of MultiRegion.
   void draw_regions_on(Layer* layer) override;
 
@@ -130,7 +142,7 @@ class Slider : public MultiRegion, public plot::Draggable
 #ifdef CWDEBUG
   void print_on(std::ostream& os) const override
   {
-    os << "draw::Slider{" << value_ << "}";
+    os << "draw::Slider{" << (100.0 * rel_value_) << "%}";
   }
 #endif
 };

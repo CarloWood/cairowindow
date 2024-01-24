@@ -179,13 +179,15 @@ class Window
   // Block until a point was dragged by the user.
   void handle_dragging();
 
+  // Called by Slider::set_value.
+  bool update_grabbed(ClickableIndex grabbed_point, double pixel_x, double pixel_y);
+
  private:
   void send_close_event();
   void grab_mouse(unsigned int button);
   void release_mouse();
 
-  ClickableIndex grab_point(double x, double y);
-  bool update_grabbed(ClickableIndex grabbed_point, int mouse_x, int mouse_y);
+  ClickableIndex grab_draggable(double x, double y);
 };
 
 } // namespace cairowindow
