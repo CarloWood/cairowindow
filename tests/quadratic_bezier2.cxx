@@ -13,8 +13,8 @@
 #include <iostream>
 #include "debug.h"
 
-#define USE_P_BETA 0
-#define USE_P_GAMMA 0
+#define USE_P_BETA 1
+#define USE_P_GAMMA 1
 
 int main()
 {
@@ -98,6 +98,7 @@ int main()
 #endif
 #endif
 
+#if !(USE_P_BETA || USE_P_GAMMA)
     // Draw a slider for w.
     auto slider_w = plot.create_slider(second_layer, {928, 83, 7, 400}, 0.5, 0.25, 2.0);
     auto slider_w_label = plot.create_text(second_layer, Pixel{928, 483}, "w", slider_style);
@@ -109,6 +110,7 @@ int main()
     // Draw a slider for v.
     auto slider_v = plot.create_slider(second_layer, {1028, 83, 7, 400}, 0.5, -2.0, 2.0);
     auto slider_v_label = plot.create_text(second_layer, Pixel{1028, 483}, "v", slider_style);
+#endif
 
     // Allow dragging Pᵦ and Pᵧ.
 #if USE_P_BETA
@@ -136,6 +138,8 @@ int main()
 #if USE_P_BETA
       // Draw a label for Pᵦ.
       auto P_beta_label = plot.create_text(second_layer, plot_P_beta, "Pᵦ", label_style({.position = draw::centered_right_of}));
+
+      w_is_negative = plot_P_beta.y() < 0.0;
 
 #if USE_P_GAMMA
       // Draw a label for Pᵧ.
@@ -171,16 +175,18 @@ int main()
       Dout(dc::notice, "s²(1-2v) = " << s_squared_times_one_minus_two_v);
       Dout(dc::notice, "sw = " << (w_is_negative ? -s_times_w : s_times_w));
 
+#if !(USE_P_BETA || USE_P_GAMMA)
       // Read-out the slider values;
       double w = slider_w.value();
       double s = slider_s.value();
       double v = slider_v.value();
+      bool slider_values_changed = false;
+#endif
       double Qx = plot_Q.x();
       double Qy = plot_Q.y();
 
       static constexpr double min_s = 0.1;
-      bool slider_values_changed = false;
-      if (w != prev_w || prev_Q != plot_Q)
+      if (prev_Q != plot_Q)
       {
         if (((plot_Q.y() >= 0.0) != (prev_Q.y() >= 0.0)) && plot_Q.x() > 0.5)
         {
@@ -190,7 +196,16 @@ int main()
           s_squared_times_one_minus_two_v = -s_squared_times_one_minus_two_v;
         }
         prev_Q = plot_Q;
-
+        // Calculate the values of s and v.
+//        s = std::max(min_s, s_times_w / w);    // s must always be larger than zero.
+//        v = (1.0 - s_squared_times_one_minus_two_v / (s * s)) / 2.0;
+#if !(USE_P_BETA || USE_P_GAMMA)
+//        slider_values_changed = true;
+#endif
+      }
+#if !(USE_P_BETA || USE_P_GAMMA)
+      else if (w != prev_w)
+      {
         // Calculate the values of s and v.
         s = std::max(min_s, s_times_w / w);    // s must always be larger than zero.
         v = (1.0 - s_squared_times_one_minus_two_v / (s * s)) / 2.0;
@@ -224,7 +239,9 @@ int main()
         Dout(dc::notice, "s = " << s << "; w = " << w);
         slider_values_changed = true;
       }
+#endif
 
+#if !(USE_P_BETA || USE_P_GAMMA)
       // If any slider changed, set all sliders to the new (calculated) values,
       // and read them out again in order to be sure that we can use != on the
       // double values to detect if they were changed, the next time we reenter
@@ -239,8 +256,7 @@ int main()
         prev_s = slider_s.value();
         prev_v = slider_v.value();
       }
-
-      Dout(dc::notice, "w = " << w << "; s = " << s << "; v = " << v);
+#endif
 
 #if USE_P_BETA
       double x_beta = plot_P_beta.x();
@@ -254,15 +270,22 @@ int main()
       double y_span = y_gamma - y_beta;
       double subexpr50 = y_span * ((1.0 - x_gamma) * x_gamma / y_gamma - (1.0 - x_beta) * x_beta / y_beta);
       double tan_theta = (std::sqrt(x_span * x_span + subexpr50) - x_span) / y_span;
+#else
+      // Helper variables.
+      double theta = perpendicular_to_symmetry_line_dir.as_angle();
+      double tan_theta = std::tan(theta);
+#endif
       double z = x_beta + y_beta * tan_theta;
-
       // Define the matrix M.
       double m10 = y_beta / (z * (1.0 - z));
-      double m01 = m10 * tan_theta;
       double m11 = -m10;
+      double m01 = -m11 * tan_theta;
       double m00 = 1.0 - m01;
-#else
-#endif
+
+      // Calculate corresponding v, s and w values.
+      double v = 0.5 * (m10 - m00 * tan_theta) / (-m11 + m01 * tan_theta);
+      double s = std::sqrt(std::abs(m11) / std::sqrt(1.0 / (1.0 + tan_theta * tan_theta)));
+      double w = s_times_w / s;
 #else
       // Helper variables.
       double theta = perpendicular_to_symmetry_line_dir.as_angle();
@@ -277,9 +300,10 @@ int main()
       double m11 = s * s * std::cos(theta);
 #endif
 
+      Dout(dc::notice, "w = " << w << "; s = " << s << "; v = " << v);
       Dout(dc::notice, "M = ((" << m00 << ", " << m01 << "), (" << m10 << ", " << m11 << "))");
 
-      if (std::isnan(m10))
+      if (std::isnan(m10) || std::isnan(w) || std::isinf(v))
       {
         // Can't draw the curve.
         window.set_send_expose_events(true);
@@ -298,6 +322,14 @@ int main()
         curve_points.push_back(v.point());
       }
       auto curve = plot.create_curve(second_layer, std::move(curve_points), curve_line_style);
+
+      // Draw the "speed vector" at P₀.
+      Vector velocity0{m00, m10};
+      auto plot_velocity0 = plot.create_connector(second_layer, plot_P0, plot_P0 + velocity0, solid_line_style({.line_color = color::green}));
+
+      // Draw the "speed vector" at P₁.
+      Vector velocity1{m00 + 2.0 * m01, m10 + 2.0 * m11};
+      auto plot_velocity1 = plot.create_connector(second_layer, plot_P1, plot_P1 + velocity1, solid_line_style({.line_color = color::green}));
 
       // V, the parabola vertex point resides at t=v.
       auto V = plot.create_point(second_layer, {xt(v), yt(v)}, point_style);
@@ -337,7 +369,11 @@ int main()
           "w", label_style({.position = draw::centered_above, .font_size = 14, .offset = 5}));
 
       // Draw an arc between P1_Q and P1_P0.
-      plot::Arc alpha_arc(P1, perpendicular_to_symmetry_line_dir.inverse(), Direction{P1, plot_P0}, 0.1);
+      Direction start_dir = perpendicular_to_symmetry_line_dir;
+      Direction end_dir{P1, plot_P0};
+      if (!w_is_negative)
+        start_dir = start_dir.inverse();
+      plot::Arc alpha_arc(P1, start_dir, end_dir, 0.1);
       plot.add_arc(second_layer, alpha_arc, arc_style({.line_color = color::blue}));
       auto alpha_label = plot.create_text(second_layer, P1 + 0.13 * alpha_arc.bisector_direction(),
           "α", label_style({.position = draw::centered, .font_size = 14}));
