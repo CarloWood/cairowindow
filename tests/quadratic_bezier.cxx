@@ -119,15 +119,17 @@ int main()
     window.register_draggable(plot, &plot_P_gamma);
 #endif
 #endif
+#if !USE_P_BETA || !USE_P_GAMMA
     window.register_draggable(plot, &plot_Q, [&P0P1_circle_center](Point const& new_position)
         {
           return P0P1_circle_center + 0.5 * Direction{P0P1_circle_center, new_position};
         }
     );
+    Point prev_Q = plot_Q;
+#endif
 
     double prev_w = 0.0;
     double prev_s{}, prev_v{};
-    Point prev_Q = plot_Q;
     bool w_is_negative = false;
 
     while (true)
@@ -147,6 +149,7 @@ int main()
 #endif
 #endif
 
+#if !USE_P_BETA || !USE_P_GAMMA
       // Draw a label for Q.
       auto Q_label = plot.create_text(second_layer, plot_Q, "Q", label_style);
 
@@ -174,6 +177,7 @@ int main()
 
       Dout(dc::notice, "s²(1-2v) = " << s_squared_times_one_minus_two_v);
       Dout(dc::notice, "sw = " << (w_is_negative ? -s_times_w : s_times_w));
+#endif
 
 #if !(USE_P_BETA || USE_P_GAMMA)
       // Read-out the slider values;
@@ -182,10 +186,9 @@ int main()
       double v = slider_v.value();
       bool slider_values_changed = false;
 #endif
-      double Qx = plot_Q.x();
-      double Qy = plot_Q.y();
 
       static constexpr double min_s = 0.1;
+#if !USE_P_BETA || !USE_P_GAMMA
       if (prev_Q != plot_Q)
       {
         if (((plot_Q.y() >= 0.0) != (prev_Q.y() >= 0.0)) && plot_Q.x() > 0.5)
@@ -196,13 +199,14 @@ int main()
           s_squared_times_one_minus_two_v = -s_squared_times_one_minus_two_v;
         }
         prev_Q = plot_Q;
+#if !USE_P_BETA
         // Calculate the values of s and v.
-//        s = std::max(min_s, s_times_w / w);    // s must always be larger than zero.
-//        v = (1.0 - s_squared_times_one_minus_two_v / (s * s)) / 2.0;
-#if !(USE_P_BETA || USE_P_GAMMA)
-//        slider_values_changed = true;
+        s = std::max(min_s, s_times_w / w);    // s must always be larger than zero.
+        v = (1.0 - s_squared_times_one_minus_two_v / (s * s)) / 2.0;
+        slider_values_changed = true;
 #endif
       }
+#endif
 #if !(USE_P_BETA || USE_P_GAMMA)
       else if (w != prev_w)
       {
@@ -282,10 +286,12 @@ int main()
       double m01 = -m11 * tan_theta;
       double m00 = 1.0 - m01;
 
-      // Calculate corresponding v, s and w values.
       double v = 0.5 * (m10 - m00 * tan_theta) / (-m11 + m01 * tan_theta);
+#if !USE_P_GAMMA
+      // Calculate corresponding v, s and w values.
       double s = std::sqrt(std::abs(m11) / std::sqrt(1.0 / (1.0 + tan_theta * tan_theta)));
       double w = s_times_w / s;
+#endif
 #else
       // Helper variables.
       double theta = perpendicular_to_symmetry_line_dir.as_angle();
@@ -300,10 +306,9 @@ int main()
       double m11 = s * s * std::cos(theta);
 #endif
 
-      Dout(dc::notice, "w = " << w << "; s = " << s << "; v = " << v);
       Dout(dc::notice, "M = ((" << m00 << ", " << m01 << "), (" << m10 << ", " << m11 << "))");
 
-      if (std::isnan(m10) || std::isnan(w) || std::isinf(v))
+      if (std::isnan(m00) || std::isnan(m10) || std::isinf(v))
       {
         // Can't draw the curve.
         window.set_send_expose_events(true);
@@ -323,11 +328,11 @@ int main()
       }
       auto curve = plot.create_curve(second_layer, std::move(curve_points), curve_line_style);
 
-      // Draw the "speed vector" at P₀.
+      // Draw the velocity vector at P₀.
       Vector velocity0{m00, m10};
       auto plot_velocity0 = plot.create_connector(second_layer, plot_P0, plot_P0 + velocity0, solid_line_style({.line_color = color::green}));
 
-      // Draw the "speed vector" at P₁.
+      // Draw the velocity vector at P₁.
       Vector velocity1{m00 + 2.0 * m01, m10 + 2.0 * m11};
       auto plot_velocity1 = plot.create_connector(second_layer, plot_P1, plot_P1 + velocity1, solid_line_style({.line_color = color::green}));
 
@@ -335,6 +340,53 @@ int main()
       auto V = plot.create_point(second_layer, {xt(v), yt(v)}, point_style);
       label_style.position = draw::centered_left_of;
       auto V_label = plot.create_text(second_layer, V, "V", label_style({.position = draw::centered_below}));
+
+#if USE_P_BETA && USE_P_GAMMA
+      // Velocity vector at t=v.
+      Vector velocityv{m00 + 2.0 * v * m01, m10 + 2.0 * v * m11};
+      Direction velocityv_dir = velocityv.direction();
+      Direction X = w_is_negative ? velocityv_dir.inverse() : velocityv_dir;
+      Direction perpendicular_to_symmetry_line_dir = X;
+      Direction symmetry_line_dir = perpendicular_to_symmetry_line_dir.normal();
+      phi = M_PI - 2.0 * (M_PI - velocityv_dir.as_angle());
+      Point new_Q = P0P1_circle_center + 0.5 * Direction{phi};
+      static_cast<plot::Draggable&>(plot_Q).moved(&plot, new_Q);
+
+      // Draw a label for Q.
+      auto Q_label = plot.create_text(second_layer, plot_Q, "Q", label_style);
+
+      // Draw a line from P₀ to Q.
+      auto plot_P0_Q = plot.create_connector(second_layer, plot_P0, plot_Q, line_style);
+      Vector P0_Q{plot_P0, plot_Q};
+      auto P0_Q_label = plot.create_text(second_layer, plot_P0 + 0.5 * P0_Q, "s²(1-2v)",
+          label_style({.font_size = 12, .offset = 5}));
+
+      // Draw a line between P₁ and Q.
+      auto line_P1_Q = plot.create_connector(second_layer,
+          P1, plot_Q, Connector::open_arrow, Connector::open_arrow, line_style({.line_color = color::coral, .dashes = {3.0, 3.0}}));
+      Vector Q_P1{plot_Q, P1};
+      auto sw_label2 = plot.create_text(second_layer, plot_Q + 0.5 * Q_P1,
+          "sw", label_style({.position = draw::centered_below, .font_size = 12, .offset = 5}));
+
+      // Determine the distance between Q and respectively P₀ and P₁.
+      double s_times_w = Q_P1.length();
+      // Calculate s_squared_times_one_minus_two_v assuming w_is_negative won't change.
+      double s_squared_times_one_minus_two_v = P0_Q.dot(symmetry_line_dir);
+
+      Dout(dc::notice, "s²(1-2v) = " << s_squared_times_one_minus_two_v);
+      Dout(dc::notice, "sw = " << (w_is_negative ? -s_times_w : s_times_w));
+
+      double s = std::sqrt(s_squared_times_one_minus_two_v / (1.0 - 2.0 * v));
+      double w = s_times_w / s;
+#endif
+      if (std::isnan(w))
+      {
+        window.set_send_expose_events(true);
+        window.handle_dragging();
+        continue;
+      }
+
+      Dout(dc::notice, "w = " << w << "; s = " << s << "; v = " << v);
 
       // Draw a vertical line from V up 0.5.
       Point V6(V.x(), V.y() + 0.5);
