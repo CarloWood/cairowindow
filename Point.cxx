@@ -41,7 +41,7 @@ Point& Point::operator-=(Vector const& v)
   return *this;
 }
 
-Vector operator-(Point const& from, Point const& to)
+Vector operator-(Point const& to, Point const& from)
 {
   return {from, to};
 }

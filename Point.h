@@ -26,7 +26,7 @@ class Point
   Point& operator+=(Direction const& direction);
   Point& operator+=(Vector const& v);
   Point& operator-=(Vector const& v);
-  friend Vector operator-(Point const& from, Point const& to);
+  friend Vector operator-(Point const& to, Point const& from);
   friend bool operator!=(Point const& p1, Point const& p2);
 
 #ifdef CWDEBUG

@@ -17,4 +17,11 @@ Direction const Direction::left{-1.0, 0.0};
 //static
 Direction const Direction::right{1.0, 0.0};
 
+#ifdef CWDEBUG
+void Direction::print_on(std::ostream& os) const
+{
+  os << "{x_:" << x_ << ", y_:" << y_ << '}';
+}
+#endif
+
 } // namespace cairowindow

@@ -1,10 +1,12 @@
 #pragma once
 
 #include "LinePiece.h"
+#include "utils/has_print_on.h"
 #include <cmath>
 #include "debug.h"
 
 namespace cairowindow {
+using utils::has_print_on::operator<<;
 
 class Line;
 
@@ -62,6 +64,10 @@ class Direction
   static Direction const down;
   static Direction const left;
   static Direction const right;
+
+#ifdef CWDEBUG
+  void print_on(std::ostream& os) const;
+#endif
 };
 
 } // namespace cairowindow

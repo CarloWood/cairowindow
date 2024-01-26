@@ -505,11 +505,50 @@ Velocity vector
   V(0) = V₀ = ⎣Vy₀⎦ = M ⎜0⎟ = ⎣m₁₁⎦
                         ⎣0⎦
 
-      ⎡Px₀  α·Vx₀  m₀₂  Px₁-(Px₀+α·Vx₀+m₀₂)⎤
-  M = ⎣Py₀  α·Vy₀  m₁₂  Py₁-(Py₀+α·Vy₀+m₁₂)⎦
+Let
 
-where α is some positive scaling factor and V₀ is the
-velocity vector V(1) of the previous fit (their P₁ now
-has become our P₀).
+       ⎡Dx₀⎤
+  D₀ = ⎣Dy₀⎦ = V₀ / |V₀|
 
+be the direction vector of the velocity vector in P₀,
+then
+
+      ⎡Px₀  α·Dx₀  m₀₂  Px₁-(Px₀+α·Dx₀+m₀₂)⎤
+  M = ⎣Py₀  α·Dy₀  m₁₂  Py₁-(Py₀+α·Dy₀+m₁₂)⎦
+
+where α is some positive scaling factor and D₀ is the
+direction of the velocity vector V(1) of the previous
+fit (their P₁ now has become our P₀).
+
+The velocity vector at P₁ is
+
+                        ⎡0⎤
+              ⎡Vx₁⎤     ⎜1⎟   ⎡m₀₁ + 2 m₀₂ + 3 m₀₃⎤
+  V(1) = V₁ = ⎣Vy₁⎦ = M ⎜2⎟ = ⎣m₁₁ + 2 m₁₂ + 3 m₁₃⎦
+                        ⎣3⎦
+
+Let
+
+       ⎡Dx₁⎤
+  D₁ = ⎣Dy₁⎦ = V₁ / |V₁|
+
+be the direction vector of the velocity vector in P₁,
+then we can state that
+
+  ⎡m₀₁ + 2 m₀₂ + 3 m₀₃⎤   ⎡α·Dx₀ + 2 m₀₂ + 3(Px₁-(Px₀+α·Dx₀+m₀₂))⎤   ⎡β·Dx₁⎤
+  ⎣m₁₁ + 2 m₁₂ + 3 m₁₃⎦ = ⎣α·Dy₀ + 2 m₁₂ + 3(Py₁-(Py₀+α·Dy₀+m₁₂))⎦ = ⎣β·Dy₁⎦
+
+where β is some positive scaling factor.
+Or
+
+  m₀₂ = 3(Px₁-Px₀) - 2α·Dx₀ - β·Dx₁
+  m₁₂ = 3(Py₁-Py₀) - 2α·Dy₀ - β·Dy₁
+
+and thus
+
+      ⎡Px₀  α·Dx₀  3(Px₁-Px₀)-2α·Dx₀-β·Dx₁  -2(Px₁-Px₀)+α·Dx₀+β·Dx₁)⎤
+  M = ⎣Py₀  α·Dy₀  3(Py₁-Py₀)-2α·Dy₀-β·Dy₁  -2(Py₁-Py₀)+α·Dy₀+β·Dy₁)⎦
+
+
+  X(t) = P₀ + α·D₀·t + (3(P₁-P₀)-2α·D₀-β·D₁)·t² + (-2(P₁-P₀)+α·D₀+β·D₁)·t³
 

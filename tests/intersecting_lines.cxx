@@ -263,7 +263,7 @@ int main()
       Dout(dc::notice, "D0·N1 = " << D0_dot_N1);
 
       // Take dot product of P1P0 with N1:
-      double P1P0_dot_N1 = (P1 - P0).dot(N1);
+      double P1P0_dot_N1 = (P0 - P1).dot(N1);
       Dout(dc::notice, "P1P0·N1 = " << P1P0_dot_N1);
 
       // Calculate lambda.
