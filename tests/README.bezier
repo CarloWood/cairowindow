@@ -483,6 +483,87 @@ The size of n is irrelevant, since we can always set mᵢⱼ = 0 for j > k < n.
 | |tan(θ)| becoming large is not a good fit.
 '-----------------------------------------------------------------------------
 
+If n = 2 we have
+
+      ⎡m₀₀  m₀₁  m₀₂⎤
+  M = ⎣m₁₀  m₁₁  m₁₂⎦
+
+       ⎡Px₀⎤                 ⎡m₀₀⎤
+  P₀ = ⎣Py₀⎦ = X(0) = M T₀ = ⎣m₁₀⎦
+
+       ⎡Px₁⎤                 ⎡m₀₀ +  m₀₁ + m₀₂⎤
+  P₁ = ⎣Py₁⎦ = X(1) = M T₁ = ⎣m₁₀ +  m₁₁ + m₁₂⎦
+
+Velocity vector
+
+          d                  ⎡0 ⎤
+  V(t) = -- X(t) = M T'ₜ = M ⎜1 ⎟
+         dt                  ⎣2t⎦
+
+
+              ⎡Vx₀⎤     ⎡0⎤   ⎡m₀₁⎤
+  V(0) = V₀ = ⎣Vy₀⎦ = M ⎜1⎟ = ⎣m₁₁⎦
+                        ⎣0⎦
+
+Let
+
+       ⎡Dx₀⎤
+  D₀ = ⎣Dy₀⎦ = V₀ / |V₀|
+
+be the direction vector of the velocity vector in P₀,
+then
+
+      ⎡Px₀  α·Dx₀  Px₁-Px₀-α·Dx₀⎤
+  M = ⎣Py₀  α·Dy₀  Py₁-Py₀-α·Dy₀⎦
+
+where α is some positive scaling factor and D₀ is the
+direction of the velocity vector V(1) of the previous
+fit (their P₁ now has become our P₀).
+
+And thus
+
+  X(t) = P₀ + α·D₀·t + ((P₁-P₀)-α·D₀)·t²
+
+If next we demand that this curve goes through Pᵧ,
+
+  Pᵧ = P₀ + α·D₀·γ + ((P₁-P₀)-α·D₀)·γ²
+
+or
+
+  Pxᵧ = Px₀ + α·Dx₀·γ + ((Px₁-Px₀)-α·Dx₀)·γ² = Px₀ + α·Dx₀(γ - γ²) + (Px₁-Px₀)γ²
+  Pyᵧ = Py₀ + α·Dy₀·γ + ((Py₁-Py₀)-α·Dy₀)·γ² = Py₀ + α·Dy₀(γ - γ²) + (Py₁-Py₀)γ²
+
+Multiply the first one with Dy₀ and the second one with Dx₀ and then
+subtract:
+
+  Pxᵧ·Dy₀ - Pyᵧ·Dx₀ = Px₀·Dy₀ - Py₀·Dx₀ + ((Px₁-Px₀)Dy₀ - (Py₁-Py₀)Dx₀)γ² -->
+
+  (Py₀ - Pyᵧ)·Dx₀ - (Px₀ - Pxᵧ)·Dy₀ + ((Py₁ - Py₀)·Dx₀ - (Px₁ - Px₀)·Dy₀)γ² = 0
+
+       -(Py₀ - Pyᵧ)·Dx₀ + (Px₀ - Pxᵧ)·Dy₀
+  γ² = ---------------------------------
+       -(Py₀ - Py₁)·Dx₀ + (Px₀ - Px₁)·Dy₀
+
+          (Px₀ - Pxᵧ) - (Px₀ - Px₁)γ²
+  α·Dx₀ = ---------------------------
+                   γ(γ - 1)
+
+          (Py₀ - Pyᵧ) - (Py₀ - Py₁)γ²
+  α·Dy₀ = ---------------------------
+                   γ(γ - 1)
+
+                             ((Px₀ - Pxᵧ) - (Px₀ - Px₁)γ²)² + ((Py₀ - Pyᵧ) - (Py₀ - Py₁)γ²)²
+  α² = (α·Dx₀)² + (α·Dy₀)² = ---------------------------------------------------------------
+                                                        γ²(γ - 1)²
+
+  ((Px₀ - Pxᵧ) - (Px₀ - Px₁)γ²)² + ((Py₀ - Pyᵧ) - (Py₀ - Py₁)γ²)² =
+
+  (Px₀ - Pxᵧ)² - 2(Px₀ - Pxᵧ)(Px₀ - Px₁)γ² + (Px₀ - Px₁)²γ⁴ + (Py₀ - Pyᵧ)² - 2(Py₀ - Pyᵧ)(Py₀ - Py₁)γ² + (Py₀ - Py₁)²γ⁴ =
+
+  |P₀ - Pᵧ|² + |P₀ - P₁|²γ⁴ - 2((Px₀ - Pxᵧ)(Px₀ - Px₁) + (Py₀ - Pyᵧ)(Py₀ - Py₁))γ²
+
+---
+
 If n = 3 we have
 
       ⎡m₀₀  m₀₁  m₀₂  m₀₃⎤
@@ -520,35 +601,80 @@ where α is some positive scaling factor and D₀ is the
 direction of the velocity vector V(1) of the previous
 fit (their P₁ now has become our P₀).
 
-The velocity vector at P₁ is
+.------------------------------------------------------------------------------
+|  The velocity vector at P₁ is
+|
+|                          ⎡0⎤
+|                ⎡Vx₁⎤     ⎜1⎟   ⎡m₀₁ + 2 m₀₂ + 3 m₀₃⎤
+|    V(1) = V₁ = ⎣Vy₁⎦ = M ⎜2⎟ = ⎣m₁₁ + 2 m₁₂ + 3 m₁₃⎦
+|                          ⎣3⎦
+|
+|  Let
+|
+|         ⎡Dx₁⎤
+|    D₁ = ⎣Dy₁⎦ = V₁ / |V₁|
+|
+|  be the direction vector of the velocity vector in P₁,
+|  then we can state that
+|
+|    ⎡m₀₁ + 2 m₀₂ + 3 m₀₃⎤   ⎡α·Dx₀ + 2 m₀₂ + 3(Px₁-(Px₀+α·Dx₀+m₀₂))⎤   ⎡β·Dx₁⎤
+|    ⎣m₁₁ + 2 m₁₂ + 3 m₁₃⎦ = ⎣α·Dy₀ + 2 m₁₂ + 3(Py₁-(Py₀+α·Dy₀+m₁₂))⎦ = ⎣β·Dy₁⎦
+|
+|  where β is some positive scaling factor.
+|  Or
+|
+|    m₀₂ = 3(Px₁-Px₀) - 2α·Dx₀ - β·Dx₁
+|    m₁₂ = 3(Py₁-Py₀) - 2α·Dy₀ - β·Dy₁
+|
+|  and thus
+|
+|        ⎡Px₀  α·Dx₀  3(Px₁-Px₀)-2α·Dx₀-β·Dx₁  -2(Px₁-Px₀)+α·Dx₀+β·Dx₁)⎤
+|    M = ⎣Py₀  α·Dy₀  3(Py₁-Py₀)-2α·Dy₀-β·Dy₁  -2(Py₁-Py₀)+α·Dy₀+β·Dy₁)⎦
+|
+|
+|    X(t) = P₀ + α·D₀·t + (3(P₁-P₀)-2α·D₀-β·D₁)·t² + (-2(P₁-P₀)+α·D₀+β·D₁)·t³
+'------------------------------------------------------------------------------
+
+
+Acceleration vector
+                              ⎡0 ⎤
+          d                   ⎜0 ⎟
+  A(t) = -- V(t) = M T''ₜ = M ⎜2 ⎟
+         dt                   ⎣6t⎦
 
                         ⎡0⎤
-              ⎡Vx₁⎤     ⎜1⎟   ⎡m₀₁ + 2 m₀₂ + 3 m₀₃⎤
-  V(1) = V₁ = ⎣Vy₁⎦ = M ⎜2⎟ = ⎣m₁₁ + 2 m₁₂ + 3 m₁₃⎦
-                        ⎣3⎦
+              ⎡Ax₀⎤     ⎜0⎟   ⎡2 m₀₂⎤
+  A(0) = A₀ = ⎣Ay₀⎦ = M ⎜2⎟ = ⎣2 m₁₂⎦
+                        ⎣0⎦
 
-Let
+Curvature
 
-       ⎡Dx₁⎤
-  D₁ = ⎣Dy₁⎦ = V₁ / |V₁|
+Let Nv₀ = (-m₁₁, m₀₁) be the velocity vector V₀ rotated 90 degrees counter clock-wise.
+Then the signed curvature at t=0 is
 
-be the direction vector of the velocity vector in P₁,
-then we can state that
+  k₀ = A₀·Nv₀ / |V₀|³ = 2 (m₁₂ m₀₁ - m₀₂ m₁₁) / (m₀₁² + m₁₁²)^(3/2)
 
-  ⎡m₀₁ + 2 m₀₂ + 3 m₀₃⎤   ⎡α·Dx₀ + 2 m₀₂ + 3(Px₁-(Px₀+α·Dx₀+m₀₂))⎤   ⎡β·Dx₁⎤
-  ⎣m₁₁ + 2 m₁₂ + 3 m₁₃⎦ = ⎣α·Dy₀ + 2 m₁₂ + 3(Py₁-(Py₀+α·Dy₀+m₁₂))⎦ = ⎣β·Dy₁⎦
+We can write the acceleration vector A₀ as,
 
-where β is some positive scaling factor.
+  A₀ = β·D₀ + γ·N₀
+
+where N₀=(-Dy₀, Dx₀) is the normal of D₀ (note that Nv₀ = α·N₀).
+
 Or
 
-  m₀₂ = 3(Px₁-Px₀) - 2α·Dx₀ - β·Dx₁
-  m₁₂ = 3(Py₁-Py₀) - 2α·Dy₀ - β·Dy₁
+  ⎡Ax₀⎤   ⎡β·Dx₀ - γ·Dy₀⎤
+  ⎣Ay₀⎦ = ⎣β·Dy₀ + γ·Dx₀⎦
 
-and thus
+then
 
-      ⎡Px₀  α·Dx₀  3(Px₁-Px₀)-2α·Dx₀-β·Dx₁  -2(Px₁-Px₀)+α·Dx₀+β·Dx₁)⎤
-  M = ⎣Py₀  α·Dy₀  3(Py₁-Py₀)-2α·Dy₀-β·Dy₁  -2(Py₁-Py₀)+α·Dy₀+β·Dy₁)⎦
+  k₀ = A₀·Nv₀ / |V₀|³ = (Ax₀·Nvx₀ + Ay₀·Nvy₀) / α³ =
+     = ((β·Dx₀ - γ·Dy₀)·α·(-Dy₀) + (β·Dy₀ + γ·Dx₀)·α·Dx₀) / α³ =
+     = (-αβ·Dx₀·Dy₀ + αγ·Dy₀² + αβ·Dx₀·Dy₀ + αγ·Dx₀²) / α³ =
+     = γ / α²
 
+Thus we can write M as
 
-  X(t) = P₀ + α·D₀·t + (3(P₁-P₀)-2α·D₀-β·D₁)·t² + (-2(P₁-P₀)+α·D₀+β·D₁)·t³
+      ⎡Px₀  α·Dx₀  (β·Dx₀ - α²k₀·Dy₀)/2  Px₁-(Px₀+α·Dx₀+(β·Dx₀ - α²k₀·Dy₀)/2)⎤
+  M = ⎣Py₀  α·Dy₀  (β·Dy₀ + α²k₀·Dx₀)/2  Py₁-(Py₀+α·Dy₀+(β·Dy₀ + α²k₀·Dx₀)/2)⎦
+
 

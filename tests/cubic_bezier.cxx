@@ -9,6 +9,7 @@
 #include "utils/AIAlert.h"
 #include "utils/debug_ostream_operators.h"
 #include "utils/ColorPool.h"
+#include "utils/square.h"
 #include <thread>
 #include <iostream>
 #include "debug.h"
@@ -24,7 +25,7 @@ int main()
     using Window = cairowindow::Window;
 
     // Create a window.
-    Window window("Quadratic Bezier", 1200, 900);
+    Window window("Cubic Bezier", 1200, 900);
 
     // Create a new layer with a gray background.
     auto background_layer = window.create_background_layer<Layer>(color::white COMMA_DEBUG_ONLY("background_layer"));
@@ -62,106 +63,182 @@ int main()
     draw::LineStyle line_style{.line_color = color::black, .line_width = 1.0, .dashes = {10.0, 5.0}};
     draw::ArcStyle arc_style{.line_color = color::blue, .line_width = 1.0};
 
-    // Draw a slider for alpha.
-    auto slider_alpha = plot.create_slider(second_layer, {928, 83, 7, 400}, 1.0, 0.1, 10.0);
-    auto slider_alpha_label = plot.create_text(second_layer, Pixel{928, 483}, "α", slider_style);
-
-    // Draw a slider for m03.
-    auto slider_m03 = plot.create_slider(second_layer, {978, 83, 7, 400}, 0.0, -1.0, 1.0);
-    auto slider_m03_label = plot.create_text(second_layer, Pixel{978, 483}, "m03", slider_style);
-
-    // Draw a slider for m13.
-    auto slider_m13 = plot.create_slider(second_layer, {1028, 83, 7, 400}, 0.0, -1.0, 3.0);
-    auto slider_m13_label = plot.create_text(second_layer, Pixel{1028, 483}, "m13", slider_style);
-
     // Create a point P₀.
-    auto plot_P0 = plot.create_point(second_layer, {-5.0, -3.0}, point_style);
+    auto plot_P0 = plot.create_point(second_layer, {-2.0, -0.0}, point_style);
     // Create a point P₁.
-    auto plot_P1 = plot.create_point(second_layer, {3.0, -1.0}, point_style);
+    auto plot_P1 = plot.create_point(second_layer, {2.0, 0.0}, point_style);
 
-    // Create a point Q on a circle around P₀.
-    double P0_circle_radius = 2.0;
-    double phi = M_PI / 10.0;
-    Direction V0_dir{phi};
-    auto plot_Q = plot.create_point(second_layer, plot_P0 + P0_circle_radius * V0_dir, point_style);
+    // Create a point D₀.
+    auto plot_D0 = plot.create_point(second_layer, {2.5, 1.5}, point_style({.color_index = 2}));
+    // Create a point D₁.
+//    auto plot_D1 = plot.create_point(second_layer, {3.5, -1.5}, point_style({.color_index = 2}));
 
-    // Make P₀ and P₁ draggable.
+    // Create a point Pᵧ.
+    auto plot_P_gamma = plot.create_point(second_layer, {7.0, -2.0}, point_style);
+
+    // Make all points draggable.
     window.register_draggable(plot, &plot_P0);
     window.register_draggable(plot, &plot_P1);
-    // Make Q draggable along the circle.
-    window.register_draggable(plot, &plot_Q, [&plot_P0, P0_circle_radius](Point const& new_position)
-        {
-          return plot_P0 + P0_circle_radius * Direction{plot_P0, new_position};
-        }
-    );
+    window.register_draggable(plot, &plot_D0);
+//    window.register_draggable(plot, &plot_D1);
+    window.register_draggable(plot, &plot_P_gamma);
 
-    Point prev_Q = plot_Q;
+    auto slider_k0 = plot.create_slider(second_layer, {928, 83, 7, 400}, 0.25, -10.0, 10.0);
+    auto slider_k0_label = plot.create_text(second_layer, Pixel{928, 483}, "k0", slider_style);
+
+    auto slider_beta = plot.create_slider(second_layer, {978, 83, 7, 400}, 0.0, -100.0, 100.0);
+    auto slider_beta_label = plot.create_text(second_layer, Pixel{978, 483}, "beta", slider_style);
 
     while (true)
     {
       // Suppress immediate updating of the window for each created item, in order to avoid flickering.
       window.set_send_expose_events(false);
 
-      // Draw a label for P₀ and P₁.
+      // Draw a label for P₀, P₁, D₀ and D₁.
       auto P0_label = plot.create_text(second_layer, plot_P0, "P₀", label_style({.position = draw::centered_right_of}));
       auto P1_label = plot.create_text(second_layer, plot_P1, "P₁", label_style({.position = draw::centered_right_of}));
+      auto D0_label = plot.create_text(second_layer, plot_D0, "D₀", label_style({.position = draw::centered_right_of}));
+//      auto D1_label = plot.create_text(second_layer, plot_D1, "D₁", label_style({.position = draw::centered_right_of}));
+      auto P_gamma_label = plot.create_text(second_layer, plot_P_gamma, "Pᵧ", label_style({.position = draw::centered_right_of}));
 
       // Draw line through P₀ and P₁.
       auto plot_line_P0P1 = plot.create_line(second_layer, plot_P0, plot_P1, line_style, plot::LineExtend::both);
 
-      // Draw a draggable point (Q) on a circle around P₀.
-      auto plot_P0_circle = plot.create_circle(second_layer, plot_P0, P0_circle_radius,
-          line_style({.line_color = color::gray}));
+      // Draw an arrow from P₀ to D₀.
+      auto plot_D0_arrow = plot.create_connector(second_layer, plot_P0, plot_D0, line_style({.line_color = color::orange}));
+      // Draw an arrow from P₁ to D₁.
+//      auto plot_D1_arrow = plot.create_connector(second_layer, plot_P1, plot_D1, line_style({.line_color = color::orange}));
 
-      Dout(dc::notice, "V0_dir = " << V0_dir);
-      if (prev_Q != plot_Q)
-      {
-        Dout(dc::notice, "prev_Q != plot_Q");
-        prev_Q = plot_Q;
-        V0_dir = (plot_Q - plot_P0).direction();
-      }
-      else
-      {
-        Dout(dc::notice, "prev_Q == plot_Q");
-        // Update Q in case P₀ was moved.
-        plot_Q = plot.create_point(second_layer, plot_P0 + P0_circle_radius * V0_dir, point_style);
-        // Make Q draggable along the circle.
-        window.register_draggable(plot, &plot_Q, [&plot_P0, P0_circle_radius](Point const& new_position)
-            {
-              return plot_P0 + P0_circle_radius * Direction{plot_P0, new_position};
-            }
-        );
-        prev_Q = plot_Q;
-      }
-      Dout(dc::notice, "V0_dir = " << V0_dir);
+      // Store the velocity vectors as Vector.
+      Vector const V0 = plot_D0_arrow;
+//      Vector const V1 = plot_D1_arrow;
 
-      // Draw an arrow from P₀ to Q.
-      auto plot_Q_arrow = plot.create_connector(second_layer, plot_P0, plot_Q, line_style({.line_color = color::orange}));
-
-      // Define the matrix.
-      //      ⎡Px₀  α·Vx₀  m₀₂  Px₁-(Px₀+α·Vx₀+m₀₂)⎤
-      //  M = ⎣Py₀  α·Vy₀  m₁₂  Py₁-(Py₀+α·Vy₀+m₁₂)⎦
-      double alpha = slider_alpha.value();
-      Vector V0 = plot_Q_arrow;
-      double m00 = plot_P0.x();
-      double m10 = plot_P0.y();
-      double m01 = alpha * V0.x();
-      double m11 = alpha * V0.y();
-      double m03 = slider_m03.value();
-      double m13 = slider_m13.value();
-      double m02 = plot_P1.x() - (m00 + m01 + m03);
-      double m12 = plot_P1.y() - (m10 + m11 + m13);
-
-      auto xt = [=](double t){ return m00 + t * (m01 + t * (m02 + t * m03)); };
-      auto yt = [=](double t){ return m10 + t * (m11 + t * (m12 + t * m13)); };
+      plot::Connector plot_curvature({0.0, 0.0}, {0.0, 0.0});
+      Vector K0(0.0, 0.0);
 
       std::vector<Point> curve_points;
-      for (int i = -100; i <= 100; ++i)
       {
-        double t = i * 0.1;
-        curve_points.emplace_back(xt(t), yt(t));
+        // Define the matrix.
+
+#if 0
+        // Using α·D₀ and β·D₁.
+
+        // X(t) = P₀ + α·D₀·t + (3(P₁-P₀)-2α·D₀-β·D₁)·t² + (-2(P₁-P₀)+α·D₀+β·D₁)·t³
+        //
+        //      ⎡Px₀  Vx₀  (3(Px₁-Px₀)-2Vx₀-Vx₁)  (-2(Px₁-Px₀)+Vx₀+Vx₁)⎤
+        //  M = ⎣Py₀  Vy₀  (3(Py₁-Py₀)-2Vy₀-Vy₁)  (-2(Py₁-Py₀)+Vy₀+Vy₁)⎦
+        //
+
+        Vector V2 = 3 * (plot_P1 - plot_P0) - 2 * V0 - V1;
+        Vector V3 = -2 * (plot_P1 - plot_P0) + V0 + V1;
+#else
+        // Using α·D₀ and k₀.
+
+        //     ⎡Px₀  α·Dx₀  (β·Dx₀ - α²k₀·Dy₀)/2  Px₁-(Px₀+α·Dx₀+(β·Dx₀ - α²k₀·Dy₀)/2)⎤
+        // M = ⎣Py₀  α·Dy₀  (β·Dy₀ + α²k₀·Dx₀)/2  Py₁-(Py₀+α·Dy₀+(β·Dy₀ + α²k₀·Dx₀)/2)⎦
+
+        double alpha = V0.length();
+        Direction D0 = V0.direction();
+        Vector V2 = 0.5 * (slider_beta.value() * D0 + alpha * alpha * slider_k0.value() * D0.normal());
+        Vector V3 = plot_P1 - plot_P0 - V0 - V2;
+#endif
+
+        double m00 = plot_P0.x();
+        double m10 = plot_P0.y();
+        double m01 = V0.x();
+        double m11 = V0.y();
+        double m02 = V2.x();
+        double m12 = V2.y();
+        double m03 = V3.x();
+        double m13 = V3.y();
+
+        auto xt = [=](double t){ return m00 + t * (m01 + t * (m02 + t * m03)); };
+        auto yt = [=](double t){ return m10 + t * (m11 + t * (m12 + t * m13)); };
+
+        for (int i = -200; i <= 400; ++i)
+        {
+          double t = i * 0.01;
+          curve_points.emplace_back(xt(t), yt(t));
+        }
+
+        // Now we have the matrix, lets calculate the second derivative of X(t).
+        // Zero's derivative:
+        // x(t) = m00 + m01 t + m02 t^2 + m03 t^3
+        // y(t) = m10 + m11 t + m12 t^2 + m13 t^3
+        //
+        // First derivate (velocity vector):
+        // x'(t) = m01 + 2 m02 t + 3 m03 t^2
+        // y'(t) = m11 + 2 m12 t + 3 m13 t^2
+        //
+        // Second derivate (acceleration vector):
+        // x''(t) = 2 m02 + 6 m03 t
+        // y''(t) = 2 m12 + 6 m13 t
+        //
+        // Acceleration vector at t=0.
+        Vector A0{2 * m02, 2 * m12};
+        // Curvature.
+        K0 = A0.dot(V0.rotate_90_degrees()) / utils::square(V0.length_squared()) * V0.rotate_90_degrees();
+        plot_curvature = plot::Connector(plot_P0, plot_P0 + K0);
       }
       auto curve = plot.create_curve(second_layer, std::move(curve_points), curve_line_style);
+      plot.add_connector(second_layer, plot_curvature, line_style);
+
+      double radius = 1.0 / K0.length();
+      auto plot_curvature_circle = plot.create_circle(second_layer,
+          plot_P0 + radius * K0.direction(), radius, solid_line_style({.line_color = color::gray}));
+
+#if 0
+      // Determine a quadratic Bezier going through P₀, P₁ and Pᵧ, tangent to D₀.
+      plot::Curve curve2;
+      do
+      {
+        Direction D0 = V0.direction();
+        Vector P1P0(plot_P1, plot_P0);
+        Vector PgammaP0(plot_P_gamma, plot_P0);
+        Vector PgammaP1(plot_P_gamma, plot_P1);
+        double PgR90dotD0 = PgammaP0.rotate_90_degrees().dot(D0);
+        double P1R90dotD0 = P1P0.rotate_90_degrees().dot(D0);
+        double P1R90dotPg = P1P0.rotate_90_degrees().dot(PgammaP0);
+        double PgP1R90dotD0 = PgammaP1.rotate_90_degrees().dot(D0);
+        double gamma_squared = PgR90dotD0 / P1R90dotD0;
+        double gamma = std::sqrt(gamma_squared);  // γ > 1 (comes after P₁).
+        P1P0 *= gamma_squared;
+        double PgdotP1 = PgammaP0.dot(P1P0);
+        double alpha_squared =
+          (PgammaP0.length_squared() + P1P0.length_squared() - 2 * PgdotP1) / (gamma_squared * utils::square(1.0 - gamma));
+        double alpha = std::sqrt(alpha_squared);  // α > 0 (or we'd go in the wrong direction!)
+
+        Dout(dc::notice, "P1R90dotPg = " << P1R90dotPg << "; PgP1R90dotD0 = " << PgP1R90dotD0);
+        if (P1R90dotPg > 0.0 || PgP1R90dotD0 > 0.0)
+          break;
+
+        // Define the quadratic matrix.
+        //
+        //     ⎡Px₀  α·Dx₀  Px₁-Px₀-α·Dx₀⎤
+        // M = ⎣Py₀  α·Dy₀  Py₁-Py₀-α·Dy₀⎦
+
+        double m00 = plot_P0.x();
+        double m10 = plot_P0.y();
+        double m01 = alpha * D0.x();
+        double m11 = alpha * D0.y();
+        double m02 = plot_P1.x() - (m00 + m01);
+        double m12 = plot_P1.y() - (m10 + m11);
+
+        auto xt = [=](double t){ return m00 + t * (m01 + t * m02); };
+        auto yt = [=](double t){ return m10 + t * (m11 + t * m12); };
+
+        std::vector<Point> curve_points2;
+        for (int i = -200; i <= 400; ++i)
+        {
+          double t = i * 0.01;
+          curve_points2.emplace_back(xt(t), yt(t));
+        }
+        curve2 = plot::Curve(std::move(curve_points2));
+      }
+      while (false);
+      if (!curve2.points().empty())
+        plot.add_curve(second_layer, curve2, curve_line_style);
+#endif
 
       // Flush all expose events related to the drawing done above.
       window.set_send_expose_events(true);

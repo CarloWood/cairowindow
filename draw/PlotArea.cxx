@@ -38,7 +38,7 @@ void PlotArea::draw_axis(cairo_t* cr, double x1, double y1, double x2, double y2
 }
 
 //static
-int PlotArea::calculate_range_ticks(plot::Range& range)
+int PlotArea::calculate_range_ticks(Range& range)
 {
   double diff = range.max() - range.min();
   double order = std::floor(std::log10(diff) + 1e-6);
@@ -59,7 +59,7 @@ void PlotArea::draw_regions_on(Layer* layer)
   std::array<int, number_of_axes> k;
   for (int axis = 0; axis < 2; ++axis)
   {
-    plot::Range range{range_[axis][min_range], range_[axis][max_range]};
+    Range range{range_[axis][min_range], range_[axis][max_range]};
     k[axis] = calculate_range_ticks(range);
   }
 

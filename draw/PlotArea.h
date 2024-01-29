@@ -6,7 +6,9 @@
 #include "cairowindow/Color.h"
 #include <array>
 
-namespace cairowindow::plot {
+namespace cairowindow {
+class Range;
+namespace plot {
 
 constexpr int x_axis = 0;
 constexpr int y_axis = 1;
@@ -14,9 +16,8 @@ constexpr int y_axis = 1;
 constexpr int min_range = 0;
 constexpr int max_range = 1;
 
-class Range;
-
-} // namespace cairowindow::plot
+} // namespace plot
+} // namespace cairowindow
 
 namespace cairowindow::draw {
 
@@ -59,7 +60,7 @@ class PlotArea : public MultiRegion
 
   Rectangle const& geometry() const { return geometry_; }
 
-  static int calculate_range_ticks(plot::Range& range);
+  static int calculate_range_ticks(Range& range);
 
  private:
   void draw_axis(cairo_t* cr, double x1, double y1, double x2, double y2, int k);

@@ -1,5 +1,9 @@
 #pragma once
 
+#include "Point.h"
+#include "BezierFitter.h"
+#include <vector>
+
 namespace cairowindow {
 
 class Curve
@@ -14,6 +18,12 @@ class Curve
 
   std::vector<Point> const& points() const { return points_; }
   std::vector<Point>& points() { return points_; }
+};
+
+class FunctionCurve
+{
+ private:
+  BezierFitter fitter_;
 };
 
 } // namespace cairowindow

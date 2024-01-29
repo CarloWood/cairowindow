@@ -12,3 +12,6 @@ target_link_libraries(quadratic_bezier AICxx::cairowindow ${AICXX_OBJECTS_LIST})
 
 add_executable(cubic_bezier cubic_bezier.cxx)
 target_link_libraries(cubic_bezier AICxx::cairowindow ${AICXX_OBJECTS_LIST})
+
+add_executable(circle_bezier circle_bezier.cxx)
+target_link_libraries(circle_bezier AICxx::cairowindow ${AICXX_OBJECTS_LIST})

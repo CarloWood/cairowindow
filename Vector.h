@@ -1,9 +1,15 @@
 #pragma once
 
 #include "LinePiece.h"
+#include "Direction.h"
+#include "utils/has_print_on.h"
 #include <cmath>
+#ifdef CWDEBUG
+#include "debug.h"
+#endif
 
 namespace cairowindow {
+using utils::has_print_on::operator<<;
 
 class Vector
 {
@@ -12,6 +18,9 @@ class Vector
   double y_;
 
  public:
+  // Construct an uninitialized Vector.
+  Vector() = default;
+
   // Construct a vector from its x,y coordinates.
   Vector(double x, double y) : x_(x), y_(y) { }
 
@@ -39,6 +48,9 @@ class Vector
   // Return the length of the vector.
   double length() const { return std::sqrt(x_ * x_ + y_ * y_); }
 
+  // Return the square of the length of the vector.
+  double length_squared() const { return x_ * x_ + y_ * y_; }
+
   // Convert the vector to a Point.
   Point point() const { return {x_, y_}; }
 
@@ -51,6 +63,29 @@ class Vector
 
   // Return the vector rotated 270 degrees.
   Vector rotate_270_degrees() const { return { y_, -x_ }; }
+
+  // Add another vector.
+  Vector& operator+=(Vector const& v2)
+  {
+    x_ += v2.x_;
+    y_ += v2.y_;
+    return *this;
+  }
+
+  // Multiply the vector with a scalar.
+  Vector& operator*=(double scalar)
+  {
+    x_ *= scalar;
+    y_ *= scalar;
+    return *this;
+  }
+
+#ifdef CWDEBUG
+  void print_on(std::ostream& os) const
+  {
+    os << '[' << x_ << ", " << y_ << ']';
+  }
+#endif
 };
 
 inline Vector operator*(double length, Vector const& v2)

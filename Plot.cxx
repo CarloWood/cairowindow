@@ -347,11 +347,8 @@ Slider Plot::create_slider(boost::intrusive_ptr<Layer> const& layer,
   return plot_slider;
 }
 
-Curve Plot::create_curve(boost::intrusive_ptr<Layer> const& layer,
-    std::vector<cairowindow::Point>&& points, draw::LineStyle const& line_style)
+void Plot::curve_to_lines(boost::intrusive_ptr<Layer> const& layer, Curve const& plot_curve, draw::LineStyle const& line_style)
 {
-  Curve plot_curve(std::move(points), std::make_shared<draw::Curve>(line_style));
-
   Rectangle const& g = plot_area_.geometry();
   double prev_point_x = std::numeric_limits<double>::quiet_NaN();
   double prev_point_y = std::numeric_limits<double>::quiet_NaN();
@@ -370,8 +367,22 @@ Curve Plot::create_curve(boost::intrusive_ptr<Layer> const& layer,
     prev_point_y = y;
     ++count;
   }
+}
 
+Curve Plot::create_curve(boost::intrusive_ptr<Layer> const& layer,
+    std::vector<cairowindow::Point>&& points, draw::LineStyle const& line_style)
+{
+  Curve plot_curve(std::move(points), std::make_shared<draw::Curve>(line_style));
+  curve_to_lines(layer, plot_curve, line_style);
   return plot_curve;
+}
+
+void Plot::add_curve(boost::intrusive_ptr<Layer> const& layer, Curve const& plot_curve,
+    draw::LineStyle const& line_style)
+{
+  plot_curve.draw_object_ = std::make_shared<draw::Curve>(line_style);
+  curve_to_lines(layer, plot_curve, line_style);
+  //layer->draw(plot_curve.draw_object_);
 }
 
 Rectangle Plot::update_grabbed(utils::Badge<Window>, ClickableIndex grabbed_point, double pixel_x, double pixel_y)

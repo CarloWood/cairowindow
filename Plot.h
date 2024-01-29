@@ -357,6 +357,10 @@ class Plot
   [[nodiscard]] Slider create_slider(boost::intrusive_ptr<Layer> const& layer,
       cairowindow::Rectangle const& geometry, double start_value, double min_value, double max_value);
 
+ private:
+  void curve_to_lines(boost::intrusive_ptr<Layer> const& layer, Curve const& plot_curve, draw::LineStyle const& line_style);
+
+ public:
   [[nodiscard]] Curve create_curve(boost::intrusive_ptr<Layer> const& layer,
       std::vector<cairowindow::Point>&& points, draw::LineStyle const& line_style);
 
@@ -376,6 +380,9 @@ class Plot
 
   void add_arc(boost::intrusive_ptr<Layer> const& layer, Arc const& plot_arc,
       draw::ArcStyle const& arc_style);
+
+  void add_curve(boost::intrusive_ptr<Layer> const& layer, Curve const& plot_curve,
+      draw::LineStyle const& line_style);
 
   void add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio = false);
 

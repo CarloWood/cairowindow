@@ -1,10 +1,13 @@
 #pragma once
 
+#include <cmath>
+
 #ifdef CWDEBUG
 #include "utils/has_print_on.h"
+#include <iostream>
 #endif
 
-namespace cairowindow::plot {
+namespace cairowindow {
 #ifdef CWDEBUG
 using utils::has_print_on::operator<<;
 #endif
@@ -40,4 +43,4 @@ class Range
 #endif
 };
 
-} // namespace cairowindow::plot
+} // namespace cairowindow
