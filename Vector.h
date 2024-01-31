@@ -80,6 +80,20 @@ class Vector
     return *this;
   }
 
+  // Divide the vector by a scalar.
+  Vector& operator/=(double scalar)
+  {
+    x_ /= scalar;
+    y_ /= scalar;
+    return *this;
+  }
+
+  // Divide by a scalar.
+  Vector operator/(double scalar) const
+  {
+    return {x_ / scalar, y_ / scalar};
+  }
+
 #ifdef CWDEBUG
   void print_on(std::ostream& os) const
   {

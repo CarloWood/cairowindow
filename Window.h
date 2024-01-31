@@ -33,6 +33,7 @@ static constexpr auto x11_False = False;
 #undef True
 #undef False
 #undef Status
+#undef Success
 } // namespace X11
 namespace plot {
 class Plot;

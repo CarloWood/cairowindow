@@ -1,4 +1,5 @@
 #include "sys.h"
+#include "cairowindow/BezierCurve.h"
 #include "cairowindow/Window.h"
 #include "cairowindow/Layer.h"
 #include "cairowindow/Plot.h"
@@ -62,6 +63,7 @@ int main()
     draw::LineStyle solid_line_style{.line_color = color::black, .line_width = 1.0};
     draw::LineStyle line_style{.line_color = color::black, .line_width = 1.0, .dashes = {10.0, 5.0}};
     draw::ArcStyle arc_style{.line_color = color::blue, .line_width = 1.0};
+    draw::RectangleStyle rectangle_style{.line_color = color::red, .line_width = 1.0};
 
     // Create a point P₀.
     auto plot_P0 = plot.create_point(second_layer, {-2.0, -0.0}, point_style);
@@ -115,6 +117,7 @@ int main()
 
       plot::Connector plot_curvature({0.0, 0.0}, {0.0, 0.0});
       Vector K0(0.0, 0.0);
+      Rectangle rect;
 
       std::vector<Point> curve_points;
       {
@@ -152,6 +155,10 @@ int main()
         double m03 = V3.x();
         double m13 = V3.y();
 
+        BezierCurveMatrix M = {{{{m00, m10}, {m01, m11}, {m02, m12}, {m03, m13}}}};
+        BezierCurve bc(M);
+        rect = bc.extents();
+
         auto xt = [=](double t){ return m00 + t * (m01 + t * (m02 + t * m03)); };
         auto yt = [=](double t){ return m10 + t * (m11 + t * (m12 + t * m13)); };
 
@@ -184,10 +191,16 @@ int main()
       plot.add_connector(second_layer, plot_curvature, line_style);
 
       double radius = 1.0 / K0.length();
-      auto plot_curvature_circle = plot.create_circle(second_layer,
-          plot_P0 + radius * K0.direction(), radius, solid_line_style({.line_color = color::gray}));
+      plot::Circle plot_curvature_circle;
+      if (K0.length() > 1e-9)
+      {
+        plot_curvature_circle = plot::Circle{plot_P0 + radius * K0.direction(), radius};
+        plot.add_circle(second_layer, plot_curvature_circle, solid_line_style({.line_color = color::gray}));
+      }
 
-#if 0
+      auto plot_extents = plot.create_rectangle(second_layer, rect, rectangle_style);
+
+#if 1
       // Determine a quadratic Bezier going through P₀, P₁ and Pᵧ, tangent to D₀.
       plot::Curve curve2;
       do

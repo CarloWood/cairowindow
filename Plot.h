@@ -6,6 +6,7 @@
 #include "draw/Circle.h"
 #include "draw/Curve.h"
 #include "draw/Connector.h"
+#include "draw/Rectangle.h"
 #include "draw/Arc.h"
 #include "draw/Slider.h"
 #include "Range.h"
@@ -16,6 +17,7 @@
 #include "Line.h"
 #include "Curve.h"
 #include "Connector.h"
+#include "Rectangle.h"
 #include "Arc.h"
 #include "Draggable.h"
 #include "utils/Vector.h"
@@ -51,7 +53,7 @@ class Point : public cairowindow::Point, public Draggable
   mutable std::shared_ptr<draw::Point> draw_object_;
 
   // Implementation of Draggable.
-  Rectangle const& geometry() const override { return draw_object_->geometry(); }
+  cairowindow::Rectangle const& geometry() const override { return draw_object_->geometry(); }
   void moved(Plot* plot, cairowindow::Point const& new_position) override;
 
 #ifdef CWDEBUG
@@ -143,19 +145,35 @@ class Connector : public cairowindow::Connector
   mutable std::shared_ptr<draw::Connector> draw_object_;
 };
 
+class Rectangle : public cairowindow::Rectangle
+{
+ public:
+  using cairowindow::Rectangle::Rectangle;
+  Rectangle(double offset_x, double offset_y, double width, double height,
+      std::shared_ptr<draw::Rectangle> const& draw_object) :
+    cairowindow::Rectangle(offset_x, offset_y, width, height), draw_object_(draw_object) { }
+  Rectangle(cairowindow::Rectangle const& rectangle,
+      std::shared_ptr<draw::Rectangle> const& draw_object) :
+    cairowindow::Rectangle(rectangle), draw_object_(draw_object) { }
+
+ public:
+  friend class Plot;
+  mutable std::shared_ptr<draw::Rectangle> draw_object_;
+};
+
 class Arc : public cairowindow::Arc
 {
  public:
   using cairowindow::Arc::Arc;
-  Arc(Point const& center, double start_angle, double end_angle, double radius,
+  Arc(cairowindow::Point const& center, double start_angle, double end_angle, double radius,
       std::shared_ptr<draw::Arc> const& draw_object) :
     cairowindow::Arc(center, start_angle, end_angle, radius), draw_object_(draw_object) { }
 
-  Arc(Point const& center, Direction const& start, Direction const& end, double radius,
+  Arc(cairowindow::Point const& center, Direction const& start, Direction const& end, double radius,
       std::shared_ptr<draw::Arc> const& draw_object) :
     cairowindow::Arc(center, start, end, radius), draw_object_(draw_object) { }
 
-  Arc(Line const& line1, Line const& line2, double radius,
+  Arc(cairowindow::Line const& line1, cairowindow::Line const& line2, double radius,
       std::shared_ptr<draw::Arc> const& draw_object) :
     cairowindow::Arc(line1, line2, radius), draw_object_(draw_object) { }
 
@@ -167,15 +185,15 @@ class Arc : public cairowindow::Arc
 class Slider
 {
  private:
-  Rectangle geometry_;
+  cairowindow::Rectangle geometry_;
   double min_value_;      // The value corresponding to position 0.
   double max_value_;      // The value corresponding to position 1.
 
  public:
-  Slider(Rectangle geometry, double min_value, double max_value) :
+  Slider(cairowindow::Rectangle geometry, double min_value, double max_value) :
     geometry_(geometry), min_value_(min_value), max_value_(max_value) { }
 
-  Rectangle const& geometry() const { return geometry_; }
+  cairowindow::Rectangle const& geometry() const { return geometry_; }
   double value() const { return min_value_ + draw_object_->rel_value() * (max_value_ - min_value_); }
   double min_value() const { return min_value_; }
   double max_value() const { return max_value_; }
@@ -243,12 +261,12 @@ class Plot
   using LabelStyle = draw::TextStyle<LabelStyleDefaults>;
 
  public:
-  Plot(Rectangle const& geometry, draw::PlotAreaStyle plot_area_style, std::string title, TitleStyle title_style) :
+  Plot(cairowindow::Rectangle const& geometry, draw::PlotAreaStyle plot_area_style, std::string title, TitleStyle title_style) :
     plot_area_(axes_geometry(geometry, plot_area_style.axes_line_width), plot_area_style),
     title_(std::make_shared<draw::Text>(title, plot_area_.geometry().offset_x() + 0.5 * plot_area_.geometry().width(),
         plot_area_.geometry().offset_y() - 0.5 * plot_area_.geometry().offset_y() - title_style.offset, title_style)) { }
 
-  Plot(Rectangle const& geometry, draw::PlotAreaStyle plot_area_style, std::string title, TitleStyle title_style,
+  Plot(cairowindow::Rectangle const& geometry, draw::PlotAreaStyle plot_area_style, std::string title, TitleStyle title_style,
       std::string xlabel, XLabelStyle xlabel_style, std::string ylabel, YLabelStyle ylabel_style) :
     plot_area_(axes_geometry(geometry, plot_area_style.axes_line_width), plot_area_style),
     title_(std::make_shared<draw::Text>(title, plot_area_.geometry().offset_x() + 0.5 * plot_area_.geometry().width(),
@@ -258,7 +276,7 @@ class Plot
     ylabel_(std::make_shared<draw::Text>(ylabel, plot_area_.geometry().offset_x() - YLabelStyleDefaults::offset,
         plot_area_.geometry().offset_y() + 0.5 * plot_area_.geometry().height(), ylabel_style)) { }
 
-  Plot(Rectangle const& geometry, draw::PlotAreaStyle plot_area_style) :
+  Plot(cairowindow::Rectangle const& geometry, draw::PlotAreaStyle plot_area_style) :
     plot_area_(axes_geometry(geometry, plot_area_style.axes_line_width), plot_area_style) { }
 
   void set_range(int axis, Range range)
@@ -297,7 +315,18 @@ class Plot
     return create_circle(layer, center, radius, draw::CircleStyle{.line_color = line_style.line_color, .line_width = line_style.line_width});
   }
 
-  // Create and drw an arc on layer width center, radius and start- and end_angle, using arc_style.
+  // Create and draw a rectangle on layer with offset_x, offset_y, width and height, using rectangle_style.
+  [[nodiscard]] Rectangle create_rectangle(boost::intrusive_ptr<Layer> const& layer,
+      double offset_x, double offset_y, double width, double height, draw::RectangleStyle const& rectangle_style);
+
+  // Same as above but from rectangle.
+  [[nodiscard]] Rectangle create_rectangle(boost::intrusive_ptr<Layer> const& layer,
+      cairowindow::Rectangle const& rectangle, draw::RectangleStyle const& rectangle_style)
+  {
+    return create_rectangle(layer, rectangle.offset_x(), rectangle.offset_y(), rectangle.width(), rectangle.height(), rectangle_style);
+  }
+
+  // Create and draw an arc on layer width center, radius and start- and end_angle, using arc_style.
   [[nodiscard]] Arc create_arc(boost::intrusive_ptr<Layer> const& layer,
       cairowindow::Point const& center, double start_angle, double end_angle, double radius, draw::ArcStyle const& arc_style);
 
@@ -369,6 +398,16 @@ class Plot
   void add_point(boost::intrusive_ptr<Layer> const& layer,
       Point const& plot_point, draw::PointStyle const& point_style);
 
+  void add_circle(boost::intrusive_ptr<Layer> const& layer, Circle const& plot_circle,
+      draw::CircleStyle const& circle_style);
+
+  // Same as above but use line_style (no fill_color).
+  void add_circle(boost::intrusive_ptr<Layer> const& layer, Circle const& plot_circle,
+      draw::LineStyle const& line_style)
+  {
+    add_circle(layer, plot_circle, draw::CircleStyle{.line_color = line_style.line_color, .line_width = line_style.line_width});
+  }
+
   void add_text(boost::intrusive_ptr<Layer> const& layer,
       Text const& text, draw::TextStyle<> const& text_style);
 
@@ -377,6 +416,9 @@ class Plot
 
   void add_connector(boost::intrusive_ptr<Layer> const& layer, Connector const& plot_connector,
       draw::LineStyle const& line_style, Color fill_color = color::white);
+
+  void add_rectangle(boost::intrusive_ptr<Layer> const& layer, Rectangle const& plot_rectangle,
+      draw::RectangleStyle const& rectangle_style);
 
   void add_arc(boost::intrusive_ptr<Layer> const& layer, Arc const& plot_arc,
       draw::ArcStyle const& arc_style);
@@ -395,10 +437,10 @@ class Plot
     draggable->set_index(next_index);
     draggable_restrictions_.emplace_back(std::move(restriction));
   }
-  Rectangle update_grabbed(utils::Badge<Window>, ClickableIndex grabbed_point, double pixel_x, double pixel_y);
+  cairowindow::Rectangle update_grabbed(utils::Badge<Window>, ClickableIndex grabbed_point, double pixel_x, double pixel_y);
 
  private:
-  Rectangle axes_geometry(Rectangle const& geometry, double axes_line_width);
+  cairowindow::Rectangle axes_geometry(cairowindow::Rectangle const& geometry, double axes_line_width);
   void apply_line_extend(double& x1, double& y1, double& x2, double& y2, LineExtend line_extend);
 
  public:

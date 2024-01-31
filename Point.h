@@ -15,6 +15,7 @@ class Point
   double y_;
 
  public:
+  Point() = default;
   Point(double x, double y) : x_(x), y_(y) { }
 
   double x() const { return x_; }

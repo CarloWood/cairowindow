@@ -10,7 +10,7 @@
 namespace cairowindow::plot {
 
 // Calculate the axes geometry from the full plot geometry.
-Rectangle Plot::axes_geometry(Rectangle const& geometry, double axes_line_width)
+cairowindow::Rectangle Plot::axes_geometry(cairowindow::Rectangle const& geometry, double axes_line_width)
 {
   // Use fixed-size margins for now.
   constexpr int top_margin = 50;
@@ -50,7 +50,7 @@ void Plot::add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio)
   if (keep_ratio)
   {
     // Fix plot_area_ geometry.
-    Rectangle const& geometry = plot_area_.geometry();
+    cairowindow::Rectangle const& geometry = plot_area_.geometry();
     double pixels_per_x_unit = geometry.width() / range_[x_axis].size();
     double pixels_per_y_unit = geometry.height() / range_[y_axis].size();
     double required_scale = pixels_per_y_unit / pixels_per_x_unit;
@@ -133,7 +133,7 @@ void Plot::add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio)
 
 double Plot::convert_x(double x) const
 {
-  Rectangle const& g = plot_area_.geometry();
+  cairowindow::Rectangle const& g = plot_area_.geometry();
   x = (x - range_[x_axis].min()) / range_[x_axis].size();
   x *= g.width();
   x += g.offset_x();
@@ -142,7 +142,7 @@ double Plot::convert_x(double x) const
 
 double Plot::convert_y(double y) const
 {
-  Rectangle const& g = plot_area_.geometry();
+  cairowindow::Rectangle const& g = plot_area_.geometry();
   y = (range_[y_axis].max() - y) / range_[y_axis].size();
   y *= g.height();
   y += g.offset_y();
@@ -154,7 +154,7 @@ Pixel Plot::convert_to_pixel(cairowindow::Point const& point) const
   double x = point.x();
   double y = point.y();
 
-  Rectangle const& g = plot_area_.geometry();
+  cairowindow::Rectangle const& g = plot_area_.geometry();
 
   x -= g.offset_x();
   x /= g.width();
@@ -174,6 +174,17 @@ void Plot::add_point(boost::intrusive_ptr<Layer> const& layer,
 {
   plot_point.draw_object_ = std::make_shared<draw::Point>(convert_x(plot_point.x()), convert_y(plot_point.y()), point_style);
   layer->draw(plot_point.draw_object_);
+}
+
+void Plot::add_circle(boost::intrusive_ptr<Layer> const& layer, Circle const& plot_circle, draw::CircleStyle const& circle_style)
+{
+  cairowindow::Point const& center = plot_circle.center();
+  double radius = plot_circle.radius();
+
+  plot_circle.draw_object_ = std::make_shared<draw::Circle>(
+      cairowindow::Rectangle{convert_x(center.x()), convert_y(center.y()), convert_x(radius) - convert_x(0), convert_y(0) - convert_y(radius)},
+        circle_style);
+  layer->draw(plot_circle.draw_object_);
 }
 
 void Plot::add_text(boost::intrusive_ptr<Layer> const& layer,
@@ -235,6 +246,19 @@ void Plot::add_connector(boost::intrusive_ptr<Layer> const& layer,
   plot_connector.draw_object_->draw_arrow_heads(layer);
 }
 
+void Plot::add_rectangle(boost::intrusive_ptr<Layer> const& layer, Rectangle const& plot_rectangle,
+    draw::RectangleStyle const& rectangle_style)
+{
+  double offset_x = plot_rectangle.offset_x();
+  double offset_y = plot_rectangle.offset_y();
+  double width = plot_rectangle.width();
+  double height = plot_rectangle.height();
+
+  plot_rectangle.draw_object_ = std::make_shared<draw::Rectangle>(
+      convert_x(offset_x), convert_y(offset_y), convert_x(offset_x + width), convert_y(offset_y + height), rectangle_style);
+  layer->draw(plot_rectangle.draw_object_);
+}
+
 void Plot::add_arc(boost::intrusive_ptr<Layer> const& layer, Arc const& plot_arc,
     draw::ArcStyle const& arc_style)
 {
@@ -285,6 +309,26 @@ Connector Plot::create_connector(boost::intrusive_ptr<Layer> const& layer,
   return plot_connector;
 }
 
+Rectangle Plot::create_rectangle(boost::intrusive_ptr<Layer> const& layer,
+    double offset_x, double offset_y, double width, double height, draw::RectangleStyle const& rectangle_style)
+{
+  Rectangle plot_rectangle(offset_x, offset_y, width, height,
+      std::make_shared<draw::Rectangle>(convert_x(offset_x), convert_y(offset_y), convert_x(offset_x + width), convert_y(offset_y + height),
+        rectangle_style));
+  layer->draw(plot_rectangle.draw_object_);
+  return plot_rectangle;
+}
+
+Arc Plot::create_arc(boost::intrusive_ptr<Layer> const& layer,
+    cairowindow::Point const& center, double start_angle, double end_angle, double radius, draw::ArcStyle const& arc_style)
+{
+  Arc plot_arc(center, start_angle, end_angle, radius,
+      std::make_shared<draw::Arc>(convert_x(center.x()), convert_y(center.y()), -end_angle, -start_angle,
+        std::max(convert_x(radius) - convert_x(0), convert_y(radius) - convert_y(0)), arc_style));
+  layer->draw(plot_arc.draw_object_);
+  return plot_arc;
+}
+
 Point Plot::create_point(boost::intrusive_ptr<Layer> const& layer,
     cairowindow::Point const& point, draw::PointStyle const& point_style)
 {
@@ -297,7 +341,7 @@ Circle Plot::create_circle(boost::intrusive_ptr<Layer> const& layer,
     cairowindow::Point const& center, double radius, draw::CircleStyle const& circle_style)
 {
   Circle plot_circle(center, radius, std::make_shared<draw::Circle>(
-        Rectangle{convert_x(center.x()), convert_y(center.y()), convert_x(radius) - convert_x(0), convert_y(0) - convert_y(radius)},
+        cairowindow::Rectangle{convert_x(center.x()), convert_y(center.y()), convert_x(radius) - convert_x(0), convert_y(0) - convert_y(radius)},
         circle_style));
   layer->draw(plot_circle.draw_object_);
   return plot_circle;
@@ -349,7 +393,7 @@ Slider Plot::create_slider(boost::intrusive_ptr<Layer> const& layer,
 
 void Plot::curve_to_lines(boost::intrusive_ptr<Layer> const& layer, Curve const& plot_curve, draw::LineStyle const& line_style)
 {
-  Rectangle const& g = plot_area_.geometry();
+  cairowindow::Rectangle const& g = plot_area_.geometry();
   double prev_point_x = std::numeric_limits<double>::quiet_NaN();
   double prev_point_y = std::numeric_limits<double>::quiet_NaN();
   int count = 0;
@@ -385,7 +429,7 @@ void Plot::add_curve(boost::intrusive_ptr<Layer> const& layer, Curve const& plot
   //layer->draw(plot_curve.draw_object_);
 }
 
-Rectangle Plot::update_grabbed(utils::Badge<Window>, ClickableIndex grabbed_point, double pixel_x, double pixel_y)
+cairowindow::Rectangle Plot::update_grabbed(utils::Badge<Window>, ClickableIndex grabbed_point, double pixel_x, double pixel_y)
 {
   double x = pixel_x;
   double y = pixel_y;
@@ -393,7 +437,7 @@ Rectangle Plot::update_grabbed(utils::Badge<Window>, ClickableIndex grabbed_poin
 
   if (draggable->convert())
   {
-    Rectangle const& g = plot_area_.geometry();
+    cairowindow::Rectangle const& g = plot_area_.geometry();
     x -= g.offset_x();
     x /= g.width();
     x *= range_[x_axis].size();

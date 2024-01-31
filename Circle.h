@@ -11,6 +11,7 @@ class Circle
   double radius_;
 
  public:
+  Circle() = default;
   Circle(Point const& center, double radius) : center_(center), radius_(radius) { }
 
   Point const& center() const { return center_; }

@@ -86,6 +86,7 @@ target_sources(cairowindow_ObjLib
     "LayerRegion.cxx"
     "Plot.cxx"
     "BezierFitter.cxx"
+    "BezierCurve.cxx"
     "draw/PlotArea.cxx"
     "draw/Grid.cxx"
     "draw/Shape.cxx"

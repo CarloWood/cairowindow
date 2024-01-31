@@ -135,7 +135,7 @@ class Slider : public MultiRegion, public plot::Draggable
   void draw_regions_on(Layer* layer) override;
 
   // Implementation of plot::Draggable.
-  Rectangle const& geometry() const override { return handle_->geometry(); }
+  cairowindow::Rectangle const& geometry() const override { return handle_->geometry(); }
   void moved(plot::Plot* plot, cairowindow::Point const& new_position) override;
   bool convert() const override { return false; }       // We want mouse coordinates.
 

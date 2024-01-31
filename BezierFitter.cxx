@@ -8,7 +8,7 @@ namespace cairowindow {
 #ifdef CWDEBUG
 void BezierCurve::print_on(std::ostream& os) const
 {
-  os << "{P0:" << P0_ << ", P1:" << P1_ << ", P2:" << P2_ << ", P3:" << P3_ << '}';
+  os << "{P0:" << P0_ << ", C1:" << C1_ << ", C2:" << C2_ << ", P1:" << P1_ << '}';
 }
 #endif
 
