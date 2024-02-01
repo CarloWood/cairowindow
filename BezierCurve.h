@@ -40,6 +40,7 @@ class BezierCurve
 
  public:
   // Construct an incomplete BezierCurve with just the begin and end points set.
+  BezierCurve(Point P0, Point P1) : P0_(P0), P1_(P1) { }
   BezierCurve(Vector P0, Vector P1) : P0_(P0), P1_(P1) { }
 
   // Construct a fully defined BezierCurve from begin and end point plus two control points.
@@ -62,7 +63,7 @@ class BezierCurve
   BezierCurveMatrix M() const { return {P0_, 3.0 * (C1_ - P0_), 3.0 * (C2_ - 2.0 * C1_ + P0_), P1_ - 3.0 * (C2_ - C1_) - P0_}; }
 
   // Return the value at t.
-  Vector P(double t) const
+  Point P(double t) const
   {
     double t2 = t * t;
     double t3 = t2 * t;
@@ -70,7 +71,7 @@ class BezierCurve
     double one_minus_t_2 = one_minus_t * one_minus_t;
     double one_minus_t_3 = one_minus_t_2 * one_minus_t;
 
-    return one_minus_t_3 * P0_ + 3.0 * one_minus_t_2 * t * C1_ + 3.0 * one_minus_t * t2 * C2_ + t3 * P1_;
+    return (one_minus_t_3 * P0_ + 3.0 * one_minus_t_2 * t * C1_ + 3.0 * one_minus_t * t2 * C2_ + t3 * P1_).point();
   }
 
   // Velocity at t.
@@ -99,6 +100,7 @@ class BezierCurve
 
   // Initialize a quadractic BezierCurve from two more data points.
   bool quadratic_from(Vector P_beta, Vector P_gamma);
+  bool quadratic_from(Point P_beta, Point P_gamma) { return quadratic_from(Vector{P_beta}, Vector{P_gamma}); }
 
   // Initialize a quadractic BezierCurve from one more data point and the direction vector in P₀.
   bool quadratic_from(Direction D0, Vector P_gamma);

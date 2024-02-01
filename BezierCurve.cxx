@@ -1,6 +1,8 @@
 #include "sys.h"
 #include "utils/square.h"
+#include "utils/almost_equal.h"
 #include "BezierCurve.h"
+#include <Eigen/Dense>
 
 namespace cairowindow {
 
@@ -31,7 +33,7 @@ Rectangle BezierCurve::extents() const
     double t_minus = (-b.x() - root) / (2.0 * a.x());
     if (t_minus >= 0.0 && t_minus <= 1.0)
     {
-      Vector P_minus = P(t_minus);
+      Point P_minus = P(t_minus);
       x_candidates.push_back(P_minus.x());
     }
     if (discriminant_x > 0.0)
@@ -39,7 +41,7 @@ Rectangle BezierCurve::extents() const
       double t_plus = (-b.x() + root) / (2.0 * a.x());
       if (t_plus >= 0.0 && t_plus <= 1.0)
       {
-        Vector P_plus = P(t_plus);
+        Point P_plus = P(t_plus);
         x_candidates.push_back(P_plus.x());
       }
     }
@@ -50,7 +52,7 @@ Rectangle BezierCurve::extents() const
     double t_minus = (-b.y() - root) / (2.0 * a.y());
     if (t_minus >= 0.0 && t_minus <= 1.0)
     {
-      Vector P_minus = P(t_minus);
+      Point P_minus = P(t_minus);
       y_candidates.push_back(P_minus.y());
     }
     if (discriminant_y > 0.0)
@@ -58,7 +60,7 @@ Rectangle BezierCurve::extents() const
       double t_plus = (-b.y() + root) / (2.0 * a.y());
       if (t_plus >= 0.0 && t_plus <= 1.0)
       {
-        Vector P_plus = P(t_plus);
+        Point P_plus = P(t_plus);
         y_candidates.push_back(P_plus.y());
       }
     }
@@ -87,112 +89,54 @@ Rectangle BezierCurve::extents() const
 
 bool BezierCurve::quadratic_from(Vector P_beta, Vector P_gamma)
 {
-  // Consider the quadratic Bezier curve:
-  //
-  //   P(t) = (1−t)² P₀ + 2t(1−t) C + t² P₁
-  //
-  // And thus
-  //
-  //   P(0) = P₀
-  //   P(1) = P₁
-  //
-  // Furthermore, we have the two points Pᵦ and Pᵧ,
-  // assumed to be part of the curve at t=β and t=γ respectively:
-  //
-  //   P(β) = (1−β)² P₀ + 2β(1−β) C + β² P₁ = Pᵦ
-  //   P(γ) = (1−γ)² P₀ + 2γ(1−γ) C + γ² P₁ = Pᵧ
-  //
-  //   Pᵦ = (1 - 2β + β²) P₀ + (2β - 2β²) C + β² P₁ -->
-  //   Pᵦ - P₀ = β (-(2 - β) P₀ + (2 - β) C - β C + β P₁) =
-  //           = (2β - β²)(C - P₀) - β² ((C - P₀) - (P₁ - P₀)) =
-  //           = 2(β - β²)(C - P₀) + β² (P₁ - P₀) -->
-  //   C - P₀ = ((Pᵦ - P₀) - β² (P₁ - P₀)) / 2(β - β²)
-  //
-  // Lets apply a translation such that P₀ = (0, 0):
-  // Let Pᵦ' = Pᵦ - P₀, P₁' = P₁ - P₀ and C' = C - P₀.
-  // Then we have
-  //
-  //   C' = (Pᵦ' - β² P₁') / 2(β - β²)
-  //
-  // Likewise
-  //
-  //   C' = (Pᵧ' - γ² P₁') / 2(γ - γ²)
-  //
-  // Multiply both sides with 2(β - β²)(γ - γ²):
-  //
-  //   2(β - β²)(γ - γ²) C' = (γ - γ²)(Pᵦ' - β² P₁')
-  //   2(β - β²)(γ - γ²) C' = (β - β²)(Pᵧ' - γ² P₁')
-  //
-  // Subtract
-  //
-  //   0 = (γ - γ²)Pᵦ' - (β - β²)Pᵧ' + (βγ² - γβ²)P₁'
-  //
-  // Let Nᵦ' be Pᵦ' rotated 90 degrees anti-clockwise.
-  // Let Nᵧ' be Pᵧ' rotated 90 degrees anti-clockwise.
-  // Let N₁' be P₁' rotated 90 degrees anti-clockwise.
-  //
-  // Take the dot product with Nᵦ' and Nᵧ' respectively.
-  // Note that those must be independent or there won't
-  // be a solution; aka, Nᵦ' and Nᵧ' form a basis.
-  //
-  // Since Pᵦ'·Nᵦ' = Pᵧ'·Nᵧ' = 0, we get the two equations:
-  //
-  //   0 = -(β - β²)(Pᵧ'·Nᵦ') + (βγ² - γβ²)(P₁'·Nᵦ')
-  //   0 =  (γ - γ²)(Pᵦ'·Nᵧ') + (βγ² - γβ²)(P₁'·Nᵧ')
-  //
-  // Note that these dot products are just known constants;
-  // lets define dᵧᵦ = Pᵧ'·Nᵦ', d₁ᵦ = P₁'·Nᵦ', dᵦᵧ = Pᵦ'·Nᵧ'
-  // and d₁ᵧ = P₁'·Nᵧ'. So that we can abbreviate the above
-  // equations as
-  //
-  //   0 = -(β - β²)dᵧᵦ + (βγ² - γβ²)d₁ᵦ
-  //   0 =  (γ - γ²)dᵦᵧ + (βγ² - γβ²)d₁ᵧ
-  //
-  // Write the first one as polynomial in γ and the second
-  // as a polynomial in β:
-  //
-  //   0 =  β d₁ᵦ γ² - β² d₁ᵦ γ - (β - β²) dᵧᵦ
-  //   0 = -γ d₁ᵧ β² + γ² d₁ᵧ β + (γ - γ²) dᵦᵧ
-  //
-  // Lets divide the first one by β and the second one by -γ
-  // (both are non-zero, or Pᵦ and/or Pᵧ would be equal to P₀).
-  //
-  //   0 = d₁ᵦ γ² - β d₁ᵦ γ + (β - 1) dᵧᵦ
-  //   0 = d₁ᵧ β² - γ d₁ᵧ β + (γ - 1) dᵦᵧ
-  //
-  // Solving the latter:
-  //
-  //       γ d₁ᵧ +/- sqrt(γ² d₁ᵧ² - 4 d₁ᵧ (γ - 1) dᵦᵧ)
-  //   β = -------------------------------------------
-  //                      2 d₁ᵧ
-  //
-  // Note that β must be less than 0 by definition: Pᵦ
-  // is supposed to become "before" P₀ (while Pᵧ comes
-  // "after" P₁, aka γ > 1).
-  //
-  // Therefore the solution for β that is negative will be
-  //
-  //   β = (γ - sqrt(γ² - 4 (γ - 1) dᵦᵧ/d₁ᵧ))/2
-  //
-  // Let's abbreviate the square root for now with S, thus β = (γ - S)/2.
-  // Injecting this into the former equation:
-  //
-  //   0 = d₁ᵦ γ² - ((γ - S)/2) d₁ᵦ γ + ((γ - S)/2 - 1) dᵧᵦ =
-  //     = d₁ᵦ γ² - d₁ᵦ γ²/2 + (d₁ᵦ γ/2) S + (γ/2 - 1) dᵧᵦ - (dᵧᵦ/2) S =
-  //     = d₁ᵦ γ²/2 + (γ/2 - 1) dᵧᵦ + (d₁ᵦ γ/2 - dᵧᵦ/2) S -->
-  //
-  // Multiply with two
-  //
-  //   0 = d₁ᵦ γ² + dᵧᵦ (γ - 2) + (d₁ᵦ γ - dᵧᵦ) S -->
-  //
-  //   S = (d₁ᵦ γ² + dᵧᵦ (γ - 2)) / (dᵧᵦ - d₁ᵦ γ)
-  //
-  // Squaring both sides
-  //
-  //   γ² - 4 (γ - 1) dᵦᵧ / d₁ᵧ = (d₁ᵦ γ² + dᵧᵦ (γ - 2))² / (dᵧᵦ - d₁ᵦ γ)²
-  //
+  Eigen::Matrix3d R;
+  R << P0_.x(), P0_.y(), 1.0,
+       P_beta.x(), P_beta.y(), 1.0,
+       P1_.x(), P1_.y(), 1.0;
 
-  return false;
+  Eigen::RowVector3d P_gamma_1;
+  P_gamma_1 << P_gamma.x(), P_gamma.y(), 1.0;
+
+  auto q = P_gamma_1 * R.inverse();
+
+  int qs_equal_to_one = 0;
+  for (int i = 0; i < 3; ++i)
+  {
+    if (utils::almost_equal(q(i), 1.0, 10e-9))
+      ++qs_equal_to_one;
+  }
+  if (qs_equal_to_one >= 2 || q(0) * q(1) * q(2) >= 0.0)
+  {
+    // There is no parabola going through all four points.
+    return false;
+  }
+
+  // For P_gamma to be after P1 (t > 1) q(1) must be larger than 0 and q(2) must be larger than 1 and the discriminant must be subtracted.
+  if (q(1) < 0.0 || q(2) < 1.0)
+    return false;
+
+  double discriminant = utils::square(-2.0 * q(1) * q(2)) - 4.0 * q(1) * (1.0 - q(1)) * q(2) * (1.0 - q(2));
+  double beta = (2.0 * q(1) * q(2) - std::sqrt(discriminant)) / (2.0 * q(1) * (1.0 - q(1)));
+
+  // Only draw parabola's that have P1 before Q0 and P0.
+  if (beta > 0.0)
+    return false;
+
+  Eigen::Matrix3d one_third_V_inverse;
+  one_third_V_inverse << beta - 1.0, 1.0, -beta, 1.0 - beta * beta, -1.0, beta * beta, beta * beta - beta, 0.0, 0.0;
+  one_third_V_inverse /= 3.0 * beta * (beta - 1.0);
+
+  Eigen::Matrix3d W = one_third_V_inverse * R;
+
+  double m01 = W(1, 0);
+  double m11 = W(1, 1);
+  double m02 = W(0, 0);
+  double m12 = W(0, 1);
+
+  C1_ = Vector{m01, m11} + P0_;
+  C2_ = Vector{m02, m12} + 2.0 * C1_ - P0_;
+
+  return true;
 }
 
 bool BezierCurve::quadratic_from(Direction D0, Vector P_gamma)

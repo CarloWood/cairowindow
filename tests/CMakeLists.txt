@@ -1,7 +1,5 @@
 include(AICxxProject)
 
-find_package(Eigen3 3.3 REQUIRED NO_MODULE)
-
 # Test for calculating intersection point of two lines (Line::intersection_with).
 add_executable(intersecting_lines intersecting_lines.cxx)
 target_link_libraries(intersecting_lines AICxx::cairowindow ${AICXX_OBJECTS_LIST})

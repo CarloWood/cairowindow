@@ -1,6 +1,7 @@
 #include "sys.h"
 #include "cairowindow/Window.h"
 #include "cairowindow/Plot.h"
+#include "cairowindow/BezierCurve.h"
 #include "utils/AIAlert.h"
 #include "utils/debug_ostream_operators.h"
 #include "utils/ColorPool.h"
@@ -40,50 +41,53 @@ int main()
         "Lachance-Schwartz", {},
         "x", {},
         "y", {});
-    plot.set_xrange({-10, 10});
-    plot.set_yrange({-10, 10});
+    plot.set_xrange({-2, 6});
+    plot.set_yrange({-4, 4});
     plot.add_to(background_layer, true);
 
     utils::ColorPool<32> color_pool;
     draw::PointStyle point_style(color_pool.get_and_use_color(), 1);
+    draw::PointStyle point_circle_style(color_pool.get_and_use_color(), 10);
+    draw::PointStyle point_square_style(color_pool.get_and_use_color(), 0);
+    draw::PointStyle point_triangle_style(color_pool.get_and_use_color(), 7);
     draw::TextStyle<> label_style{.position = draw::centered_left_of, .font_size = 18.0, .offset = 10};
     draw::LineStyle curve_line_style{.line_width = 1.0};
 
-    // Create a point Q₁.
-    auto Q1 = plot.create_point(second_layer, {-2.0, -1.0}, point_style);
-    // Create a point Q₂.
-    auto Q2 = plot.create_point(second_layer, {2.0, -1.0}, point_style);
-    // Create a point Q₃.
-    auto Q3 = plot.create_point(second_layer, {0.0, 1.0}, point_style);
-    // Create a point Q₄.
-    auto Q4 = plot.create_point(second_layer, {0.0, -2.0}, point_style);
+    // Create a point P₀.
+    auto P0 = plot.create_point(second_layer, {-0.3, -0.6}, point_style);
+    // Create a point P₁.
+    auto P1 = plot.create_point(second_layer, {1.0, 0.4}, point_style);
+    // Create a point Pᵦ.
+    auto P_beta = plot.create_point(second_layer, {-1.0, 2.0}, point_style);
+    // Create a point Pᵧ.
+    auto P_gamma = plot.create_point(second_layer, {2.2, 3.3}, point_style);
 
     // Make all points draggable.
-    window.register_draggable(plot, &Q1);
-    window.register_draggable(plot, &Q2);
-    window.register_draggable(plot, &Q3);
-    window.register_draggable(plot, &Q4);
+    window.register_draggable(plot, &P0);
+    window.register_draggable(plot, &P1);
+    window.register_draggable(plot, &P_beta);
+    window.register_draggable(plot, &P_gamma);
 
     while (true)
     {
       // Suppress immediate updating of the window for each created item, in order to avoid flickering.
       window.set_send_expose_events(false);
 
-      // Draw a label for Q₁, Q₂, Q₃ and Q₄.
-      auto Q1_label = plot.create_text(second_layer, Q1, "Q₁", label_style);
-      auto Q2_label = plot.create_text(second_layer, Q2, "Q₂", label_style);
-      auto Q3_label = plot.create_text(second_layer, Q3, "Q₃", label_style);
-      auto Q4_label = plot.create_text(second_layer, Q4, "Q₄", label_style);
+      // Draw a label for P₀, P₁, Pᵦ and Pᵧ.
+      auto P0_label = plot.create_text(second_layer, P0, "P₀", label_style);
+      auto P1_label = plot.create_text(second_layer, P1, "P₁", label_style);
+      auto P_beta_label = plot.create_text(second_layer, P_beta, "Pᵦ", label_style);
+      auto P_gamma_label = plot.create_text(second_layer, P_gamma, "Pᵧ", label_style);
 
       Eigen::Matrix3d R;
-      R << Q1.x(), Q1.y(), 1.0,
-           Q2.x(), Q2.y(), 1.0,
-           Q3.x(), Q3.y(), 1.0;
+      R << P0.x(), P0.y(), 1.0,
+           P_beta.x(), P_beta.y(), 1.0,
+           P1.x(), P1.y(), 1.0;
 
-      Eigen::RowVector3d Q4_1;
-      Q4_1 << Q4.x(), Q4.y(), 1.0;
+      Eigen::RowVector3d P_gamma_1;
+      P_gamma_1 << P_gamma.x(), P_gamma.y(), 1.0;
 
-      auto q = Q4_1 * R.inverse();
+      auto q = P_gamma_1 * R.inverse();
 
       // See https://deepblue.lib.umich.edu/bitstream/handle/2027.42/29347/0000415.pdf
       int count = 0;
@@ -100,36 +104,26 @@ int main()
         continue;
       }
 
-      std::array<plot::Curve, 2> curve;
-      for (int solution = 0; solution < 2; ++solution)
+      Dout(dc::notice, "q = " << q);
+
+      std::array<plot::Point, 2> marker;
+      plot::Curve curve2;
+
+      BezierCurve bc(P0, P1);
+      if (bc.quadratic_from(P_beta, P_gamma))
       {
-        double discriminant = utils::square(-2.0 * q(1) * q(2)) - 4.0 * q(1) * (1.0 - q(1)) * q(2) * (1.0 - q(2));
-        double a = (2.0 * q(1) * q(2) + ((solution == 0) ? -1 : 1) * std::sqrt(discriminant)) / (2.0 * q(1) * (1.0 - q(1)));
-
-        // Only draw parabola's that have Q2 before Q0 and Q1.
-        if (a > 0.0)
-          continue;
-
-        Eigen::Matrix3d V;
-        V << 0.0, 0.0, 1.0,
-             a*a,   a, 1.0,
-             1.0, 1.0, 1.0;
-
-        Eigen::Matrix3d VinvR = V.inverse() * R;
-
         std::vector<Point> curve_points;
         {
-          for (int i = -200; i <= 200; ++i)
+          for (int i = -200; i <= 300; ++i)
           {
-            double t = i * 0.1;
-            Eigen::RowVector3d T;
-            T << (t * t), t, 1.0;
-            auto Phi = T * VinvR;
-            curve_points.emplace_back(Phi(0), Phi(1));
+            double t = i * 0.01;
+            curve_points.push_back(bc.P(t));
           }
         }
-        curve[solution] = plot.create_curve(second_layer, std::move(curve_points),
-            curve_line_style({.line_color = (solution == 0) ? color::green : color::blue}));
+        curve2 = plot.create_curve(second_layer, std::move(curve_points), curve_line_style({.line_color = color::red}));
+
+        marker[0] = plot.create_point(second_layer, bc.P(0.0), point_circle_style);
+        marker[1] = plot.create_point(second_layer, bc.P(1.0), point_square_style);
       }
 
       // Flush all expose events related to the drawing done above.

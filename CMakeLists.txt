@@ -15,6 +15,8 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(CAIRO REQUIRED cairo)
 pkg_check_modules(X11 REQUIRED x11)
 
+find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+
 #==============================================================================
 # OPTIONS
 
@@ -131,6 +133,7 @@ target_compile_features(cairowindow_ObjLib
 target_link_libraries(cairowindow_ObjLib
   PUBLIC
     AICxx::utils
+    Eigen3::Eigen
   INTERFACE
     ${CAIRO_LDFLAGS} ${X11_LDFLAGS}
 )
