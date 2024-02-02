@@ -73,7 +73,7 @@ int main()
     // Create a point D₀.
     auto plot_D0 = plot.create_point(second_layer, {2.5, 1.5}, point_style({.color_index = 2}));
     // Create a point D₁.
-//    auto plot_D1 = plot.create_point(second_layer, {3.5, -1.5}, point_style({.color_index = 2}));
+    auto plot_D1 = plot.create_point(second_layer, {3.5, -1.5}, point_style({.color_index = 2}));
 
     // Create a point Pᵧ.
     auto plot_P_gamma = plot.create_point(second_layer, {7.0, -2.0}, point_style);
@@ -82,11 +82,11 @@ int main()
     window.register_draggable(plot, &plot_P0);
     window.register_draggable(plot, &plot_P1);
     window.register_draggable(plot, &plot_D0);
-//    window.register_draggable(plot, &plot_D1);
+    window.register_draggable(plot, &plot_D1);
     window.register_draggable(plot, &plot_P_gamma);
 
-    auto slider_k0 = plot.create_slider(second_layer, {928, 83, 7, 400}, 0.25, -10.0, 10.0);
-    auto slider_k0_label = plot.create_text(second_layer, Pixel{928, 483}, "k0", slider_style);
+//    auto slider_k0 = plot.create_slider(second_layer, {928, 83, 7, 400}, 0.25, -10.0, 10.0);
+//    auto slider_k0_label = plot.create_text(second_layer, Pixel{928, 483}, "k0", slider_style);
 
     auto slider_beta = plot.create_slider(second_layer, {978, 83, 7, 400}, 0.0, -100.0, 100.0);
     auto slider_beta_label = plot.create_text(second_layer, Pixel{978, 483}, "beta", slider_style);
@@ -100,7 +100,7 @@ int main()
       auto P0_label = plot.create_text(second_layer, plot_P0, "P₀", label_style({.position = draw::centered_right_of}));
       auto P1_label = plot.create_text(second_layer, plot_P1, "P₁", label_style({.position = draw::centered_right_of}));
       auto D0_label = plot.create_text(second_layer, plot_D0, "D₀", label_style({.position = draw::centered_right_of}));
-//      auto D1_label = plot.create_text(second_layer, plot_D1, "D₁", label_style({.position = draw::centered_right_of}));
+      auto D1_label = plot.create_text(second_layer, plot_D1, "D₁", label_style({.position = draw::centered_right_of}));
       auto P_gamma_label = plot.create_text(second_layer, plot_P_gamma, "Pᵧ", label_style({.position = draw::centered_right_of}));
 
       // Draw line through P₀ and P₁.
@@ -109,22 +109,22 @@ int main()
       // Draw an arrow from P₀ to D₀.
       auto plot_D0_arrow = plot.create_connector(second_layer, plot_P0, plot_D0, line_style({.line_color = color::orange}));
       // Draw an arrow from P₁ to D₁.
-//      auto plot_D1_arrow = plot.create_connector(second_layer, plot_P1, plot_D1, line_style({.line_color = color::orange}));
+      auto plot_D1_arrow = plot.create_connector(second_layer, plot_P1, plot_D1, line_style({.line_color = color::orange}));
 
       // Store the velocity vectors as Vector.
       Vector const V0 = plot_D0_arrow;
-//      Vector const V1 = plot_D1_arrow;
+      Vector const V1 = plot_D1_arrow;
 
       plot::Connector plot_curvature({0.0, 0.0}, {0.0, 0.0});
-      Vector K0(0.0, 0.0);
+//      Vector K0(0.0, 0.0);
       Rectangle rect;
 
-#if 0
+#if 1
       std::vector<Point> curve_points;
       {
         // Define the matrix.
 
-#if 0
+#if 1
         // Using α·D₀ and β·D₁.
 
         // X(t) = P₀ + α·D₀·t + (3(P₁-P₀)-2α·D₀-β·D₁)·t² + (-2(P₁-P₀)+α·D₀+β·D₁)·t³
@@ -183,14 +183,15 @@ int main()
         // y''(t) = 2 m12 + 6 m13 t
         //
         // Acceleration vector at t=0.
-        Vector A0{2 * m02, 2 * m12};
+//        Vector A0{2 * m02, 2 * m12};
         // Curvature.
-        K0 = A0.dot(V0.rotate_90_degrees()) / utils::square(V0.length_squared()) * V0.rotate_90_degrees();
-        plot_curvature = plot::Connector(plot_P0, plot_P0 + K0);
+//        K0 = A0.dot(V0.rotate_90_degrees()) / utils::square(V0.length_squared()) * V0.rotate_90_degrees();
+//        plot_curvature = plot::Connector(plot_P0, plot_P0 + K0);
       }
       auto curve = plot.create_curve(second_layer, std::move(curve_points), curve_line_style);
       plot.add_connector(second_layer, plot_curvature, line_style);
 
+#if 0
       double radius = 1.0 / K0.length();
       plot::Circle plot_curvature_circle;
       if (K0.length() > 1e-9)
@@ -198,6 +199,7 @@ int main()
         plot_curvature_circle = plot::Circle{plot_P0 + radius * K0.direction(), radius};
         plot.add_circle(second_layer, plot_curvature_circle, solid_line_style({.line_color = color::gray}));
       }
+#endif
 
       auto plot_extents = plot.create_rectangle(second_layer, rect, rectangle_style);
 #endif

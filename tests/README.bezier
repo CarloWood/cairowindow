@@ -677,4 +677,14 @@ Thus we can write M as
       ⎡Px₀  α·Dx₀  (β·Dx₀ - α²k₀·Dy₀)/2  Px₁-(Px₀+α·Dx₀+(β·Dx₀ - α²k₀·Dy₀)/2)⎤
   M = ⎣Py₀  α·Dy₀  (β·Dy₀ + α²k₀·Dx₀)/2  Py₁-(Py₀+α·Dy₀+(β·Dy₀ + α²k₀·Dx₀)/2)⎦
 
+Using N₀ = (-Dy₀, Dx₀) = (Nx₀, Ny₀):
+
+      ⎡Px₀  α·Dx₀  (β·Dx₀ + α²k₀·Nx₀)/2  Px₁-(Px₀+α·Dx₀+(β·Dx₀ + α²k₀·Nx₀)/2)⎤
+  M = ⎣Py₀  α·Dy₀  (β·Dy₀ + α²k₀·Ny₀)/2  Py₁-(Py₀+α·Dy₀+(β·Dy₀ + α²k₀·Ny₀)/2)⎦
+
+And thus
+
+  P(t) = P₀ + α D₀ t + (β D₀ + α²k₀ N₀)/2 t² + (P₁ - (P₀ + α D₀ + (β D₀ + α²k₀ N₀)/2)) t³
+
+  Pᵧ = P₀ + α D₀ γ + (β D₀ + α²k₀ N₀)/2 γ² + (P₁ - (P₀ + α D₀ + (β D₀ + α²k₀ N₀)/2)) γ³
 

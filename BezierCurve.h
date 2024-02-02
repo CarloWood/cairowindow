@@ -45,6 +45,7 @@ class BezierCurve
 
   // Construct a fully defined BezierCurve from begin and end point plus two control points.
   BezierCurve(Vector P0, Vector C1, Vector C2, Vector P1) : P0_(P0), C1_(C1), C2_(C2), P1_(P1) { }
+  BezierCurve(Point P0, Point C1, Point C2, Point P1) : P0_(P0), C1_(C1), C2_(C2), P1_(P1) { }
 
   // Construct a fully defined BezierCurve from "matrix" columns.
   BezierCurve(BezierCurveMatrix const& m) :
