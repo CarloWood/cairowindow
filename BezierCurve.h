@@ -104,6 +104,7 @@ class BezierCurve
 
   // Initialize a quadractic BezierCurve from one more data point and the direction vector in P₀.
   bool quadratic_from(Direction D0, Vector P_gamma);
+  bool quadratic_from(Direction D0, Point P_gamma) { return quadratic_from(D0, Vector{P_gamma}); }
 
 #ifdef CWDEBUG
   void print_on(std::ostream& os) const;

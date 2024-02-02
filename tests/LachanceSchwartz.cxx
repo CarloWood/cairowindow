@@ -51,6 +51,7 @@ int main()
     draw::PointStyle point_square_style(color_pool.get_and_use_color(), 0);
     draw::PointStyle point_triangle_style(color_pool.get_and_use_color(), 7);
     draw::TextStyle<> label_style{.position = draw::centered_left_of, .font_size = 18.0, .offset = 10};
+    draw::LineStyle line_style{.line_color = color::black, .line_width = 1.0, .dashes = {10.0, 5.0}};
     draw::LineStyle curve_line_style{.line_width = 1.0};
 
     // Create a point P₀.
@@ -107,6 +108,7 @@ int main()
       Dout(dc::notice, "q = " << q);
 
       std::array<plot::Point, 2> marker;
+      std::array<plot::Connector, 2> control;
       plot::Curve curve2;
 
       BezierCurve bc(P0, P1);
@@ -124,6 +126,9 @@ int main()
 
         marker[0] = plot.create_point(second_layer, bc.P(0.0), point_circle_style);
         marker[1] = plot.create_point(second_layer, bc.P(1.0), point_square_style);
+
+        control[0] = plot.create_connector(second_layer, P0, bc.C1().point(), line_style);
+        control[1] = plot.create_connector(second_layer, P1, bc.C2().point(), line_style);
       }
 
       // Flush all expose events related to the drawing done above.

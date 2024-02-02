@@ -23,6 +23,8 @@ class Connector : public LinePiece
   ArrowHeadShape arrow_head_shape_to_;
 
  public:
+  Connector() = default;
+
   Connector(Point const& from, Point const& to, ArrowHeadShape arrow_head_shape_from, ArrowHeadShape arrow_head_shape_to) :
     LinePiece(from, to), arrow_head_shape_from_(arrow_head_shape_from), arrow_head_shape_to_(arrow_head_shape_to) { }
 

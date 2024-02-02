@@ -119,6 +119,7 @@ int main()
       Vector K0(0.0, 0.0);
       Rectangle rect;
 
+#if 0
       std::vector<Point> curve_points;
       {
         // Define the matrix.
@@ -199,13 +200,17 @@ int main()
       }
 
       auto plot_extents = plot.create_rectangle(second_layer, rect, rectangle_style);
+#endif
 
 #if 1
       // Determine a quadratic Bezier going through P₀, P₁ and Pᵧ, tangent to D₀.
       plot::Curve curve2;
+      plot::Curve curve3;
       do
       {
-        Direction D0 = V0.direction();
+        Direction const D0 = V0.direction();
+
+#if 0
         Vector P1P0(plot_P1, plot_P0);
         Vector PgammaP0(plot_P_gamma, plot_P0);
         Vector PgammaP1(plot_P_gamma, plot_P1);
@@ -220,6 +225,8 @@ int main()
         double alpha_squared =
           (PgammaP0.length_squared() + P1P0.length_squared() - 2 * PgdotP1) / (gamma_squared * utils::square(1.0 - gamma));
         double alpha = std::sqrt(alpha_squared);  // α > 0 (or we'd go in the wrong direction!)
+
+        Dout(dc::notice, "alpha = " << alpha);
 
         Dout(dc::notice, "P1R90dotPg = " << P1R90dotPg << "; PgP1R90dotD0 = " << PgP1R90dotD0);
         if (P1R90dotPg > 0.0 || PgP1R90dotD0 > 0.0)
@@ -237,6 +244,8 @@ int main()
         double m02 = plot_P1.x() - (m00 + m01);
         double m12 = plot_P1.y() - (m10 + m11);
 
+        Dout(dc::notice, "m00 = " << m00 << ", m10 = " << m10 << ", m01 = " << m01 << ", m11 = " << m11 << ", m02 = " << m02 << ", m12 = " << m12);
+
         auto xt = [=](double t){ return m00 + t * (m01 + t * m02); };
         auto yt = [=](double t){ return m10 + t * (m11 + t * m12); };
 
@@ -247,10 +256,25 @@ int main()
           curve_points2.emplace_back(xt(t), yt(t));
         }
         curve2 = plot::Curve(std::move(curve_points2));
+#else
+        BezierCurve bc(plot_P0, plot_P1);
+        if (bc.quadratic_from(D0, plot_P_gamma))
+        {
+          std::vector<Point> curve_points2;
+          for (int i = -200; i <= 400; ++i)
+          {
+            double t = i * 0.01;
+            curve_points2.push_back(bc.P(t));
+          }
+          curve3 = plot::Curve(std::move(curve_points2));
+        }
+#endif
       }
       while (false);
       if (!curve2.points().empty())
         plot.add_curve(second_layer, curve2, curve_line_style);
+      if (!curve3.points().empty())
+        plot.add_curve(second_layer, curve3, curve_line_style);
 #endif
 
       // Flush all expose events related to the drawing done above.

@@ -13,6 +13,7 @@ class LinePiece
   Point to_;
 
  public:
+  LinePiece() = default;
   LinePiece(Point const& from, Point const& to) : from_(from), to_(to) { }
 
   Point const& from() const { return from_; }
