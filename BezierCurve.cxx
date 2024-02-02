@@ -159,16 +159,16 @@ bool BezierCurve::quadratic_from(Direction D0, Vector P_gamma)
 {
   DoutEntering(dc::notice, "BezierCurve::quadratic_from(" << D0 << ", " << P_gamma << ")");
 
-  Vector P1P0(P1_ - P0_);
-  Vector PgammaP0(P_gamma - P0_);
+  Vector P1P0(P0_ - P1_);
+  Vector PgammaP0(P0_ - P_gamma);
 
   // Test validity.
   {
-    Vector PgammaP1(P_gamma - P1_);
+    Vector PgammaP1(P1_ - P_gamma);
     double P1R90dotPg = P1P0.rotate_90_degrees().dot(PgammaP0);
     double PgP1R90dotD0 = PgammaP1.rotate_90_degrees().dot(D0);
 
-    if (P1R90dotPg < 0.0 && PgP1R90dotD0 < 0.0)
+    if (P1R90dotPg > 0.0 || PgP1R90dotD0 > 0.0)
       return false;
   }
 

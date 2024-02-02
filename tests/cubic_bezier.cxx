@@ -208,57 +208,8 @@ int main()
       plot::Curve curve3;
       do
       {
-        Direction const D0 = V0.direction();
-
-#if 0
-        Vector P1P0(plot_P1, plot_P0);
-        Vector PgammaP0(plot_P_gamma, plot_P0);
-        Vector PgammaP1(plot_P_gamma, plot_P1);
-        double PgR90dotD0 = PgammaP0.rotate_90_degrees().dot(D0);
-        double P1R90dotD0 = P1P0.rotate_90_degrees().dot(D0);
-        double P1R90dotPg = P1P0.rotate_90_degrees().dot(PgammaP0);
-        double PgP1R90dotD0 = PgammaP1.rotate_90_degrees().dot(D0);
-        double gamma_squared = PgR90dotD0 / P1R90dotD0;
-        double gamma = std::sqrt(gamma_squared);  // γ > 1 (comes after P₁).
-        P1P0 *= gamma_squared;
-        double PgdotP1 = PgammaP0.dot(P1P0);
-        double alpha_squared =
-          (PgammaP0.length_squared() + P1P0.length_squared() - 2 * PgdotP1) / (gamma_squared * utils::square(1.0 - gamma));
-        double alpha = std::sqrt(alpha_squared);  // α > 0 (or we'd go in the wrong direction!)
-
-        Dout(dc::notice, "alpha = " << alpha);
-
-        Dout(dc::notice, "P1R90dotPg = " << P1R90dotPg << "; PgP1R90dotD0 = " << PgP1R90dotD0);
-        if (P1R90dotPg > 0.0 || PgP1R90dotD0 > 0.0)
-          break;
-
-        // Define the quadratic matrix.
-        //
-        //     ⎡Px₀  α·Dx₀  Px₁-Px₀-α·Dx₀⎤
-        // M = ⎣Py₀  α·Dy₀  Py₁-Py₀-α·Dy₀⎦
-
-        double m00 = plot_P0.x();
-        double m10 = plot_P0.y();
-        double m01 = alpha * D0.x();
-        double m11 = alpha * D0.y();
-        double m02 = plot_P1.x() - (m00 + m01);
-        double m12 = plot_P1.y() - (m10 + m11);
-
-        Dout(dc::notice, "m00 = " << m00 << ", m10 = " << m10 << ", m01 = " << m01 << ", m11 = " << m11 << ", m02 = " << m02 << ", m12 = " << m12);
-
-        auto xt = [=](double t){ return m00 + t * (m01 + t * m02); };
-        auto yt = [=](double t){ return m10 + t * (m11 + t * m12); };
-
-        std::vector<Point> curve_points2;
-        for (int i = -200; i <= 400; ++i)
-        {
-          double t = i * 0.01;
-          curve_points2.emplace_back(xt(t), yt(t));
-        }
-        curve2 = plot::Curve(std::move(curve_points2));
-#else
         BezierCurve bc(plot_P0, plot_P1);
-        if (bc.quadratic_from(D0, plot_P_gamma))
+        if (bc.quadratic_from(V0.direction(), plot_P_gamma))
         {
           std::vector<Point> curve_points2;
           for (int i = -200; i <= 400; ++i)
@@ -268,7 +219,6 @@ int main()
           }
           curve3 = plot::Curve(std::move(curve_points2));
         }
-#endif
       }
       while (false);
       if (!curve2.points().empty())
