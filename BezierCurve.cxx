@@ -93,11 +93,11 @@ bool BezierCurve::quadratic_from(Vector P_beta, Vector P_gamma)
   // as published in the article "Four point parabolic interpolation" 1991.
   // See https://deepblue.lib.umich.edu/handle/2027.42/29347
 
-  Eigen::Matrix3d R(
-      P0_.x(),       P0_.y(), 1.0,
-      P_beta.x(), P_beta.y(), 1.0,
-      P1_.x(),       P1_.y(), 1.0
-    );
+  Eigen::Matrix3d R{
+      { P0_.x(),       P0_.y(), 1.0 },
+      { P_beta.x(), P_beta.y(), 1.0 },
+      { P1_.x(),       P1_.y(), 1.0 }
+    };
 
   Eigen::RowVector3d P_gamma_1(P_gamma.x(), P_gamma.y(), 1.0);
 
@@ -129,10 +129,11 @@ bool BezierCurve::quadratic_from(Vector P_beta, Vector P_gamma)
   //       ⎣1  1  1⎦
   //
   // But we need and calculate ⅓V⁻¹ directly:
-  Eigen::Matrix3d one_third_V_inverse(
-              beta - 1.0,  1.0,       -beta,
-       1.0 - beta * beta, -1.0, beta * beta,
-      beta * beta - beta,  0.0,         0.0;
+  Eigen::Matrix3d one_third_V_inverse{
+    {         beta - 1.0,  1.0,       -beta },
+    {  1.0 - beta * beta, -1.0, beta * beta },
+    { beta * beta - beta,  0.0,         0.0 }
+  };
   one_third_V_inverse /= 3.0 * beta * (beta - 1.0);
 
   // Calculate ⅓V⁻¹R.
