@@ -338,117 +338,168 @@ class Plot
 
   // Create and draw a point on layer at x,y using point_style.
   [[nodiscard]] Point create_point(boost::intrusive_ptr<Layer> const& layer,
-      cairowindow::Point const& point, draw::PointStyle const& point_style);
+      draw::PointStyle const& point_style,
+      cairowindow::Point const& point);
 
   // Create and draw a circle on layer with center and radius using circle_style.
   [[nodiscard]] Circle create_circle(boost::intrusive_ptr<Layer> const& layer,
-      cairowindow::Point const& center, double radius, draw::CircleStyle const& circle_style);
+      draw::CircleStyle const& circle_style,
+      cairowindow::Point const& center, double radius);
 
   // Same as above but use line_style (no fill_color).
   [[nodiscard]] Circle create_circle(boost::intrusive_ptr<Layer> const& layer,
-      cairowindow::Point const& center, double radius, draw::LineStyle const& line_style)
+      draw::LineStyle const& line_style,
+      cairowindow::Point const& center, double radius)
   {
-    return create_circle(layer, center, radius, draw::CircleStyle{.line_color = line_style.line_color, .line_width = line_style.line_width});
+    return create_circle(layer, draw::CircleStyle{.line_color = line_style.line_color, .line_width = line_style.line_width}, center, radius);
   }
 
   // Create and draw a rectangle on layer with offset_x, offset_y, width and height, using rectangle_style.
   [[nodiscard]] Rectangle create_rectangle(boost::intrusive_ptr<Layer> const& layer,
-      double offset_x, double offset_y, double width, double height, draw::RectangleStyle const& rectangle_style);
+      draw::RectangleStyle const& rectangle_style,
+      double offset_x, double offset_y, double width, double height);
 
   // Same as above but from rectangle.
   [[nodiscard]] Rectangle create_rectangle(boost::intrusive_ptr<Layer> const& layer,
-      cairowindow::Rectangle const& rectangle, draw::RectangleStyle const& rectangle_style)
+      draw::RectangleStyle const& rectangle_style,
+      cairowindow::Rectangle const& rectangle)
   {
-    return create_rectangle(layer, rectangle.offset_x(), rectangle.offset_y(), rectangle.width(), rectangle.height(), rectangle_style);
+    return create_rectangle(layer, rectangle_style, rectangle.offset_x(), rectangle.offset_y(), rectangle.width(), rectangle.height());
   }
 
   // Create and draw an arc on layer width center, radius and start- and end_angle, using arc_style.
   [[nodiscard]] Arc create_arc(boost::intrusive_ptr<Layer> const& layer,
-      cairowindow::Point const& center, double start_angle, double end_angle, double radius, draw::ArcStyle const& arc_style);
+      draw::ArcStyle const& arc_style,
+      cairowindow::Point const& center, double start_angle, double end_angle, double radius);
 
   // Same, but using a Direction for the angles.
   [[nodiscard]] Arc create_arc(boost::intrusive_ptr<Layer> const& layer,
-      cairowindow::Point const& center, Direction const& start, Direction const& end, double radius, draw::ArcStyle const& arc_style)
+      draw::ArcStyle const& arc_style,
+      cairowindow::Point const& center, Direction const& start, Direction const& end, double radius)
   {
-    return create_arc(layer, center, start.as_angle(), end.as_angle(), radius, arc_style);
+    return create_arc(layer, arc_style, center, start.as_angle(), end.as_angle(), radius);
   }
 
   // Create and draw a Bezier curve on layer width  using bezier_style.
   [[nodiscard]] BezierCurve create_bezier_curve(boost::intrusive_ptr<Layer> const& layer,
-      cairowindow::BezierCurve const& bezier_curve, draw::BezierCurveStyle const& bezier_style);
+      draw::BezierCurveStyle const& bezier_style,
+      cairowindow::BezierCurve const& bezier_curve);
 
   // Create and draw a Bezier curve on layer width  using bezier_style.
   [[nodiscard]] BezierCurve create_bezier_curve(boost::intrusive_ptr<Layer> const& layer,
-      Vector P0, Vector C1, Vector C2, Vector P1, draw::BezierCurveStyle const& bezier_style)
+      draw::BezierCurveStyle const& bezier_style,
+      Vector P0, Vector C1, Vector C2, Vector P1)
   {
-    return create_bezier_curve(layer, cairowindow::BezierCurve{P0, C1, C2, P1}, bezier_style);
+    return create_bezier_curve(layer, bezier_style, cairowindow::BezierCurve{P0, C1, C2, P1});
   }
 
   // Same, but using Points.
   [[nodiscard]] BezierCurve create_bezier_curve(boost::intrusive_ptr<Layer> const& layer,
-      Point P0, Point C1, Point C2, Point P1, draw::BezierCurveStyle const& bezier_style)
+      draw::BezierCurveStyle const& bezier_style,
+      Point P0, Point C1, Point C2, Point P1)
   {
-    return create_bezier_curve(layer, cairowindow::BezierCurve{P0, C1, C2, P1}, bezier_style);
+    return create_bezier_curve(layer, bezier_style, cairowindow::BezierCurve{P0, C1, C2, P1});
   }
 
   // Same, but using BezierCurveMatrix.
   [[nodiscard]] BezierCurve create_bezier_curve(boost::intrusive_ptr<Layer> const& layer,
-      BezierCurveMatrix const& m, draw::BezierCurveStyle const& bezier_style)
+      draw::BezierCurveStyle const& bezier_style,
+      BezierCurveMatrix const& m)
   {
-    return create_bezier_curve(layer, cairowindow::BezierCurve{m}, bezier_style);
+    return create_bezier_curve(layer, bezier_style, cairowindow::BezierCurve{m});
   }
 
   // Create and draw text on layer at position using text_style.
   [[nodiscard]] Text create_text(boost::intrusive_ptr<Layer> const& layer,
-      cairowindow::Point position, std::string const& text, draw::TextStyle<> const& text_style);
+      draw::TextStyle<> const& text_style,
+      cairowindow::Point position, std::string const& text);
 
   // Same, but using pixel coordinates.
   [[nodiscard]] Text create_text(boost::intrusive_ptr<Layer> const& layer,
-      cairowindow::Pixel position, std::string const& text, draw::TextStyle<> const& text_style);
+      draw::TextStyle<> const& text_style,
+      cairowindow::Pixel position, std::string const& text);
 
   // Create and draw a line piece between points from and to using line_style and line_extend.
   [[nodiscard]] LinePiece create_line(boost::intrusive_ptr<Layer> const& layer,
-      cairowindow::Point const& from, cairowindow::Point const& to, draw::LineStyle const& line_style,
-      LineExtend line_extend = LineExtend::none);
+      draw::LineStyle const& line_style, LineExtend line_extend,
+      cairowindow::Point const& from, cairowindow::Point const& to);
 
-  // Create and draw a line piece between points from and to using line_style and line_extend.
   [[nodiscard]] LinePiece create_line(boost::intrusive_ptr<Layer> const& layer,
-      cairowindow::LinePiece const& line_piece, draw::LineStyle const& line_style,
-      LineExtend line_extend = LineExtend::none)
+      draw::LineStyle const& line_style,
+      cairowindow::Point const& from, cairowindow::Point const& to)
   {
-    return create_line(layer, line_piece.from(), line_piece.to(), line_style, line_extend);
+    return create_line(layer, line_style, LineExtend::none, from, to);
+  }
+
+  // Create and draw a line piece between points from and to using line_style and line_extend.
+  [[nodiscard]] LinePiece create_line(boost::intrusive_ptr<Layer> const& layer,
+      draw::LineStyle const& line_style, LineExtend line_extend,
+      cairowindow::LinePiece const& line_piece)
+  {
+    return create_line(layer, line_style, line_extend, line_piece.from(), line_piece.to());
+  }
+
+  [[nodiscard]] LinePiece create_line(boost::intrusive_ptr<Layer> const& layer,
+      draw::LineStyle const& line_style,
+      cairowindow::LinePiece const& line_piece)
+  {
+    return create_line(layer, line_style, line_piece.from(), line_piece.to());
   }
 
   // Create and draw a line through point in direction using line_style.
   [[nodiscard]] Line create_line(boost::intrusive_ptr<Layer> const& layer,
-      cairowindow::Point const& point, cairowindow::Direction const& direction, draw::LineStyle const& line_style);
+      draw::LineStyle const& line_style,
+      cairowindow::Point const& point, cairowindow::Direction const& direction);
 
   // Create and draw a line according to Line using line_style.
   [[nodiscard]] Line create_line(boost::intrusive_ptr<Layer> const& layer,
-      cairowindow::Line const& line, draw::LineStyle const& line_style)
+      draw::LineStyle const& line_style,
+      cairowindow::Line const& line)
   {
-    return create_line(layer, line.point(), line.direction(), line_style);
+    return create_line(layer, line_style, line.point(), line.direction());
   }
 
   // Create and draw a connector from point to point using line_style and fill_color for the arrow heads if appropriate.
   [[nodiscard]] Connector create_connector(boost::intrusive_ptr<Layer> const& layer,
-      cairowindow::Point const& from, cairowindow::Point const& to,
+      draw::LineStyle const& line_style, Color fill_color,
       Connector::ArrowHeadShape arrow_head_shape_from, Connector::ArrowHeadShape arrow_head_shape_to,
-      draw::LineStyle const& line_style, Color fill_color = color::white);
+      cairowindow::Point const& from, cairowindow::Point const& to);
 
   [[nodiscard]] Connector create_connector(boost::intrusive_ptr<Layer> const& layer,
-      cairowindow::Point const& from, cairowindow::Point const& to,
-      Connector::ArrowHeadShape arrow_head_shape_to,
-      draw::LineStyle const& line_style, Color fill_color = color::white)
+      draw::LineStyle const& line_style,
+      Connector::ArrowHeadShape arrow_head_shape_from, Connector::ArrowHeadShape arrow_head_shape_to,
+      cairowindow::Point const& from, cairowindow::Point const& to)
   {
-    return create_connector(layer, from, to, Connector::no_arrow, arrow_head_shape_to, line_style, fill_color);
+    return create_connector(layer, line_style, color::white, arrow_head_shape_from, arrow_head_shape_to, from, to);
   }
 
   [[nodiscard]] Connector create_connector(boost::intrusive_ptr<Layer> const& layer,
-      cairowindow::Point const& from, cairowindow::Point const& to,
-      draw::LineStyle const& line_style, Color fill_color = color::white)
+      draw::LineStyle const& line_style, Color fill_color, Connector::ArrowHeadShape arrow_head_shape_to,
+      cairowindow::Point const& from, cairowindow::Point const& to)
   {
-    return create_connector(layer, from, to, Connector::no_arrow, Connector::open_arrow, line_style, fill_color);
+    return create_connector(layer, line_style, fill_color, Connector::no_arrow, arrow_head_shape_to, from, to);
+  }
+
+  [[nodiscard]] Connector create_connector(boost::intrusive_ptr<Layer> const& layer,
+      draw::LineStyle const& line_style,
+      Connector::ArrowHeadShape arrow_head_shape_to,
+      cairowindow::Point const& from, cairowindow::Point const& to)
+  {
+    return create_connector(layer, line_style, color::white, Connector::no_arrow, arrow_head_shape_to, from, to);
+  }
+
+  [[nodiscard]] Connector create_connector(boost::intrusive_ptr<Layer> const& layer,
+      draw::LineStyle const& line_style, Color fill_color,
+      cairowindow::Point const& from, cairowindow::Point const& to)
+  {
+    return create_connector(layer, line_style, fill_color, Connector::no_arrow, Connector::open_arrow, from, to);
+  }
+
+  [[nodiscard]] Connector create_connector(boost::intrusive_ptr<Layer> const& layer,
+      draw::LineStyle const& line_style,
+      cairowindow::Point const& from, cairowindow::Point const& to)
+  {
+    return create_connector(layer, line_style, color::white, Connector::no_arrow, Connector::open_arrow, from, to);
   }
 
   [[nodiscard]] Slider create_slider(boost::intrusive_ptr<Layer> const& layer,
@@ -459,7 +510,8 @@ class Plot
 
  public:
   [[nodiscard]] Curve create_curve(boost::intrusive_ptr<Layer> const& layer,
-      std::vector<cairowindow::Point>&& points, draw::LineStyle const& line_style);
+      draw::LineStyle const& line_style,
+      std::vector<cairowindow::Point>&& points);
 
   void add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio = false);
 

@@ -195,7 +195,8 @@ void Plot::apply_line_extend(double& x1, double& y1, double& x2, double& y2, Lin
 }
 
 Line Plot::create_line(boost::intrusive_ptr<Layer> const& layer,
-    cairowindow::Point const& point, cairowindow::Direction const& direction, draw::LineStyle const& line_style)
+    draw::LineStyle const& line_style,
+    cairowindow::Point const& point, cairowindow::Direction const& direction)
 {
   double normal_x = -direction.y();
   double normal_y = direction.x();
@@ -218,9 +219,9 @@ Line Plot::create_line(boost::intrusive_ptr<Layer> const& layer,
 }
 
 Connector Plot::create_connector(boost::intrusive_ptr<Layer> const& layer,
-    cairowindow::Point const& from, cairowindow::Point const& to,
+    draw::LineStyle const& line_style, Color fill_color,
     Connector::ArrowHeadShape arrow_head_shape_from, Connector::ArrowHeadShape arrow_head_shape_to,
-    draw::LineStyle const& line_style, Color fill_color)
+    cairowindow::Point const& from, cairowindow::Point const& to)
 {
   Connector plot_connector(from, to, arrow_head_shape_from, arrow_head_shape_to,
       std::make_shared<draw::Connector>(convert_x(from.x()), convert_y(from.y()), convert_x(to.x()), convert_y(to.y()),
@@ -231,7 +232,8 @@ Connector Plot::create_connector(boost::intrusive_ptr<Layer> const& layer,
 }
 
 Rectangle Plot::create_rectangle(boost::intrusive_ptr<Layer> const& layer,
-    double offset_x, double offset_y, double width, double height, draw::RectangleStyle const& rectangle_style)
+    draw::RectangleStyle const& rectangle_style,
+    double offset_x, double offset_y, double width, double height)
 {
   Rectangle plot_rectangle(offset_x, offset_y, width, height,
       std::make_shared<draw::Rectangle>(convert_x(offset_x), convert_y(offset_y), convert_x(offset_x + width), convert_y(offset_y + height),
@@ -241,7 +243,8 @@ Rectangle Plot::create_rectangle(boost::intrusive_ptr<Layer> const& layer,
 }
 
 Arc Plot::create_arc(boost::intrusive_ptr<Layer> const& layer,
-    cairowindow::Point const& center, double start_angle, double end_angle, double radius, draw::ArcStyle const& arc_style)
+    draw::ArcStyle const& arc_style,
+    cairowindow::Point const& center, double start_angle, double end_angle, double radius)
 {
   Arc plot_arc(center, start_angle, end_angle, radius,
       std::make_shared<draw::Arc>(convert_x(center.x()), convert_y(center.y()), -end_angle, -start_angle,
@@ -251,7 +254,8 @@ Arc Plot::create_arc(boost::intrusive_ptr<Layer> const& layer,
 }
 
 BezierCurve Plot::create_bezier_curve(boost::intrusive_ptr<Layer> const& layer,
-    cairowindow::BezierCurve const& bezier_curve, draw::BezierCurveStyle const& bezier_curve_style)
+    draw::BezierCurveStyle const& bezier_curve_style,
+    cairowindow::BezierCurve const& bezier_curve)
 {
   BezierCurve plot_bezier_curve(bezier_curve,
       std::make_shared<draw::BezierCurve>(
@@ -265,7 +269,8 @@ BezierCurve Plot::create_bezier_curve(boost::intrusive_ptr<Layer> const& layer,
 }
 
 Point Plot::create_point(boost::intrusive_ptr<Layer> const& layer,
-    cairowindow::Point const& point, draw::PointStyle const& point_style)
+    draw::PointStyle const& point_style,
+    cairowindow::Point const& point)
 {
   Point plot_point(point, std::make_shared<draw::Point>(convert_x(point.x()), convert_y(point.y()), point_style));
   layer->draw(plot_point.draw_object_);
@@ -273,7 +278,8 @@ Point Plot::create_point(boost::intrusive_ptr<Layer> const& layer,
 }
 
 Circle Plot::create_circle(boost::intrusive_ptr<Layer> const& layer,
-    cairowindow::Point const& center, double radius, draw::CircleStyle const& circle_style)
+    draw::CircleStyle const& circle_style,
+    cairowindow::Point const& center, double radius)
 {
   Circle plot_circle(center, radius, std::make_shared<draw::Circle>(
         cairowindow::Rectangle{convert_x(center.x()), convert_y(center.y()), convert_x(radius) - convert_x(0), convert_y(0) - convert_y(radius)},
@@ -283,7 +289,8 @@ Circle Plot::create_circle(boost::intrusive_ptr<Layer> const& layer,
 }
 
 Text Plot::create_text(boost::intrusive_ptr<Layer> const& layer,
-    cairowindow::Point position, std::string const& text, draw::TextStyle<> const& text_style)
+    draw::TextStyle<> const& text_style,
+    cairowindow::Point position, std::string const& text)
 {
   Text plot_text(convert_to_pixel(position), text,
       std::make_shared<draw::Text>(text, convert_x(position.x()), convert_y(position.y()), text_style));
@@ -292,7 +299,8 @@ Text Plot::create_text(boost::intrusive_ptr<Layer> const& layer,
 }
 
 Text Plot::create_text(boost::intrusive_ptr<Layer> const& layer,
-    cairowindow::Pixel position, std::string const& text, draw::TextStyle<> const& text_style)
+    draw::TextStyle<> const& text_style,
+    cairowindow::Pixel position, std::string const& text)
 {
   Text plot_text(position, text, std::make_shared<draw::Text>(text, position.x(), position.y(), text_style));
   layer->draw(plot_text.draw_object_);
@@ -300,7 +308,8 @@ Text Plot::create_text(boost::intrusive_ptr<Layer> const& layer,
 }
 
 LinePiece Plot::create_line(boost::intrusive_ptr<Layer> const& layer,
-    cairowindow::Point const& from, cairowindow::Point const& to, draw::LineStyle const& line_style, LineExtend line_extend)
+    draw::LineStyle const& line_style, LineExtend line_extend,
+    cairowindow::Point const& from, cairowindow::Point const& to)
 {
   double x1 = from.x();
   double y1 = from.y();
@@ -349,7 +358,8 @@ void Plot::curve_to_lines(boost::intrusive_ptr<Layer> const& layer, Curve const&
 }
 
 Curve Plot::create_curve(boost::intrusive_ptr<Layer> const& layer,
-    std::vector<cairowindow::Point>&& points, draw::LineStyle const& line_style)
+    draw::LineStyle const& line_style,
+    std::vector<cairowindow::Point>&& points)
 {
   Curve plot_curve(std::move(points), std::make_shared<draw::Curve>(line_style));
   curve_to_lines(layer, plot_curve, line_style);

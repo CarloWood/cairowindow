@@ -66,50 +66,49 @@ int main()
     draw::ArcStyle arc_style{.line_color = color::blue, .line_width = 1.0};
 
     // P₀, the point at t=0, was translated to the origin.
-    auto plot_P0 = plot.create_point(second_layer, {0, 0}, point_style);
-    auto P0_label = plot.create_text(second_layer, plot_P0, "P₀", label_style);
+    auto plot_P0 = plot.create_point(second_layer, point_style, {0, 0});
+    auto P0_label = plot.create_text(second_layer, label_style, plot_P0, "P₀");
 
     // P₁, the point at t=1.
     Point P1(1.0, 0.0);
-    auto plot_P1 = plot.create_point(second_layer, P1, point_style);
-    auto P1_label = plot.create_text(second_layer, P1, "P₁", label_style({.position = draw::centered_right_of}));
+    auto plot_P1 = plot.create_point(second_layer, point_style, P1);
+    auto P1_label = plot.create_text(second_layer, label_style({.position = draw::centered_right_of}), P1, "P₁");
 
     // Draw a line through P₀ and P₁.
-    auto line_through_P0_and_P1 = plot.create_line(second_layer, plot_P0, P1, solid_line_style);
+    auto line_through_P0_and_P1 = plot.create_line(second_layer, solid_line_style, plot_P0, P1);
 
     // Draw a cirle around the midpoint of P₀P₁ with radius |P₀P₁|/2.
     Vector P0P1(P1);
     Point P0P1_circle_center = (0.5 * P0P1).point();
-    auto plot_P0P1_circle_center = plot.create_point(second_layer, P0P1_circle_center, point_style);
+    auto plot_P0P1_circle_center = plot.create_point(second_layer, point_style, P0P1_circle_center);
     double P0P1_circle_radius = 0.5 * P0P1.length();
-    auto plot_P0P1_circle = plot.create_circle(second_layer, P0P1_circle_center, P0P1_circle_radius,
-        line_style({.line_color = color::gray}));
+    auto plot_P0P1_circle = plot.create_circle(second_layer, line_style({.line_color = color::gray}), P0P1_circle_center, P0P1_circle_radius);
 
     // Create a point Q on the circle.
     double phi = M_PI;
-    auto plot_Q = plot.create_point(second_layer, P0P1_circle_center + 0.5 * Direction{phi}, point_style);
+    auto plot_Q = plot.create_point(second_layer, point_style, P0P1_circle_center + 0.5 * Direction{phi});
 
 #if USE_P_BETA
     // Initial position of Pᵦ, a point at t < 0.
-    auto plot_P_beta = plot.create_point(second_layer, {-0.5, -0.25}, point_style);
+    auto plot_P_beta = plot.create_point(second_layer, point_style, {-0.5, -0.25});
 #if USE_P_GAMMA
     // Initial position of Pᵧ, a point at t > 1.
-    auto plot_P_gamma = plot.create_point(second_layer, {1.8, -0.15}, point_style);
+    auto plot_P_gamma = plot.create_point(second_layer, point_style, {1.8, -0.15});
 #endif
 #endif
 
 #if !(USE_P_BETA || USE_P_GAMMA)
     // Draw a slider for w.
     auto slider_w = plot.create_slider(second_layer, {928, 83, 7, 400}, 0.5, 0.25, 2.0);
-    auto slider_w_label = plot.create_text(second_layer, Pixel{928, 483}, "w", slider_style);
+    auto slider_w_label = plot.create_text(second_layer, slider_style, Pixel{928, 483}, "w");
 
     // Draw a slider for s.
     auto slider_s = plot.create_slider(second_layer, {978, 83, 7, 400}, 2.0, 0.5, 4.0);
-    auto slider_s_label = plot.create_text(second_layer, Pixel{978, 483}, "s", slider_style);
+    auto slider_s_label = plot.create_text(second_layer, slider_style, Pixel{978, 483}, "s");
 
     // Draw a slider for v.
     auto slider_v = plot.create_slider(second_layer, {1028, 83, 7, 400}, 0.5, -2.0, 2.0);
-    auto slider_v_label = plot.create_text(second_layer, Pixel{1028, 483}, "v", slider_style);
+    auto slider_v_label = plot.create_text(second_layer, slider_style, Pixel{1028, 483}, "v");
 #endif
 
     // Allow dragging Pᵦ and Pᵧ.
@@ -139,32 +138,31 @@ int main()
 
 #if USE_P_BETA
       // Draw a label for Pᵦ.
-      auto P_beta_label = plot.create_text(second_layer, plot_P_beta, "Pᵦ", label_style({.position = draw::centered_right_of}));
+      auto P_beta_label = plot.create_text(second_layer, label_style({.position = draw::centered_right_of}), plot_P_beta, "Pᵦ");
 
       w_is_negative = plot_P_beta.y() < 0.0;
 
 #if USE_P_GAMMA
       // Draw a label for Pᵧ.
-      auto P_gamma_label = plot.create_text(second_layer, plot_P_gamma, "Pᵧ", label_style({.position = draw::centered_right_of}));
+      auto P_gamma_label = plot.create_text(second_layer, label_style({.position = draw::centered_right_of}), plot_P_gamma, "Pᵧ");
 #endif
 #endif
 
 #if !USE_P_BETA || !USE_P_GAMMA
       // Draw a label for Q.
-      auto Q_label = plot.create_text(second_layer, plot_Q, "Q", label_style);
+      auto Q_label = plot.create_text(second_layer, label_style, plot_Q, "Q");
 
       // Draw a line from P₀ to Q.
-      auto plot_P0_Q = plot.create_connector(second_layer, plot_P0, plot_Q, line_style);
+      auto plot_P0_Q = plot.create_connector(second_layer, line_style, plot_P0, plot_Q);
       Vector P0_Q{plot_P0, plot_Q};
-      auto P0_Q_label = plot.create_text(second_layer, plot_P0 + 0.5 * P0_Q, "s²(1-2v)",
-          label_style({.font_size = 12, .offset = 5}));
+      auto P0_Q_label = plot.create_text(second_layer, label_style({.font_size = 12, .offset = 5}), plot_P0 + 0.5 * P0_Q, "s²(1-2v)");
 
       // Draw a line between P₁ and Q.
-      auto line_P1_Q = plot.create_connector(second_layer,
-          P1, plot_Q, Connector::open_arrow, Connector::open_arrow, line_style({.line_color = color::coral, .dashes = {3.0, 3.0}}));
+      auto line_P1_Q = plot.create_connector(second_layer, line_style({.line_color = color::coral, .dashes = {3.0, 3.0}}),
+          Connector::open_arrow, Connector::open_arrow, P1, plot_Q);
       Vector Q_P1{plot_Q, P1};
-      auto sw_label2 = plot.create_text(second_layer, plot_Q + 0.5 * Q_P1,
-          "sw", label_style({.position = draw::centered_below, .font_size = 12, .offset = 5}));
+      auto sw_label2 = plot.create_text(second_layer, label_style({.position = draw::centered_below, .font_size = 12, .offset = 5}),
+          plot_Q + 0.5 * Q_P1, "sw");
 
       // Determine the distance between Q and respectively P₀ and P₁.
       double s_times_w = Q_P1.length();
@@ -326,20 +324,20 @@ int main()
         Vector v{xt(t), yt(t)};
         curve_points.push_back(v.point());
       }
-      auto curve = plot.create_curve(second_layer, std::move(curve_points), curve_line_style);
+      auto curve = plot.create_curve(second_layer, curve_line_style, std::move(curve_points));
 
       // Draw the velocity vector at P₀.
       Vector velocity0{m00, m10};
-      auto plot_velocity0 = plot.create_connector(second_layer, plot_P0, plot_P0 + velocity0, solid_line_style({.line_color = color::green}));
+      auto plot_velocity0 = plot.create_connector(second_layer, solid_line_style({.line_color = color::green}), plot_P0, plot_P0 + velocity0);
 
       // Draw the velocity vector at P₁.
       Vector velocity1{m00 + 2.0 * m01, m10 + 2.0 * m11};
-      auto plot_velocity1 = plot.create_connector(second_layer, plot_P1, plot_P1 + velocity1, solid_line_style({.line_color = color::green}));
+      auto plot_velocity1 = plot.create_connector(second_layer, solid_line_style({.line_color = color::green}), plot_P1, plot_P1 + velocity1);
 
       // V, the parabola vertex point resides at t=v.
-      auto V = plot.create_point(second_layer, {xt(v), yt(v)}, point_style);
+      auto V = plot.create_point(second_layer, point_style, {xt(v), yt(v)});
       label_style.position = draw::centered_left_of;
-      auto V_label = plot.create_text(second_layer, V, "V", label_style({.position = draw::centered_below}));
+      auto V_label = plot.create_text(second_layer, label_style({.position = draw::centered_below}), V, "V");
 
 #if USE_P_BETA && USE_P_GAMMA
       // Velocity vector at t=v.
@@ -353,20 +351,19 @@ int main()
       static_cast<plot::Draggable&>(plot_Q).moved(&plot, new_Q);
 
       // Draw a label for Q.
-      auto Q_label = plot.create_text(second_layer, plot_Q, "Q", label_style);
+      auto Q_label = plot.create_text(second_layer, label_style, plot_Q, "Q");
 
       // Draw a line from P₀ to Q.
-      auto plot_P0_Q = plot.create_connector(second_layer, plot_P0, plot_Q, line_style);
+      auto plot_P0_Q = plot.create_connector(second_layer, line_style, plot_P0, plot_Q);
       Vector P0_Q{plot_P0, plot_Q};
-      auto P0_Q_label = plot.create_text(second_layer, plot_P0 + 0.5 * P0_Q, "s²(1-2v)",
-          label_style({.font_size = 12, .offset = 5}));
+      auto P0_Q_label = plot.create_text(second_layer, label_style({.font_size = 12, .offset = 5}), plot_P0 + 0.5 * P0_Q, "s²(1-2v)");
 
       // Draw a line between P₁ and Q.
-      auto line_P1_Q = plot.create_connector(second_layer,
-          P1, plot_Q, Connector::open_arrow, Connector::open_arrow, line_style({.line_color = color::coral, .dashes = {3.0, 3.0}}));
+      auto line_P1_Q = plot.create_connector(second_layer, line_style({.line_color = color::coral, .dashes = {3.0, 3.0}}),
+          Connector::open_arrow, Connector::open_arrow, P1, plot_Q);
       Vector Q_P1{plot_Q, P1};
-      auto sw_label2 = plot.create_text(second_layer, plot_Q + 0.5 * Q_P1,
-          "sw", label_style({.position = draw::centered_below, .font_size = 12, .offset = 5}));
+      auto sw_label2 = plot.create_text(second_layer, label_style({.position = draw::centered_below, .font_size = 12, .offset = 5}),
+          plot_Q + 0.5 * Q_P1, "sw");
 
       // Determine the distance between Q and respectively P₀ and P₁.
       double s_times_w = Q_P1.length();
@@ -391,47 +388,49 @@ int main()
       // Draw a vertical line from V up 0.5.
       Point V6(V.x(), V.y() + 0.5);
       LinePiece foo(V, V6);
-      auto plot_foo = plot.create_line(second_layer, foo, line_style);
+      auto plot_foo = plot.create_line(second_layer, line_style, foo);
 
       // Point on symmetry line at distance 1 from V.
       Point V1 = V + symmetry_line_dir;
-      auto plot_V1 = plot.create_point(second_layer, V1, point_style);
+      auto plot_V1 = plot.create_point(second_layer, point_style, V1);
       // Draw an arrow from V to V1.
-      auto plot_V_V1 = plot.create_connector(second_layer, V, V1, solid_line_style({.line_color = color::purple}));
+      auto plot_V_V1 = plot.create_connector(second_layer, solid_line_style({.line_color = color::purple}), V, V1);
 
       // Draw the unit vectors X and Y.
-      auto plot_X = plot.create_connector(second_layer, V, V + perpendicular_to_symmetry_line_dir, solid_line_style);
-      auto X_label = plot.create_text(second_layer, V + 0.5 * perpendicular_to_symmetry_line_dir, "X", label_style);
-      auto plot_Y = plot.create_connector(second_layer, V, V + symmetry_line_dir, solid_line_style);
-      auto Y_label = plot.create_text(second_layer, V + 0.5 * symmetry_line_dir, "Y", label_style);
+      auto plot_X = plot.create_connector(second_layer, solid_line_style, V, V + perpendicular_to_symmetry_line_dir);
+      auto X_label = plot.create_text(second_layer, label_style, V + 0.5 * perpendicular_to_symmetry_line_dir, "X");
+      auto plot_Y = plot.create_connector(second_layer, solid_line_style, V, V + symmetry_line_dir);
+      auto Y_label = plot.create_text(second_layer, label_style, V + 0.5 * symmetry_line_dir, "Y");
 
       // Go from V1 a distance w left and right.
       Point V1L = V1 + w * perpendicular_to_symmetry_line_dir;
       Point V1R = V1 - w * perpendicular_to_symmetry_line_dir;
-      auto plot_V1L = plot.create_point(second_layer, V1L, point_style({.color_index = color_index2}));
-      auto plot_V1R = plot.create_point(second_layer, V1R, point_style({.color_index = color_index2}));
+      auto plot_V1L = plot.create_point(second_layer, point_style({.color_index = color_index2}), V1L);
+      auto plot_V1R = plot.create_point(second_layer, point_style({.color_index = color_index2}), V1R);
 
       // Draw the symmetry line of the parabola, through V.
-      auto symmetry_line_of_parabola = plot.create_line(second_layer, V, symmetry_line_dir, line_style);
+      auto symmetry_line_of_parabola = plot.create_line(second_layer, line_style, V, symmetry_line_dir);
 
       // Draw a line between V1 and V1L.
       auto line_at_one_from_V = plot.create_connector(second_layer,
-          V1, V1L, Connector::open_arrow, Connector::open_arrow, line_style({.line_color = color::coral, .dashes = {3.0, 3.0}}));
-      auto w_label = plot.create_text(second_layer, V1 + 0.5 * w * perpendicular_to_symmetry_line_dir,
-          "w", label_style({.position = draw::centered_above, .font_size = 14, .offset = 5}));
+          line_style({.line_color = color::coral, .dashes = {3.0, 3.0}}),
+          Connector::open_arrow, Connector::open_arrow, V1, V1L);
+      auto w_label = plot.create_text(second_layer,
+          label_style({.position = draw::centered_above, .font_size = 14, .offset = 5}),
+          V1 + 0.5 * w * perpendicular_to_symmetry_line_dir, "w");
 
       // Draw an arc between P1_Q and P1_P0.
       Direction start_dir = perpendicular_to_symmetry_line_dir;
       Direction end_dir{P1, plot_P0};
       if (!w_is_negative)
         start_dir = start_dir.inverse();
-      auto alpha_arc = plot.create_arc(second_layer, P1, start_dir, end_dir, 0.1, arc_style({.line_color = color::blue}));
-      auto alpha_label = plot.create_text(second_layer, P1 + 0.13 * alpha_arc.bisector_direction(),
-          "α", label_style({.position = draw::centered, .font_size = 14}));
+      auto alpha_arc = plot.create_arc(second_layer, arc_style({.line_color = color::blue}), P1, start_dir, end_dir, 0.1);
+      auto alpha_label = plot.create_text(second_layer, label_style({.position = draw::centered, .font_size = 14}),
+          P1 + 0.13 * alpha_arc.bisector_direction(), "α");
 
-      auto theta_arc = plot.create_arc(second_layer, V, Direction::up, symmetry_line_dir, 0.2, arc_style);
-      auto theta_label = plot.create_text(second_layer, V + 0.24 * theta_arc.bisector_direction(),
-          "θ", label_style({.position = draw::centered, .font_size = 14}));
+      auto theta_arc = plot.create_arc(second_layer, arc_style, V, Direction::up, symmetry_line_dir, 0.2);
+      auto theta_label = plot.create_text(second_layer, label_style({.position = draw::centered, .font_size = 14}),
+          V + 0.24 * theta_arc.bisector_direction(), "θ");
 
       // Flush all expose events related to the drawing done above.
       window.set_send_expose_events(true);

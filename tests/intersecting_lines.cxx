@@ -300,36 +300,36 @@ int main()
           (100.0 * real_scaled_abs_error_y) << "%)");
 
       // P₀
-      auto plot_P0 = plot.create_point(second_layer, P0, point_style);
-      auto P0_label = plot.create_text(second_layer, P0, "P₀", point_label_style({.position = draw::centered_right_of}));
+      auto plot_P0 = plot.create_point(second_layer, point_style, P0);
+      auto P0_label = plot.create_text(second_layer, point_label_style({.position = draw::centered_right_of}), P0, "P₀");
       // P₁
-      auto plot_P1 = plot.create_point(second_layer, P1, point_style);
-      auto P1_label = plot.create_text(second_layer, P1, "P₁", point_label_style);
+      auto plot_P1 = plot.create_point(second_layer, point_style, P1);
+      auto P1_label = plot.create_text(second_layer, point_label_style, P1, "P₁");
       // I
-      auto plot_I = plot.create_point(second_layer, I, point_style);
-      auto I_label = plot.create_text(second_layer, I, "I", point_label_style);
+      auto plot_I = plot.create_point(second_layer, point_style, I);
+      auto I_label = plot.create_text(second_layer, point_label_style, I, "I");
       // calc_I
-      auto plot_calc_I = plot.create_point(second_layer, calc_I, point_style({.color_index = 2}));
-      auto calc_I_label = plot.create_text(second_layer, calc_I, "I", point_label_style({.position = draw::centered_right_of}));
+      auto plot_calc_I = plot.create_point(second_layer, point_style({.color_index = 2}), calc_I);
+      auto calc_I_label = plot.create_text(second_layer, point_label_style({.position = draw::centered_right_of}), calc_I, "I");
 
       // Draw lines
-      auto plot_line0 = plot.create_line(second_layer, P0, D0, line_style);
-      auto plot_line1 = plot.create_line(second_layer, P1, D1, line_style);
+      auto plot_line0 = plot.create_line(second_layer, line_style, P0, D0);
+      auto plot_line1 = plot.create_line(second_layer, line_style, P1, D1);
 
       // Draw D₀
       Point D0_end_point = I + D0;
-      auto plot_D0 = plot.create_connector(second_layer, I, D0_end_point, D_line_style);
-      auto D0_label = plot.create_text(second_layer, I + 0.5 * D0, "D0", point_label_style({.position = draw::centered_below}));
+      auto plot_D0 = plot.create_connector(second_layer, D_line_style, I, D0_end_point);
+      auto D0_label = plot.create_text(second_layer, point_label_style({.position = draw::centered_below}), I + 0.5 * D0, "D0");
       // Draw D₁
       Point D1_end_point = I + D1;
-      auto plot_D1 = plot.create_connector(second_layer, I, D1_end_point, D_line_style);
-      auto D1_label = plot.create_text(second_layer, I + 0.5 * D1, "D1", point_label_style({.position = draw::centered_above}));
+      auto plot_D1 = plot.create_connector(second_layer, D_line_style, I, D1_end_point);
+      auto D1_label = plot.create_text(second_layer, point_label_style({.position = draw::centered_above}), I + 0.5 * D1, "D1");
 
       // Draw line through P0, parallel to N1.
       Line QP0(N1, P0);
       Point Q = QP0.intersection_with(plot_line1);
-      auto plot_Q = plot.create_point(second_layer, Q, point_style({.color_index = 3}));
-      auto plot_QP0 = plot.create_connector(second_layer, Q, P0, dashed_line_style);
+      auto plot_Q = plot.create_point(second_layer, point_style({.color_index = 3}), Q);
+      auto plot_QP0 = plot.create_connector(second_layer, dashed_line_style, Q, P0);
 
       LinePiece ab(Q, P0);
       Dout(dc::notice, "|QP0| = " << std::setprecision(std::numeric_limits<double>::max_digits10) << ab.length());

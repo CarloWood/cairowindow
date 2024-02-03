@@ -66,17 +66,17 @@ int main()
     draw::RectangleStyle rectangle_style{.line_color = color::red, .line_width = 1.0};
 
     // Create a point P₀.
-    auto plot_P0 = plot.create_point(second_layer, {-2.0, -0.0}, point_style);
+    auto plot_P0 = plot.create_point(second_layer, point_style, {-2.0, -0.0});
     // Create a point P₁.
-    auto plot_P1 = plot.create_point(second_layer, {2.0, 0.0}, point_style);
+    auto plot_P1 = plot.create_point(second_layer, point_style, {2.0, 0.0});
 
     // Create a point D₀.
-    auto plot_D0 = plot.create_point(second_layer, {2.5, 1.5}, point_style({.color_index = 2}));
+    auto plot_D0 = plot.create_point(second_layer, point_style({.color_index = 2}), {2.5, 1.5});
     // Create a point D₁.
-    auto plot_D1 = plot.create_point(second_layer, {3.5, -1.5}, point_style({.color_index = 2}));
+    auto plot_D1 = plot.create_point(second_layer, point_style({.color_index = 2}), {3.5, -1.5});
 
     // Create a point Pᵧ.
-    auto plot_P_gamma = plot.create_point(second_layer, {7.0, -2.0}, point_style);
+    auto plot_P_gamma = plot.create_point(second_layer, point_style, {7.0, -2.0});
 
     // Make all points draggable.
     window.register_draggable(plot, &plot_P0);
@@ -86,10 +86,10 @@ int main()
     window.register_draggable(plot, &plot_P_gamma);
 
 //    auto slider_k0 = plot.create_slider(second_layer, {928, 83, 7, 400}, 0.25, -10.0, 10.0);
-//    auto slider_k0_label = plot.create_text(second_layer, Pixel{928, 483}, "k0", slider_style);
+//    auto slider_k0_label = plot.create_text(second_layer, slider_style, Pixel{928, 483}, "k0");
 
     auto slider_beta = plot.create_slider(second_layer, {978, 83, 7, 400}, 0.0, -100.0, 100.0);
-    auto slider_beta_label = plot.create_text(second_layer, Pixel{978, 483}, "beta", slider_style);
+    auto slider_beta_label = plot.create_text(second_layer, slider_style, Pixel{978, 483}, "beta");
 
     while (true)
     {
@@ -97,19 +97,19 @@ int main()
       window.set_send_expose_events(false);
 
       // Draw a label for P₀, P₁, D₀ and D₁.
-      auto P0_label = plot.create_text(second_layer, plot_P0, "P₀", label_style({.position = draw::centered_right_of}));
-      auto P1_label = plot.create_text(second_layer, plot_P1, "P₁", label_style({.position = draw::centered_right_of}));
-      auto D0_label = plot.create_text(second_layer, plot_D0, "D₀", label_style({.position = draw::centered_right_of}));
-      auto D1_label = plot.create_text(second_layer, plot_D1, "D₁", label_style({.position = draw::centered_right_of}));
-      auto P_gamma_label = plot.create_text(second_layer, plot_P_gamma, "Pᵧ", label_style({.position = draw::centered_right_of}));
+      auto P0_label = plot.create_text(second_layer, label_style({.position = draw::centered_right_of}), plot_P0, "P₀");
+      auto P1_label = plot.create_text(second_layer, label_style({.position = draw::centered_right_of}), plot_P1, "P₁");
+      auto D0_label = plot.create_text(second_layer, label_style({.position = draw::centered_right_of}), plot_D0, "D₀");
+      auto D1_label = plot.create_text(second_layer, label_style({.position = draw::centered_right_of}), plot_D1, "D₁");
+      auto P_gamma_label = plot.create_text(second_layer, label_style({.position = draw::centered_right_of}), plot_P_gamma, "Pᵧ");
 
       // Draw line through P₀ and P₁.
-      auto plot_line_P0P1 = plot.create_line(second_layer, plot_P0, plot_P1, line_style, plot::LineExtend::both);
+      auto plot_line_P0P1 = plot.create_line(second_layer, line_style, plot::LineExtend::both, plot_P0, plot_P1);
 
       // Draw an arrow from P₀ to D₀.
-      auto plot_D0_arrow = plot.create_connector(second_layer, plot_P0, plot_D0, line_style({.line_color = color::orange}));
+      auto plot_D0_arrow = plot.create_connector(second_layer, line_style({.line_color = color::orange}), plot_P0, plot_D0);
       // Draw an arrow from P₁ to D₁.
-      auto plot_D1_arrow = plot.create_connector(second_layer, plot_P1, plot_D1, line_style({.line_color = color::orange}));
+      auto plot_D1_arrow = plot.create_connector(second_layer, line_style({.line_color = color::orange}), plot_P1, plot_D1);
 
       // Store the velocity vectors as Vector.
       Vector const V0 = plot_D0_arrow;
@@ -186,19 +186,19 @@ int main()
         Vector A0{2 * m02, 2 * m12};
         // Curvature.
 //        K0 = A0.dot(V0.rotate_90_degrees()) / utils::square(V0.length_squared()) * V0.rotate_90_degrees();
-//        plot_curvature = plot.create_connector(second_layer, plot_P0, plot_P0 + K0, line_style);
+//        plot_curvature = plot.create_connector(second_layer, line_style, plot_P0, plot_P0 + K0);
       }
-      auto curve = plot.create_curve(second_layer, std::move(curve_points), curve_line_style);
+      auto curve = plot.create_curve(second_layer, curve_line_style, std::move(curve_points));
 
 #if 0
       double radius = 1.0 / K0.length();
       plot::Circle plot_curvature_circle;
       if (K0.length() > 1e-9)
-        plot_curvature_circle = plot.create_circle(second_layer, plot_P0 + radius * K0.direction(), radius,
-            solid_line_style({.line_color = color::gray}));
+        plot_curvature_circle = plot.create_circle(second_layer, solid_line_style({.line_color = color::gray}),
+            plot_P0 + radius * K0.direction(), radius);
 #endif
 
-      auto plot_extents = plot.create_rectangle(second_layer, rect, rectangle_style);
+      auto plot_extents = plot.create_rectangle(second_layer, rectangle_style, rect);
 #endif
 
 #if 1
@@ -215,7 +215,7 @@ int main()
             double t = i * 0.01;
             curve_points2.push_back(bc.P(t));
           }
-          curve2 = plot.create_curve(second_layer, std::move(curve_points2), curve_line_style);
+          curve2 = plot.create_curve(second_layer, curve_line_style, std::move(curve_points2));
         }
       }
       while (false);

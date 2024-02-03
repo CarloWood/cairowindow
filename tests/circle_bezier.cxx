@@ -49,9 +49,9 @@ int main()
     draw::TextStyle<> slider_style{.position = draw::centered_below, .font_size = 18.0, .offset = 10};
 
     auto slider_velocity = plot.create_slider(second_layer, {978, 83, 7, 400}, 105.0, 0.0, 150.0);
-    auto slider_velocity_label = plot.create_text(second_layer, Pixel{978, 483}, "v", slider_style);
+    auto slider_velocity_label = plot.create_text(second_layer, slider_style, Pixel{978, 483}, "v");
 
-    auto plot_circle = plot.create_circle(background_layer, {100.0, 100.0}, 80.0, line_style);
+    auto plot_circle = plot.create_circle(background_layer, line_style, {100.0, 100.0}, 80.0);
 
 #if 1
     //BezierFitter fitter([](double t) -> Point { return {100.0 + 80.0 * std::cos(t), 100.0 + 80.0 * std::sin(t)}; }, {-M_PI, M_PI}, {0.0, 0.0, 200.0, 200.0}, 0.1);
@@ -66,8 +66,8 @@ int main()
     int i = 0;
     for (auto&& bezier : result)
     {
-      points0[i] = plot.create_point(second_layer, result[i].P(0), point_style);
-      curves[i] = plot.create_bezier_curve(second_layer, bezier, bezier_curve_style);
+      points0[i] = plot.create_point(second_layer, point_style, result[i].P(0));
+      curves[i] = plot.create_bezier_curve(second_layer, bezier_curve_style, bezier);
       ++i;
     }
 #else
@@ -91,9 +91,9 @@ int main()
         double t = i * 0.01;
         curve_points.push_back(bezier.P(t));
       }
-      auto plot_curve = plot.create_curve(second_layer, std::move(curve_points), curve_line_style);
+      auto plot_curve = plot.create_curve(second_layer, curve_line_style, std::move(curve_points));
 #else
-      auto plot_curve = plot.create_bezier_curve(second_layer, bezier, bezier_curve_style);
+      auto plot_curve = plot.create_bezier_curve(second_layer, bezier_curve_style, bezier);
 #endif
 
       // Flush all expose events related to the drawing done above.

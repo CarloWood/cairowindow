@@ -55,13 +55,13 @@ int main()
     draw::LineStyle curve_line_style{.line_width = 1.0};
 
     // Create a point P₀.
-    auto P0 = plot.create_point(second_layer, {-0.3, -0.6}, point_style);
+    auto P0 = plot.create_point(second_layer, point_style, {-0.3, -0.6});
     // Create a point P₁.
-    auto P1 = plot.create_point(second_layer, {1.0, 0.4}, point_style);
+    auto P1 = plot.create_point(second_layer, point_style, {1.0, 0.4});
     // Create a point Pᵦ.
-    auto P_beta = plot.create_point(second_layer, {-1.0, 2.0}, point_style);
+    auto P_beta = plot.create_point(second_layer, point_style, {-1.0, 2.0});
     // Create a point Pᵧ.
-    auto P_gamma = plot.create_point(second_layer, {2.2, 3.3}, point_style);
+    auto P_gamma = plot.create_point(second_layer, point_style, {2.2, 3.3});
 
     // Make all points draggable.
     window.register_draggable(plot, &P0);
@@ -75,10 +75,10 @@ int main()
       window.set_send_expose_events(false);
 
       // Draw a label for P₀, P₁, Pᵦ and Pᵧ.
-      auto P0_label = plot.create_text(second_layer, P0, "P₀", label_style);
-      auto P1_label = plot.create_text(second_layer, P1, "P₁", label_style);
-      auto P_beta_label = plot.create_text(second_layer, P_beta, "Pᵦ", label_style);
-      auto P_gamma_label = plot.create_text(second_layer, P_gamma, "Pᵧ", label_style);
+      auto P0_label = plot.create_text(second_layer, label_style, P0, "P₀");
+      auto P1_label = plot.create_text(second_layer, label_style, P1, "P₁");
+      auto P_beta_label = plot.create_text(second_layer, label_style, P_beta, "Pᵦ");
+      auto P_gamma_label = plot.create_text(second_layer, label_style, P_gamma, "Pᵧ");
 
       Eigen::Matrix3d R;
       R << P0.x(), P0.y(), 1.0,
@@ -122,13 +122,13 @@ int main()
             curve_points.push_back(bc.P(t));
           }
         }
-        curve2 = plot.create_curve(second_layer, std::move(curve_points), curve_line_style({.line_color = color::red}));
+        curve2 = plot.create_curve(second_layer, curve_line_style({.line_color = color::red}), std::move(curve_points));
 
-        marker[0] = plot.create_point(second_layer, bc.P(0.0), point_circle_style);
-        marker[1] = plot.create_point(second_layer, bc.P(1.0), point_square_style);
+        marker[0] = plot.create_point(second_layer, point_circle_style, bc.P(0.0));
+        marker[1] = plot.create_point(second_layer, point_square_style, bc.P(1.0));
 
-        control[0] = plot.create_connector(second_layer, P0, bc.C1().point(), line_style);
-        control[1] = plot.create_connector(second_layer, P1, bc.C2().point(), line_style);
+        control[0] = plot.create_connector(second_layer, line_style, P0, bc.C1().point());
+        control[1] = plot.create_connector(second_layer, line_style, P1, bc.C2().point());
       }
 
       // Flush all expose events related to the drawing done above.
