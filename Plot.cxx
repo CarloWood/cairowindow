@@ -169,31 +169,6 @@ Pixel Plot::convert_to_pixel(cairowindow::Point const& point) const
   return Pixel{x, y};
 }
 
-void Plot::add_point(boost::intrusive_ptr<Layer> const& layer,
-    Point const& plot_point, draw::PointStyle const& point_style)
-{
-  plot_point.draw_object_ = std::make_shared<draw::Point>(convert_x(plot_point.x()), convert_y(plot_point.y()), point_style);
-  layer->draw(plot_point.draw_object_);
-}
-
-void Plot::add_circle(boost::intrusive_ptr<Layer> const& layer, Circle const& plot_circle, draw::CircleStyle const& circle_style)
-{
-  cairowindow::Point const& center = plot_circle.center();
-  double radius = plot_circle.radius();
-
-  plot_circle.draw_object_ = std::make_shared<draw::Circle>(
-      cairowindow::Rectangle{convert_x(center.x()), convert_y(center.y()), convert_x(radius) - convert_x(0), convert_y(0) - convert_y(radius)},
-        circle_style);
-  layer->draw(plot_circle.draw_object_);
-}
-
-void Plot::add_text(boost::intrusive_ptr<Layer> const& layer,
-    Text const& text, draw::TextStyle<> const& text_style)
-{
-  text.draw_object_ = std::make_shared<draw::Text>(text.text(), convert_x(text.position().x()), convert_y(text.position().y()), text_style);
-  layer->draw(text.draw_object_);
-}
-
 void Plot::apply_line_extend(double& x1, double& y1, double& x2, double& y2, LineExtend line_extend)
 {
   if (line_extend != LineExtend::none)
@@ -217,60 +192,6 @@ void Plot::apply_line_extend(double& x1, double& y1, double& x2, double& y2, Lin
       }
     }
   }
-}
-
-void Plot::add_line(boost::intrusive_ptr<Layer> const& layer,
-    LinePiece const& plot_line_piece, draw::LineStyle const& line_style, LineExtend line_extend)
-{
-  double x1 = plot_line_piece.from().x();
-  double y1 = plot_line_piece.from().y();
-  double x2 = plot_line_piece.to().x();
-  double y2 = plot_line_piece.to().y();
-
-  apply_line_extend(x1, y1, x2, y2, line_extend);
-  plot_line_piece.draw_object_ = std::make_shared<draw::Line>(convert_x(x1), convert_y(y1), convert_x(x2), convert_y(y2), line_style);
-  layer->draw(plot_line_piece.draw_object_);
-}
-
-void Plot::add_connector(boost::intrusive_ptr<Layer> const& layer,
-    Connector const& plot_connector, draw::LineStyle const& line_style, Color fill_color)
-{
-  double x1 = plot_connector.from().x();
-  double y1 = plot_connector.from().y();
-  double x2 = plot_connector.to().x();
-  double y2 = plot_connector.to().y();
-
-  plot_connector.draw_object_ = std::make_shared<draw::Connector>(convert_x(x1), convert_y(y1), convert_x(x2), convert_y(y2), line_style,
-      fill_color, plot_connector.arrow_head_shape_from(), plot_connector.arrow_head_shape_to());
-  layer->draw(plot_connector.draw_object_);
-  plot_connector.draw_object_->draw_arrow_heads(layer);
-}
-
-void Plot::add_rectangle(boost::intrusive_ptr<Layer> const& layer, Rectangle const& plot_rectangle,
-    draw::RectangleStyle const& rectangle_style)
-{
-  double offset_x = plot_rectangle.offset_x();
-  double offset_y = plot_rectangle.offset_y();
-  double width = plot_rectangle.width();
-  double height = plot_rectangle.height();
-
-  plot_rectangle.draw_object_ = std::make_shared<draw::Rectangle>(
-      convert_x(offset_x), convert_y(offset_y), convert_x(offset_x + width), convert_y(offset_y + height), rectangle_style);
-  layer->draw(plot_rectangle.draw_object_);
-}
-
-void Plot::add_arc(boost::intrusive_ptr<Layer> const& layer, Arc const& plot_arc,
-    draw::ArcStyle const& arc_style)
-{
-  double center_x = plot_arc.center().x();
-  double center_y = plot_arc.center().y();
-  double radius = plot_arc.radius();
-
-  plot_arc.draw_object_ = std::make_shared<draw::Arc>(convert_x(center_x), convert_y(center_y),
-      // Negate and swap start and end angles in order to mirror in the x-axis.
-      -plot_arc.end_angle(), -plot_arc.start_angle(), std::max(convert_x(radius) - convert_x(0), convert_y(radius) - convert_y(0)),
-      arc_style);
-  layer->draw(plot_arc.draw_object_);
 }
 
 Line Plot::create_line(boost::intrusive_ptr<Layer> const& layer,
@@ -327,6 +248,20 @@ Arc Plot::create_arc(boost::intrusive_ptr<Layer> const& layer,
         std::max(convert_x(radius) - convert_x(0), convert_y(radius) - convert_y(0)), arc_style));
   layer->draw(plot_arc.draw_object_);
   return plot_arc;
+}
+
+BezierCurve Plot::create_bezier_curve(boost::intrusive_ptr<Layer> const& layer,
+    cairowindow::BezierCurve const& bezier_curve, draw::BezierCurveStyle const& bezier_curve_style)
+{
+  BezierCurve plot_bezier_curve(bezier_curve,
+      std::make_shared<draw::BezierCurve>(
+        convert_x(bezier_curve.P0().x()), convert_y(bezier_curve.P0().y()),
+        convert_x(bezier_curve.C1().x()), convert_y(bezier_curve.C1().y()),
+        convert_x(bezier_curve.C2().x()), convert_y(bezier_curve.C2().y()),
+        convert_x(bezier_curve.P1().x()), convert_y(bezier_curve.P1().y()),
+        bezier_curve_style));
+  layer->draw(plot_bezier_curve.draw_object_);
+  return plot_bezier_curve;
 }
 
 Point Plot::create_point(boost::intrusive_ptr<Layer> const& layer,
@@ -419,14 +354,6 @@ Curve Plot::create_curve(boost::intrusive_ptr<Layer> const& layer,
   Curve plot_curve(std::move(points), std::make_shared<draw::Curve>(line_style));
   curve_to_lines(layer, plot_curve, line_style);
   return plot_curve;
-}
-
-void Plot::add_curve(boost::intrusive_ptr<Layer> const& layer, Curve const& plot_curve,
-    draw::LineStyle const& line_style)
-{
-  plot_curve.draw_object_ = std::make_shared<draw::Curve>(line_style);
-  curve_to_lines(layer, plot_curve, line_style);
-  //layer->draw(plot_curve.draw_object_);
 }
 
 cairowindow::Rectangle Plot::update_grabbed(utils::Badge<Window>, ClickableIndex grabbed_point, double pixel_x, double pixel_y)

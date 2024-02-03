@@ -425,13 +425,11 @@ int main()
       Direction end_dir{P1, plot_P0};
       if (!w_is_negative)
         start_dir = start_dir.inverse();
-      plot::Arc alpha_arc(P1, start_dir, end_dir, 0.1);
-      plot.add_arc(second_layer, alpha_arc, arc_style({.line_color = color::blue}));
+      auto alpha_arc = plot.create_arc(second_layer, P1, start_dir, end_dir, 0.1, arc_style({.line_color = color::blue}));
       auto alpha_label = plot.create_text(second_layer, P1 + 0.13 * alpha_arc.bisector_direction(),
           "α", label_style({.position = draw::centered, .font_size = 14}));
 
-      plot::Arc theta_arc(V, Direction::up, symmetry_line_dir, 0.2);
-      plot.add_arc(second_layer, theta_arc, arc_style);
+      auto theta_arc = plot.create_arc(second_layer, V, Direction::up, symmetry_line_dir, 0.2, arc_style);
       auto theta_label = plot.create_text(second_layer, V + 0.24 * theta_arc.bisector_direction(),
           "θ", label_style({.position = draw::centered, .font_size = 14}));
 

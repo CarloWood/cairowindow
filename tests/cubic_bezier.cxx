@@ -115,7 +115,7 @@ int main()
       Vector const V0 = plot_D0_arrow;
       Vector const V1 = plot_D1_arrow;
 
-      plot::Connector plot_curvature({0.0, 0.0}, {0.0, 0.0});
+      plot::Connector plot_curvature;
 //      Vector K0(0.0, 0.0);
       Rectangle rect;
 
@@ -183,22 +183,19 @@ int main()
         // y''(t) = 2 m12 + 6 m13 t
         //
         // Acceleration vector at t=0.
-//        Vector A0{2 * m02, 2 * m12};
+        Vector A0{2 * m02, 2 * m12};
         // Curvature.
 //        K0 = A0.dot(V0.rotate_90_degrees()) / utils::square(V0.length_squared()) * V0.rotate_90_degrees();
-//        plot_curvature = plot::Connector(plot_P0, plot_P0 + K0);
+//        plot_curvature = plot.create_connector(second_layer, plot_P0, plot_P0 + K0, line_style);
       }
       auto curve = plot.create_curve(second_layer, std::move(curve_points), curve_line_style);
-      plot.add_connector(second_layer, plot_curvature, line_style);
 
 #if 0
       double radius = 1.0 / K0.length();
       plot::Circle plot_curvature_circle;
       if (K0.length() > 1e-9)
-      {
-        plot_curvature_circle = plot::Circle{plot_P0 + radius * K0.direction(), radius};
-        plot.add_circle(second_layer, plot_curvature_circle, solid_line_style({.line_color = color::gray}));
-      }
+        plot_curvature_circle = plot.create_circle(second_layer, plot_P0 + radius * K0.direction(), radius,
+            solid_line_style({.line_color = color::gray}));
 #endif
 
       auto plot_extents = plot.create_rectangle(second_layer, rect, rectangle_style);
@@ -207,7 +204,6 @@ int main()
 #if 1
       // Determine a quadratic Bezier going through P₀, P₁ and Pᵧ, tangent to D₀.
       plot::Curve curve2;
-      plot::Curve curve3;
       do
       {
         BezierCurve bc(plot_P0, plot_P1);
@@ -219,14 +215,10 @@ int main()
             double t = i * 0.01;
             curve_points2.push_back(bc.P(t));
           }
-          curve3 = plot::Curve(std::move(curve_points2));
+          curve2 = plot.create_curve(second_layer, std::move(curve_points2), curve_line_style);
         }
       }
       while (false);
-      if (!curve2.points().empty())
-        plot.add_curve(second_layer, curve2, curve_line_style);
-      if (!curve3.points().empty())
-        plot.add_curve(second_layer, curve3, curve_line_style);
 #endif
 
       // Flush all expose events related to the drawing done above.

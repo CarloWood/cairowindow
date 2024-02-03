@@ -318,13 +318,11 @@ int main()
 
       // Draw D₀
       Point D0_end_point = I + D0;
-      plot::Connector plot_D0(I, D0_end_point);
-      plot.add_connector(second_layer, plot_D0, D_line_style);
+      auto plot_D0 = plot.create_connector(second_layer, I, D0_end_point, D_line_style);
       auto D0_label = plot.create_text(second_layer, I + 0.5 * D0, "D0", point_label_style({.position = draw::centered_below}));
       // Draw D₁
       Point D1_end_point = I + D1;
-      plot::Connector plot_D1(I, D1_end_point);
-      plot.add_connector(second_layer, plot_D1, D_line_style);
+      auto plot_D1 = plot.create_connector(second_layer, I, D1_end_point, D_line_style);
       auto D1_label = plot.create_text(second_layer, I + 0.5 * D1, "D1", point_label_style({.position = draw::centered_above}));
 
       // Draw line through P0, parallel to N1.

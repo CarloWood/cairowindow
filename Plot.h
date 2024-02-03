@@ -8,6 +8,7 @@
 #include "draw/Connector.h"
 #include "draw/Rectangle.h"
 #include "draw/Arc.h"
+#include "draw/BezierCurve.h"
 #include "draw/Slider.h"
 #include "Range.h"
 #include "Point.h"
@@ -19,6 +20,7 @@
 #include "Connector.h"
 #include "Rectangle.h"
 #include "Arc.h"
+#include "BezierCurve.h"
 #include "Draggable.h"
 #include "utils/Vector.h"
 #include "utils/Badge.h"
@@ -182,6 +184,40 @@ class Arc : public cairowindow::Arc
   mutable std::shared_ptr<draw::Arc> draw_object_;
 };
 
+class BezierCurve : public cairowindow::BezierCurve
+{
+ public:
+  using cairowindow::BezierCurve::BezierCurve;
+
+  BezierCurve(cairowindow::BezierCurve const& bezier_curve,
+      std::shared_ptr<draw::BezierCurve> const& draw_object) :
+    cairowindow::BezierCurve(bezier_curve), draw_object_(draw_object) { }
+
+  BezierCurve(Point P0, Point P1,
+      std::shared_ptr<draw::BezierCurve> const& draw_object) :
+    cairowindow::BezierCurve(P0, P1), draw_object_(draw_object) { }
+
+  BezierCurve(Vector P0, Vector P1,
+      std::shared_ptr<draw::BezierCurve> const& draw_object) :
+    cairowindow::BezierCurve(P0, P1), draw_object_(draw_object) { }
+
+  BezierCurve(Vector P0, Vector C1, Vector C2, Vector P1,
+      std::shared_ptr<draw::BezierCurve> const& draw_object) :
+    cairowindow::BezierCurve(P0, C1, C2, P1), draw_object_(draw_object) { }
+
+  BezierCurve(Point P0, Point C1, Point C2, Point P1,
+      std::shared_ptr<draw::BezierCurve> const& draw_object) :
+    cairowindow::BezierCurve(P0, C1, C2, P1), draw_object_(draw_object) { }
+
+  BezierCurve(BezierCurveMatrix const& m,
+      std::shared_ptr<draw::BezierCurve> const& draw_object) :
+    cairowindow::BezierCurve(m), draw_object_(draw_object) { }
+
+ public:
+  friend class Plot;
+  mutable std::shared_ptr<draw::BezierCurve> draw_object_;
+};
+
 class Slider
 {
  private:
@@ -330,6 +366,38 @@ class Plot
   [[nodiscard]] Arc create_arc(boost::intrusive_ptr<Layer> const& layer,
       cairowindow::Point const& center, double start_angle, double end_angle, double radius, draw::ArcStyle const& arc_style);
 
+  // Same, but using a Direction for the angles.
+  [[nodiscard]] Arc create_arc(boost::intrusive_ptr<Layer> const& layer,
+      cairowindow::Point const& center, Direction const& start, Direction const& end, double radius, draw::ArcStyle const& arc_style)
+  {
+    return create_arc(layer, center, start.as_angle(), end.as_angle(), radius, arc_style);
+  }
+
+  // Create and draw a Bezier curve on layer width  using bezier_style.
+  [[nodiscard]] BezierCurve create_bezier_curve(boost::intrusive_ptr<Layer> const& layer,
+      cairowindow::BezierCurve const& bezier_curve, draw::BezierCurveStyle const& bezier_style);
+
+  // Create and draw a Bezier curve on layer width  using bezier_style.
+  [[nodiscard]] BezierCurve create_bezier_curve(boost::intrusive_ptr<Layer> const& layer,
+      Vector P0, Vector C1, Vector C2, Vector P1, draw::BezierCurveStyle const& bezier_style)
+  {
+    return create_bezier_curve(layer, cairowindow::BezierCurve{P0, C1, C2, P1}, bezier_style);
+  }
+
+  // Same, but using Points.
+  [[nodiscard]] BezierCurve create_bezier_curve(boost::intrusive_ptr<Layer> const& layer,
+      Point P0, Point C1, Point C2, Point P1, draw::BezierCurveStyle const& bezier_style)
+  {
+    return create_bezier_curve(layer, cairowindow::BezierCurve{P0, C1, C2, P1}, bezier_style);
+  }
+
+  // Same, but using BezierCurveMatrix.
+  [[nodiscard]] BezierCurve create_bezier_curve(boost::intrusive_ptr<Layer> const& layer,
+      BezierCurveMatrix const& m, draw::BezierCurveStyle const& bezier_style)
+  {
+    return create_bezier_curve(layer, cairowindow::BezierCurve{m}, bezier_style);
+  }
+
   // Create and draw text on layer at position using text_style.
   [[nodiscard]] Text create_text(boost::intrusive_ptr<Layer> const& layer,
       cairowindow::Point position, std::string const& text, draw::TextStyle<> const& text_style);
@@ -392,39 +460,6 @@ class Plot
  public:
   [[nodiscard]] Curve create_curve(boost::intrusive_ptr<Layer> const& layer,
       std::vector<cairowindow::Point>&& points, draw::LineStyle const& line_style);
-
-  // Same, but pass an already existing plot_point. If plot_point was added before
-  // then it will be removed from the plot and then added to the new coordinates.
-  void add_point(boost::intrusive_ptr<Layer> const& layer,
-      Point const& plot_point, draw::PointStyle const& point_style);
-
-  void add_circle(boost::intrusive_ptr<Layer> const& layer, Circle const& plot_circle,
-      draw::CircleStyle const& circle_style);
-
-  // Same as above but use line_style (no fill_color).
-  void add_circle(boost::intrusive_ptr<Layer> const& layer, Circle const& plot_circle,
-      draw::LineStyle const& line_style)
-  {
-    add_circle(layer, plot_circle, draw::CircleStyle{.line_color = line_style.line_color, .line_width = line_style.line_width});
-  }
-
-  void add_text(boost::intrusive_ptr<Layer> const& layer,
-      Text const& text, draw::TextStyle<> const& text_style);
-
-  void add_line(boost::intrusive_ptr<Layer> const& layer, LinePiece const& plot_line_piece,
-      draw::LineStyle const& line_style, LineExtend line_extend = LineExtend::none);
-
-  void add_connector(boost::intrusive_ptr<Layer> const& layer, Connector const& plot_connector,
-      draw::LineStyle const& line_style, Color fill_color = color::white);
-
-  void add_rectangle(boost::intrusive_ptr<Layer> const& layer, Rectangle const& plot_rectangle,
-      draw::RectangleStyle const& rectangle_style);
-
-  void add_arc(boost::intrusive_ptr<Layer> const& layer, Arc const& plot_arc,
-      draw::ArcStyle const& arc_style);
-
-  void add_curve(boost::intrusive_ptr<Layer> const& layer, Curve const& plot_curve,
-      draw::LineStyle const& line_style);
 
   void add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio = false);
 

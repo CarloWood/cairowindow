@@ -39,6 +39,8 @@ class BezierCurve
   Vector P1_;           // End point.
 
  public:
+  BezierCurve() = default;
+
   // Construct an incomplete BezierCurve with just the begin and end points set.
   BezierCurve(Point P0, Point P1) : P0_(P0), P1_(P1) { }
   BezierCurve(Vector P0, Vector P1) : P0_(P0), P1_(P1) { }

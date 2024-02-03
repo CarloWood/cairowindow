@@ -45,6 +45,7 @@ int main()
     draw::PointStyle point_style(0, 1);
     draw::LineStyle curve_line_style{.line_width = 1.0};
     draw::LineStyle line_style{.line_color = color::red, .line_width = 1.0};
+    draw::BezierCurveStyle bezier_curve_style{.line_color = Color::next_color(), .line_width = 1.0};
     draw::TextStyle<> slider_style{.position = draw::centered_below, .font_size = 18.0, .offset = 10};
 
     auto slider_velocity = plot.create_slider(second_layer, {978, 83, 7, 400}, 105.0, 0.0, 150.0);
@@ -53,22 +54,20 @@ int main()
     auto plot_circle = plot.create_circle(background_layer, {100.0, 100.0}, 80.0, line_style);
 
 #if 1
-    BezierFitter fitter([](double t) -> Point { return {100.0 + 80.0 * std::cos(t), 100.0 + 80.0 * std::sin(t)}; }, {-M_PI, M_PI}, {0.0, 0.0, 200.0, 200.0}, 0.1);
+    //BezierFitter fitter([](double t) -> Point { return {100.0 + 80.0 * std::cos(t), 100.0 + 80.0 * std::sin(t)}; }, {-M_PI, M_PI}, {0.0, 0.0, 200.0, 200.0}, 0.1);
+
+    BezierFitter fitter([](double t) -> Point {
+        return {100.0 * t / M_PI, 100.0 + 100.0 * std::sin(5.0 * t * t)};
+    }, {0, 2.0 * M_PI}, {0.0, 0.0, 200.0, 200.0}, 0.001);
 
     std::vector<BezierCurve> result = fitter.solve();
-    std::vector<plot::Curve> curves(result.size());
+    std::vector<plot::BezierCurve> curves(result.size());
     std::vector<plot::Point> points0(result.size());
     int i = 0;
     for (auto&& bezier : result)
     {
-      std::vector<Point> curve_points;
-      for (int i = 0; i <= 100; ++i)
-      {
-        double t = i * 0.01;
-        curve_points.push_back(bezier.P(t));
-      }
       points0[i] = plot.create_point(second_layer, result[i].P(0), point_style);
-      curves[i] = plot.create_curve(second_layer, std::move(curve_points), curve_line_style);
+      curves[i] = plot.create_bezier_curve(second_layer, bezier, bezier_curve_style);
       ++i;
     }
 #else
@@ -85,6 +84,7 @@ int main()
       Point C1 = P1 + Vector{0.0, v};
       BezierCurve bezier(P0, C0, C1, P1);
 
+#if 0
       std::vector<Point> curve_points;
       for (int i = 0; i <= 100; ++i)
       {
@@ -92,6 +92,9 @@ int main()
         curve_points.push_back(bezier.P(t));
       }
       auto plot_curve = plot.create_curve(second_layer, std::move(curve_points), curve_line_style);
+#else
+      auto plot_curve = plot.create_bezier_curve(second_layer, bezier, bezier_curve_style);
+#endif
 
       // Flush all expose events related to the drawing done above.
       window.set_send_expose_events(true);

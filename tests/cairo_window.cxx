@@ -91,7 +91,7 @@ int main()
     for (int i = 50; i < 150; ++i)
     {
       // P₀, the point at t=0.
-      plot::Point P0(2.0, -6.0);
+      Point P0(2.0, -6.0);
 
       // Curve characteristics.
       double w = 0.8;                     // "width"
@@ -150,7 +150,7 @@ int main()
 //      auto H_label = plot.create_text(second_layer, H, "H", point_label_style);
 
       // P₀.
-      plot.add_point(second_layer, P0, point_style);
+      auto plot_P0 = plot.create_point(second_layer, P0, point_style);
       point_label_style.position = draw::centered_left_of;
       auto P0_label = plot.create_text(second_layer, P0, "P₀", point_label_style);
 
