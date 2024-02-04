@@ -45,6 +45,9 @@ using utils::has_print_on::operator<<;
 
 class Plot;
 
+//--------------------------------------------------------------------------
+// Point
+
 class Point : public cairowindow::Point, public Draggable
 {
  public:
@@ -53,7 +56,6 @@ class Point : public cairowindow::Point, public Draggable
 
  private:
   friend class Plot;
-  friend class cairowindow::Window;
   mutable std::shared_ptr<draw::Point> draw_object_;
 
   // Implementation of Draggable.
@@ -65,28 +67,8 @@ class Point : public cairowindow::Point, public Draggable
 #endif
 };
 
-class Circle : public cairowindow::Circle
-{
- public:
-  using cairowindow::Circle::Circle;
-  Circle(cairowindow::Point const& center, double radius, std::shared_ptr<draw::Circle> const& draw_object) :
-    cairowindow::Circle(center, radius), draw_object_(draw_object) { }
-
- private:
-  friend class Plot;
-  mutable std::shared_ptr<draw::Circle> draw_object_;
-};
-
-class Text : public cairowindow::Text
-{
- public:
-  using cairowindow::Text::Text;
-  Text(cairowindow::Text const& text) : cairowindow::Text(text) { }
-
- private:
-  friend class Plot;
-  mutable std::shared_ptr<draw::Text> draw_object_;
-};
+//--------------------------------------------------------------------------
+// LinePiece
 
 class LinePiece : public cairowindow::LinePiece
 {
@@ -99,30 +81,8 @@ class LinePiece : public cairowindow::LinePiece
   mutable std::shared_ptr<draw::Line> draw_object_;
 };
 
-class Line : public cairowindow::Line
-{
- public:
-  using cairowindow::Line::Line;
-  Line(cairowindow::Line const& line) : cairowindow::Line(line) { }
-
- public:
-  friend class Plot;
-  mutable std::shared_ptr<draw::Line> draw_object_;
-};
-
-class Curve : public cairowindow::Curve
-{
- public:
-  using cairowindow::Curve::Curve;
-  Curve(std::vector<cairowindow::Point> const& points, std::shared_ptr<draw::Curve> const& draw_object) :
-    cairowindow::Curve(points), draw_object_(draw_object) { }
-  Curve(std::vector<cairowindow::Point>&& points, std::shared_ptr<draw::Curve> const& draw_object) :
-    cairowindow::Curve(std::move(points)), draw_object_(draw_object) { }
-
- public:
-  friend class Plot;
-  mutable std::shared_ptr<draw::Curve> draw_object_;
-};
+//--------------------------------------------------------------------------
+// Connector
 
 class Connector : public cairowindow::Connector
 {
@@ -135,6 +95,23 @@ class Connector : public cairowindow::Connector
   mutable std::shared_ptr<draw::Connector> draw_object_;
 };
 
+//--------------------------------------------------------------------------
+// Line
+
+class Line : public cairowindow::Line
+{
+ public:
+  using cairowindow::Line::Line;
+  Line(cairowindow::Line const& line) : cairowindow::Line(line) { }
+
+ public:
+  friend class Plot;
+  mutable std::shared_ptr<draw::Line> draw_object_;
+};
+
+//--------------------------------------------------------------------------
+// Rectangle
+
 class Rectangle : public cairowindow::Rectangle
 {
  public:
@@ -146,26 +123,36 @@ class Rectangle : public cairowindow::Rectangle
   mutable std::shared_ptr<draw::Rectangle> draw_object_;
 };
 
+//--------------------------------------------------------------------------
+// Circle
+
+class Circle : public cairowindow::Circle
+{
+ public:
+  using cairowindow::Circle::Circle;
+  Circle(cairowindow::Circle const& circle) : cairowindow::Circle(circle) { }
+
+ private:
+  friend class Plot;
+  mutable std::shared_ptr<draw::Circle> draw_object_;
+};
+
+//--------------------------------------------------------------------------
+// Arc
+
 class Arc : public cairowindow::Arc
 {
  public:
   using cairowindow::Arc::Arc;
-  Arc(cairowindow::Point const& center, double start_angle, double end_angle, double radius,
-      std::shared_ptr<draw::Arc> const& draw_object) :
-    cairowindow::Arc(center, start_angle, end_angle, radius), draw_object_(draw_object) { }
-
-  Arc(cairowindow::Point const& center, Direction const& start, Direction const& end, double radius,
-      std::shared_ptr<draw::Arc> const& draw_object) :
-    cairowindow::Arc(center, start, end, radius), draw_object_(draw_object) { }
-
-  Arc(cairowindow::Line const& line1, cairowindow::Line const& line2, double radius,
-      std::shared_ptr<draw::Arc> const& draw_object) :
-    cairowindow::Arc(line1, line2, radius), draw_object_(draw_object) { }
+  Arc(cairowindow::Arc const& arc) : cairowindow::Arc(arc) { }
 
  public:
   friend class Plot;
   mutable std::shared_ptr<draw::Arc> draw_object_;
 };
+
+//--------------------------------------------------------------------------
+// BezierCurve
 
 class BezierCurve : public cairowindow::BezierCurve
 {
@@ -177,6 +164,23 @@ class BezierCurve : public cairowindow::BezierCurve
   friend class Plot;
   mutable std::shared_ptr<draw::BezierCurve> draw_object_;
 };
+
+//--------------------------------------------------------------------------
+// Text
+
+class Text : public cairowindow::Text
+{
+ public:
+  using cairowindow::Text::Text;
+  Text(cairowindow::Text const& text) : cairowindow::Text(text) { }
+
+ private:
+  friend class Plot;
+  mutable std::shared_ptr<draw::Text> draw_object_;
+};
+
+//--------------------------------------------------------------------------
+// Slider
 
 class Slider
 {
@@ -199,6 +203,22 @@ class Slider
  public:
   friend class Plot;
   mutable std::shared_ptr<draw::Slider> draw_object_;
+};
+
+//--------------------------------------------------------------------------
+
+class Curve : public cairowindow::Curve
+{
+ public:
+  using cairowindow::Curve::Curve;
+  Curve(std::vector<cairowindow::Point> const& points, std::shared_ptr<draw::Curve> const& draw_object) :
+    cairowindow::Curve(points), draw_object_(draw_object) { }
+  Curve(std::vector<cairowindow::Point>&& points, std::shared_ptr<draw::Curve> const& draw_object) :
+    cairowindow::Curve(std::move(points)), draw_object_(draw_object) { }
+
+ public:
+  friend class Plot;
+  mutable std::shared_ptr<draw::Curve> draw_object_;
 };
 
 enum class LineExtend
