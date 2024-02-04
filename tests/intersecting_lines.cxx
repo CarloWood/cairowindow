@@ -279,8 +279,8 @@ int main()
       Dout(dc::notice, "Calculated I = (" << std::setprecision(std::numeric_limits<double>::max_digits10) << calc_I << ")");
 
       // Create two lines.
-      Line L0(D0, P0);
-      Line L1(D1, P1);
+      Line L0(P0, D0);
+      Line L1(P1, D1);
       Point real_I = L0.intersection_with(L1);
 
       Dout(dc::notice, "Relative error in I = (" <<
@@ -326,7 +326,7 @@ int main()
       auto D1_label = plot.create_text(second_layer, point_label_style({.position = draw::centered_above}), I + 0.5 * D1, "D1");
 
       // Draw line through P0, parallel to N1.
-      Line QP0(N1, P0);
+      Line QP0(P0, N1);
       Point Q = QP0.intersection_with(plot_line1);
       auto plot_Q = plot.create_point(second_layer, point_style({.color_index = 3}), Q);
       auto plot_QP0 = plot.create_connector(second_layer, dashed_line_style, Q, P0);

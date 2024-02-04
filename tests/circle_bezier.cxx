@@ -51,7 +51,7 @@ int main()
     auto slider_velocity = plot.create_slider(second_layer, {978, 83, 7, 400}, 105.0, 0.0, 150.0);
     auto slider_velocity_label = plot.create_text(second_layer, slider_style, Pixel{978, 483}, "v");
 
-    auto plot_circle = plot.create_circle(background_layer, line_style, {100.0, 100.0}, 80.0);
+    auto plot_circle = plot.create_circle(background_layer, line_style, Point{100.0, 100.0}, 80.0);
 
 #if 1
     //BezierFitter fitter([](double t) -> Point { return {100.0 + 80.0 * std::cos(t), 100.0 + 80.0 * std::sin(t)}; }, {-M_PI, M_PI}, {0.0, 0.0, 200.0, 200.0}, 0.1);
