@@ -29,6 +29,9 @@
 #include <vector>
 #include <functional>
 #include <algorithm>
+#include <type_traits>
+#include <tuple>
+#include <utility>
 #include "debug.h"
 #ifdef CWDEBUG
 #include "debug_channel.h"
@@ -129,18 +132,7 @@ class Connector : public cairowindow::Connector
 {
  public:
   using cairowindow::Connector::Connector;
-  Connector(cairowindow::Point const& from, cairowindow::Point const& to,
-      ArrowHeadShape head_from, ArrowHeadShape head_to,
-      std::shared_ptr<draw::Connector> const& draw_object) :
-    cairowindow::Connector(from, to, head_from, head_to), draw_object_(draw_object) { }
-
-  Connector(cairowindow::Point const& from, cairowindow::Point const& to,
-      ArrowHeadShape head_to, std::shared_ptr<draw::Connector> const& draw_object) :
-    cairowindow::Connector(from, to, head_to), draw_object_(draw_object) { }
-
-  Connector(cairowindow::Point const& from, cairowindow::Point const& to,
-      std::shared_ptr<draw::Connector> const& draw_object) :
-    cairowindow::Connector(from, to), draw_object_(draw_object) { }
+  Connector(cairowindow::Connector const& connector) : cairowindow::Connector(connector) { }
 
  public:
   friend class Plot;
@@ -151,12 +143,7 @@ class Rectangle : public cairowindow::Rectangle
 {
  public:
   using cairowindow::Rectangle::Rectangle;
-  Rectangle(double offset_x, double offset_y, double width, double height,
-      std::shared_ptr<draw::Rectangle> const& draw_object) :
-    cairowindow::Rectangle(offset_x, offset_y, width, height), draw_object_(draw_object) { }
-  Rectangle(cairowindow::Rectangle const& rectangle,
-      std::shared_ptr<draw::Rectangle> const& draw_object) :
-    cairowindow::Rectangle(rectangle), draw_object_(draw_object) { }
+  Rectangle(cairowindow::Rectangle const& rectangle) : cairowindow::Rectangle(rectangle) { }
 
  public:
   friend class Plot;
@@ -248,6 +235,22 @@ enum class LineExtend
   to = 2,
   both = from|to
 };
+
+namespace {
+
+template<typename Tuple, std::size_t... Indices>
+auto tuple_tail_impl(Tuple&& tuple, std::index_sequence<Indices...>)
+{
+  return std::make_tuple(std::get<Indices + 1>(std::forward<Tuple>(tuple))...);
+}
+
+template<typename... Args>
+auto tuple_tail(std::tuple<Args...>&& tuple)
+{
+  return tuple_tail_impl(std::forward<std::tuple<Args...>>(tuple), std::make_index_sequence<sizeof...(Args) - 1>{});
+}
+
+} // namespace
 
 class Plot
 {
@@ -354,17 +357,17 @@ class Plot
     return create_circle(layer, draw::CircleStyle{.line_color = line_style.line_color, .line_width = line_style.line_width}, center, radius);
   }
 
-  // Create and draw a rectangle on layer with offset_x, offset_y, width and height, using rectangle_style.
-  [[nodiscard]] Rectangle create_rectangle(boost::intrusive_ptr<Layer> const& layer,
-      draw::RectangleStyle const& rectangle_style,
-      double offset_x, double offset_y, double width, double height);
+  // Add and draw plot_rectangle on layer, using rectangle_style.
+  void add_rectangle(boost::intrusive_ptr<Layer> const& layer, draw::RectangleStyle const& rectangle_style, Rectangle const& plot_rectangle);
 
-  // Same as above but from rectangle.
+  // Create and draw a rectangle on layer, using args... and rectangle_style.
+  template<typename... Args>
   [[nodiscard]] Rectangle create_rectangle(boost::intrusive_ptr<Layer> const& layer,
-      draw::RectangleStyle const& rectangle_style,
-      cairowindow::Rectangle const& rectangle)
+      draw::RectangleStyle const& rectangle_style, Args&&... args)
   {
-    return create_rectangle(layer, rectangle_style, rectangle.offset_x(), rectangle.offset_y(), rectangle.width(), rectangle.height());
+    Rectangle plot_rectangle(args...);
+    add_rectangle(layer, rectangle_style, plot_rectangle);
+    return plot_rectangle;
   }
 
   // Create and draw an arc on layer width center, radius and start- and end_angle, using arc_style.
@@ -459,47 +462,58 @@ class Plot
     return create_line(layer, line_style, line.point(), line.direction());
   }
 
-  // Create and draw a connector from point to point using line_style and fill_color for the arrow heads if appropriate.
-  [[nodiscard]] Connector create_connector(boost::intrusive_ptr<Layer> const& layer,
+  void add_connector(boost::intrusive_ptr<Layer> const& layer,
       draw::LineStyle const& line_style, Color fill_color,
       Connector::ArrowHeadShape arrow_head_shape_from, Connector::ArrowHeadShape arrow_head_shape_to,
-      cairowindow::Point const& from, cairowindow::Point const& to);
+      Connector const& plot_connector);
 
-  [[nodiscard]] Connector create_connector(boost::intrusive_ptr<Layer> const& layer,
-      draw::LineStyle const& line_style,
-      Connector::ArrowHeadShape arrow_head_shape_from, Connector::ArrowHeadShape arrow_head_shape_to,
-      cairowindow::Point const& from, cairowindow::Point const& to)
+ private:
+  template<typename... Args>
+  [[nodiscard]] Connector create_connector_helper(
+      Color& fill_color,
+      Connector::ArrowHeadShape& arrow_head_shape_from,
+      Connector::ArrowHeadShape& arrow_head_shape_to,
+      boost::intrusive_ptr<Layer> const& layer,
+      draw::LineStyle const& line_style, std::tuple<Args...>&& args)
   {
-    return create_connector(layer, line_style, color::white, arrow_head_shape_from, arrow_head_shape_to, from, to);
+    using type_of_first_arg = std::tuple_element_t<0, std::tuple<Args...>>;
+    if constexpr (std::is_same_v<type_of_first_arg, Color> ||
+                  std::is_same_v<type_of_first_arg, typename Connector::ArrowHeadShape>)
+    {
+      if constexpr (std::is_same_v<type_of_first_arg, Color>)
+        fill_color = std::get<0>(args);
+      else
+      {
+        if constexpr (std::is_same_v<std::tuple_element_t<1, std::tuple<Args...>>, typename Connector::ArrowHeadShape>)
+          arrow_head_shape_from = std::get<0>(args);
+        else
+          arrow_head_shape_to = std::get<0>(args);
+      }
+      return create_connector_helper(fill_color, arrow_head_shape_from, arrow_head_shape_to, layer, line_style, tuple_tail(std::move(args)));
+    }
+    else
+    {
+      Connector plot_connector = std::apply([&](auto&&... unpacked_args) -> Connector {
+        return {std::forward<decltype(unpacked_args)>(unpacked_args)..., arrow_head_shape_from, arrow_head_shape_to};
+      }, std::move(args));
+
+      add_connector(layer, line_style, fill_color, arrow_head_shape_from, arrow_head_shape_to, plot_connector);
+      return plot_connector;
+    }
   }
 
+ public:
+  // Create and draw a connector on layer, using args... and line_style.
+  // Args can optionally start with a fill_color and/or zero, one or two ArrowHeadShape arguments.
+  template<typename... Args>
   [[nodiscard]] Connector create_connector(boost::intrusive_ptr<Layer> const& layer,
-      draw::LineStyle const& line_style, Color fill_color, Connector::ArrowHeadShape arrow_head_shape_to,
-      cairowindow::Point const& from, cairowindow::Point const& to)
+      draw::LineStyle const& line_style, Args&&... args)
   {
-    return create_connector(layer, line_style, fill_color, Connector::no_arrow, arrow_head_shape_to, from, to);
-  }
-
-  [[nodiscard]] Connector create_connector(boost::intrusive_ptr<Layer> const& layer,
-      draw::LineStyle const& line_style,
-      Connector::ArrowHeadShape arrow_head_shape_to,
-      cairowindow::Point const& from, cairowindow::Point const& to)
-  {
-    return create_connector(layer, line_style, color::white, Connector::no_arrow, arrow_head_shape_to, from, to);
-  }
-
-  [[nodiscard]] Connector create_connector(boost::intrusive_ptr<Layer> const& layer,
-      draw::LineStyle const& line_style, Color fill_color,
-      cairowindow::Point const& from, cairowindow::Point const& to)
-  {
-    return create_connector(layer, line_style, fill_color, Connector::no_arrow, Connector::open_arrow, from, to);
-  }
-
-  [[nodiscard]] Connector create_connector(boost::intrusive_ptr<Layer> const& layer,
-      draw::LineStyle const& line_style,
-      cairowindow::Point const& from, cairowindow::Point const& to)
-  {
-    return create_connector(layer, line_style, color::white, Connector::no_arrow, Connector::open_arrow, from, to);
+    Color fill_color = color::white;
+    Connector::ArrowHeadShape arrow_head_shape_from = Connector::no_arrow;
+    Connector::ArrowHeadShape arrow_head_shape_to = Connector::open_arrow;
+    return create_connector_helper(fill_color, arrow_head_shape_from, arrow_head_shape_to, layer,
+        line_style, std::make_tuple(std::forward<Args>(args)...));
   }
 
   [[nodiscard]] Slider create_slider(boost::intrusive_ptr<Layer> const& layer,

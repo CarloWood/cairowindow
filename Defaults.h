@@ -1,7 +1,7 @@
 #pragma once
 
-#define DEFAULT_FROM(Defaults, member) \
-  utils::defaults::default_##member##_from<Defaults, decltype(member)>()
+#define DECLARE_WITH_DEFAULT_FROM(type, member, Defaults) \
+  type member = utils::defaults::default_##member##_from<Defaults, type>()
 
 #define DECLARE_DEFAULTS_HAS_MEMBER(member) \
   namespace utils::defaults { \

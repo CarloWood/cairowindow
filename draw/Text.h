@@ -60,12 +60,12 @@ struct TextStyleDelta
 template<typename Defaults = DefaultTextStyleDefaults>
 struct TextStyle
 {
-  TextPosition position   = DEFAULT_FROM(Defaults, position);
-  double font_size        = DEFAULT_FROM(Defaults, font_size);
-  Color color             = DEFAULT_FROM(Defaults, color);
-  std::string font_family = DEFAULT_FROM(Defaults, font_family);
-  double offset           = DEFAULT_FROM(Defaults, offset);
-  double rotation         = DEFAULT_FROM(Defaults, rotation);
+  DECLARE_WITH_DEFAULT_FROM(TextPosition, position, Defaults);
+  DECLARE_WITH_DEFAULT_FROM(double, font_size, Defaults);
+  DECLARE_WITH_DEFAULT_FROM(Color, color, Defaults);
+  DECLARE_WITH_DEFAULT_FROM(std::string, font_family, Defaults);
+  DECLARE_WITH_DEFAULT_FROM(double, offset, Defaults);
+  DECLARE_WITH_DEFAULT_FROM(double, rotation, Defaults);
 
   void setup(cairo_t* cr)
   {

@@ -218,28 +218,33 @@ Line Plot::create_line(boost::intrusive_ptr<Layer> const& layer,
   return plot_line;
 }
 
-Connector Plot::create_connector(boost::intrusive_ptr<Layer> const& layer,
+void Plot::add_connector(boost::intrusive_ptr<Layer> const& layer,
     draw::LineStyle const& line_style, Color fill_color,
     Connector::ArrowHeadShape arrow_head_shape_from, Connector::ArrowHeadShape arrow_head_shape_to,
-    cairowindow::Point const& from, cairowindow::Point const& to)
+    Connector const& plot_connector)
 {
-  Connector plot_connector(from, to, arrow_head_shape_from, arrow_head_shape_to,
-      std::make_shared<draw::Connector>(convert_x(from.x()), convert_y(from.y()), convert_x(to.x()), convert_y(to.y()),
-        line_style, fill_color, arrow_head_shape_from, arrow_head_shape_to));
+  cairowindow::Point const& from = plot_connector.from();
+  cairowindow::Point const& to = plot_connector.to();
+
+  plot_connector.draw_object_ = std::make_shared<draw::Connector>(
+      convert_x(from.x()), convert_y(from.y()), convert_x(to.x()), convert_y(to.y()),
+      line_style, fill_color, arrow_head_shape_from, arrow_head_shape_to);
   layer->draw(plot_connector.draw_object_);
   plot_connector.draw_object_->draw_arrow_heads(layer);
-  return plot_connector;
 }
 
-Rectangle Plot::create_rectangle(boost::intrusive_ptr<Layer> const& layer,
-    draw::RectangleStyle const& rectangle_style,
-    double offset_x, double offset_y, double width, double height)
+void Plot::add_rectangle(boost::intrusive_ptr<Layer> const& layer,
+    draw::RectangleStyle const& rectangle_style, Rectangle const& plot_rectangle)
 {
-  Rectangle plot_rectangle(offset_x, offset_y, width, height,
-      std::make_shared<draw::Rectangle>(convert_x(offset_x), convert_y(offset_y), convert_x(offset_x + width), convert_y(offset_y + height),
-        rectangle_style));
+  double offset_x = plot_rectangle.offset_x();
+  double offset_y = plot_rectangle.offset_y();
+  double width = plot_rectangle.width();
+  double height = plot_rectangle.height();
+
+  plot_rectangle.draw_object_ = std::make_shared<draw::Rectangle>(
+      convert_x(offset_x), convert_y(offset_y), convert_x(offset_x + width), convert_y(offset_y + height),
+      rectangle_style);
   layer->draw(plot_rectangle.draw_object_);
-  return plot_rectangle;
 }
 
 Arc Plot::create_arc(boost::intrusive_ptr<Layer> const& layer,
