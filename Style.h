@@ -84,8 +84,8 @@ using utils::has_print_on::operator<<;
     cairowindow_##Class##_FOREACH_MEMBER(CAIROWINDOW_DECLARE_MEMBER)\
    public:\
     Class##Style(Class##StyleParams params) :\
-      Base##Style({REMOVE_TRAILING_COMMA(cairowindow_##Base##_FOREACH_STYLE_MEMBER(CAIROWINDOW_BASECLASS_PARAM_LIST))}),\
-      REMOVE_TRAILING_COMMA(cairowindow_##Class##_FOREACH_MEMBER(CAIROWINDOW_INITIALIZER_LIST)) { }\
+      Base##Style({REMOVE_TRAILING_COMMA(cairowindow_##Base##_FOREACH_STYLE_MEMBER(CAIROWINDOW_BASECLASS_PARAM_LIST))}) \
+      REMOVE_TRAILING_COMMA(, cairowindow_##Class##_FOREACH_MEMBER(CAIROWINDOW_INITIALIZER_LIST)) { }\
     Class##Style operator()(Class##StyleParamsDelta delta) const\
     {\
       Class##Style style(*this);\

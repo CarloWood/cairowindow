@@ -59,7 +59,7 @@ int main()
     draw::LineStyle solid_line_style({.line_color = color::black, .line_width = 1.0});
     draw::LineStyle line_style({.line_color = color::black, .line_width = 1.0, .dashes = {10.0, 5.0}});
     draw::ArcStyle arc_style{.line_color = color::blue, .line_width = 1.0};
-    draw::RectangleStyle rectangle_style{.line_color = color::red, .line_width = 1.0};
+    draw::RectangleStyle rectangle_style({.line_color = color::red, .line_width = 1.0});
 
     // Create a point P₀.
     auto plot_P0 = plot.create_point(second_layer, point_style, {-2.0, -0.0});
