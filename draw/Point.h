@@ -88,7 +88,7 @@ class Point : public Shape
  public:
   Point(double x, double y, PointStyle style) :
     Shape({x, y, style.is_filled() ? 5.0 : 4.0, style.is_filled() ? 5.0 : 4.0},
-          { .line_color = style.line_color(), .fill_color = style.fill_color(), .position = at_corner, .shape = style.get_shape() }),
+          ShapeStyleParams{ .line_color = style.line_color(), .fill_color = style.fill_color(), .position = at_corner, .shape = style.get_shape() }),
     point_style_(style)
   {
     DoutEntering(dc::cairowindow, "Point(" << x << ", " << y << ", style) [" << this << "]");

@@ -1,26 +1,39 @@
 #pragma once
 
+#include "Shape.h"
 #include "cairowindow/LayerRegion.h"
+#include "cairowindow/Line.h"
 #include "cairowindow/Color.h"
 
 namespace cairowindow::draw {
 
-struct CircleStyle
+// List the additional members of CircleStyle (none).
+#define cairowindow_Circle_FOREACH_MEMBER(X, ...)
+
+// CircleStyle is derived from ShapeStyle.
+#define cairowindow_Circle_FOREACH_STYLE_MEMBER(X, ...) \
+  cairowindow_Shape_FOREACH_STYLE_MEMBER(X, __VA_ARGS__) \
+  cairowindow_Circle_FOREACH_MEMBER(X, __VA_ARGS__)
+
+// Define default values for CircleStyle.
+struct CircleStyleParamsDefault : ShapeStyleParamsDefault
 {
-  // These must correspond 1:1 with the first four elements of ShapeStyle!
-  Color line_color = color::black;
-  Color fill_color = color::transparent;
-  double line_width = 1.0;
-  ShapePosition position = at_corner;    // The center of the circle is normally at the top-left corner.
+  // Override defaults from ShapeStyleParamsDefault.
+  static constexpr Color line_color = color::black;
+  static constexpr double line_width = 1.0;
+  static constexpr Color fill_color = color::transparent;
+  static constexpr ShapePosition position = at_corner;          // The center of the circle is normally at the top-left corner.
+  static constexpr ShapeEnum shape = ellipse;
 };
+
+// Declare CircleStyle, derived from ShapeStyle.
+DECLARE_STYLE_WITH_BASE(Circle, Shape, CircleStyleParamsDefault);
 
 class Circle : public Shape
 {
  public:
-  Circle(Rectangle const& geometry, CircleStyle style) :
-    Shape(geometry, ShapeStyle{style.line_color, style.fill_color, style.line_width, style.position, ellipse}) { }
+  Circle(Rectangle const& geometry, CircleStyle style) : Shape(geometry, style({.shape = ellipse})) { }
 
-  CircleStyle& style() { return reinterpret_cast<CircleStyle&>(style_); }
   CircleStyle const& style() const { return reinterpret_cast<CircleStyle const&>(style_); }
 };
 

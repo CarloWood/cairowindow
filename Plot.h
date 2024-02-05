@@ -500,7 +500,7 @@ class Plot
       draw::LineStyle const& line_style,
       Args&&... args)
   {
-    return create_circle(layer, draw::CircleStyle{.line_color = line_style.line_color(), .line_width = line_style.line_width()},
+    return create_circle(layer, draw::CircleStyle({.line_color = line_style.line_color(), .line_width = line_style.line_width()}),
         std::forward<Args>(args)...);
   }
 

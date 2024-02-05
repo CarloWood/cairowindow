@@ -37,7 +37,7 @@ int main()
 #if 0
     // Draw something on the background layer.
     auto red_square = std::make_shared<draw::Shape>(Rectangle{50, 50, 350, 250},
-        draw::ShapeStyle{.line_color = color::red, .shape = draw::rectangle});
+        draw::ShapeStyleParams{.line_color = color::red, .shape = draw::rectangle});
     background_layer->draw(red_square);
 #endif
 

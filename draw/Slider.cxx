@@ -12,9 +12,9 @@ SliderHandle::SliderHandle(Slider const* parent) :
      {parent->track().offset_x() + ((parent->track().orientation() == SliderTrack::horizontal) ? parent->horizontal_position_pixels() : 0),
       parent->track().offset_y() + ((parent->track().orientation() == SliderTrack::vertical) ? parent->vertical_position_pixels() : 0),
       1.5 * parent->track().width(), 1.5 * parent->track().width()},
-     { .line_color = Color{0.5, 0.5, 0.5, 0.5},
-       .fill_color = color::white,
+     ShapeStyleParams{ .line_color = Color{0.5, 0.5, 0.5, 0.5},
        .line_width = SliderTrack::track_width,
+       .fill_color = color::white,
        .position = at_corner,
        .shape = ellipse })
 {

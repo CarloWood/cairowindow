@@ -15,7 +15,7 @@ namespace cairowindow::draw {
 
 // RectangleStyle is derived from LineStyle.
 #define cairowindow_Rectangle_FOREACH_STYLE_MEMBER(X, ...) \
-  cairowindow_Line_FOREACH_MEMBER(X, __VA_ARGS__) \
+  cairowindow_Line_FOREACH_STYLE_MEMBER(X, __VA_ARGS__) \
   cairowindow_Rectangle_FOREACH_MEMBER(X, __VA_ARGS__)
 
 // Define default values for RectangleStyle.

@@ -15,7 +15,7 @@ namespace cairowindow::draw {
 
 // ArcStyle is derived from LineStyle.
 #define cairowindow_Arc_FOREACH_STYLE_MEMBER(X, ...) \
-  cairowindow_Line_FOREACH_MEMBER(X, __VA_ARGS__) \
+  cairowindow_Line_FOREACH_STYLE_MEMBER(X, __VA_ARGS__) \
   cairowindow_Arc_FOREACH_MEMBER(X, __VA_ARGS__)
 
 // Define default values for ArcStyle.

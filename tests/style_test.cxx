@@ -24,7 +24,7 @@ static constexpr int magic_undefined3 = -2;
 
 // FooStyle is derived from BarStyle.
 #define cairowindow_Foo_FOREACH_STYLE_MEMBER(X, ...) \
-  cairowindow_Bar_FOREACH_MEMBER(X, __VA_ARGS__) \
+  cairowindow_Bar_FOREACH_STYLE_MEMBER(X, __VA_ARGS__) \
   cairowindow_Foo_FOREACH_MEMBER(X, __VA_ARGS__)
 
 // Define default values for BarStyle.

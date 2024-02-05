@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Line.h"
+#include "ShapePosition.h"
 #include "cairowindow/LayerRegion.h"
 #include "cairowindow/Color.h"
 #include "utils/square.h"
@@ -8,6 +10,7 @@ namespace cairowindow::draw {
 
 enum ShapeEnum
 {
+  undefined_shape,
   rectangle,
   ellipse,
   triangle,
@@ -33,27 +36,30 @@ static constexpr int number_of_arrow_shapes = circle_arrow_shape + 1 - none_arro
 
 ShapeEnum next_shape();
 
-enum ShapePosition
+// List the additional members of ShapeStyle.
+#define cairowindow_Shape_FOREACH_MEMBER(X, ...) \
+  X(Color, fill_color, Color{}, __VA_ARGS__) \
+  X(ShapePosition, position, undefined_shape_position, __VA_ARGS__) \
+  X(ShapeEnum, shape, undefined_shape, __VA_ARGS__)
+
+// ShapeStyle is derived from LineStyle.
+#define cairowindow_Shape_FOREACH_STYLE_MEMBER(X, ...) \
+  cairowindow_Line_FOREACH_STYLE_MEMBER(X, __VA_ARGS__) \
+  cairowindow_Shape_FOREACH_MEMBER(X, __VA_ARGS__)
+
+// Define default values for ShapeStyle.
+struct ShapeStyleParamsDefault : public LineStyleParamsDefault
 {
-  at_center,
-  at_corner,
-  at_tip
+  // Override defaults from CircleStyleParamsDefault.
+  static constexpr Color line_color = color::transparent;
+  // New defaults.
+  static constexpr Color fill_color = color::transparent;
+  static constexpr ShapePosition position = at_center;
+  static constexpr ShapeEnum shape = rectangle;
 };
 
-struct ShapeStyle
-{
-  // Must start with the same style variables as ArrowHeadStyle and CircleStyle, because we do a reinterpret_cast between these!
-  Color line_color = color::transparent;
-  Color fill_color = color::transparent;
-  double line_width = 2.0;
-  ShapePosition position = at_center;
-  // This only exists in ShapeStyle and ArrowHeadStyle.
-  ShapeEnum shape = rectangle;
-
-#ifdef CWDEBUG
-  void print_on(std::ostream& os) const;
-#endif
-};
+// Declare ShapeStyle, derived from LineStyle.
+DECLARE_STYLE_WITH_BASE(Shape, Line, ShapeStyleParamsDefault);
 
 class Shape : public LayerRegion
 {
@@ -67,17 +73,17 @@ class Shape : public LayerRegion
   Shape(Rectangle const& geometry, ShapeStyle style, double rotation = {}) :
     geometry_(geometry), style_(style), rotation_(rotation)
     {
-      switch (style.shape)
+      switch (style.shape())
       {
         case open_arrow_shape:
         case filled_arrow_shape:
-          arrow_overshoot_ = 0.5 * style_.line_width * std::sqrt(::utils::square(2.0 * geometry_.width() / geometry_.height()) + 1.0);
+          arrow_overshoot_ = 0.5 * style_.line_width() * std::sqrt(::utils::square(2.0 * geometry_.width() / geometry_.height()) + 1.0);
           break;
         case diamond_arrow_shape:
-          arrow_overshoot_ = 0.25 * style_.line_width * std::sqrt(::utils::square(geometry_.width() / geometry_.height()) + 1.0);
+          arrow_overshoot_ = 0.25 * style_.line_width() * std::sqrt(::utils::square(geometry_.width() / geometry_.height()) + 1.0);
           break;
         case circle_arrow_shape:
-          arrow_overshoot_ = 0.5 * style_.line_width;
+          arrow_overshoot_ = 0.5 * style_.line_width();
           break;
         default:        // Stop compiler from complaining.
           break;
@@ -85,7 +91,7 @@ class Shape : public LayerRegion
     }
 
   Rectangle const& geometry() const { return geometry_; }
-  ShapeStyle& style() { return style_; }
+//  ShapeStyle& style() { return style_; }
   ShapeStyle const& style() const { return style_; }
 
   double arrow_overshoot() const { return arrow_overshoot_; }
