@@ -77,6 +77,9 @@ StrokeExtents Shape::do_draw(cairo_t* cr)
   }
   switch (style_.shape())
   {
+    case undefined_shape:
+      ASSERT(false);    // Should never happen.
+      [[fallthrough]];
     case rectangle:
       //
       // -1,-1 ----> 1,-1

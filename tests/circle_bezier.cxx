@@ -45,7 +45,7 @@ int main()
     draw::PointStyle point_style({.color_index = 0, .filled_shape = 1});
     draw::LineStyle curve_line_style({.line_width = 1.0});
     draw::LineStyle line_style({.line_color = color::red, .line_width = 1.0});
-    draw::BezierCurveStyle bezier_curve_style{.line_color = Color::next_color(), .line_width = 1.0};
+    draw::BezierCurveStyle bezier_curve_style({.line_color = Color::next_color(), .line_width = 1.0});
     draw::TextStyle<> slider_style{.position = draw::centered_below, .font_size = 18.0, .offset = 10};
 
     auto slider_velocity = plot.create_slider(second_layer, {978, 83, 7, 400}, 105.0, 0.0, 150.0);

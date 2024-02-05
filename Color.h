@@ -69,6 +69,7 @@ constexpr Color black{0.0, 0.0, 0.0};
 constexpr Color white{1.0, 1.0, 1.0};
 constexpr Color gray{0.5, 0.5, 0.5};
 constexpr Color light_gray{0.8, 0.8, 0.8};
+constexpr Color dark_gray{0.2, 0.2, 0.2};
 constexpr Color purple{0.5, 0.0, 0.5};
 constexpr Color orange{1.0, 0.647, 0.0};
 constexpr Color brown{0.647, 0.165, 0.165};

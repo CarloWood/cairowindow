@@ -10,13 +10,23 @@
 
 namespace cairowindow::draw {
 
-struct BezierCurveStyle
+// List the additional members of BezierCurveStyle (none).
+#define cairowindow_BezierCurve_FOREACH_MEMBER(X, ...)
+
+// BezierCurveStyle is derived from LineStyle.
+#define cairowindow_BezierCurve_FOREACH_STYLE_MEMBER(X, ...) \
+  cairowindow_Line_FOREACH_STYLE_MEMBER(X, __VA_ARGS__) \
+  cairowindow_BezierCurve_FOREACH_MEMBER(X, __VA_ARGS__)
+
+// Define default values for BezierCurveStyle.
+struct BezierCurveStyleParamsDefault : LineStyleParamsDefault
 {
-  Color line_color = color::gray;
-  double line_width = 2.0;
-  std::vector<double> dashes = {};
-  double dashes_offset = 0.0;
+  // Override defaults from LineStyleParamsDefault.
+  static constexpr Color line_color = color::dark_gray;
 };
+
+// Declare BezierCurveStyle, derived from LineStyle.
+DECLARE_STYLE_WITH_BASE(BezierCurve, Line, BezierCurveStyleParamsDefault);
 
 class BezierCurve : public LayerRegion
 {
@@ -43,10 +53,10 @@ class BezierCurve : public LayerRegion
 #ifdef CWDEBUG
     using namespace debugcairo;
 #endif
-    cairo_set_source_rgba(cr, style_.line_color.red(), style_.line_color.green(), style_.line_color.blue(), style_.line_color.alpha());
-    cairo_set_line_width(cr, style_.line_width);
-    if (!style_.dashes.empty())
-      cairo_set_dash(cr, style_.dashes.data(), style_.dashes.size(), style_.dashes_offset);
+    cairo_set_source_rgba(cr, style_.line_color().red(), style_.line_color().green(), style_.line_color().blue(), style_.line_color().alpha());
+    cairo_set_line_width(cr, style_.line_width());
+    if (!style_.dashes().empty())
+      cairo_set_dash(cr, style_.dashes().data(), style_.dashes().size(), style_.dashes_offset());
 
     cairo_move_to(cr, x0_, y0_);
     cairo_curve_to(cr, x1_, y1_, x2_, y2_, x3_, y3_);
