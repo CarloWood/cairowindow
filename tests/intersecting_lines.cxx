@@ -236,9 +236,7 @@ int main()
 
       // Define styles.
       utils::ColorPool<32> color_pool;
-      int color_index = color_pool.get_and_use_color();
-      int filled_shape = 10;
-      draw::PointStyle point_style(color_index, filled_shape);
+      draw::PointStyle point_style({.color_index = color_pool.get_and_use_color(), .filled_shape = 10});
       draw::LineStyle line_style{.line_color = color::black, .line_width = 1.0};
       draw::TextStyle<> point_label_style{.position = draw::centered_left_of, .font_size = 18.0, .offset = 10};
       draw::LineStyle dashed_line_style{.line_color = color::black, .line_width = 1.0, .dashes = {10.0, 5.0}};

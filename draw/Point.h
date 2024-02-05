@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Shape.h"
+#include "cairowindow/Style.h"
 #include <array>
 #ifdef CWDEBUG
 #include "cairowindow/debug_channel.h"
@@ -8,17 +9,30 @@
 
 namespace cairowindow::draw {
 
-struct PointStyleDelta
-{
-  static constexpr int undefined_magic = -1;
+#define cairowindow_PointBase_FOREACH_MEMBER(X, ...) \
+  X(int, color_index, -1, __VA_ARGS__) \
+  X(int, filled_shape, -1, __VA_ARGS__)
 
-  int color_index = undefined_magic;
-  int filled_shape = undefined_magic;
+#define cairowindow_PointBase_FOREACH_STYLE_MEMBER(X, ...) \
+  cairowindow_PointBase_FOREACH_MEMBER(X, __VA_ARGS__)
+
+// Define default values for PointStyle.
+struct PointStyleParamsDefault
+{
+  static constexpr int color_index = 0;
+  static constexpr int filled_shape = 0;
 };
 
-struct PointStyle
+// Declare PointStyle.
+DECLARE_STYLE(PointBase, PointStyleParamsDefault);
+
+// Extend PointBaseStyle with some member functions.
+struct PointStyle : public PointBaseStyle
 {
  public:
+  using PointBaseStyle::PointBaseStyle;
+  PointStyle(PointBaseStyle const& point_style) : PointBaseStyle(point_style) { }
+
   struct FilledShape
   {
     ShapeEnum shape;
@@ -45,37 +59,24 @@ struct PointStyle
   }};
 
  public:
-  int color_index;
-  int filled_shape;
-
   bool is_filled() const
   {
-    return filled_shapes[filled_shape % number_of_shapes].filled;
+    return filled_shapes[m_filled_shape % number_of_shapes].filled;
   }
 
   ShapeEnum get_shape() const
   {
-    return filled_shapes[filled_shape % number_of_shapes].shape;
+    return filled_shapes[m_filled_shape % number_of_shapes].shape;
   }
 
   Color line_color() const
   {
-    return is_filled() ? color::transparent : Color::get_color(color_index);
+    return is_filled() ? color::transparent : Color::get_color(m_color_index);
   };
 
   Color fill_color() const
   {
-    return is_filled() ? Color::get_color(color_index) : color::transparent;
-  }
-
-  PointStyle operator()(PointStyleDelta delta)
-  {
-    PointStyle result{*this};
-    if (delta.color_index != PointStyleDelta::undefined_magic)
-      result.color_index = delta.color_index;
-    if (delta.filled_shape != PointStyleDelta::undefined_magic)
-      result.filled_shape = delta.filled_shape;
-    return result;
+    return is_filled() ? Color::get_color(m_color_index) : color::transparent;
   }
 };
 

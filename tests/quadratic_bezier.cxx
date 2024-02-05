@@ -53,11 +53,9 @@ int main()
     plot.add_to(background_layer, true);
 
     utils::ColorPool<32> color_pool;
-    int color_index = color_pool.get_and_use_color();
+    draw::PointStyle point_style({.color_index = color_pool.get_and_use_color(), .filled_shape = 1});
     int color_index2 = 3; //color_pool.get_and_use_color();
     Dout(dc::notice, "color_index2 = " << color_index2);
-    int filled_shape = 1;
-    draw::PointStyle point_style(color_index, filled_shape);
     draw::TextStyle<> label_style{.position = draw::centered_left_of, .font_size = 18.0, .offset = 10};
     draw::TextStyle<> slider_style{.position = draw::centered_below, .font_size = 18.0, .offset = 10};
     draw::LineStyle curve_line_style{.line_width = 1.0};

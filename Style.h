@@ -75,6 +75,7 @@ using utils::has_print_on::operator<<;
 #define DECLARE_STYLE_WITH_BASE(Class, Base, Defaults) \
   CAIROWINDOW_DECLARE_STYLE_PARAMS(Class, Defaults); \
   class Class##Style : public Base##Style {\
+   protected: \
     cairowindow_##Class##_FOREACH_MEMBER(CAIROWINDOW_DECLARE_MEMBER)\
    public:\
     Class##Style(Class##StyleParams params) :\
