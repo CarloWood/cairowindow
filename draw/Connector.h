@@ -36,12 +36,12 @@ class Connector : public Line
     }
     if (arrow_head_shape_from != cairowindow::Connector::no_arrow)
       arrow_head_from_ = std::make_shared<ArrowHead>(x1, y1, Direction{{x2, y2}, {x1, y1}}, // Pointing to the tip at x1,y1
-          ArrowHeadStyle{.line_color = style.line_color(), .fill_color = fill_color, .line_width = style.line_width(),
-           .shape = Connector::shape(arrow_head_shape_from)});
+          ArrowHeadStyle({.line_color = style.line_color(), .line_width = style.line_width(), .fill_color = fill_color,
+           .shape = Connector::shape(arrow_head_shape_from)}));
     if (arrow_head_shape_to != cairowindow::Connector::no_arrow)
       arrow_head_to_ = std::make_shared<ArrowHead>(x2, y2, Direction{{x1, y1}, {x2, y2}},
-          ArrowHeadStyle{.line_color = style.line_color(), .fill_color = fill_color, .line_width = style.line_width(),
-           .shape = Connector::shape(arrow_head_shape_to)});
+          ArrowHeadStyle({.line_color = style.line_color(), .line_width = style.line_width(), .fill_color = fill_color,
+           .shape = Connector::shape(arrow_head_shape_to)}));
   }
 
   ArrowHeadShape arrow_head_shape_from() const { return arrow_head_shape_from_; }

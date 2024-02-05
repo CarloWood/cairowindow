@@ -7,17 +7,31 @@
 
 namespace cairowindow::draw {
 
-struct ArrowHeadStyle
+// List the additional members of ArrowHeadBaseStyle (none).
+#define cairowindow_ArrowHeadBase_FOREACH_MEMBER(X, ...)
+
+// ArrowHeadBaseStyle is derived from ShapeStyle.
+#define cairowindow_ArrowHeadBase_FOREACH_STYLE_MEMBER(X, ...) \
+  cairowindow_Shape_FOREACH_STYLE_MEMBER(X, __VA_ARGS__) \
+  cairowindow_ArrowHeadBase_FOREACH_MEMBER(X, __VA_ARGS__)
+
+// Define default values for ArrowHeadBaseStyle.
+struct ArrowHeadBaseStyleParamsDefault : ShapeStyleParamsDefault
 {
-  // Must start with the same style variables as ShapeStyle, because we do a reinterpret_cast between the two!
-  Color line_color = color::transparent;
-  Color fill_color = color::transparent;
-  double line_width = 1.0;
-  ShapePosition position = at_tip;
-  ShapeEnum shape = open_arrow_shape;
+};
+
+// Declare ArrowHeadBaseStyle, derived from ShapeStyle.
+DECLARE_STYLE_WITH_BASE(ArrowHeadBase, Shape, ArrowHeadBaseStyleParamsDefault);
+
+// Extend ArrowHeadStyle with a member function.
+class ArrowHeadStyle : public ArrowHeadBaseStyle
+{
+ public:
+  using ArrowHeadBaseStyle::ArrowHeadBaseStyle;
+  ArrowHeadStyle(ArrowHeadBaseStyle const& style) : ArrowHeadBaseStyle(style) { }
 
   // Return an index usable for s_arrow_head_size.
-  int arrow() const { return shape - none_arrow_shape; }
+  int arrow() const { return m_shape - none_arrow_shape; }
 };
 
 class ArrowHead : public Shape
