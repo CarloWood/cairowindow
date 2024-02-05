@@ -65,7 +65,7 @@ int main()
 //    background_layer->draw(&plot_area);
 
     // Add some text.
-//    auto text = std::make_shared<draw::Text>("Hello world", draw::centered_below, 350, 350, draw::TextStyle{.font_size = 24.0});
+//    auto text = std::make_shared<draw::Text>("Hello world", draw::centered_below, 350, 350, draw::TextStyle({.font_size = 24.0}));
 //    second_layer->draw(text);
 
     plot::Plot plot(window.geometry(), { .grid = {.color = color::orange} },
@@ -80,7 +80,7 @@ int main()
     draw::PointStyle point_style({.color_index = color_pool.get_and_use_color(), .filled_shape = 1});
     int color_index2 = 3; //color_pool.get_and_use_color();
     Dout(dc::notice, "color_index2 = " << color_index2);
-    draw::TextStyle<> point_label_style{.position = draw::centered_left_of, .font_size = 18.0, .offset = 10};
+    draw::TextStyle point_label_style({.position = draw::centered_left_of, .font_size = 18.0, .offset = 10});
     draw::LineStyle curve_line_style({.line_width = 1.0});
     draw::LineStyle solid_line_style({.line_color = color::black, .line_width = 1.0});
     draw::LineStyle line_style({.line_color = color::black, .line_width = 1.0, .dashes = {10.0, 5.0}});
@@ -119,12 +119,10 @@ int main()
 
       // P₁, the point at t=1.
       auto P1 = plot.create_point(second_layer, point_style, {xt(1.0), yt(1.0)});
-      point_label_style.position = draw::centered_left_of;
       auto P1_label = plot.create_text(second_layer, point_label_style({.position = draw::centered_right_of}), P1, "P₁");
 
       // V, the parabola vertex point resides at t=v.
       auto V = plot.create_point(second_layer, point_style, {xt(v), yt(v)});
-      point_label_style.position = draw::centered_left_of;
       auto V_label = plot.create_text(second_layer, point_label_style({.position = draw::centered_below}), V, "V");
 
       // Point on symmetry line at distance 1 from V.
@@ -150,7 +148,6 @@ int main()
 
       // P₀.
       auto plot_P0 = plot.create_point(second_layer, point_style, P0);
-      point_label_style.position = draw::centered_left_of;
       auto P0_label = plot.create_text(second_layer, point_label_style, P0, "P₀");
 
       // Draw a cirle around the midpoint of P₀P₁ with radius |P₀P₁|/2.

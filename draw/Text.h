@@ -3,7 +3,6 @@
 #include "cairowindow/LayerRegion.h"
 #include "cairowindow/Color.h"
 #include "cairowindow/StrokeExtents.h"
-#include "cairowindow/Defaults.h"
 #include <string>
 #ifdef CWDEBUG
 #include "cairowindow/debug_channel.h"
@@ -14,7 +13,7 @@ namespace cairowindow::draw {
 
 enum TextPosition
 {
-  undefined,
+  undefined_text_position,
   above_right_of,
   above_left_of,
   below_right_of,
@@ -26,14 +25,20 @@ enum TextPosition
   centered
 };
 
-DECLARE_DEFAULTS_HAS_MEMBER(position)
-DECLARE_DEFAULTS_HAS_MEMBER(font_size)
-DECLARE_DEFAULTS_HAS_MEMBER(color)
-DECLARE_DEFAULTS_HAS_MEMBER(font_family)
-DECLARE_DEFAULTS_HAS_MEMBER(offset)
-DECLARE_DEFAULTS_HAS_MEMBER(rotation)
+// List the members of TextStyle.
+#define cairowindow_TextBase_FOREACH_MEMBER(X, ...) \
+  X(draw::TextPosition, position, undefined_text_position, __VA_ARGS__) \
+  X(double, font_size, -1.0, __VA_ARGS__) \
+  X(Color, color, Color{}, __VA_ARGS__) \
+  X(std::string, font_family, "", __VA_ARGS__) \
+  X(double, offset, 12345678.9, __VA_ARGS__) \
+  X(double, rotation, -3000000.0, __VA_ARGS__)
 
-struct DefaultTextStyleDefaults
+// Mandatory macro.
+#define cairowindow_TextBase_FOREACH_STYLE_MEMBER(X, ...) \
+  cairowindow_TextBase_FOREACH_MEMBER(X, __VA_ARGS__)
+
+struct TextStyleParamsDefault
 {
   static constexpr draw::TextPosition position = draw::above_right_of;
   static constexpr double font_size = 12.0;
@@ -43,99 +48,42 @@ struct DefaultTextStyleDefaults
   static constexpr double rotation = 0.0;        // Clock-wise rotation in radians.
 };
 
-struct TextStyleDelta
-{
-  static constexpr double undefined_font_size_magic = -1.0;
-  static constexpr double undefined_offset_magic = 12345678.9;
-  static constexpr double undefined_rotation_magic = -3000000.0;
+// Declare TextBaseStyle.
+DECLARE_STYLE(TextBase, TextStyleParamsDefault);
 
-  TextPosition position   = undefined;
-  double font_size        = undefined_font_size_magic;
-  Color color{};
-  std::string font_family{};
-  double offset           = undefined_offset_magic;
-  double rotation         = undefined_rotation_magic;
-};
-
-template<typename Defaults = DefaultTextStyleDefaults>
-struct TextStyle
+// Extend TextStyleBase with a member function.
+class TextStyle : public TextBaseStyle
 {
-  DECLARE_WITH_DEFAULT_FROM(TextPosition, position, Defaults);
-  DECLARE_WITH_DEFAULT_FROM(double, font_size, Defaults);
-  DECLARE_WITH_DEFAULT_FROM(Color, color, Defaults);
-  DECLARE_WITH_DEFAULT_FROM(std::string, font_family, Defaults);
-  DECLARE_WITH_DEFAULT_FROM(double, offset, Defaults);
-  DECLARE_WITH_DEFAULT_FROM(double, rotation, Defaults);
+ public:
+  using TextBaseStyle::TextBaseStyle;
+  TextStyle(TextBaseStyle const& text_style) : TextBaseStyle(text_style) { }
 
   void setup(cairo_t* cr)
   {
-    DoutEntering(dc::cairowindow, "TextStyle<" << libcwd::type_info_of<Defaults>().demangled_name() << ">::setup(" << cr << ") [" << this << "]");
+    DoutEntering(dc::cairowindow, "TextStyle::setup(" << cr << ") [" << this << "]");
 #ifdef CWDEBUG
     using namespace debugcairo;
 #endif
-    cairo_select_font_face(cr, font_family.c_str(), CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
-    cairo_set_font_size(cr, font_size);
-    cairo_set_source_rgb(cr, color.red(), color.green(), color.blue());
+    cairo_select_font_face(cr, m_font_family.c_str(), CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
+    cairo_set_font_size(cr, m_font_size);
+    cairo_set_source_rgb(cr, m_color.red(), m_color.green(), m_color.blue());
   }
-
-  TextStyle operator()(TextStyleDelta delta)
-  {
-    TextStyle result{*this};
-    if (delta.position != undefined)
-      result.position = delta.position;
-    if (delta.font_size != TextStyleDelta::undefined_font_size_magic)
-      result.font_size = delta.font_size;
-    if (delta.color.is_defined())
-      result.color = delta.color;
-    if (!delta.font_family.empty())
-      result.font_family = delta.font_family;
-    if (delta.offset != TextStyleDelta::undefined_offset_magic)
-      result.offset = delta.offset;
-    if (delta.rotation != TextStyleDelta::undefined_rotation_magic)
-      result.rotation = delta.rotation;
-    return result;
-  }
-
-#ifdef CWDEBUG
-  friend std::ostream& operator<<(std::ostream& os, TextStyle const* text_style_ptr)
-  {
-    os << "TextStyle*";
-    return os;
-  }
-#endif
-};
-
-struct TextStyleNoDefault : TextStyle<>
-{
-  TextStyleNoDefault() = default;
-
-  template<typename Defaults>
-  TextStyleNoDefault(TextStyle<Defaults> const& text_style) :
-    TextStyle<>{
-      .position = text_style.position,
-      .font_size = text_style.font_size,
-      .color = text_style.color,
-      .font_family = text_style.font_family,
-      .offset = text_style.offset,
-      .rotation = text_style.rotation}
-  { }
 };
 
 class Text : public LayerRegion
 {
  private:
-  TextStyleNoDefault style_;
+  TextStyle style_;
   std::string text_;
   double pos_x_{};
   double pos_y_{};
 
  public:
-  Text() = default;
-  Text(std::string const& text, double pos_x, double pos_y, TextStyleNoDefault style) :
+  Text(std::string const& text, double pos_x, double pos_y, TextStyle style) :
     style_(style), text_(text), pos_x_(pos_x), pos_y_(pos_y) { }
 
   // Accessors.
-  TextStyleNoDefault const& style() const { return style_; }
+  TextStyle const& style() const { return style_; }
   std::string const& text() const { return text_; }
   double pos_x() const { return pos_x_; }
   double pos_y() const { return pos_y_; }
@@ -170,44 +118,44 @@ class Text : public LayerRegion
     Dout(dc::cairowindow, "Drawing \"" << text_ << "\" at position (" << pos_x_ << ", " << pos_y_ << ")");
     cairo_text_extents(cr, text_.c_str(), &extents);
     cairo_translate(cr, pos_x_, pos_y_);
-    cairo_rotate(cr, style_.rotation);
+    cairo_rotate(cr, style_.rotation());
     double tx = 0;
     double ty = 0;
-    switch (style_.position)
+    switch (style_.position())
     {
-      case undefined:
+      case undefined_text_position:
         ASSERT(false);
       case above_right_of:
-        tx += style_.offset;
+        tx += style_.offset();
         break;
       case above_left_of:
-        tx -= style_.offset;
+        tx -= style_.offset();
         tx -= extents.x_advance;
         break;
       case below_right_of:
-        tx += style_.offset;
+        tx += style_.offset();
         ty -= extents.y_bearing;
         break;
       case below_left_of:
-        tx -= style_.offset;
+        tx -= style_.offset();
         tx -= extents.x_advance;
         ty -= extents.y_bearing;
         break;
       case centered_right_of:
-        tx += style_.offset;
+        tx += style_.offset();
         ty -= 0.5 * extents.y_bearing;
         break;
       case centered_left_of:
-        tx -= style_.offset;
+        tx -= style_.offset();
         tx -= extents.x_advance;
         ty -= 0.5 * extents.y_bearing;
         break;
       case centered_above:
-        ty -= style_.offset;
+        ty -= style_.offset();
         tx -= extents.x_bearing + 0.5 * extents.width;
         break;
       case centered_below:
-        ty += style_.offset;
+        ty += style_.offset();
         tx -= extents.x_bearing + 0.5 * extents.width;
         ty -= extents.y_bearing;
         break;

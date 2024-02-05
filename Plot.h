@@ -245,6 +245,59 @@ auto tuple_tail(std::tuple<Args...>&& tuple)
 
 } // namespace
 
+} // namespace plot
+namespace draw {
+
+struct TitleStyleDefaults : TextStyleParamsDefault
+{
+  static constexpr TextPosition position = centered;
+  static constexpr double font_size = 24.0;
+};
+
+struct LabelStyleDefaults : TextStyleParamsDefault
+{
+  static constexpr TextPosition position = centered_below;
+  static constexpr double font_size = 18.0;
+};
+
+struct XLabelStyleDefaults : LabelStyleDefaults
+{
+  static constexpr double offset = 10.0;
+};
+
+struct YLabelStyleDefaults : LabelStyleDefaults
+{
+  static constexpr TextPosition position = centered_above;
+  static constexpr double rotation = -0.5 * M_PI;
+  static constexpr double offset = XLabelStyleDefaults::offset;
+};
+
+#define cairowindow_Title_FOREACH_MEMBER cairowindow_TextBase_FOREACH_MEMBER
+#define cairowindow_Title_FOREACH_STYLE_MEMBER cairowindow_TextBase_FOREACH_MEMBER
+#define cairowindow_XLabel_FOREACH_MEMBER cairowindow_TextBase_FOREACH_MEMBER
+#define cairowindow_XLabel_FOREACH_STYLE_MEMBER cairowindow_TextBase_FOREACH_MEMBER
+#define cairowindow_YLabel_FOREACH_MEMBER cairowindow_TextBase_FOREACH_MEMBER
+#define cairowindow_YLabel_FOREACH_STYLE_MEMBER cairowindow_TextBase_FOREACH_MEMBER
+#define cairowindow_Label_FOREACH_MEMBER cairowindow_TextBase_FOREACH_MEMBER
+#define cairowindow_Label_FOREACH_STYLE_MEMBER cairowindow_TextBase_FOREACH_MEMBER
+
+DECLARE_STYLE_WITH_BASE(Title, TextBase, TitleStyleDefaults)
+DECLARE_STYLE_WITH_BASE(XLabel, TextBase, XLabelStyleDefaults)
+DECLARE_STYLE_WITH_BASE(YLabel, TextBase, YLabelStyleDefaults)
+DECLARE_STYLE_WITH_BASE(Label, TextBase, LabelStyleDefaults)
+
+#undef cairowindow_Title_FOREACH_MEMBER
+#undef cairowindow_Title_FOREACH_STYLE_MEMBER
+#undef cairowindow_XLabel_FOREACH_MEMBER
+#undef cairowindow_XLabel_FOREACH_STYLE_MEMBER
+#undef cairowindow_YLabel_FOREACH_MEMBER
+#undef cairowindow_YLabel_FOREACH_STYLE_MEMBER
+#undef cairowindow_Label_FOREACH_MEMBER
+#undef cairowindow_Label_FOREACH_STYLE_MEMBER
+
+} // namespace draw
+namespace plot {
+
 class Plot
 {
  private:
@@ -261,51 +314,20 @@ class Plot
   utils::Vector<Draggable*, ClickableIndex> draggables_;
   utils::Vector<std::function<cairowindow::Point (cairowindow::Point const&)>, ClickableIndex> draggable_restrictions_;
 
-  struct TitleStyleDefaults : draw::DefaultTextStyleDefaults
-  {
-    static constexpr draw::TextPosition position = draw::centered;
-    static constexpr double font_size = 24.0;
-    static constexpr double offset = 0.0;
-  };
-
-  struct LabelStyleDefaults : draw::DefaultTextStyleDefaults
-  {
-    static constexpr draw::TextPosition position = draw::centered_below;
-    static constexpr double font_size = 18.0;
-  };
-
-  struct XLabelStyleDefaults : LabelStyleDefaults
-  {
-    static constexpr double offset = 10.0;
-  };
-
-  struct YLabelStyleDefaults : LabelStyleDefaults
-  {
-    static constexpr draw::TextPosition position = draw::centered_above;
-    static constexpr double rotation = -0.5 * M_PI;
-    static constexpr double offset = XLabelStyleDefaults::offset;
-  };
-
  public:
-  using TitleStyle = draw::TextStyle<TitleStyleDefaults>;
-  using XLabelStyle = draw::TextStyle<XLabelStyleDefaults>;
-  using YLabelStyle = draw::TextStyle<YLabelStyleDefaults>;
-  using LabelStyle = draw::TextStyle<LabelStyleDefaults>;
-
- public:
-  Plot(cairowindow::Rectangle const& geometry, draw::PlotAreaStyle plot_area_style, std::string title, TitleStyle title_style) :
+  Plot(cairowindow::Rectangle const& geometry, draw::PlotAreaStyle plot_area_style, std::string title, draw::TitleStyle title_style) :
     plot_area_(axes_geometry(geometry, plot_area_style.axes_line_width), plot_area_style),
     title_(std::make_shared<draw::Text>(title, plot_area_.geometry().offset_x() + 0.5 * plot_area_.geometry().width(),
-        plot_area_.geometry().offset_y() - 0.5 * plot_area_.geometry().offset_y() - title_style.offset, title_style)) { }
+        plot_area_.geometry().offset_y() - 0.5 * plot_area_.geometry().offset_y() - title_style.offset(), title_style)) { }
 
-  Plot(cairowindow::Rectangle const& geometry, draw::PlotAreaStyle plot_area_style, std::string title, TitleStyle title_style,
-      std::string xlabel, XLabelStyle xlabel_style, std::string ylabel, YLabelStyle ylabel_style) :
+  Plot(cairowindow::Rectangle const& geometry, draw::PlotAreaStyle plot_area_style, std::string title, draw::TitleStyle title_style,
+      std::string xlabel, draw::XLabelStyle xlabel_style, std::string ylabel, draw::YLabelStyle ylabel_style) :
     plot_area_(axes_geometry(geometry, plot_area_style.axes_line_width), plot_area_style),
     title_(std::make_shared<draw::Text>(title, plot_area_.geometry().offset_x() + 0.5 * plot_area_.geometry().width(),
-        plot_area_.geometry().offset_y() - 0.5 * plot_area_.geometry().offset_y() - title_style.offset, title_style)),
+        plot_area_.geometry().offset_y() - 0.5 * plot_area_.geometry().offset_y() - title_style.offset(), title_style)),
     xlabel_(std::make_shared<draw::Text>(xlabel, plot_area_.geometry().offset_x() + 0.5 * plot_area_.geometry().width(),
-        plot_area_.geometry().offset_y() + plot_area_.geometry().height() + XLabelStyleDefaults::offset, xlabel_style)),
-    ylabel_(std::make_shared<draw::Text>(ylabel, plot_area_.geometry().offset_x() - YLabelStyleDefaults::offset,
+        plot_area_.geometry().offset_y() + plot_area_.geometry().height() + draw::XLabelStyleDefaults::offset, xlabel_style)),
+    ylabel_(std::make_shared<draw::Text>(ylabel, plot_area_.geometry().offset_x() - draw::YLabelStyleDefaults::offset,
         plot_area_.geometry().offset_y() + 0.5 * plot_area_.geometry().height(), ylabel_style)) { }
 
   Plot(cairowindow::Rectangle const& geometry, draw::PlotAreaStyle plot_area_style) :
@@ -547,12 +569,12 @@ class Plot
 
   // Add and draw plot_text on layer using text_style.
   void add_text(boost::intrusive_ptr<Layer> const& layer,
-      draw::TextStyle<> const& text_style,
+      draw::TextStyle const& text_style,
       Text const& plot_text);
 
   // Create and draw text on layer at position using text_style.
   [[nodiscard]] Text create_text(boost::intrusive_ptr<Layer> const& layer,
-      draw::TextStyle<> const& text_style,
+      draw::TextStyle const& text_style,
       cairowindow::Point position, std::string const& text)
   {
     Text plot_text(convert_to_pixel(position), text);
@@ -562,7 +584,7 @@ class Plot
 
   // Same, but using pixel coordinates.
   [[nodiscard]] Text create_text(boost::intrusive_ptr<Layer> const& layer,
-      draw::TextStyle<> const& text_style,
+      draw::TextStyle const& text_style,
       cairowindow::Pixel position, std::string const& text)
   {
     Text plot_text(position, text);

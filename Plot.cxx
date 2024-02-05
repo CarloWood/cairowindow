@@ -72,7 +72,7 @@ void Plot::add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio)
   if (title_)
   {
     title_->move_to(plot_area_.geometry().offset_x() + 0.5 * plot_area_.geometry().width(),
-        plot_area_.geometry().offset_y() - 0.5 * plot_area_.geometry().offset_y() - title_->style().offset);
+        plot_area_.geometry().offset_y() - 0.5 * plot_area_.geometry().offset_y() - title_->style().offset());
     layer->draw(title_);
   }
 
@@ -92,9 +92,9 @@ void Plot::add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio)
     double x = plot_area_.geometry().offset_x();
     double y = plot_area_.geometry().offset_y() + plot_area_.geometry().height();
     if (axis == x_axis)
-      y += XLabelStyleDefaults::offset;
+      y += draw::XLabelStyleDefaults::offset;
     else
-      x -= XLabelStyleDefaults::offset;
+      x -= draw::XLabelStyleDefaults::offset;
     for (int tick = 0; tick <= range_ticks_[axis]; ++tick)
     {
       std::ostringstream label_str;
@@ -102,7 +102,7 @@ void Plot::add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio)
         label_str << std::fixed << std::setprecision(precision);
       label_str << label;
       labels_[axis].emplace_back(std::make_shared<draw::Text>(label_str.str(),
-            x, y, LabelStyle{.position = (axis == x_axis) ? draw::centered_below : draw::centered_left_of}));
+            x, y, draw::LabelStyle({.position = (axis == x_axis) ? draw::centered_below : draw::centered_left_of})));
       layer->draw(labels_[axis].back());
       StrokeExtents label_extents = labels_[axis].back()->stroke_extents();
       if (axis == x_axis)
@@ -359,7 +359,7 @@ void Plot::add_bezier_curve(boost::intrusive_ptr<Layer> const& layer,
 // Text
 
 void Plot::add_text(boost::intrusive_ptr<Layer> const& layer,
-    draw::TextStyle<> const& text_style,
+    draw::TextStyle const& text_style,
     Text const& plot_text)
 {
   cairowindow::Pixel position = plot_text.position();

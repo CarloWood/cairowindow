@@ -50,7 +50,7 @@ int main()
     draw::PointStyle point_circle_style({.color_index = color_pool.get_and_use_color(), .filled_shape = 10});
     draw::PointStyle point_square_style({.color_index = color_pool.get_and_use_color(), .filled_shape = 0});
     draw::PointStyle point_triangle_style({.color_index = color_pool.get_and_use_color(), .filled_shape = 7});
-    draw::TextStyle<> label_style{.position = draw::centered_left_of, .font_size = 18.0, .offset = 10};
+    draw::TextStyle label_style({.position = draw::centered_left_of, .font_size = 18.0, .offset = 10});
     draw::LineStyle line_style({.line_color = color::black, .line_width = 1.0, .dashes = {10.0, 5.0}});
     draw::LineStyle curve_line_style({.line_width = 1.0});
 

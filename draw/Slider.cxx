@@ -50,7 +50,7 @@ void Slider::set_value_text()
   value_str << std::setprecision(3) << (rel_value_ * (max_value_ - min_value_) + min_value_);
   //FIXME: position correctly for horizontal sliders.
   value_text_ = std::make_shared<Text>(value_str.str(), track_->offset_x(), track_->offset_y(),
-      TextStyle<>{.position = centered_above, .font_size = 14, .color = color::black, .font_family = "sans-serif", .offset = 10, .rotation = 0});
+      TextStyle({.position = centered_above, .font_size = 14, .color = color::black, .font_family = "sans-serif", .offset = 10, .rotation = 0}));
 }
 
 void Slider::draw_regions_on(Layer* layer)
