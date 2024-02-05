@@ -18,3 +18,6 @@ target_link_libraries(circle_bezier AICxx::cairowindow ${AICXX_OBJECTS_LIST})
 
 add_executable(LachanceSchwartz LachanceSchwartz.cxx)
 target_link_libraries(LachanceSchwartz AICxx::cairowindow ${AICXX_OBJECTS_LIST} Eigen3::Eigen)
+
+add_executable(style_test style_test.cxx)
+target_link_libraries(style_test ${AICXX_OBJECTS_LIST})
