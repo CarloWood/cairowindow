@@ -36,11 +36,11 @@ class Connector : public Line
     }
     if (arrow_head_shape_from != cairowindow::Connector::no_arrow)
       arrow_head_from_ = std::make_shared<ArrowHead>(x1, y1, Direction{{x2, y2}, {x1, y1}}, // Pointing to the tip at x1,y1
-          ArrowHeadStyle{.line_color = style.line_color, .fill_color = fill_color, .line_width = style.line_width,
+          ArrowHeadStyle{.line_color = style.line_color(), .fill_color = fill_color, .line_width = style.line_width(),
            .shape = Connector::shape(arrow_head_shape_from)});
     if (arrow_head_shape_to != cairowindow::Connector::no_arrow)
       arrow_head_to_ = std::make_shared<ArrowHead>(x2, y2, Direction{{x1, y1}, {x2, y2}},
-          ArrowHeadStyle{.line_color = style.line_color, .fill_color = fill_color, .line_width = style.line_width,
+          ArrowHeadStyle{.line_color = style.line_color(), .fill_color = fill_color, .line_width = style.line_width(),
            .shape = Connector::shape(arrow_head_shape_to)});
   }
 
@@ -59,8 +59,8 @@ class Connector : public Line
 
     draw_line(cr);
 
-    return {std::min(x1_, x2_) - 0.5 * style_.line_width, std::min(y1_, y2_) - 0.5 * style_.line_width,
-      std::max(x1_, x2_) + 0.5 * style_.line_width, std::max(y1_, y2_) + 0.5 * style_.line_width};
+    return {std::min(x1_, x2_) - 0.5 * style_.line_width(), std::min(y1_, y2_) - 0.5 * style_.line_width(),
+      std::max(x1_, x2_) + 0.5 * style_.line_width(), std::max(y1_, y2_) + 0.5 * style_.line_width()};
   }
 };
 

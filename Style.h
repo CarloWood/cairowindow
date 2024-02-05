@@ -29,6 +29,10 @@
 #define CAIROWINDOW_UPDATE_STYLE_FROM_DELTA(type, member, undefined_magic, ...) \
   if (delta.member != undefined_magic) style.m_##member = delta.member;
 
+// Declare member accessors of Class##Style classes.
+#define CAIROWINDOW_DECLARE_MEMBER_ACCESSOR(type, member, ...) \
+  type const& member() const { return m_##member; }
+
 #ifdef CWDEBUG
 // Used for debug purposes; print members of the ostream `os`.
 #define CAIROWINDOW_PRINT_ON(type, member, ...) os << #member ":" << member << "; ";
@@ -67,6 +71,7 @@ using utils::has_print_on::operator<<;
       cairowindow_##Class##_FOREACH_STYLE_MEMBER(CAIROWINDOW_UPDATE_STYLE_FROM_DELTA) \
       return style; \
     } \
+    cairowindow_##Class##_FOREACH_MEMBER(CAIROWINDOW_DECLARE_MEMBER_ACCESSOR) \
     CWDEBUG_ONLY(void print_on(std::ostream& os) const { cairowindow_##Class##_FOREACH_MEMBER(CAIROWINDOW_PRINT_m_ON) }) \
   };
 
@@ -87,5 +92,6 @@ using utils::has_print_on::operator<<;
       cairowindow_##Class##_FOREACH_STYLE_MEMBER(CAIROWINDOW_UPDATE_STYLE_FROM_DELTA)\
       return style;\
     }\
+    cairowindow_##Class##_FOREACH_MEMBER(CAIROWINDOW_DECLARE_MEMBER_ACCESSOR) \
     CWDEBUG_ONLY(void print_on(std::ostream& os) const { cairowindow_##Class##_FOREACH_STYLE_MEMBER(CAIROWINDOW_PRINT_m_ON) })\
   };\

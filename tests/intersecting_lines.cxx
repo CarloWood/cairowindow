@@ -237,11 +237,11 @@ int main()
       // Define styles.
       utils::ColorPool<32> color_pool;
       draw::PointStyle point_style({.color_index = color_pool.get_and_use_color(), .filled_shape = 10});
-      draw::LineStyle line_style{.line_color = color::black, .line_width = 1.0};
+      draw::LineStyle line_style({.line_color = color::black, .line_width = 1.0});
       draw::TextStyle<> point_label_style{.position = draw::centered_left_of, .font_size = 18.0, .offset = 10};
-      draw::LineStyle dashed_line_style{.line_color = color::black, .line_width = 1.0, .dashes = {10.0, 5.0}};
-      draw::LineStyle D_line_style{.line_color = color::blue, .line_width = 2.0, .dashes = {5.0, 5.0}};
-      draw::LineStyle E_line_style{.line_color = color::red, .line_width = 1.0};
+      draw::LineStyle dashed_line_style({.line_color = color::black, .line_width = 1.0, .dashes = {10.0, 5.0}});
+      draw::LineStyle D_line_style({.line_color = color::blue, .line_width = 2.0, .dashes = {5.0, 5.0}});
+      draw::LineStyle E_line_style({.line_color = color::red, .line_width = 1.0});
 
       // Plot P0, P1, I and calc_I.
       Point P0{P0x, P0y};

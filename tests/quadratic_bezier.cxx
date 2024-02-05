@@ -58,9 +58,9 @@ int main()
     Dout(dc::notice, "color_index2 = " << color_index2);
     draw::TextStyle<> label_style{.position = draw::centered_left_of, .font_size = 18.0, .offset = 10};
     draw::TextStyle<> slider_style{.position = draw::centered_below, .font_size = 18.0, .offset = 10};
-    draw::LineStyle curve_line_style{.line_width = 1.0};
-    draw::LineStyle solid_line_style{.line_color = color::black, .line_width = 1.0};
-    draw::LineStyle line_style{.line_color = color::black, .line_width = 1.0, .dashes = {10.0, 5.0}};
+    draw::LineStyle curve_line_style({.line_width = 1.0});
+    draw::LineStyle solid_line_style({.line_color = color::black, .line_width = 1.0});
+    draw::LineStyle line_style({.line_color = color::black, .line_width = 1.0, .dashes = {10.0, 5.0}});
     draw::ArcStyle arc_style{.line_color = color::blue, .line_width = 1.0};
 
     // P₀, the point at t=0, was translated to the origin.

@@ -43,8 +43,8 @@ int main()
     plot.add_to(background_layer, true);
 
     draw::PointStyle point_style({.color_index = 0, .filled_shape = 1});
-    draw::LineStyle curve_line_style{.line_width = 1.0};
-    draw::LineStyle line_style{.line_color = color::red, .line_width = 1.0};
+    draw::LineStyle curve_line_style({.line_width = 1.0});
+    draw::LineStyle line_style({.line_color = color::red, .line_width = 1.0});
     draw::BezierCurveStyle bezier_curve_style{.line_color = Color::next_color(), .line_width = 1.0};
     draw::TextStyle<> slider_style{.position = draw::centered_below, .font_size = 18.0, .offset = 10};
 

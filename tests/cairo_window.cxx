@@ -54,7 +54,7 @@ int main()
 
 #if 0
     // Draw a line.
-    draw::Line blue_line({350, 250, 100, 100}, draw::LineStyle{.line_color = color::blue, .line_width = 1.0});
+    draw::Line blue_line({350, 250, 100, 100}, draw::LineStyle({.line_color = color::blue, .line_width = 1.0}));
     second_layer->draw(&blue_line);
 #endif
 
@@ -81,9 +81,9 @@ int main()
     int color_index2 = 3; //color_pool.get_and_use_color();
     Dout(dc::notice, "color_index2 = " << color_index2);
     draw::TextStyle<> point_label_style{.position = draw::centered_left_of, .font_size = 18.0, .offset = 10};
-    draw::LineStyle curve_line_style{.line_width = 1.0};
-    draw::LineStyle solid_line_style{.line_color = color::black, .line_width = 1.0};
-    draw::LineStyle line_style{.line_color = color::black, .line_width = 1.0, .dashes = {10.0, 5.0}};
+    draw::LineStyle curve_line_style({.line_width = 1.0});
+    draw::LineStyle solid_line_style({.line_color = color::black, .line_width = 1.0});
+    draw::LineStyle line_style({.line_color = color::black, .line_width = 1.0, .dashes = {10.0, 5.0}});
 
 //    for (int j = 0; j < 100; ++j)
     for (int i = 50; i < 150; ++i)

@@ -34,7 +34,7 @@ void Grid::draw_regions_on(Layer* layer)
         y1 -= delta;
         y2 -= delta;
       }
-      lines_.emplace_back(std::make_shared<Line>(x1, y2, x2, y1, LineStyle{.line_color = color_, .line_width = line_width_}));
+      lines_.emplace_back(std::make_shared<Line>(x1, y2, x2, y1, LineStyle{{.line_color = color_, .line_width = line_width_}}));
       layer->draw(lines_.back());
     }
   }

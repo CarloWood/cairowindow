@@ -17,10 +17,10 @@ class Curve : public MultiRegion
 
  public:
   Curve(LineStyle line_style) :
-    MultiRegion(line_style.line_color, line_style.line_width) { }
+    MultiRegion(line_style.line_color(), line_style.line_width()) { }
 
-  Curve(std::vector<std::shared_ptr<Line>> const& lines, LineStyle line_style) :
-    MultiRegion(line_style.line_color, line_style.line_width), lines_(lines) { }
+  Curve(std::vector<std::shared_ptr<Line>> const& lines, LineStyle const& line_style) :
+    MultiRegion(line_style.line_color(), line_style.line_width()), lines_(lines) { }
 
   std::vector<std::shared_ptr<Line>> const& lines() const { return lines_; }
   std::vector<std::shared_ptr<Line>>& lines() { return lines_; }

@@ -4,6 +4,7 @@
 #include "utils/has_print_on.h"
 #include <iostream>
 #endif
+#include "debug.h"
 
 namespace cairowindow {
 #ifdef CWDEBUG
@@ -37,6 +38,14 @@ class Color
   // Get the (next) color from a color pool.
   static Color get_color(int color_index);
   static Color next_color();
+
+  // The Style macros need an operator!= to compare with the "undefined" magic.
+  bool operator!=(Color const& undefined_color) const
+  {
+    // Only use this to compare with a default constructed color.
+    ASSERT(!undefined_color.is_defined());
+    return is_defined();
+  }
 
 #ifdef CWDEBUG
   void print_on(std::ostream& os) const
