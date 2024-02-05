@@ -10,39 +10,21 @@
 
 namespace cairowindow::draw {
 
-struct ArcStyleDelta
-{
-  static constexpr double undefined_line_width_magic = -1.0;
-  static constexpr double undefined_dashes_magic = -1.0;
-  static constexpr double undefined_dashes_offset_magic = 12345678.9;
+// List the additional members of ArcStyle (none).
+#define cairowindow_Arc_FOREACH_MEMBER(X, ...)
 
-  Color line_color{};
-  double line_width = undefined_line_width_magic;
-  std::vector<double> dashes{undefined_dashes_magic};
-  double dashes_offset = undefined_dashes_offset_magic;
+// ArcStyle is derived from LineStyle.
+#define cairowindow_Arc_FOREACH_STYLE_MEMBER(X, ...) \
+  cairowindow_Line_FOREACH_MEMBER(X, __VA_ARGS__) \
+  cairowindow_Arc_FOREACH_MEMBER(X, __VA_ARGS__)
+
+// Define default values for ArcStyle.
+struct ArcStyleParamsDefault : LineStyleParamsDefault
+{
 };
 
-struct ArcStyle
-{
-  Color line_color = color::indigo;
-  double line_width = 2.0;
-  std::vector<double> dashes = {};
-  double dashes_offset = 0.0;
-
-  ArcStyle operator()(ArcStyleDelta delta)
-  {
-    ArcStyle result{*this};
-    if (delta.line_color.is_defined())
-      result.line_color = delta.line_color;
-    if (delta.line_width != ArcStyleDelta::undefined_line_width_magic)
-      result.line_width = delta.line_width;
-    if (delta.dashes.size() != 1 || delta.dashes[0] != ArcStyleDelta::undefined_dashes_magic)
-      result.dashes = delta.dashes;
-    if (delta.dashes_offset != ArcStyleDelta::undefined_dashes_offset_magic)
-      result.dashes_offset = delta.dashes_offset;
-    return result;
-  }
-};
+// Declare ArcStyle, derived from LineStyle.
+DECLARE_STYLE_WITH_BASE(Arc, Line, ArcStyleParamsDefault);
 
 class Arc : public LayerRegion
 {
@@ -65,11 +47,11 @@ class Arc : public LayerRegion
 #ifdef CWDEBUG
     using namespace debugcairo;
 #endif
-    cairo_set_source_rgba(cr, style_.line_color.red(), style_.line_color.green(), style_.line_color.blue(), style_.line_color.alpha());
-    cairo_set_line_width(cr, style_.line_width);
+    cairo_set_source_rgba(cr, style_.line_color().red(), style_.line_color().green(), style_.line_color().blue(), style_.line_color().alpha());
+    cairo_set_line_width(cr, style_.line_width());
+    if (!style_.dashes().empty())
+      cairo_set_dash(cr, style_.dashes().data(), style_.dashes().size(), style_.dashes_offset());
     cairo_arc(cr, center_x_, center_y_, radius_, pixel_start_angle_, pixel_end_angle_);
-    if (!style_.dashes.empty())
-      cairo_set_dash(cr, style_.dashes.data(), style_.dashes.size(), style_.dashes_offset);
     double x1, y1, x2, y2;
     cairo_stroke_extents(cr, &x1, &y1, &x2, &y2);
     cairo_stroke(cr);

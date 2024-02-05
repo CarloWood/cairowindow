@@ -58,7 +58,7 @@ int main()
     draw::LineStyle curve_line_style({.line_width = 1.0});
     draw::LineStyle solid_line_style({.line_color = color::black, .line_width = 1.0});
     draw::LineStyle line_style({.line_color = color::black, .line_width = 1.0, .dashes = {10.0, 5.0}});
-    draw::ArcStyle arc_style{.line_color = color::blue, .line_width = 1.0};
+    draw::ArcStyle arc_style({.line_color = color::blue, .line_width = 1.0});
     draw::RectangleStyle rectangle_style({.line_color = color::red, .line_width = 1.0});
 
     // Create a point P₀.
