@@ -48,7 +48,7 @@ class ArrowHead : public Shape
  public:
   ArrowHead(double tip_x, double tip_y, Direction direction, ArrowHeadStyle style) :
     Shape({tip_x - s_arrow_head_size[style.arrow()].width, tip_y - 0.5 * s_arrow_head_size[style.arrow()].height,
-        s_arrow_head_size[style.arrow()].width, s_arrow_head_size[style.arrow()].height}, reinterpret_cast<ShapeStyle const&>(style),
+        s_arrow_head_size[style.arrow()].width, s_arrow_head_size[style.arrow()].height}, style,
         direction.as_angle()),
     tip_x_(tip_x), tip_y_(tip_y), direction_(direction), style_(style) { }
 };

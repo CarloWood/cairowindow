@@ -34,7 +34,11 @@ class Circle : public Shape
  public:
   Circle(Rectangle const& geometry, CircleStyle style) : Shape(geometry, style({.shape = ellipse})) { }
 
-  CircleStyle const& style() const { return reinterpret_cast<CircleStyle const&>(style_); }
+  CircleStyle const& style() const
+  {
+    // The static cast is safe because (currently) CircleStyle does not have additional members.
+    return static_cast<CircleStyle const&>(style_);
+  }
 };
 
 } // namespace cairowindow::draw
