@@ -84,6 +84,7 @@ int main()
     draw::LineStyle curve_line_style({.line_width = 1.0});
     draw::LineStyle solid_line_style({.line_color = color::black, .line_width = 1.0});
     draw::LineStyle line_style({.line_color = color::black, .line_width = 1.0, .dashes = {10.0, 5.0}});
+    draw::ConnectorStyle connector_style(line_style({.line_color = color::coral, .dashes = {3.0, 3.0}}));
 
 //    for (int j = 0; j < 100; ++j)
     for (int i = 50; i < 150; ++i)
@@ -170,14 +171,14 @@ int main()
 
       // Draw a line between V1 and V1L.
       auto line_at_one_from_V = plot.create_connector(second_layer,
-          line_style({.line_color = color::coral, .dashes = {3.0, 3.0}}),
-          Connector::open_arrow, Connector::open_arrow, V1, V1L);
+          connector_style, Connector::open_arrow, Connector::open_arrow,
+          V1, V1L);
       auto w_label = plot.create_text(second_layer, point_label_style({.position = draw::centered_above}),
           V1 + 0.5 * w * perpendicular_to_symmetry_line_dir, "w");
       // Draw a line between P₁ and P1R.
       auto line_P1_P1R = plot.create_connector(second_layer,
-          line_style({.line_color = color::coral, .dashes = {3.0, 3.0}}),
-          Connector::open_arrow, Connector::open_arrow, P1, plot_P1R);
+          connector_style, Connector::open_arrow, Connector::open_arrow,
+          P1, plot_P1R);
       auto w_label2 = plot.create_text(second_layer, point_label_style({.position = draw::centered_above}),
           plot_P1R + 0.5 * w * perpendicular_to_symmetry_line_dir, "w");
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "LinePiece.h"
+#include "draw/Shape.h"
 #include "utils/square.h"
 #include <cmath>
 

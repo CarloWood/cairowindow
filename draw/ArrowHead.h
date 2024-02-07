@@ -18,6 +18,9 @@ namespace cairowindow::draw {
 // Define default values for ArrowHeadBaseStyle.
 struct ArrowHeadBaseStyleParamsDefault : ShapeStyleParamsDefault
 {
+  // Override defaults of ShapeStyleParamsDefault.
+  static constexpr ShapePosition position = at_tip;
+  static constexpr ShapeEnum shape = none_arrow_shape;
 };
 
 // Declare ArrowHeadBaseStyle, derived from ShapeStyle.
@@ -28,7 +31,6 @@ class ArrowHeadStyle : public ArrowHeadBaseStyle
 {
  public:
   using ArrowHeadBaseStyle::ArrowHeadBaseStyle;
-  ArrowHeadStyle(ArrowHeadBaseStyle const& style) : ArrowHeadBaseStyle(style) { }
 
   // Return an index usable for s_arrow_head_size.
   int arrow() const { return m_shape - none_arrow_shape; }
@@ -40,17 +42,16 @@ class ArrowHead : public Shape
   double tip_x_;
   double tip_y_;
   Direction direction_;
-  ArrowHeadStyle style_;
 
   struct Size { double width; double height; };         // In pixels.
   static std::array<Size, number_of_arrow_shapes> s_arrow_head_size;
 
  public:
-  ArrowHead(double tip_x, double tip_y, Direction direction, ArrowHeadStyle style) :
-    Shape({tip_x - s_arrow_head_size[style.arrow()].width, tip_y - 0.5 * s_arrow_head_size[style.arrow()].height,
-        s_arrow_head_size[style.arrow()].width, s_arrow_head_size[style.arrow()].height}, style,
+  ArrowHead(double tip_x, double tip_y, Direction direction, ArrowHeadStyle arrow_head_style) :
+    Shape({tip_x - s_arrow_head_size[arrow_head_style.arrow()].width, tip_y - 0.5 * s_arrow_head_size[arrow_head_style.arrow()].height,
+        s_arrow_head_size[arrow_head_style.arrow()].width, s_arrow_head_size[arrow_head_style.arrow()].height}, arrow_head_style,
         direction.as_angle()),
-    tip_x_(tip_x), tip_y_(tip_y), direction_(direction), style_(style) { }
+    tip_x_(tip_x), tip_y_(tip_y), direction_(direction) { }
 };
 
 } // namespace cairowindow::draw

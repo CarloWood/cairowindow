@@ -39,7 +39,7 @@ class LayerRegion
 #ifdef CWDEBUG
   friend std::ostream& operator<<(std::ostream& os, LayerRegion const* layer_region_ptr)
   {
-    os << "LayerRegion*";
+    os << "(LayerRegion*)" << (void*)layer_region_ptr;
     return os;
   }
 #endif

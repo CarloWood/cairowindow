@@ -62,6 +62,7 @@ int main()
     draw::LineStyle solid_line_style({.line_color = color::black, .line_width = 1.0});
     draw::LineStyle line_style({.line_color = color::black, .line_width = 1.0, .dashes = {10.0, 5.0}});
     draw::ArcStyle arc_style({.line_color = color::blue, .line_width = 1.0});
+    draw::ConnectorStyle connector_style(line_style({.line_color = color::coral, .dashes = {3.0, 3.0}}));
 
     // P₀, the point at t=0, was translated to the origin.
     auto plot_P0 = plot.create_point(second_layer, point_style, {0, 0});
@@ -156,8 +157,7 @@ int main()
       auto P0_Q_label = plot.create_text(second_layer, label_style({.font_size = 12, .offset = 5}), plot_P0 + 0.5 * P0_Q, "s²(1-2v)");
 
       // Draw a line between P₁ and Q.
-      auto line_P1_Q = plot.create_connector(second_layer, line_style({.line_color = color::coral, .dashes = {3.0, 3.0}}),
-          Connector::open_arrow, Connector::open_arrow, P1, plot_Q);
+      auto line_P1_Q = plot.create_connector(second_layer, connector_style, Connector::open_arrow, Connector::open_arrow, P1, plot_Q);
       Vector Q_P1{plot_Q, P1};
       auto sw_label2 = plot.create_text(second_layer, label_style({.position = draw::centered_below, .font_size = 12, .offset = 5}),
           plot_Q + 0.5 * Q_P1, "sw");
@@ -326,11 +326,15 @@ int main()
 
       // Draw the velocity vector at P₀.
       Vector velocity0{m00, m10};
-      auto plot_velocity0 = plot.create_connector(second_layer, solid_line_style({.line_color = color::green}), plot_P0, plot_P0 + velocity0);
+      auto plot_velocity0 = plot.create_connector(second_layer,
+          solid_line_style({.line_color = color::green}),
+          plot_P0, plot_P0 + velocity0);
 
       // Draw the velocity vector at P₁.
       Vector velocity1{m00 + 2.0 * m01, m10 + 2.0 * m11};
-      auto plot_velocity1 = plot.create_connector(second_layer, solid_line_style({.line_color = color::green}), plot_P1, plot_P1 + velocity1);
+      auto plot_velocity1 = plot.create_connector(second_layer,
+          solid_line_style({.line_color = color::green}),
+          plot_P1, plot_P1 + velocity1);
 
       // V, the parabola vertex point resides at t=v.
       auto V = plot.create_point(second_layer, point_style, {xt(v), yt(v)});
@@ -356,8 +360,9 @@ int main()
       auto P0_Q_label = plot.create_text(second_layer, label_style({.font_size = 12, .offset = 5}), plot_P0 + 0.5 * P0_Q, "s²(1-2v)");
 
       // Draw a line between P₁ and Q.
-      auto line_P1_Q = plot.create_connector(second_layer, line_style({.line_color = color::coral, .dashes = {3.0, 3.0}}),
-          Connector::open_arrow, Connector::open_arrow, P1, plot_Q);
+      auto line_P1_Q = plot.create_connector(second_layer,
+          connector_style, Connector::open_arrow, Connector::open_arrow,
+          P1, plot_Q);
       Vector Q_P1{plot_Q, P1};
       auto sw_label2 = plot.create_text(second_layer, label_style({.position = draw::centered_below, .font_size = 12, .offset = 5}),
           plot_Q + 0.5 * Q_P1, "sw");
@@ -391,7 +396,9 @@ int main()
       Point V1 = V + symmetry_line_dir;
       auto plot_V1 = plot.create_point(second_layer, point_style, V1);
       // Draw an arrow from V to V1.
-      auto plot_V_V1 = plot.create_connector(second_layer, solid_line_style({.line_color = color::purple}), V, V1);
+      auto plot_V_V1 = plot.create_connector(second_layer,
+          solid_line_style({.line_color = color::purple}),
+          V, V1);
 
       // Draw the unit vectors X and Y.
       auto plot_X = plot.create_connector(second_layer, solid_line_style, V, V + perpendicular_to_symmetry_line_dir);
@@ -410,8 +417,8 @@ int main()
 
       // Draw a line between V1 and V1L.
       auto line_at_one_from_V = plot.create_connector(second_layer,
-          line_style({.line_color = color::coral, .dashes = {3.0, 3.0}}),
-          Connector::open_arrow, Connector::open_arrow, V1, V1L);
+          connector_style, Connector::open_arrow, Connector::open_arrow,
+          V1, V1L);
       auto w_label = plot.create_text(second_layer,
           label_style({.position = draw::centered_above, .font_size = 14, .offset = 5}),
           V1 + 0.5 * w * perpendicular_to_symmetry_line_dir, "w");

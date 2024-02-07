@@ -37,6 +37,10 @@
 #define CAIROWINDOW_COPY_DEFAULTS(type, member, undval, Defaults, ...) \
   .member = Defaults::member,
 
+// Used to build initializer list of Class##Style that copies from Defaults.
+#define CAIROWINDOW_INITIALIZER_LIST_COPY_DEFAULTS(type, member, undval, Defaults, ...) \
+  m_##member(Defaults::member),
+
 #ifdef CWDEBUG
 // Used for debug purposes; print members of the ostream `os`.
 #define CAIROWINDOW_PRINT_ON(type, member, ...) os << #member ":" << member << "; ";
@@ -84,20 +88,27 @@ using utils::has_print_on::operator<<;
 // Base must already have been declared before using DECLARE_STYLE or DECLARE_STYLE_WITH_BASE.
 #define DECLARE_STYLE_WITH_BASE(Class, Base, Defaults) \
   CAIROWINDOW_DECLARE_STYLE_PARAMS(Class, Defaults); \
-  class Class##Style : public Base##Style {\
+  struct Class##StyleParamsPlus { \
+    cairowindow_##Class##_FOREACH_MEMBER(CAIROWINDOW_DECLARE_STYLE_MEMBER, Defaults) \
+  }; \
+  class Class##Style : public Base##Style { \
    protected: \
-    cairowindow_##Class##_FOREACH_MEMBER(CAIROWINDOW_DECLARE_MEMBER)\
-   public:\
-    Class##Style(Class##StyleParams params) :\
+    cairowindow_##Class##_FOREACH_MEMBER(CAIROWINDOW_DECLARE_MEMBER) \
+   public: \
+    Class##Style(Class##StyleParams params) : \
       Base##Style({REMOVE_TRAILING_COMMA(cairowindow_##Base##_FOREACH_STYLE_MEMBER(CAIROWINDOW_BASECLASS_PARAM_LIST))}) \
-      REMOVE_TRAILING_COMMA(, cairowindow_##Class##_FOREACH_MEMBER(CAIROWINDOW_INITIALIZER_LIST)) { }\
+      REMOVE_TRAILING_COMMA(, cairowindow_##Class##_FOREACH_MEMBER(CAIROWINDOW_INITIALIZER_LIST)) { } \
     Class##Style() : Class##Style(Class##StyleParams{cairowindow_##Class##_FOREACH_MEMBER(CAIROWINDOW_COPY_DEFAULTS, Defaults)}) { } \
-    Class##Style operator()(Class##StyleParamsDelta delta) const\
-    {\
-      Class##Style style(*this);\
-      cairowindow_##Class##_FOREACH_STYLE_MEMBER(CAIROWINDOW_UPDATE_STYLE_FROM_DELTA)\
-      return style;\
-    }\
+    Class##Style(Base##Style const& base) : Base##Style(base) \
+      REMOVE_TRAILING_COMMA(, cairowindow_##Class##_FOREACH_MEMBER(CAIROWINDOW_INITIALIZER_LIST_COPY_DEFAULTS, Defaults)) { } \
+    Class##Style(Base##Style base, Class##StyleParamsPlus params) : Base##Style(base) \
+      REMOVE_TRAILING_COMMA(, cairowindow_##Class##_FOREACH_MEMBER(CAIROWINDOW_INITIALIZER_LIST)) { } \
+    Class##Style operator()(Class##StyleParamsDelta delta) const \
+    { \
+      Class##Style style(*this); \
+      cairowindow_##Class##_FOREACH_STYLE_MEMBER(CAIROWINDOW_UPDATE_STYLE_FROM_DELTA) \
+      return style; \
+    } \
     cairowindow_##Class##_FOREACH_MEMBER(CAIROWINDOW_DECLARE_MEMBER_ACCESSOR) \
-    CWDEBUG_ONLY(void print_on(std::ostream& os) const { cairowindow_##Class##_FOREACH_STYLE_MEMBER(CAIROWINDOW_PRINT_m_ON) })\
+    CWDEBUG_ONLY(void print_on(std::ostream& os) const { cairowindow_##Class##_FOREACH_STYLE_MEMBER(CAIROWINDOW_PRINT_m_ON) }) \
   };

@@ -409,57 +409,50 @@ class Plot
 
   // Add and draw plot_connector on layer, using line_style, fill_color, arrow_head_shape_from and arrow_head_shape_to.
   void add_connector(boost::intrusive_ptr<Layer> const& layer,
-      draw::LineStyle const& line_style, Color fill_color,
-      Connector::ArrowHeadShape arrow_head_shape_from, Connector::ArrowHeadShape arrow_head_shape_to,
-      Connector const& plot_connector);
+      draw::ConnectorStyle const& style, Connector const& plot_connector);
 
  private:
   template<typename... Args>
   [[nodiscard]] Connector create_connector_helper(
-      Color& fill_color,
-      Connector::ArrowHeadShape& arrow_head_shape_from,
-      Connector::ArrowHeadShape& arrow_head_shape_to,
+      Connector::ArrowHeadShape& default_arrow_head_shape_from,
+      Connector::ArrowHeadShape& default_arrow_head_shape_to,
       boost::intrusive_ptr<Layer> const& layer,
-      draw::LineStyle const& line_style, std::tuple<Args...>&& args)
+      draw::ConnectorStyle const& connector_style, std::tuple<Args...>&& args)
   {
-    using type_of_first_arg = std::tuple_element_t<0, std::tuple<Args...>>;
-    if constexpr (std::is_same_v<type_of_first_arg, Color> ||
-                  std::is_same_v<type_of_first_arg, typename Connector::ArrowHeadShape>)
+    // Strip Connector::ArrowHeadShape arguments from args... and apply them to the defaults.
+    if constexpr (std::is_same_v<std::tuple_element_t<0, std::tuple<Args...>>, typename Connector::ArrowHeadShape>)
     {
-      if constexpr (std::is_same_v<type_of_first_arg, Color>)
-        fill_color = std::get<0>(args);
+      if constexpr (std::is_same_v<std::tuple_element_t<1, std::tuple<Args...>>, typename Connector::ArrowHeadShape>)
+        default_arrow_head_shape_from = std::get<0>(args);
       else
-      {
-        if constexpr (std::is_same_v<std::tuple_element_t<1, std::tuple<Args...>>, typename Connector::ArrowHeadShape>)
-          arrow_head_shape_from = std::get<0>(args);
-        else
-          arrow_head_shape_to = std::get<0>(args);
-      }
-      return create_connector_helper(fill_color, arrow_head_shape_from, arrow_head_shape_to, layer, line_style, tuple_tail(std::move(args)));
+        default_arrow_head_shape_to = std::get<0>(args);
+      return create_connector_helper(default_arrow_head_shape_from, default_arrow_head_shape_to,
+          layer, connector_style, tuple_tail(std::move(args)));
     }
     else
     {
+      // The defaults are now set. Construct a Connector from the remaining arguments and the default arrow head shapes.
       Connector plot_connector = std::apply([&](auto&&... unpacked_args) -> Connector {
-        return {std::forward<decltype(unpacked_args)>(unpacked_args)..., arrow_head_shape_from, arrow_head_shape_to};
+        return {std::forward<decltype(unpacked_args)>(unpacked_args)..., default_arrow_head_shape_from, default_arrow_head_shape_to};
       }, std::move(args));
 
-      add_connector(layer, line_style, fill_color, arrow_head_shape_from, arrow_head_shape_to, plot_connector);
+      add_connector(layer, connector_style, plot_connector);
       return plot_connector;
     }
   }
 
  public:
+
   // Create and draw a connector on layer, using args... and line_style.
-  // Args can optionally start with a fill_color and/or zero, one or two ArrowHeadShape arguments.
+  // Args can optionally start with zero, one or two ArrowHeadShape arguments.
   template<typename... Args>
   [[nodiscard]] Connector create_connector(boost::intrusive_ptr<Layer> const& layer,
-      draw::LineStyle const& line_style, Args&&... args)
+      draw::ConnectorStyle const& connector_style, Args&&... args)
   {
-    Color fill_color = color::white;
     Connector::ArrowHeadShape arrow_head_shape_from = Connector::no_arrow;
     Connector::ArrowHeadShape arrow_head_shape_to = Connector::open_arrow;
-    return create_connector_helper(fill_color, arrow_head_shape_from, arrow_head_shape_to, layer,
-        line_style, std::make_tuple(std::forward<Args>(args)...));
+    return create_connector_helper(arrow_head_shape_from, arrow_head_shape_to, layer,
+        connector_style, std::make_tuple(std::forward<Args>(args)...));
   }
 
   //--------------------------------------------------------------------------
@@ -492,7 +485,7 @@ class Plot
   [[nodiscard]] Rectangle create_rectangle(boost::intrusive_ptr<Layer> const& layer,
       draw::RectangleStyle const& rectangle_style, Args&&... args)
   {
-    Rectangle plot_rectangle(args...);
+    Rectangle plot_rectangle(std::forward<Args>(args)...);
     add_rectangle(layer, rectangle_style, plot_rectangle);
     return plot_rectangle;
   }

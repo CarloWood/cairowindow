@@ -236,16 +236,17 @@ void Plot::add_line(boost::intrusive_ptr<Layer> const& layer,
 // Connector
 
 void Plot::add_connector(boost::intrusive_ptr<Layer> const& layer,
-    draw::LineStyle const& line_style, Color fill_color,
-    Connector::ArrowHeadShape arrow_head_shape_from, Connector::ArrowHeadShape arrow_head_shape_to,
+    draw::ConnectorStyle const& connector_style,
     Connector const& plot_connector)
 {
   cairowindow::Point const& from = plot_connector.from();
   cairowindow::Point const& to = plot_connector.to();
+  Connector::ArrowHeadShape arrow_head_shape_from = plot_connector.arrow_head_shape_from();
+  Connector::ArrowHeadShape arrow_head_shape_to = plot_connector.arrow_head_shape_to();
 
   plot_connector.draw_object_ = std::make_shared<draw::Connector>(
       convert_x(from.x()), convert_y(from.y()), convert_x(to.x()), convert_y(to.y()),
-      line_style, fill_color, arrow_head_shape_from, arrow_head_shape_to);
+      connector_style, arrow_head_shape_from, arrow_head_shape_to);
   layer->draw(plot_connector.draw_object_);
   plot_connector.draw_object_->draw_arrow_heads(layer);
 }
