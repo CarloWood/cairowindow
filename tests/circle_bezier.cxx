@@ -48,27 +48,40 @@ int main()
     draw::BezierCurveStyle bezier_curve_style({.line_color = Color::next_color(), .line_width = 1.0});
     draw::TextStyle slider_style({.position = draw::centered_below, .font_size = 18.0, .offset = 10});
 
-    auto slider_velocity = plot.create_slider(second_layer, {978, 83, 7, 400}, 105.0, 0.0, 150.0);
-    auto slider_velocity_label = plot.create_text(second_layer, slider_style, Pixel{978, 483}, "v");
+    auto slider_offset = plot.create_slider(second_layer, {978, 83, 7, 400}, 0.0, -M_PI, M_PI);
+    auto slider_offset_label = plot.create_text(second_layer, slider_style, Pixel{978, 483}, "offset");
 
     auto plot_circle = plot.create_circle(background_layer, line_style, Point{100.0, 100.0}, 80.0);
 
 #if 1
     //BezierFitter fitter([](double t) -> Point { return {100.0 + 80.0 * std::cos(t), 100.0 + 80.0 * std::sin(t)}; }, {-M_PI, M_PI}, {0.0, 0.0, 200.0, 200.0}, 0.1);
-
-    BezierFitter fitter([](double t) -> Point {
-        return {100.0 * t / M_PI, 100.0 + 100.0 * std::sin(5.0 * t * t)};
-    }, {0, 2.0 * M_PI}, {0.0, 0.0, 200.0, 200.0}, 0.001);
-
-    std::vector<BezierCurve> result = fitter.solve();
-    std::vector<plot::BezierCurve> curves(result.size());
-    std::vector<plot::Point> points0(result.size());
-    int i = 0;
-    for (auto&& bezier : result)
+    while (true)
     {
-      points0[i] = plot.create_point(second_layer, point_style, result[i].P(0));
-      curves[i] = plot.create_bezier_curve(second_layer, bezier_curve_style, bezier);
-      ++i;
+      // Suppress immediate updating of the window for each created item, in order to avoid flickering.
+      window.set_send_expose_events(false);
+
+      double offset = slider_offset.value();
+
+      BezierFitter fitter([&](double t) -> Point {
+          return {100.0 + 80.0 * std::cos(t + offset), 100.0 + 80.0 * std::sin(t + offset * 0.5)};
+      }, {0, 2.0 * M_PI}, {0.0, 0.0, 200.0, 200.0}, 0.001);
+
+      std::vector<BezierCurve> result = fitter.solve();
+      std::vector<plot::BezierCurve> curves(result.size());
+      std::vector<plot::Point> points0(result.size());
+      int i = 0;
+      for (auto&& bezier : result)
+      {
+        points0[i] = plot.create_point(second_layer, point_style, result[i].P(0));
+        curves[i] = plot.create_bezier_curve(second_layer, bezier_curve_style, bezier);
+        ++i;
+      }
+
+      // Flush all expose events related to the drawing done above.
+      window.set_send_expose_events(true);
+
+      // Block until the user moved a draggable object, then go to the top of loop for a redraw.
+      window.handle_dragging();
     }
 #else
     Point P0{20.0, 100};
