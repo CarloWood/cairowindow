@@ -30,16 +30,16 @@ static constexpr int magic_undefined3 = -2;
 // Define default values for BarStyle.
 struct BarStyleParamsDefault
 {
-  static int const A = 101;
-  static int const B = 102;
+  static constexpr int A = 101;
+  static constexpr int B = 102;
 };
 
 // Define default values for FooStyle.
 struct FooStyleParamsDefault : BarStyleParamsDefault
 {
-  static int const B = 202;   // Change default from BarStyleParamsDefault.
-  static int const C = 203;
-  static int const D = 204;
+  static constexpr int B = 202;   // Change default from BarStyleParamsDefault.
+  static constexpr int C = 203;
+  static constexpr int D = 204;
 };
 
 // Declare BarStyle.
