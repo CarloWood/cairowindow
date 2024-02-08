@@ -32,7 +32,7 @@ DECLARE_STYLE_WITH_BASE(Circle, Shape, CircleStyleParamsDefault);
 class Circle : public Shape
 {
  public:
-  Circle(Rectangle const& geometry, CircleStyle style) : Shape(geometry, style({.shape = ellipse})) { }
+  Circle(cairowindow::Rectangle const& geometry, CircleStyle style) : Shape(geometry, style({.shape = ellipse})) { }
 
   CircleStyle const& style() const
   {

@@ -1,6 +1,8 @@
 #pragma once
 
+#include "Draggable.h"
 #include "utils/has_print_on.h"
+#include <memory>
 
 namespace cairowindow {
 using utils::has_print_on::operator<<;
@@ -35,4 +37,31 @@ class Point
 #endif
 };
 
+namespace draw {
+class Point;
+} // namespace draw
+
+namespace plot {
+class Plot;
+
+class Point : public cairowindow::Point, public Draggable
+{
+ public:
+  Point() = default;
+  Point(cairowindow::Point const& point) : cairowindow::Point(point) { }
+
+ private:
+  friend class Plot;
+  mutable std::shared_ptr<draw::Point> draw_object_;
+
+  // Implementation of Draggable.
+  cairowindow::Rectangle const& geometry() const override;
+  void moved(Plot* plot, cairowindow::Point const& new_position) override;
+
+#ifdef CWDEBUG
+  void print_on(std::ostream& os) const override { cairowindow::Point::print_on(os); }
+#endif
+};
+
+} // namespace plot
 } // namespace cairowindow

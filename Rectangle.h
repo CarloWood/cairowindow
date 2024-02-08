@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cairo/cairo.h>
+#include <memory>
 #include "debug.h"
 #ifdef CWDEBUG
 #include "utils/has_print_on.h"
@@ -41,4 +42,23 @@ class Rectangle
 #endif
 };
 
+namespace draw {
+class Rectangle;
+} // namespace draw
+
+namespace plot {
+class Plot;
+
+class Rectangle : public cairowindow::Rectangle
+{
+ public:
+  using cairowindow::Rectangle::Rectangle;
+  Rectangle(cairowindow::Rectangle const& rectangle) : cairowindow::Rectangle(rectangle) { }
+
+ public:
+  friend class Plot;
+  mutable std::shared_ptr<draw::Rectangle> draw_object_;
+};
+
+} // namespace plot
 } // namespace cairowindow

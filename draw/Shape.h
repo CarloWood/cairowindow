@@ -4,6 +4,7 @@
 #include "ShapePosition.h"
 #include "cairowindow/LayerRegion.h"
 #include "cairowindow/Color.h"
+#include "cairowindow/Rectangle.h"
 #include "utils/square.h"
 
 namespace cairowindow::draw {
@@ -64,13 +65,13 @@ DECLARE_STYLE_WITH_BASE(Shape, Line, ShapeStyleParamsDefault);
 class Shape : public LayerRegion
 {
  protected:
-  Rectangle geometry_;
+  cairowindow::Rectangle geometry_;
   ShapeStyle style_;
   double rotation_;
   double arrow_overshoot_;
 
  public:
-  Shape(Rectangle const& geometry, ShapeStyle style, double rotation = {}) :
+  Shape(cairowindow::Rectangle const& geometry, ShapeStyle style, double rotation = {}) :
     geometry_(geometry), style_(style), rotation_(rotation)
     {
       switch (style.shape())
@@ -90,7 +91,7 @@ class Shape : public LayerRegion
       }
     }
 
-  Rectangle const& geometry() const { return geometry_; }
+  cairowindow::Rectangle const& geometry() const { return geometry_; }
 //  ShapeStyle& style() { return style_; }
   ShapeStyle const& style() const { return style_; }
 

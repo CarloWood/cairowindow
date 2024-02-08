@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Point.h"
+#include <memory>
 
 namespace cairowindow {
 
@@ -18,5 +19,27 @@ class Circle
   double radius() const { return radius_; }
 };
 
+namespace draw {
+class Circle;
+} // namespace draw
+
+namespace plot {
+class Plot;
+
+//--------------------------------------------------------------------------
+// Circle
+
+class Circle : public cairowindow::Circle
+{
+ public:
+  using cairowindow::Circle::Circle;
+  Circle(cairowindow::Circle const& circle) : cairowindow::Circle(circle) { }
+
+ private:
+  friend class Plot;
+  mutable std::shared_ptr<draw::Circle> draw_object_;
+};
+
+} // namespace plot
 } // namespace cairowindow
 

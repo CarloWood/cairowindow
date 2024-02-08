@@ -357,6 +357,22 @@ void Plot::add_bezier_curve(boost::intrusive_ptr<Layer> const& layer,
 }
 
 //--------------------------------------------------------------------------
+// Curve
+
+void Plot::add_bezier_fitter(boost::intrusive_ptr<Layer> const& layer,
+    draw::LineStyle const& line_style,
+    BezierFitter const& plot_bezier_fitter)
+{
+  std::vector<cairowindow::BezierCurve> const& bezier_curves = plot_bezier_fitter.result();
+
+  // This call creates default constructed plot::BezierCurve objects from the "result" vector
+  // of cairowindow::BezierCurve in bezier_curves.
+  plot_bezier_fitter.draw_object_ = std::make_shared<draw::BezierFitter>(bezier_curves, line_style);
+  for (BezierCurve const& plot_bezier_curve : plot_bezier_fitter.draw_object_->plot_bezier_curves())
+    add_bezier_curve(layer, line_style, plot_bezier_curve);
+}
+
+//--------------------------------------------------------------------------
 // Text
 
 void Plot::add_text(boost::intrusive_ptr<Layer> const& layer,

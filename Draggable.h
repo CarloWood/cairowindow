@@ -19,7 +19,7 @@ struct Draggable
 
   virtual ~Draggable() = default;
 
-  virtual Rectangle const& geometry() const = 0;
+  virtual cairowindow::Rectangle const& geometry() const = 0;
   virtual void moved(Plot* plot, cairowindow::Point const& new_position) = 0;
   virtual bool convert() const { return true; }
 

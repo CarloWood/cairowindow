@@ -1,5 +1,8 @@
 #pragma once
 
+#include "Line.h"
+#include <memory>
+
 namespace cairowindow {
 
 class Arc
@@ -38,4 +41,23 @@ class Arc
   }
 };
 
+namespace draw {
+class Arc;
+} // namespace draw
+
+namespace plot {
+class Plot;
+
+class Arc : public cairowindow::Arc
+{
+ public:
+  using cairowindow::Arc::Arc;
+  Arc(cairowindow::Arc const& arc) : cairowindow::Arc(arc) { }
+
+ public:
+  friend class Plot;
+  mutable std::shared_ptr<draw::Arc> draw_object_;
+};
+
+} // namespace plot
 } // namespace cairowindow

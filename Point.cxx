@@ -2,6 +2,7 @@
 #include "Point.h"
 #include "Direction.h"
 #include "Vector.h"
+#include "draw/Point.h"
 
 namespace cairowindow {
 
@@ -58,4 +59,12 @@ void Point::print_on(std::ostream& os) const
 }
 #endif
 
+namespace plot {
+
+cairowindow::Rectangle const& Point::geometry() const
+{
+  return draw_object_->geometry();
+}
+
+} // namespace plot
 } // namespace cairowindow

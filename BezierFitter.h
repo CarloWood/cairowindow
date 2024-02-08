@@ -6,28 +6,52 @@
 #include "IntersectRectangle.h"
 #include <functional>
 #include <vector>
+#include <memory>
 
 namespace cairowindow {
 
 class BezierFitter
 {
  private:
-  std::function<Point(double)> func_;           // The parametric function that must be fitted: takes the parameter (t) and returns a Point.
-  Range domain_;                                // The minimum and maximum values that will be passed to func_ (the domain of t).
-  IntersectRectangle viewport_;                 // Bézier segments that fall entirely outside of this viewport will be discarded.
-  double tolerance_;                            // The smallest deviation from the true function value allowed in the Bézier curve output.
+  std::vector<BezierCurve> result_;
 #ifdef CWDEBUG
-  mutable int depth_;
+  int depth_;
 #endif
 
  public:
-  BezierFitter(std::function<Point(double)>&& func, Range const& domain, Rectangle const& viewport, double tolerance) :
-    func_(func), domain_(domain), viewport_(viewport), tolerance_(tolerance) { }
+  BezierFitter() = default;
 
-  std::vector<BezierCurve> solve() const;
+  // func     : the parametric function that must be fitted: takes the parameter (t) and returns a Point.
+  // domain   : the minimum and maximum values that will be passed to func_ (the domain of t).
+  // viewport : Bézier segments that fall entirely outside of this viewport will be discarded.
+  // tolerance: the smallest deviation from the true function value allowed in the Bézier curve output.
+  void solve(std::function<Point(double)>&& func, Range const& domain, Rectangle const& viewport, double tolerance);
+
+  // Get a pointer to the result vector.
+  std::vector<BezierCurve> const& result() const { return result_; }
 
  private:
-  void solve(std::vector<BezierCurve>& out, double t0, double t6, Vector P0, Vector P3, Vector P6) const;
+  void solve(std::function<Point(double)> const& func, IntersectRectangle const& viewport,
+      double tolerance, double t0, double t6, Vector P0, Vector P3, Vector P6);
 };
 
+namespace draw {
+class BezierFitter;
+} // namespace draw
+
+namespace plot {
+class Plot;
+
+class BezierFitter : public cairowindow::BezierFitter
+{
+ public:
+  using cairowindow::BezierFitter::BezierFitter;
+  BezierFitter(cairowindow::BezierFitter&& bezier_fitter) : cairowindow::BezierFitter(std::move(bezier_fitter)) { }
+
+ public:
+  friend class Plot;
+  mutable std::shared_ptr<draw::BezierFitter> draw_object_;
+};
+
+} // namespace plot
 } // namespace cairowindow

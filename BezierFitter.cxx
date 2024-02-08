@@ -45,16 +45,17 @@ void vals2coeffs7(std::array<Vector, 7>& out, Vector P0, Vector P1, Vector P2, V
 
 } // namespace
 
-void BezierFitter::solve(std::vector<BezierCurve>& out, double const t0, double const t6, Vector const P0, Vector const P3, Vector const P6) const
+void BezierFitter::solve(std::function<Point(double)> const& func, IntersectRectangle const& viewport, double tolerance,
+    double const t0, double const t6, Vector const P0, Vector const P3, Vector const P6)
 {
   static constexpr double chebpt7_1 = 0.5 - 0.25 * sqrt3;
   static constexpr double chebpt7_5 = 0.5 + 0.25 * sqrt3;
 
   double td = t6 - t0;
-  Vector P1{func_(t0 + td * chebpt7_1)};
-  Vector P2{func_(t0 + td * 0.25)};
-  Vector P4{func_(t0 + td * 0.75)};
-  Vector P5{func_(t0 + td * chebpt7_5)};
+  Vector P1{func(t0 + td * chebpt7_1)};
+  Vector P2{func(t0 + td * 0.25)};
+  Vector P4{func(t0 + td * 0.75)};
+  Vector P5{func(t0 + td * chebpt7_5)};
 
   std::array<Vector, 7> coeffs;
   vals2coeffs7(coeffs, P0, P1, P2, P3, P4, P5, P6);
@@ -65,26 +66,26 @@ void BezierFitter::solve(std::vector<BezierCurve>& out, double const t0, double 
   double const yspread = std::abs(coeffs[1].y()) + std::abs(coeffs[2].y()) + std::abs(coeffs[3].y()) + yresid;
 
   // If the curve is entirely outside the viewport, don't bother rendering:
-  if ((coeffs[0].x() + xspread < viewport_.x1()) || (coeffs[0].x() - xspread > viewport_.x2()) ||
-      (coeffs[0].y() + yspread < viewport_.y1()) || (coeffs[0].y() - yspread > viewport_.y2()))
+  if ((coeffs[0].x() + xspread < viewport.x1()) || (coeffs[0].x() - xspread > viewport.x2()) ||
+      (coeffs[0].y() + yspread < viewport.y1()) || (coeffs[0].y() - yspread > viewport.y2()))
     return;
 
   // If the spread is very large in either dimension, we need
   // to be more careful about detecting the edges of the viewport.
-  if (xspread > viewport_.x2() - viewport_.x1() || yspread > viewport_.y2() - viewport_.y1())
+  if (xspread > viewport.x2() - viewport.x1() || yspread > viewport.y2() - viewport.y1())
   {
     double const xmax = std::max({P0.x(), P1.x(), P2.x(), P3.x(), P4.x(), P5.x(), P6.x()});
     double const xmin = std::min({P0.x(), P1.x(), P2.x(), P3.x(), P4.x(), P5.x(), P6.x()});
     double const ymax = std::max({P0.y(), P1.y(), P2.y(), P3.y(), P4.y(), P5.y(), P6.y()});
     double const ymin = std::min({P0.y(), P1.y(), P2.y(), P3.y(), P4.y(), P5.y(), P6.y()});
-    if (xmax < viewport_.x1() || xmin > viewport_.x2() || ymax < viewport_.y1() || ymin > viewport_.y2())
+    if (xmax < viewport.x1() || xmin > viewport.x2() || ymax < viewport.y1() || ymin > viewport.y2())
       return;
   }
 
   Dout(dc::notice, "xresid = " << xresid << "; yresid = " << yresid);
 
   // If we hit the desired tolerance, return a single bezier segment:
-  if (xresid < tolerance_ && yresid < tolerance_)
+  if (xresid < tolerance && yresid < tolerance)
   {
     // Alias degree 6 polynomial to degree 3:
     coeffs[0] += coeffs[6];
@@ -94,7 +95,7 @@ void BezierFitter::solve(std::vector<BezierCurve>& out, double const t0, double 
     // Convert from Chebyshev to Bernstein basis, and return:
     Vector Pt0 = coeffs[0] - 1.666666666666667 * coeffs[2];
     Vector Pt1 = 5.0 * coeffs[3] - 0.333333333333333 * coeffs[1];
-    out.emplace_back(P0, Pt0 + Pt1, Pt0 - Pt1, P6);
+    result_.emplace_back(P0, Pt0 + Pt1, Pt0 - Pt1, P6);
     return;
   }
 
@@ -107,23 +108,21 @@ void BezierFitter::solve(std::vector<BezierCurve>& out, double const t0, double 
     return;
   }
 #endif
-  solve(out, t0, 0.5 * (t0 + t6), P0, P2, P3);
-  solve(out, 0.5 * (t0 + t6), t6, P3, P4, P6);
+  solve(func, viewport, tolerance, t0, 0.5 * (t0 + t6), P0, P2, P3);
+  solve(func, viewport, tolerance, 0.5 * (t0 + t6), t6, P3, P4, P6);
 #ifdef CWDEBUG
   --depth_;
 #endif
 }
 
-std::vector<BezierCurve> BezierFitter::solve() const
+void BezierFitter::solve(std::function<Point(double)>&& func, Range const& domain, Rectangle const& viewport, double tolerance)
 {
-  std::vector<BezierCurve> result;
-  double t0 = domain_.min();
-  double t6 = domain_.max();
+  double t0 = domain.min();
+  double t6 = domain.max();
 #ifdef CWDEBUG
   depth_ = 0;
 #endif
-  solve(result, t0, t6, Vector{func_(t0)}, Vector{func_(0.5 * (t0 + t6))}, Vector{func_(t6)});
-  return result;
+  solve(func, viewport, tolerance, t0, t6, Vector{func(t0)}, Vector{func(0.5 * (t0 + t6))}, Vector{func(t6)});
 }
 
 } // amespace cairowindow

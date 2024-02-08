@@ -54,28 +54,26 @@ int main()
     auto plot_circle = plot.create_circle(background_layer, line_style, Point{100.0, 100.0}, 80.0);
 
 #if 1
-    //BezierFitter fitter([](double t) -> Point { return {100.0 + 80.0 * std::cos(t), 100.0 + 80.0 * std::sin(t)}; }, {-M_PI, M_PI}, {0.0, 0.0, 200.0, 200.0}, 0.1);
     while (true)
     {
       // Suppress immediate updating of the window for each created item, in order to avoid flickering.
       window.set_send_expose_events(false);
 
-      double offset = slider_offset.value();
-
-      BezierFitter fitter([&](double t) -> Point {
+      BezierFitter bezier_fitter;
+      bezier_fitter.solve([offset = slider_offset.value()](double t) -> Point {
           return {100.0 + 80.0 * std::cos(t + offset), 100.0 + 80.0 * std::sin(t + offset * 0.5)};
       }, {0, 2.0 * M_PI}, {0.0, 0.0, 200.0, 200.0}, 0.001);
 
-      std::vector<BezierCurve> result = fitter.solve();
-      std::vector<plot::BezierCurve> curves(result.size());
+      std::vector<BezierCurve> const& result = bezier_fitter.result();
       std::vector<plot::Point> points0(result.size());
       int i = 0;
       for (auto&& bezier : result)
       {
         points0[i] = plot.create_point(second_layer, point_style, result[i].P(0));
-        curves[i] = plot.create_bezier_curve(second_layer, bezier_curve_style, bezier);
         ++i;
       }
+
+      auto plot_bezier_fitter = plot.create_bezier_fitter(second_layer, curve_line_style, std::move(bezier_fitter));
 
       // Flush all expose events related to the drawing done above.
       window.set_send_expose_events(true);

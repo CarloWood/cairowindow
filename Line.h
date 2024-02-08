@@ -2,6 +2,7 @@
 
 #include "Direction.h"
 #include "Point.h"
+#include <memory>
 
 namespace cairowindow {
 
@@ -22,4 +23,26 @@ class Line
   Point intersection_with(Line const& line2) const;
 };
 
+namespace draw {
+class Line;
+} // namespace draw
+
+namespace plot {
+class Plot;
+
+//--------------------------------------------------------------------------
+// Line
+
+class Line : public cairowindow::Line
+{
+ public:
+  using cairowindow::Line::Line;
+  Line(cairowindow::Line const& line) : cairowindow::Line(line) { }
+
+ public:
+  friend class Plot;
+  mutable std::shared_ptr<draw::Line> draw_object_;
+};
+
+} // namespace plot
 } // namespace cairowindow

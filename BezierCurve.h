@@ -4,6 +4,7 @@
 #include "Rectangle.h"
 #include "utils/has_print_on.h"
 #include <array>
+#include <memory>
 #ifdef CWDEBUG
 #include "debug.h"
 #endif
@@ -114,4 +115,23 @@ class BezierCurve
 #endif
 };
 
+namespace draw {
+class BezierCurve;
+} // namespace draw
+
+namespace plot {
+class Plot;
+
+class BezierCurve : public cairowindow::BezierCurve
+{
+ public:
+  using cairowindow::BezierCurve::BezierCurve;
+  BezierCurve(cairowindow::BezierCurve const& bezier_curve) : cairowindow::BezierCurve(bezier_curve) { }
+
+ public:
+  friend class Plot;
+  mutable std::shared_ptr<draw::BezierCurve> draw_object_;
+};
+
+} // namespace plot
 } // namespace cairowindow

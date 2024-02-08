@@ -4,6 +4,7 @@
 #include "draw/Shape.h"
 #include "utils/square.h"
 #include <cmath>
+#include <memory>
 
 namespace cairowindow {
 
@@ -36,4 +37,23 @@ class Connector : public LinePiece
   ArrowHeadShape arrow_head_shape_to() const { return arrow_head_shape_to_; }
 };
 
+namespace draw {
+class Connector;
+} // namespace draw
+
+namespace plot {
+class Plot;
+
+class Connector : public cairowindow::Connector
+{
+ public:
+  using cairowindow::Connector::Connector;
+  Connector(cairowindow::Connector const& connector) : cairowindow::Connector(connector) { }
+
+ public:
+  friend class Plot;
+  mutable std::shared_ptr<draw::Connector> draw_object_;
+};
+
+} // namespace plot
 } // namespace cairowindow

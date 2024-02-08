@@ -9,6 +9,7 @@
 #include "draw/Rectangle.h"
 #include "draw/Arc.h"
 #include "draw/BezierCurve.h"
+#include "draw/BezierFitter.h"
 #include "draw/Slider.h"
 #include "Range.h"
 #include "Point.h"
@@ -21,6 +22,7 @@
 #include "Rectangle.h"
 #include "Arc.h"
 #include "BezierCurve.h"
+#include "BezierFitter.h"
 #include "Draggable.h"
 #include "utils/Vector.h"
 #include "utils/Badge.h"
@@ -44,140 +46,6 @@ namespace plot {
 using utils::has_print_on::operator<<;
 
 class Plot;
-
-//--------------------------------------------------------------------------
-// Point
-
-class Point : public cairowindow::Point, public Draggable
-{
- public:
-  Point() = default;
-  Point(cairowindow::Point const& point) : cairowindow::Point(point) { }
-
- private:
-  friend class Plot;
-  mutable std::shared_ptr<draw::Point> draw_object_;
-
-  // Implementation of Draggable.
-  cairowindow::Rectangle const& geometry() const override { return draw_object_->geometry(); }
-  void moved(Plot* plot, cairowindow::Point const& new_position) override;
-
-#ifdef CWDEBUG
-  void print_on(std::ostream& os) const override { cairowindow::Point::print_on(os); }
-#endif
-};
-
-//--------------------------------------------------------------------------
-// LinePiece
-
-class LinePiece : public cairowindow::LinePiece
-{
- public:
-  using cairowindow::LinePiece::LinePiece;
-  LinePiece(cairowindow::LinePiece const& line_piece) : cairowindow::LinePiece(line_piece) { }
-
- private:
-  friend class Plot;
-  mutable std::shared_ptr<draw::Line> draw_object_;
-};
-
-//--------------------------------------------------------------------------
-// Connector
-
-class Connector : public cairowindow::Connector
-{
- public:
-  using cairowindow::Connector::Connector;
-  Connector(cairowindow::Connector const& connector) : cairowindow::Connector(connector) { }
-
- public:
-  friend class Plot;
-  mutable std::shared_ptr<draw::Connector> draw_object_;
-};
-
-//--------------------------------------------------------------------------
-// Line
-
-class Line : public cairowindow::Line
-{
- public:
-  using cairowindow::Line::Line;
-  Line(cairowindow::Line const& line) : cairowindow::Line(line) { }
-
- public:
-  friend class Plot;
-  mutable std::shared_ptr<draw::Line> draw_object_;
-};
-
-//--------------------------------------------------------------------------
-// Rectangle
-
-class Rectangle : public cairowindow::Rectangle
-{
- public:
-  using cairowindow::Rectangle::Rectangle;
-  Rectangle(cairowindow::Rectangle const& rectangle) : cairowindow::Rectangle(rectangle) { }
-
- public:
-  friend class Plot;
-  mutable std::shared_ptr<draw::Rectangle> draw_object_;
-};
-
-//--------------------------------------------------------------------------
-// Circle
-
-class Circle : public cairowindow::Circle
-{
- public:
-  using cairowindow::Circle::Circle;
-  Circle(cairowindow::Circle const& circle) : cairowindow::Circle(circle) { }
-
- private:
-  friend class Plot;
-  mutable std::shared_ptr<draw::Circle> draw_object_;
-};
-
-//--------------------------------------------------------------------------
-// Arc
-
-class Arc : public cairowindow::Arc
-{
- public:
-  using cairowindow::Arc::Arc;
-  Arc(cairowindow::Arc const& arc) : cairowindow::Arc(arc) { }
-
- public:
-  friend class Plot;
-  mutable std::shared_ptr<draw::Arc> draw_object_;
-};
-
-//--------------------------------------------------------------------------
-// BezierCurve
-
-class BezierCurve : public cairowindow::BezierCurve
-{
- public:
-  using cairowindow::BezierCurve::BezierCurve;
-  BezierCurve(cairowindow::BezierCurve const& bezier_curve) : cairowindow::BezierCurve(bezier_curve) { }
-
- public:
-  friend class Plot;
-  mutable std::shared_ptr<draw::BezierCurve> draw_object_;
-};
-
-//--------------------------------------------------------------------------
-// Text
-
-class Text : public cairowindow::Text
-{
- public:
-  using cairowindow::Text::Text;
-  Text(cairowindow::Text const& text) : cairowindow::Text(text) { }
-
- private:
-  friend class Plot;
-  mutable std::shared_ptr<draw::Text> draw_object_;
-};
 
 //--------------------------------------------------------------------------
 // Slider
@@ -555,6 +423,22 @@ class Plot
     BezierCurve plot_bezier_curve(std::forward<Args>(args)...);
     add_bezier_curve(layer, bezier_style, plot_bezier_curve);
     return plot_bezier_curve;
+  }
+
+  //--------------------------------------------------------------------------
+  // Curve
+
+  void add_bezier_fitter(boost::intrusive_ptr<Layer> const& layer,
+      draw::LineStyle const& line_style,
+      BezierFitter const& plot_bezier_fitter);
+
+  [[nodiscard]] BezierFitter create_bezier_fitter(boost::intrusive_ptr<Layer> const& layer,
+      draw::LineStyle const& line_style,
+      cairowindow::BezierFitter&& bezier_fitter)
+  {
+    BezierFitter plot_bezier_fitter(std::move(bezier_fitter));
+    add_bezier_fitter(layer, line_style, plot_bezier_fitter);
+    return plot_bezier_fitter;
   }
 
   //--------------------------------------------------------------------------

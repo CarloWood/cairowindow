@@ -1,8 +1,10 @@
 #pragma once
 
+#include "Line.h"
 #include "cairowindow/LayerRegion.h"
 #include "cairowindow/Color.h"
 #include "cairowindow/StrokeExtents.h"
+#include "cairowindow/Style.h"
 #ifdef CWDEBUG
 #include "cairowindow/debug_channel.h"
 #include "cairowindow/debugcairo.h"
