@@ -288,12 +288,12 @@ void debug_cairo_stroke_extents(cairo_t* cr, double* x1, double* y1, double* x2,
 }
 
 cairo_surface_t* debug_cairo_surface_create_similar(cairo_surface_t* other, cairo_content_t content, int width, int height
-    COMMA_CWDEBUG_ONLY(std::string name))
+    COMMA_CWDEBUG_ONLY(std::string debug_name))
 {
   Dout(dc::cairo, "cairo_surface_create_similar(" << other << ", " << content << ", " << width << ", " << height << ")");
   cairo_surface_t* surface = cairo_surface_create_similar(other, content, width, height);
   cairo_surface_t_pointer_map_t::wat cairo_surface_t_pointer_map_w(cairo_surface_t_pointer_map);
-  cairo_surface_t_pointer_map_w->insert({surface, "surface:" + name});
+  cairo_surface_t_pointer_map_w->insert({surface, "surface:\"" + debug_name + '"'});
   return surface;
 }
 
@@ -316,11 +316,18 @@ void debug_cairo_translate(cairo_t* cr, double tx, double ty)
   cairo_translate(cr, tx, ty);
 }
 
-cairo_surface_t* debug_cairo_xlib_surface_create(Display* dpy, Drawable d, Visual* visual, int width, int height
+cairo_surface_t* debug_cairo_xlib_surface_create(
+    /*Display*/void* dpy,
+    /*Drawable*/unsigned long d,
+    /*Visual*/void* visual,
+    int width, int height
     COMMA_CWDEBUG_ONLY(std::string name))
 {
+  Display* x11_dpy = (Display*)dpy;
+  Drawable x11_d = d;
+  Visual* x11_visual = (Visual*)visual;
   Dout(dc::cairo, "cairo_xlib_surface_create(dpy, visual, " << width << ", " << height << ")");
-  cairo_surface_t* surface = cairo_xlib_surface_create(dpy, d, visual, width, height);
+  cairo_surface_t* surface = cairo_xlib_surface_create(x11_dpy, x11_d, x11_visual, width, height);
   cairo_surface_t_pointer_map_t::wat cairo_surface_t_pointer_map_w(cairo_surface_t_pointer_map);
   cairo_surface_t_pointer_map_w->insert({surface, "surface:" + name});
   return surface;

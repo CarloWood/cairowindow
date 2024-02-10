@@ -4,34 +4,48 @@
 #include <iostream>
 #include "debug.h"
 
+// Include this last as it defines a lot of macros that clash with C++.
+#include <cairo/cairo-xlib.h>
+
 namespace cairowindow {
 
 cairo_t* DebugWindowVars::open_window(std::string const& title)
 {
-  display_ = XOpenDisplay(nullptr);
-  if (!display_)
+  auto display = XOpenDisplay(nullptr);
+  if (!display)
   {
     std::cerr << "Cannot open display.\n";
     return nullptr;
   }
 
-  int screen = DefaultScreen(display_);
-  Window root = DefaultRootWindow(display_);
-  x11window_ = XCreateSimpleWindow(display_, root, 10, 10, width_, height_, 1, BlackPixel(display_, screen), WhitePixel(display_, screen));
-  XStoreName(display_, x11window_, title.c_str());
-  XMapWindow(display_, x11window_);
-  XSelectInput(display_, x11window_, ExposureMask | KeyPressMask);
+  x11display_ = (_XDisplay*)display;
 
-  x11_surface_ = cairo_xlib_surface_create(display_, x11window_, DefaultVisual(display_, screen), width_, height_);
-  return cairo_create(x11_surface_);
+  int screen = DefaultScreen(display);
+  Window root = DefaultRootWindow(display);
+  x11window_ = XCreateSimpleWindow(display, root, 10, 10, width_, height_, 1, BlackPixel(display, screen), WhitePixel(display, screen));
+  XStoreName(display, x11window_, title.c_str());
+  XMapWindow(display, x11window_);
+  XSelectInput(display, x11window_, ExposureMask | KeyPressMask);
+
+#ifdef CWDEBUG
+  using namespace debugcairo;
+#endif
+  x11_surface_ = cairo_xlib_surface_create(display, x11window_, DefaultVisual(display, screen), width_, height_
+      COMMA_DEBUG_ONLY("DebugWindow::x11_surface_:\"" + title + '"'));
+  return cairo_create(x11_surface_ COMMA_DEBUG_ONLY("DebugWindow::cr:\"" + title + '"'));
 }
 
 void DebugWindowVars::close_window(cairo_t* cr)
 {
+  Display* display = (Display*)x11display_;
+
+#ifdef CWDEBUG
+  using namespace debugcairo;
+#endif
   cairo_destroy(cr);
   cairo_surface_destroy(x11_surface_);
-  XDestroyWindow(display_, x11window_);
-  XCloseDisplay(display_);
+  XDestroyWindow(display, x11window_);
+  XCloseDisplay(display);
 }
 
 void DebugWindow::main_loop(cairo_surface_t* shared_surface, std::string title)
@@ -52,9 +66,14 @@ void DebugWindow::main_loop(cairo_surface_t* shared_surface, std::string title)
   double const lightGray = 0.8; // Light gray for one set of tiles.
   double const darkGray = 0.5;  // Dark gray for the other set of tiles.
 
+#ifdef CWDEBUG
+  using namespace debugcairo;
+#endif
   // Create a pattern surface to draw the checkerboard pattern.
-  cairo_surface_t* pattern_surface = cairo_surface_create_similar(cairo_get_target(cr), CAIRO_CONTENT_COLOR, tileSize * 2, tileSize * 2);
-  cairo_t* pattern_cr = cairo_create(pattern_surface);
+  cairo_surface_t* pattern_surface = cairo_surface_create_similar(cairo_get_target(cr), CAIRO_CONTENT_COLOR, tileSize * 2, tileSize * 2
+      COMMA_CWDEBUG_ONLY("DebugWindow checkerboard surface for:\"" + title + '"'));
+  cairo_t* pattern_cr = cairo_create(pattern_surface
+      COMMA_CWDEBUG_ONLY("DebugWindow checkerboard cr for:\"" + title '"'));
 
   // Draw the checkerboard pattern.
   // Light gray squares.
@@ -81,9 +100,10 @@ void DebugWindow::main_loop(cairo_surface_t* shared_surface, std::string title)
       XEvent event;
       {
         variables_type::wat vars_w(variables_);
-        if (XPending(vars_w->display_) <= 0)
+        Display* display = (Display*)(vars_w->x11display_);
+        if (XPending(display) <= 0)
           break;
-        XNextEvent(vars_w->display_, &event);
+        XNextEvent(display, &event);
       }
 
       if (event.type == Expose)
@@ -133,10 +153,12 @@ void DebugWindow::update(StrokeExtents const& stroke_extents)
 
 void DebugWindowVars::trigger_expose_event()
 {
+  Display* display = (Display*)(x11display_);
+
   // Trigger an Expose event.
   XExposeEvent ev = {0};
   ev.type = Expose;
-  ev.display = display_;
+  ev.display = display;
   ev.window = x11window_;
   ev.x = 0;
   ev.y = 0;
@@ -144,8 +166,8 @@ void DebugWindowVars::trigger_expose_event()
   ev.height = height_;
   ev.count = 0; // No more Expose events to follow.
 
-  XSendEvent(display_, x11window_, false, ExposureMask, (XEvent*)&ev);
-  XFlush(display_);
+  XSendEvent(display, x11window_, false, ExposureMask, (XEvent*)&ev);
+  XFlush(display);
 }
 
 } // namespace cairowindow

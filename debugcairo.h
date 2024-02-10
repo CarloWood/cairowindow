@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cairo/cairo.h>
-#include <cairo/cairo-xlib.h>
 #include "debug.h"
 
 #ifdef CWDEBUG
@@ -57,7 +56,12 @@ cairo_surface_t* debug_cairo_surface_create_similar(cairo_surface_t* other, cair
 void debug_cairo_surface_destroy(cairo_surface_t* surface);
 void debug_cairo_text_extents(cairo_t* cr, char const* utf8, cairo_text_extents_t* extents);
 void debug_cairo_translate(cairo_t* cr, double tx, double ty);
-cairo_surface_t* debug_cairo_xlib_surface_create(Display* dpy, Drawable d, Visual* visual, int width, int height
+// Avoid using X11 macro "types", so we don't have to include the X11 headers.
+cairo_surface_t* debug_cairo_xlib_surface_create(
+    /*Display*/void* dpy,
+    /*Drawable*/unsigned long d,
+    /*Visual*/void* visual,
+    int width, int height
     COMMA_CWDEBUG_ONLY(std::string name));
 
 } // namespace debugcairo

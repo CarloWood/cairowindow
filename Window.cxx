@@ -12,6 +12,9 @@
 #include "debugcairo.h"
 #endif
 
+// Include this last as it defines a lot of macros that clash with C++.
+#include <cairo/cairo-xlib.h>
+
 #ifdef CWDEBUG
 NAMESPACE_DEBUG_CHANNELS_START
 channel_ct cairowindow("CAIROWINDOW");
@@ -85,7 +88,7 @@ void Window::grab_mouse(unsigned int button)
   DoutEntering(dc::notice, "Window::grab_mouse(" << button << ")");
   if ((mouse_button_mask_ & (1 << button)))
   {
-    XGrabPointer(display_, x11window_, X11::x11_False,
+    XGrabPointer(display_, x11window_, False,
         PointerMotionMask | ButtonReleaseMask, GrabModeAsync, GrabModeAsync, None, None, CurrentTime);
     mouse_grabbed_by_ = button;
   }

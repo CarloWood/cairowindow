@@ -24,17 +24,15 @@
 #include "debug_channel.h"
 #endif
 
-#include <cairo/cairo-xlib.h>
+// Get some X11 types that we need.
+extern "C" {
+#include <X11/Xdefs.h>                  // For Atom and XID
+typedef XID Window;
+typedef XID Drawable;
+struct _XDisplay;                       // Forward declaration.
+}
 
 namespace cairowindow {
-namespace X11 {
-static constexpr auto x11_True = True;
-static constexpr auto x11_False = False;
-#undef True
-#undef False
-#undef Status
-#undef Success
-} // namespace X11
 namespace plot {
 class Plot;
 class Draggable;
@@ -52,7 +50,7 @@ static const uint32_t custom_event_grab_mouse = 1;
 class Window
 {
  private:
-  Display* display_;
+  _XDisplay* display_;
   X11Window x11window_;
   int width_;
   int height_;

@@ -13,10 +13,12 @@
 #include <atomic>
 #include <thread>
 
-#include <cairo/cairo-xlib.h>
-#undef True
-#undef False
-#undef Status
+// Get some X11 types that we need.
+extern "C" {
+#include <X11/Xdefs.h>                  // For XID
+typedef XID Window;
+struct _XDisplay;                       // Forward declaration.
+}
 
 namespace cairowindow {
 
@@ -26,7 +28,7 @@ struct DebugWindowVars
 {
   using Window = ::Window;
 
-  Display* display_;
+  _XDisplay* x11display_;
   Window x11window_;
   cairo_surface_t* x11_surface_;
   double width_;
