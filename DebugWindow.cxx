@@ -73,7 +73,7 @@ void DebugWindow::main_loop(cairo_surface_t* shared_surface, std::string title)
   cairo_surface_t* pattern_surface = cairo_surface_create_similar(cairo_get_target(cr), CAIRO_CONTENT_COLOR, tileSize * 2, tileSize * 2
       COMMA_CWDEBUG_ONLY("DebugWindow checkerboard surface for:\"" + title + '"'));
   cairo_t* pattern_cr = cairo_create(pattern_surface
-      COMMA_CWDEBUG_ONLY("DebugWindow checkerboard cr for:\"" + title '"'));
+      COMMA_CWDEBUG_ONLY("DebugWindow checkerboard cr for:\"" + title + '"'));
 
   // Draw the checkerboard pattern.
   // Light gray squares.

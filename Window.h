@@ -141,9 +141,10 @@ class Window
 
   bool push_message(Message const& message)
   {
-    bool full = message_buffer_.push(&message);
-    message_semaphore_.post();
-    return full;
+    bool success = message_buffer_.push(&message);
+    if (success)
+      message_semaphore_.post();
+    return !success;
   }
 
   bool have_message(bool block)
