@@ -112,7 +112,7 @@ int main()
       Vector const V1 = plot_D1_arrow;
 
       plot::Connector plot_curvature;
-//      Vector K0(0.0, 0.0);
+      Vector K0(0.0, 0.0);
       Rectangle rect;
 
 #if 1
@@ -181,12 +181,12 @@ int main()
         // Acceleration vector at t=0.
         Vector A0{2 * m02, 2 * m12};
         // Curvature.
-//        K0 = A0.dot(V0.rotate_90_degrees()) / utils::square(V0.length_squared()) * V0.rotate_90_degrees();
-//        plot_curvature = plot.create_connector(second_layer, line_style, plot_P0, plot_P0 + K0);
+        K0 = A0.dot(V0.rotate_90_degrees()) / utils::square(V0.length_squared()) * V0.rotate_90_degrees();
+        plot_curvature = plot.create_connector(second_layer, line_style, plot_P0, plot_P0 + K0);
       }
       auto curve = plot.create_curve(second_layer, curve_line_style, std::move(curve_points));
 
-#if 0
+#if 1
       double radius = 1.0 / K0.length();
       plot::Circle plot_curvature_circle;
       if (K0.length() > 1e-9)

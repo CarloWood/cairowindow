@@ -48,7 +48,7 @@ int main()
     draw::BezierCurveStyle bezier_curve_style({.line_color = Color::next_color(), .line_width = 1.0});
     draw::TextStyle slider_style({.position = draw::centered_below, .font_size = 18.0, .offset = 10});
 
-    auto slider_offset = plot.create_slider(second_layer, {978, 83, 7, 400}, 0.0, -M_PI, M_PI);
+    auto slider_offset = plot.create_slider(second_layer, {978, 83, 7, 400}, -0.205, -M_PI, M_PI);
     auto slider_offset_label = plot.create_text(second_layer, slider_style, Pixel{978, 483}, "offset");
 
     auto plot_circle = plot.create_circle(background_layer, line_style, Point{100.0, 100.0}, 80.0);
@@ -61,7 +61,7 @@ int main()
 
       BezierFitter bezier_fitter;
       bezier_fitter.solve([offset = slider_offset.value()](double t) -> Point {
-          return {100.0 + 80.0 * std::cos(t + offset), 100.0 + 80.0 * std::sin(t + offset * 0.5)};
+          return {100.0 + 80.0 * std::cos(t + offset), 100.0 + 80.0 * std::sin(2.0 * t + offset * 0.5)};
       }, {0, 2.0 * M_PI}, {0.0, 0.0, 200.0, 200.0}, 0.001);
 
       std::vector<BezierCurve> const& result = bezier_fitter.result();
@@ -74,6 +74,11 @@ int main()
       }
 
       auto plot_bezier_fitter = plot.create_bezier_fitter(second_layer, curve_line_style, std::move(bezier_fitter));
+
+      std::vector<Point> points1(points0.size());
+      for (plot::Point const& plot_point : points0)
+        points1.emplace_back(plot_point);
+      auto plot_curve = plot.create_curve(second_layer, curve_line_style, std::move(points1));
 
       // Flush all expose events related to the drawing done above.
       window.set_send_expose_events(true);
