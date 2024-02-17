@@ -17,7 +17,7 @@ int main()
     using Window = cairowindow::Window;
 
     // Create a window.
-    Window window("Circle Bezier", 1200, 900);
+    Window window("Chord length", 1200, 900);
 
     // Create a new layer with a gray background.
     auto background_layer = window.create_background_layer<Layer>(color::white COMMA_DEBUG_ONLY("background_layer"));

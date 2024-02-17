@@ -72,6 +72,14 @@ class Vector
     return *this;
   }
 
+  // Subtract another vector.
+  Vector& operator-=(Vector const& v2)
+  {
+    x_ -= v2.x_;
+    y_ -= v2.y_;
+    return *this;
+  }
+
   // Multiply the vector with a scalar.
   Vector& operator*=(double scalar)
   {

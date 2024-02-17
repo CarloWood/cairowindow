@@ -9,21 +9,22 @@ namespace cairowindow {
 
 Rectangle BezierCurve::extents() const
 {
-  std::vector<double> x_candidates = { P0_.x(), P1_.x() };
-  std::vector<double> y_candidates = { P0_.y(), P1_.y() };
+  Vector const P0{this->P0()};
+  Vector const P1{this->P1()};
+  std::vector<double> x_candidates = { P0.x(), P1.x() };
+  std::vector<double> y_candidates = { P0.y(), P1.y() };
 
   // If the curve extents outside of the rectangle spanned by begin and end point
   // then the first derivative of x(t) and/or y(t) must be zero at the edge of
   // the extent.
   //
-  // Since the first derivative is given by 3(C₁ - P₀) + 6(C₂ - 2C₁ + P₀) t + 3(P₁ - 3C₂ + 3C₁ - P₀) t²
-  // we can find the zeroes by solving two quadratic equations, for x and y respectively.
+  // Since the first derivative is given by V0 + A0 t + J/2 t² we can find the
+  // zeroes by solving two quadratic equations, for x and y respectively.
   //
   // Let `a t² + b t + c = 0`.
-
-  Vector a = 3.0 * (P1_ - 3.0 * C1_ + 3.0 * C0_ - P0_);
-  Vector b = 6.0 * (C1_ - 2.0 * C0_ + P0_);
-  Vector c = 3.0 * (C0_ - P0_);
+  Vector a = 0.5 * J();
+  Vector b = A0();
+  Vector c = V0();
 
   double discriminant_x = utils::square(b.x()) - 4.0 * a.x() * c.x();
   double discriminant_y = utils::square(b.y()) - 4.0 * a.y() * c.y();
@@ -90,14 +91,17 @@ Rectangle BezierCurve::extents() const
 
 bool BezierCurve::quadratic_from(Vector P_beta, Vector P_gamma)
 {
+  Vector const P0{this->P0()};
+  Vector const P1{this->P1()};
+
   // The method used here is by Michael A. Lachance, Michael A. and Arthur J. Schwartz,
   // as published in the article "Four point parabolic interpolation" 1991.
   // See https://deepblue.lib.umich.edu/handle/2027.42/29347
 
   Eigen::Matrix3d R{
-      { P0_.x(),       P0_.y(), 1.0 },
+      { P0.x(),         P0.y(), 1.0 },
       { P_beta.x(), P_beta.y(), 1.0 },
-      { P1_.x(),       P1_.y(), 1.0 }
+      { P1.x(),         P1.y(), 1.0 }
     };
 
   Eigen::RowVector3d P_gamma_1(P_gamma.x(), P_gamma.y(), 1.0);
@@ -130,28 +134,28 @@ bool BezierCurve::quadratic_from(Vector P_beta, Vector P_gamma)
   //       ⎣1  1  1⎦
   //
   // But we need and calculate ⅓V⁻¹ directly:
-  Eigen::Matrix3d one_third_V_inverse{
+  Eigen::Matrix3d V_inverse{
     {         beta - 1.0,  1.0,       -beta },
     {  1.0 - beta * beta, -1.0, beta * beta },
     { beta * beta - beta,  0.0,         0.0 }
   };
-  one_third_V_inverse /= 3.0 * beta * (beta - 1.0);
+  V_inverse /= beta * (beta - 1.0);
 
-  // Calculate ⅓V⁻¹R.
-  Eigen::Matrix3d W = one_third_V_inverse * R;
+  // Calculate V⁻¹R.
+  Eigen::Matrix3d W = V_inverse * R;
 
   // The paper uses (t² t  1) V⁻¹R, where-as we use M (1  t  t²)ᵀ,
   // fortunately, the translation between the two matrixes is
-  // straightforward. Note that we're still working with ⅓ of the
-  // values because that is needed for the next formula.
-  double one_third_m01 = W(1, 0);
-  double one_third_m11 = W(1, 1);
-  double one_third_m02 = W(0, 0);
-  double one_third_m12 = W(0, 1);
+  // straightforward.
+  double m01 = W(1, 0);
+  double m11 = W(1, 1);
+  double m02 = W(0, 0);
+  double m12 = W(0, 1);
 
-  // Convert to control points.
-  C0_ = Vector{one_third_m01, one_third_m11} + P0_;
-  C1_ = Vector{one_third_m02, one_third_m12} + 2.0 * C0_ - P0_;
+  // Apply to the matrix.
+  m_.coefficient[1] = Vector{m01, m11};
+  m_.coefficient[2] = Vector{m02, m12};
+  m_.coefficient[3] -= m_.coefficient[2] + m_.coefficient[1];
 
   return true;
 }
@@ -160,12 +164,15 @@ bool BezierCurve::quadratic_from(Direction D0, Vector P_gamma)
 {
   DoutEntering(dc::notice, "BezierCurve::quadratic_from(" << D0 << ", " << P_gamma << ")");
 
-  Vector P1P0(P0_ - P1_);
-  Vector PgammaP0(P0_ - P_gamma);
+  Vector const P0{this->P0()};
+  Vector const P1{this->P1()};
+
+  Vector P1P0(P0 - P1);
+  Vector PgammaP0(P0 - P_gamma);
 
   // Test validity.
   {
-    Vector PgammaP1(P1_ - P_gamma);
+    Vector PgammaP1(P1 - P_gamma);
     double P1R90dotPg = P1P0.rotate_90_degrees().dot(PgammaP0);
     double PgP1R90dotD0 = PgammaP1.rotate_90_degrees().dot(D0);
 
@@ -183,15 +190,17 @@ bool BezierCurve::quadratic_from(Direction D0, Vector P_gamma)
     (PgammaP0.length_squared() + P1P0.length_squared() - 2 * PgdotP1) / (gamma_squared * utils::square(1.0 - gamma));
   double alpha = std::sqrt(alpha_squared);  // α > 0 (or we'd go in the wrong direction!)
 
-  double m00 = P0_.x();
-  double m10 = P0_.y();
+  double m00 = P0.x();
+  double m10 = P0.y();
   double m01 = alpha * D0.x();
   double m11 = alpha * D0.y();
-  double m02 = P1_.x() - (m00 + m01);
-  double m12 = P1_.y() - (m10 + m11);
+  double m02 = P1.x() - (m00 + m01);
+  double m12 = P1.y() - (m10 + m11);
 
-  C0_ = Vector{m01, m11} / 3.0 + P0_;
-  C1_ = Vector{m02, m12} / 3.0 + 2.0 * C0_ - P0_;
+  // Apply to the matrix.
+  m_.coefficient[1] = Vector{m01, m11};
+  m_.coefficient[2] = Vector{m02, m12};
+  m_.coefficient[3] -= m_.coefficient[2] + m_.coefficient[1];
 
   return true;
 }
@@ -200,15 +209,14 @@ bool BezierCurve::quadratic_from(Direction D0, Vector P_gamma)
 // due to round off errors of the double themselves.
 double BezierCurve::chord_length(double tolerance) const
 {
-  auto m = M();
-  double m00 = m.coefficient[0].x();
-  double m10 = m.coefficient[0].y();
-  double m01 = m.coefficient[1].x();
-  double m11 = m.coefficient[1].y();
-  double m02 = m.coefficient[2].x();
-  double m12 = m.coefficient[2].y();
-  double m03 = m.coefficient[3].x();
-  double m13 = m.coefficient[3].y();
+  double m00 = m_.coefficient[0].x();
+  double m10 = m_.coefficient[0].y();
+  double m01 = m_.coefficient[1].x();
+  double m11 = m_.coefficient[1].y();
+  double m02 = m_.coefficient[2].x();
+  double m12 = m_.coefficient[2].y();
+  double m03 = m_.coefficient[3].x();
+  double m13 = m_.coefficient[3].y();
   double c0 = utils::square(m01) + utils::square(m11);
   double c1 = 4 * m01 * m02 + 4 * m11 * m12;
   double c2 = 4 * utils::square(m02) + 6 * m01 * m03 + 4 * utils::square(m12) + 6 * m11 * m13;
@@ -219,5 +227,13 @@ double BezierCurve::chord_length(double tolerance) const
   };
   return boost::math::quadrature::gauss_kronrod<double, 31>::integrate(f, 0.0, 1.0, tolerance);
 }
+
+#ifdef CWDEBUG
+void BezierCurve::print_on(std::ostream& os) const
+{
+  os << "{m_x0:" << m_.coefficient[0] << ", m_x1:" << m_.coefficient[1] <<
+    ", m_x2:" << m_.coefficient[2] << ", m_x3:" << m_.coefficient[3] << '}';
+}
+#endif
 
 } // namespace cairowindow

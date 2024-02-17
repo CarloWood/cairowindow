@@ -5,13 +5,6 @@
 
 namespace cairowindow {
 
-#ifdef CWDEBUG
-void BezierCurve::print_on(std::ostream& os) const
-{
-  os << "{P0:" << P0_ << ", C0:" << C0_ << ", C1:" << C1_ << ", P1:" << P1_ << '}';
-}
-#endif
-
 namespace {
 
 constexpr double sqrt3 = 1.7320508075688773;
@@ -125,4 +118,4 @@ void BezierFitter::solve(std::function<Point(double)>&& func, Range const& domai
   solve(func, viewport, tolerance, t0, t6, Vector{func(t0)}, Vector{func(0.5 * (t0 + t6))}, Vector{func(t6)});
 }
 
-} // amespace cairowindow
+} // namespace cairowindow

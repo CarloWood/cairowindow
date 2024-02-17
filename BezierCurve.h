@@ -25,11 +25,19 @@ struct BezierCurveMatrix
 //
 //        = P₀ + 3(C₀ - P₀)t + 3(C₁ - 2C₀ + P₀)t² + (P₁ - 3C₁ + 3C₀ - P₀)t³
 //
+//        = B  +        V0 t +          (A0/2) t² +                  J/6 t³
+//
+// The matrix m_ is defined as
+//
+//   m_ = [ B  V0  A0/2  J/6 ]
+//
 // First derivative
 //
 //   P'(t) = (-3 + 6t - 3t²) P₀ + (3 - 12t + 9t²) C₀ + (6t - 9t²) C₁ + 3t² P₁ =
 //
 //         = 3(C₀ - P₀) + 6(C₁ - 2C₀ + P₀) t + 3(P₁ - 3C₁ + 3C₀ - P₀) t²
+//
+//         = V0 + A0 t + J/2 t²
 //
 // Second derivative
 //
@@ -37,77 +45,82 @@ struct BezierCurveMatrix
 //
 //          = 6(C₁ - 2C₀ + P₀) + 6(P₁ - 3C₁ + 3C₀ - P₀) t
 //
+//          = A0 + J t
+//
 class BezierCurve
 {
  private:
-  Vector P0_;           // Start point.
-  Vector C0_;           // First control point.
-  Vector C1_;           // Second control point.
-  Vector P1_;           // End point.
+  BezierCurveMatrix m_; // A 2x4 matrix where each colum represents a vector, respectively B, V0, A0/2 and J/6,
+                        // where B is the position at t=0: P(0), V0 is the velocity at t=0: P'(0),
+                        // A0 is the acceleration at t=0: P''(0) and J is the (constant) jolt: P'''(0).
 
  public:
   BezierCurve() = default;
 
   // Construct an incomplete BezierCurve with just the begin and end points set.
-  BezierCurve(Point P0, Point P1) : P0_(P0), P1_(P1) { }
-  BezierCurve(Vector P0, Vector P1) : P0_(P0), P1_(P1) { }
+  BezierCurve(Point P0, Point P1) : m_{{{Vector{P0}, {}, {}, P1 - P0}}} { }
+
+  BezierCurve(Vector P0, Vector P1) : m_{{{P0, {}, {}, P1 - P0}}} { }
 
   // Construct a fully defined BezierCurve from begin and end point plus two control points.
-  BezierCurve(Vector P0, Vector C0, Vector C1, Vector P1) : P0_(P0), C0_(C0), C1_(C1), P1_(P1) { }
-  BezierCurve(Point P0, Point C0, Point C1, Point P1) : P0_(P0), C0_(C0), C1_(C1), P1_(P1) { }
+  BezierCurve(Point P0, Point C0, Point C1, Point P1) :
+    m_{{{Vector{P0}, 3.0 * (C0 - P0), 3.0 * ((C1 - P0) - 2.0 * (C0 - P0)), P1 - P0 - 3.0 * (C1 - C0)}}} { }
+
+  BezierCurve(Vector P0, Vector C0, Vector C1, Vector P1) :
+    m_{{{P0, 3.0 * (C0 - P0), 3.0 * ((C1 - P0) - 2.0 * (C0 - P0)), P1 - P0 - 3.0 * (C1 - C0)}}} { }
 
   // Construct a fully defined BezierCurve from "matrix" columns.
-  BezierCurve(BezierCurveMatrix const& m) :
-    P0_(m.coefficient[0]),
-    C0_(m.coefficient[1] / 3.0 + P0_),
-    C1_(m.coefficient[2] / 3.0 + 2.0 * C0_ - P0_),
-    P1_(m.coefficient[3] + 3.0 * (C1_ - C0_) + P0_) { }
+  BezierCurve(BezierCurveMatrix const& m) : m_{m} { }
 
   // Accessors.
-  Vector P0() const { return P0_; }
-  Vector C0() const { return C0_; }
-  Vector C1() const { return C1_; }
-  Vector P1() const { return P1_; }
+  Vector P0() const { return m_.coefficient[0]; }
+  Vector C0() const { return m_.coefficient[1] / 3.0 + m_.coefficient[0]; }
+  Vector C1() const { return m_.coefficient[2] / 3.0 + 2.0 / 3.0 * m_.coefficient[1] + m_.coefficient[0]; }
+  Vector P1() const { return m_.coefficient[3] + m_.coefficient[2] + m_.coefficient[1] + m_.coefficient[0]; }
 
   // As matrix (coefficients of a polynomial in t).
-  BezierCurveMatrix M() const { return {P0_, V0(), 0.5 * A0(), 1.0 / 6.0 * J0()}; }
+  BezierCurveMatrix const& M() const { return m_; }
 
   // Velocity at t=0.
   Vector V0() const
   {
-    return 3.0 * (C0_ - P0_);
+    return m_.coefficient[1];
   }
 
   // Acceleration at t=0.
   Vector A0() const
   {
-    return 6.0 * ((C1_ - P0_) - 2.0 * (C0_ - P0_));
+    return 2.0 * m_.coefficient[2];
   }
 
   // Jolt at t=0.
-  Vector J0() const
+  Vector J() const
   {
-    return 6.0 * ((P1_ - P0_) - 3.0 * (C1_ - C0_));
+    return 6.0 * m_.coefficient[3];
+  }
+
+  // The vector to the starting point (B = Begin).
+  Vector B(double t) const
+  {
+    return m_.coefficient[0] + t * (m_.coefficient[1] + t * (m_.coefficient[2] + t * m_.coefficient[3]));
   }
 
   // Point at t.
   Point P(double t) const
   {
-    Vector B{P0_ + t * (V0() + t / 2.0 * (A0() + t / 3.0 * J0()))};
-    return B.point();
+    return B(t).point();
   }
 
   // Velocity at t.
   Vector velocity(double t) const
   {
-    return V0() + t * (A0() + t / 2.0 * J0());
+    return V0() + t * (A0() + t * (0.5 * J()));
   }
 
   // Acceleration at t.
   Vector acceleration(double t) const
   {
-    // 6(C₁ - 2C₀ + P₀) + 6(P₁ - 3C₁ + 3C₀ - P₀) t
-    return A0() + t * J0();
+    return A0() + t * J();
   }
 
   // Special case: direction of the velocity at t=0.
@@ -119,7 +132,7 @@ class BezierCurve
   // Special case: direction of the velocity at t=1.
   Direction D1() const
   {
-    Vector V1{3.0 * (P1_ - C1_)};
+    Vector V1{V0() + A0() + 0.5 * J()};
     return V1.direction();
   }
 
