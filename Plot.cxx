@@ -342,15 +342,15 @@ void Plot::add_bezier_curve(boost::intrusive_ptr<Layer> const& layer,
     BezierCurve const& plot_bezier_curve)
 {
   Vector const& P0 = plot_bezier_curve.P0();
+  Vector const& C0 = plot_bezier_curve.C0();
   Vector const& C1 = plot_bezier_curve.C1();
-  Vector const& C2 = plot_bezier_curve.C2();
   Vector const& P1 = plot_bezier_curve.P1();
 
   plot_bezier_curve.draw_object_ =
       std::make_shared<draw::BezierCurve>(
         convert_x(P0.x()), convert_y(P0.y()),
+        convert_x(C0.x()), convert_y(C0.y()),
         convert_x(C1.x()), convert_y(C1.y()),
-        convert_x(C2.x()), convert_y(C2.y()),
         convert_x(P1.x()), convert_y(P1.y()),
         bezier_curve_style);
   layer->draw(plot_bezier_curve.draw_object_);

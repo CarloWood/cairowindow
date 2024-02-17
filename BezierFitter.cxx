@@ -8,7 +8,7 @@ namespace cairowindow {
 #ifdef CWDEBUG
 void BezierCurve::print_on(std::ostream& os) const
 {
-  os << "{P0:" << P0_ << ", C1:" << C1_ << ", C2:" << C2_ << ", P1:" << P1_ << '}';
+  os << "{P0:" << P0_ << ", C0:" << C0_ << ", C1:" << C1_ << ", P1:" << P1_ << '}';
 }
 #endif
 
@@ -82,7 +82,7 @@ void BezierFitter::solve(std::function<Point(double)> const& func, IntersectRect
       return;
   }
 
-  Dout(dc::notice, "xresid = " << xresid << "; yresid = " << yresid);
+//  Dout(dc::notice, "xresid = " << xresid << "; yresid = " << yresid);
 
   // If we hit the desired tolerance, return a single bezier segment:
   if (xresid < tolerance && yresid < tolerance)

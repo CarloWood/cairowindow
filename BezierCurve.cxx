@@ -3,6 +3,7 @@
 #include "utils/almost_equal.h"
 #include "BezierCurve.h"
 #include <Eigen/Dense>
+#include <boost/math/quadrature/gauss_kronrod.hpp>
 
 namespace cairowindow {
 
@@ -20,9 +21,9 @@ Rectangle BezierCurve::extents() const
   //
   // Let `a t² + b t + c = 0`.
 
-  Vector a = 3.0 * (P1_ - 3.0 * C2_ + 3.0 * C1_ - P0_);
-  Vector b = 6.0 * (C2_ - 2.0 * C1_ + P0_);
-  Vector c = 3.0 * (C1_ - P0_);
+  Vector a = 3.0 * (P1_ - 3.0 * C1_ + 3.0 * C0_ - P0_);
+  Vector b = 6.0 * (C1_ - 2.0 * C0_ + P0_);
+  Vector c = 3.0 * (C0_ - P0_);
 
   double discriminant_x = utils::square(b.x()) - 4.0 * a.x() * c.x();
   double discriminant_y = utils::square(b.y()) - 4.0 * a.y() * c.y();
@@ -149,8 +150,8 @@ bool BezierCurve::quadratic_from(Vector P_beta, Vector P_gamma)
   double one_third_m12 = W(0, 1);
 
   // Convert to control points.
-  C1_ = Vector{one_third_m01, one_third_m11} + P0_;
-  C2_ = Vector{one_third_m02, one_third_m12} + 2.0 * C1_ - P0_;
+  C0_ = Vector{one_third_m01, one_third_m11} + P0_;
+  C1_ = Vector{one_third_m02, one_third_m12} + 2.0 * C0_ - P0_;
 
   return true;
 }
@@ -189,10 +190,34 @@ bool BezierCurve::quadratic_from(Direction D0, Vector P_gamma)
   double m02 = P1_.x() - (m00 + m01);
   double m12 = P1_.y() - (m10 + m11);
 
-  C1_ = Vector{m01, m11} / 3.0 + P0_;
-  C2_ = Vector{m02, m12} / 3.0 + 2.0 * C1_ - P0_;
+  C0_ = Vector{m01, m11} / 3.0 + P0_;
+  C1_ = Vector{m02, m12} / 3.0 + 2.0 * C0_ - P0_;
 
   return true;
+}
+
+// A tolerance of less than 1e-15 probably won't work,
+// due to round off errors of the double themselves.
+double BezierCurve::chord_length(double tolerance) const
+{
+  auto m = M();
+  double m00 = m.coefficient[0].x();
+  double m10 = m.coefficient[0].y();
+  double m01 = m.coefficient[1].x();
+  double m11 = m.coefficient[1].y();
+  double m02 = m.coefficient[2].x();
+  double m12 = m.coefficient[2].y();
+  double m03 = m.coefficient[3].x();
+  double m13 = m.coefficient[3].y();
+  double c0 = utils::square(m01) + utils::square(m11);
+  double c1 = 4 * m01 * m02 + 4 * m11 * m12;
+  double c2 = 4 * utils::square(m02) + 6 * m01 * m03 + 4 * utils::square(m12) + 6 * m11 * m13;
+  double c3 = 12 * m02 * m03 + 12 * m12 * m13;
+  double c4 = 9 * utils::square(m03) + 9 * utils::square(m13);
+  auto f = [c0, c1, c2, c3, c4](double t){
+    return std::sqrt(c0 + t * (c1 + t * (c2 + t * (c3 + t * c4))));
+  };
+  return boost::math::quadrature::gauss_kronrod<double, 31>::integrate(f, 0.0, 1.0, tolerance);
 }
 
 } // namespace cairowindow

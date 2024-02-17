@@ -19,24 +19,30 @@ struct BezierCurveMatrix
 
 // The cubic Bezier curve is the 2D parametric function:
 //
-//   P(t) = (1-t)³ P₀ + 3(1-t)²t C₁ + 3(1-t)t² C₂ + t³ P₁
+//   P(t) = (1-t)³ P₀ + 3(1-t)²t C₀ + 3(1-t)t² C₁ + t³ P₁
 //
-//        = (1 - 3t + 3t² - t³) P₀ + (3t - 6t² + 3t³) C₁ + (3t² - 3t³) C₂ + t³ P₁ =
+//        = (1 - 3t + 3t² - t³) P₀ + (3t - 6t² + 3t³) C₀ + (3t² - 3t³) C₁ + t³ P₁ =
 //
-//        = P₀ + 3(C₁ - P₀)t + 3(C₂ - 2C₁ + P₀)t² + (P₁ - 3C₂ + 3C₁ - P₀)t³
+//        = P₀ + 3(C₀ - P₀)t + 3(C₁ - 2C₀ + P₀)t² + (P₁ - 3C₁ + 3C₀ - P₀)t³
 //
 // First derivative
 //
-//   P'(t) = (-3 + 6t - 3t²) P₀ + (3 - 12t + 9t²) C₁ + (6t - 9t²) C₂ + 3t² P₁ =
+//   P'(t) = (-3 + 6t - 3t²) P₀ + (3 - 12t + 9t²) C₀ + (6t - 9t²) C₁ + 3t² P₁ =
 //
-//         = 3(C₁ - P₀) + 6(C₂ - 2C₁ + P₀) t + 3(P₁ - 3C₂ + 3C₁ - P₀) t²
+//         = 3(C₀ - P₀) + 6(C₁ - 2C₀ + P₀) t + 3(P₁ - 3C₁ + 3C₀ - P₀) t²
+//
+// Second derivative
+//
+//   P''(t) = 6(1 - t) P₀ + 6(-2 + 3t) C₀ + 6(1 - 3t) C₁ + 6t P₁ =
+//
+//          = 6(C₁ - 2C₀ + P₀) + 6(P₁ - 3C₁ + 3C₀ - P₀) t
 //
 class BezierCurve
 {
  private:
   Vector P0_;           // Start point.
-  Vector C1_;           // First control point.
-  Vector C2_;           // Second control point.
+  Vector C0_;           // First control point.
+  Vector C1_;           // Second control point.
   Vector P1_;           // End point.
 
  public:
@@ -47,57 +53,85 @@ class BezierCurve
   BezierCurve(Vector P0, Vector P1) : P0_(P0), P1_(P1) { }
 
   // Construct a fully defined BezierCurve from begin and end point plus two control points.
-  BezierCurve(Vector P0, Vector C1, Vector C2, Vector P1) : P0_(P0), C1_(C1), C2_(C2), P1_(P1) { }
-  BezierCurve(Point P0, Point C1, Point C2, Point P1) : P0_(P0), C1_(C1), C2_(C2), P1_(P1) { }
+  BezierCurve(Vector P0, Vector C0, Vector C1, Vector P1) : P0_(P0), C0_(C0), C1_(C1), P1_(P1) { }
+  BezierCurve(Point P0, Point C0, Point C1, Point P1) : P0_(P0), C0_(C0), C1_(C1), P1_(P1) { }
 
   // Construct a fully defined BezierCurve from "matrix" columns.
   BezierCurve(BezierCurveMatrix const& m) :
     P0_(m.coefficient[0]),
-    C1_(m.coefficient[1] / 3.0 + P0_),
-    C2_(m.coefficient[2] / 3.0 + 2.0 * C1_ - P0_),
-    P1_(m.coefficient[3] + 3.0 * (C2_ - C1_) + P0_) { }
+    C0_(m.coefficient[1] / 3.0 + P0_),
+    C1_(m.coefficient[2] / 3.0 + 2.0 * C0_ - P0_),
+    P1_(m.coefficient[3] + 3.0 * (C1_ - C0_) + P0_) { }
 
   // Accessors.
   Vector P0() const { return P0_; }
+  Vector C0() const { return C0_; }
   Vector C1() const { return C1_; }
-  Vector C2() const { return C2_; }
   Vector P1() const { return P1_; }
 
   // As matrix (coefficients of a polynomial in t).
-  BezierCurveMatrix M() const { return {P0_, 3.0 * (C1_ - P0_), 3.0 * (C2_ - 2.0 * C1_ + P0_), P1_ - 3.0 * (C2_ - C1_) - P0_}; }
+  BezierCurveMatrix M() const { return {P0_, V0(), 0.5 * A0(), 1.0 / 6.0 * J0()}; }
 
-  // Return the value at t.
+  // Velocity at t=0.
+  Vector V0() const
+  {
+    return 3.0 * (C0_ - P0_);
+  }
+
+  // Acceleration at t=0.
+  Vector A0() const
+  {
+    return 6.0 * ((C1_ - P0_) - 2.0 * (C0_ - P0_));
+  }
+
+  // Jolt at t=0.
+  Vector J0() const
+  {
+    return 6.0 * ((P1_ - P0_) - 3.0 * (C1_ - C0_));
+  }
+
+  // Point at t.
   Point P(double t) const
   {
-    double t2 = t * t;
-    double t3 = t2 * t;
-    double one_minus_t = 1.0 - t;
-    double one_minus_t_2 = one_minus_t * one_minus_t;
-    double one_minus_t_3 = one_minus_t_2 * one_minus_t;
-
-    return (one_minus_t_3 * P0_ + 3.0 * one_minus_t_2 * t * C1_ + 3.0 * one_minus_t * t2 * C2_ + t3 * P1_).point();
+    Vector B{P0_ + t * (V0() + t / 2.0 * (A0() + t / 3.0 * J0()))};
+    return B.point();
   }
 
   // Velocity at t.
   Vector velocity(double t) const
   {
-    double t2 = t * t;
-    return 3.0 * ((-1 + 2 * t - t2) * P0_ + (1 - 4.0 * t + 3.0 * t2) * C1_ + (2.0 * t - 3.0 * t2) * C2_ + t2 * P1_);
+    return V0() + t * (A0() + t / 2.0 * J0());
+  }
+
+  // Acceleration at t.
+  Vector acceleration(double t) const
+  {
+    // 6(C₁ - 2C₀ + P₀) + 6(P₁ - 3C₁ + 3C₀ - P₀) t
+    return A0() + t * J0();
   }
 
   // Special case: direction of the velocity at t=0.
   Direction D0() const
   {
-    Vector velocity{3.0 * (C1_ - P0_)};
-    return velocity.direction();
+    return V0().direction();
   }
 
   // Special case: direction of the velocity at t=1.
   Direction D1() const
   {
-    Vector velocity{3.0 * (P1_ - C2_)};
-    return velocity.direction();
+    Vector V1{3.0 * (P1_ - C1_)};
+    return V1.direction();
   }
+
+  // Curvature at t.
+  Vector curvature(double t) const
+  {
+    Vector v = velocity(t);
+    Vector a = acceleration(t);
+    return a.dot(v.rotate_90_degrees()) / utils::square(v.length_squared()) * v.rotate_90_degrees();
+  }
+
+  double chord_length(double tolerance) const;
 
   // Calculate the axis aligned rectangle within which this BezierCurve exists (on the range 0 <= t <= 1).
   Rectangle extents() const;

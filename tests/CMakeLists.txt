@@ -21,3 +21,6 @@ target_link_libraries(LachanceSchwartz AICxx::cairowindow ${AICXX_OBJECTS_LIST} 
 
 add_executable(style_test style_test.cxx)
 target_link_libraries(style_test ${AICXX_OBJECTS_LIST})
+
+add_executable(chord_length_bezier chord_length_bezier.cxx)
+target_link_libraries(chord_length_bezier AICxx::cairowindow ${AICXX_OBJECTS_LIST})
