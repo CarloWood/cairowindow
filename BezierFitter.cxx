@@ -94,9 +94,9 @@ void BezierFitter::solve(std::function<Point(double)> const& func, IntersectRect
 
 #ifdef CWDEBUG
   ++depth_;
-  if (depth_ > 1000)
+  if (depth_ > 100)
   {
-    if (depth_ == 1001)
+    if (depth_ == 101)
       Dout(dc::warning, "Reached max. depth!");
     return;
   }

@@ -150,6 +150,12 @@ void debug_cairo_move_to(cairo_t* cr, double x, double y)
   cairo_move_to(cr, x, y);
 }
 
+void debug_cairo_curve_to(cairo_t* cr, double x1, double y1, double x2, double y2, double x3, double y3)
+{
+  Dout(dc::cairo, "cairo_curve_to(" << cr << ", " << x1 << ", " << y2 << ", " << x2 << ", " << y2 << ", " << x3 << ", " << y3 << ")");
+  cairo_curve_to(cr, x1, y1, x2, y2, x3, y3);
+}
+
 void debug_cairo_paint(cairo_t* cr)
 {
   Dout(dc::cairo, "cairo_paint(" << cr << ")");

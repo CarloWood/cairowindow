@@ -17,7 +17,7 @@ int main()
     using Window = cairowindow::Window;
 
     // Create a window.
-    Window window("Chord length", 1200, 900);
+    Window window("Arc length", 1200, 900);
 
     // Create a new layer with a gray background.
     auto background_layer = window.create_background_layer<Layer>(color::white COMMA_DEBUG_ONLY("background_layer"));
@@ -35,7 +35,7 @@ int main()
 
     // Create and draw plot area.
     plot::Plot plot(window.geometry(), { .grid = {.color = color::orange} },
-        "Chord length cubic Bezier", {},
+        "Arc length cubic Bezier", {},
         "x", {},
         "y", {});
     plot.set_xrange({0, 1});
@@ -223,7 +223,7 @@ g9 = -3d₄∕(5d₀) ⋆ g5 - 9d₃∕(12d₀) ⋆ g6  - 6d₂∕(7d₀) ⋆ g7
       fitter3.solve([f,f3](double u) -> Point { return {u + 0.5, f3(u)/* - f(u + 0.5)*/}; }, {-0.5, 0.5}, {0.0, 0.0, 1.0, 2.0}, 0.001);
       auto plot_curve3 = plot.create_bezier_fitter(second_layer, curve_line_style({.line_color = color::orange}), std::move(fitter3));
 
-      double len2 = plot_bezier.chord_length(1e-15);
+      double len2 = plot_bezier.arc_length(1e-15);
       Dout(dc::notice, "len2 = " << std::setprecision(std::numeric_limits<double>::max_digits10) << len2);
 
       Vector K0 = plot_bezier.curvature(0.5);

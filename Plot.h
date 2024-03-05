@@ -478,11 +478,12 @@ class Plot
   //--------------------------------------------------------------------------
 
  private:
-  void curve_to_lines(boost::intrusive_ptr<Layer> const& layer, Curve const& plot_curve, draw::LineStyle const& line_style);
+  void curve_to_bezier_curves(boost::intrusive_ptr<Layer> const& layer,
+      Curve const& plot_curve, draw::BezierCurveStyle const& bezier_curve_style);
 
  public:
   [[nodiscard]] Curve create_curve(boost::intrusive_ptr<Layer> const& layer,
-      draw::LineStyle const& line_style,
+      draw::BezierCurveStyle const& line_style,
       std::vector<cairowindow::Point>&& points);
 
   void add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio = false);

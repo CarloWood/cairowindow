@@ -51,7 +51,7 @@ int main()
     auto slider_offset = plot.create_slider(second_layer, {978, 83, 7, 400}, -0.205, -M_PI, M_PI);
     auto slider_offset_label = plot.create_text(second_layer, slider_style, Pixel{978, 483}, "offset");
 
-    auto plot_circle = plot.create_circle(background_layer, line_style, Point{100.0, 100.0}, 80.0);
+    //auto plot_circle = plot.create_circle(background_layer, line_style, Point{100.0, 100.0}, 80.0);
 
 #if 1
     while (true)
@@ -73,9 +73,11 @@ int main()
         ++i;
       }
 
-      auto plot_bezier_fitter = plot.create_bezier_fitter(second_layer, curve_line_style, std::move(bezier_fitter));
+      //auto plot_bezier_fitter = plot.create_bezier_fitter(second_layer, curve_line_style, std::move(bezier_fitter));
 
-      std::vector<Point> points1(points0.size());
+      points0.resize(3);
+      std::vector<Point> points1;
+      points1.reserve(points0.size());
       for (plot::Point const& plot_point : points0)
         points1.emplace_back(plot_point);
       auto plot_curve = plot.create_curve(second_layer, curve_line_style, std::move(points1));

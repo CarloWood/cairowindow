@@ -7,6 +7,8 @@
 
 namespace cairowindow {
 
+class Direction;
+
 class LinePiece
 {
  private:
@@ -20,6 +22,8 @@ class LinePiece
   Point const& from() const { return from_; }
   Point const& to() const { return to_; }
   double length() const { return std::sqrt(utils::square(from_.x() - to_.x()) + utils::square(from_.y() - to_.y())); };
+
+  Direction direction() const;
 };
 
 namespace draw {

@@ -199,15 +199,18 @@ void Plot::apply_line_extend(double& x1, double& y1, double& x2, double& y2, Lin
     auto intersections = rectangle.intersection_points(line);
     if (!intersections.empty())
     {
-      if (line_extend != LineExtend::to)
+      // It is not known which intersection with the bounding rectangle ends up where in the intersections array.
+      // Therefore look at the sign of the dot product between the line piece and the line between the two intersections.
+      int index_to = (dx * (intersections[1][0] - intersections[0][0]) + dy * (intersections[1][1] - intersections[0][1])) < 0.0 ? 1 : 0;
+      if (line_extend == LineExtend::from || line_extend == LineExtend::both)
       {
-        x1 = intersections[0][0];
-        y1 = intersections[0][1];
+        x1 = intersections[index_to][0];
+        y1 = intersections[index_to][1];
       }
-      if (line_extend != LineExtend::from)
+      if (line_extend == LineExtend::to || line_extend == LineExtend::both)
       {
-        x2 = intersections[1][0];
-        y2 = intersections[1][1];
+        x2 = intersections[1 - index_to][0];
+        y2 = intersections[1 - index_to][1];
       }
     }
   }
@@ -404,34 +407,49 @@ Slider Plot::create_slider(boost::intrusive_ptr<Layer> const& layer,
 
 //--------------------------------------------------------------------------
 
-void Plot::curve_to_lines(boost::intrusive_ptr<Layer> const& layer, Curve const& plot_curve, draw::LineStyle const& line_style)
+void Plot::curve_to_bezier_curves(boost::intrusive_ptr<Layer> const& layer,
+    Curve const& plot_curve, draw::BezierCurveStyle const& bezier_curve_style)
 {
-  cairowindow::Rectangle const& g = plot_area_.geometry();
-  double prev_point_x = std::numeric_limits<double>::quiet_NaN();
-  double prev_point_y = std::numeric_limits<double>::quiet_NaN();
-  int count = 0;
-  std::vector<std::shared_ptr<draw::Line>>& lines = plot_curve.draw_object_->lines();
-  for (cairowindow::Point const& point : plot_curve.points())
+  std::vector<cairowindow::Point> const& points = plot_curve.points();
+  if (points.size() < 2)
+    return;
+  std::vector<std::shared_ptr<draw::BezierCurve>>& bezier_curves = plot_curve.draw_object_->bezier_curves();
+  if (points.size() == 2)
   {
-    double x = convert_x(point.x());
-    double y = convert_y(point.y());
-    if (!std::isnan(prev_point_x) && !std::isnan(prev_point_y) && !std::isnan(x) && !std::isnan(y))
-    {
-      lines.emplace_back(std::make_shared<draw::Line>(prev_point_x, prev_point_y, x, y, line_style));
-      layer->draw(lines.back());
-    }
-    prev_point_x = x;
-    prev_point_y = y;
-    ++count;
+    // Draw a straight line: P(t) = P0 + t (P1 - P0)
+    //   P(t) = B + V0 t + (A0/2) t² + J/6 t³
+    Vector B{points[0]};
+    Vector V0{points[1] - points[0]};
+    BezierCurve bezier_curve(BezierCurveMatrix{{{B, V0, {}, {}}}});
+    // Create and draw the draw object.
+    add_bezier_curve(layer, bezier_curve_style, bezier_curve);
+    // Move it into the Curve object.
+    bezier_curves.emplace_back(std::move(bezier_curve.draw_object_));
+    return;
+  }
+  if (points.size() == 3)
+  {
+    // Implement.
+    ASSERT(false);
+  }
+
+//  cairowindow::Rectangle const& g = plot_area_.geometry();
+  cairowindow::Point prev_point;
+
+  for (int i = 1; i < points.size(); ++i)
+  {
+    BezierCurve bezier_curve(BezierCurveMatrix{{{Vector{points[i - 1]}, points[i] - points[i - 1], {}, {}}}});
+    add_bezier_curve(layer, bezier_curve_style, bezier_curve);
+    bezier_curves.emplace_back(std::move(bezier_curve.draw_object_));
   }
 }
 
 Curve Plot::create_curve(boost::intrusive_ptr<Layer> const& layer,
-    draw::LineStyle const& line_style,
-    std::vector<cairowindow::Point>&& points)
+  draw::BezierCurveStyle const& bezier_curve_style,
+  std::vector<cairowindow::Point>&& points)
 {
-  Curve plot_curve(std::move(points), std::make_shared<draw::Curve>(line_style));
-  curve_to_lines(layer, plot_curve, line_style);
+  Curve plot_curve(std::move(points), std::make_shared<draw::Curve>(bezier_curve_style));
+  curve_to_bezier_curves(layer, plot_curve, bezier_curve_style);
   return plot_curve;
 }
 

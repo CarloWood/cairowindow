@@ -17,6 +17,9 @@ class Direction
   double y_;
 
  public:
+  // Construct an undefined Direction.
+  Direction() = default;
+
   // Construct a Direction that points in the direction theta (in radians): an angle with the positive x-axis.
   Direction(double theta) : x_(std::cos(theta)), y_(std::sin(theta)) { }
 
@@ -44,6 +47,7 @@ class Direction
   // Return dot product with d2.
   double dot(Direction const& d2) const { return x_ * d2.x_ + y_ * d2.y_; }
 
+  // Returns an angle in the range (-π, π] radians.
   double as_angle() const { return std::atan2(y_, x_); }
 
  protected:

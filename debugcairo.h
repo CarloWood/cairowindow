@@ -29,6 +29,7 @@ cairo_surface_t* debug_cairo_get_target(cairo_t* cr);
 void debug_cairo_line_to(cairo_t* cr, double x, double y);
 void debug_cairo_matrix_transform_point(const cairo_matrix_t* matrix, double* x, double* y);
 void debug_cairo_move_to(cairo_t* cr, double x, double y);
+void debug_cairo_curve_to(cairo_t* cr, double x1, double y1, double x2, double y2, double x3, double y3);
 void debug_cairo_paint(cairo_t* cr);
 cairo_pattern_t* debug_cairo_pattern_create_for_surface(cairo_surface_t* surface);
 void debug_cairo_pattern_destroy(cairo_pattern_t* pattern);
@@ -104,6 +105,9 @@ cairo_surface_t* debug_cairo_xlib_surface_create(
 
 #define cairo_move_to(cr, x, y) \
   debug_cairo_move_to(cr, x, y)
+
+#define cairo_curve_to(cr, x1, y1, x2, y2, x3, y3) \
+  debug_cairo_curve_to(cr, x1, y1, x2, y2, x3, y3)
 
 #define cairo_paint(cr) \
   debug_cairo_paint(cr)

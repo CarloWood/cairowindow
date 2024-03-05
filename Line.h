@@ -13,6 +13,9 @@ class Line
   Direction direction_;
 
  public:
+  // Construct an undefined line.
+  Line() = default;
+  // Construct a line through point with direction.
   Line(Point const& point, Direction const& direction) : point_(point), direction_(direction) { }
 
   Point const& point() const { return point_; }

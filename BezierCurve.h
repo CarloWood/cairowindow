@@ -3,6 +3,7 @@
 #include "Vector.h"
 #include "Rectangle.h"
 #include "utils/has_print_on.h"
+#include "utils/square.h"
 #include <array>
 #include <memory>
 #ifdef CWDEBUG
@@ -16,6 +17,15 @@ struct BezierCurveMatrix
 {
   std::array<Vector, 4> coefficient;
 };
+
+enum point_nt
+{
+  point_beta,
+  point0,
+  point1,
+  point_gamma
+};
+
 
 // The cubic Bezier curve is the 2D parametric function:
 //
@@ -58,9 +68,9 @@ class BezierCurve
   BezierCurve() = default;
 
   // Construct an incomplete BezierCurve with just the begin and end points set.
-  BezierCurve(Point P0, Point P1) : m_{{{Vector{P0}, {}, {}, P1 - P0}}} { }
-
-  BezierCurve(Vector P0, Vector P1) : m_{{{P0, {}, {}, P1 - P0}}} { }
+  // Put P₁ temporarily where V₀ will go.
+  BezierCurve(Point P0, Point P1) : m_{{{Vector{P0}, Vector{P1}, {}, Vector{0.0, 0.0}}}} { }
+  BezierCurve(Vector P0, Vector P1) : m_{{{P0, P1, {}, Vector{0.0, 0.0}}}} { }
 
   // Construct a fully defined BezierCurve from begin and end point plus two control points.
   BezierCurve(Point P0, Point C0, Point C1, Point P1) :
@@ -144,18 +154,39 @@ class BezierCurve
     return a.dot(v.rotate_90_degrees()) / utils::square(v.length_squared()) * v.rotate_90_degrees();
   }
 
-  double chord_length(double tolerance) const;
+  double arc_length(double tolerance) const;
+  double stretching_energy(double tolerance) const;
+  double bending_energy(double tolerance) const;
 
   // Calculate the axis aligned rectangle within which this BezierCurve exists (on the range 0 <= t <= 1).
   Rectangle extents() const;
 
-  // Initialize a quadractic BezierCurve from two more data points.
+  // Initialize a "quadratic" BezierCurve (must use the (Point P0, Point P1) constructor) that represents a straight line between P₀ and P₁.
+  void linear_from();
+
+  // Initialize a quadratic BezierCurve from the velocity at P₀ (on top of going through the P₀ and P₁ passed to the constructor).
+  void quadratic_from(Vector const& V0);
+
+  // Initialize a quadratic BezierCurve from the direction of the tangents in P₀ and P₁.
+  bool quadratic_from(Direction D0, Direction D1);
+
+  // Initialize a quadratic BezierCurve from one more data point (Pᵧ) and the direction of the tangent in P_{point}.
+  // Where point can be point0, point1 or point_gamma.
+  bool quadratic_from(Vector P_gamma, Direction Di, point_nt point, double& gamma);
+  bool quadratic_from(Point P_gamma, Direction Di, point_nt point, double& gamma) { return quadratic_from(Vector{P_gamma}, Di, point, gamma); }
+
+  // Initialize a quadratic BezierCurve from two more data points (Pᵦ and Pᵧ).
   bool quadratic_from(Vector P_beta, Vector P_gamma);
   bool quadratic_from(Point P_beta, Point P_gamma) { return quadratic_from(Vector{P_beta}, Vector{P_gamma}); }
 
-  // Initialize a quadractic BezierCurve from one more data point and the direction vector in P₀.
-  bool quadratic_from(Direction D0, Vector P_gamma);
-  bool quadratic_from(Direction D0, Point P_gamma) { return quadratic_from(D0, Vector{P_gamma}); }
+  // If this is a quadratic BezierCurve (constructed with quadratic_from) then this will return the exact arc length.
+  // This uses an algebraic formula and therefore much faster than arc_length.
+  double quadratic_arc_length() const;
+  // Returns the square of the above.
+  double quadratic_stretching_energy() const { return utils::square(quadratic_arc_length()); }
+  // If this is a quadratic BezierCurve (constructed with quadratic_from) then this will return the exact bending energy.
+  // This uses an algebraic formula and therefore much faster (and more accurate) than bending_energy.
+  double quadratic_bending_energy() const;
 
 #ifdef CWDEBUG
   void print_on(std::ostream& os) const;

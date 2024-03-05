@@ -22,5 +22,11 @@ target_link_libraries(LachanceSchwartz AICxx::cairowindow ${AICXX_OBJECTS_LIST} 
 add_executable(style_test style_test.cxx)
 target_link_libraries(style_test ${AICXX_OBJECTS_LIST})
 
-add_executable(chord_length_bezier chord_length_bezier.cxx)
-target_link_libraries(chord_length_bezier AICxx::cairowindow ${AICXX_OBJECTS_LIST})
+add_executable(arc_length_bezier arc_length_bezier.cxx)
+target_link_libraries(arc_length_bezier AICxx::cairowindow ${AICXX_OBJECTS_LIST})
+
+add_executable(shortest_arc_length shortest_arc_length.cxx)
+target_link_libraries(shortest_arc_length AICxx::cairowindow ${AICXX_OBJECTS_LIST})
+
+add_executable(shortest_arc_length2 shortest_arc_length2.cxx)
+target_link_libraries(shortest_arc_length2 AICxx::cairowindow ${AICXX_OBJECTS_LIST})

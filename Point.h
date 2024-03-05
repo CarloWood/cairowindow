@@ -59,6 +59,7 @@ class Point : public cairowindow::Point, public Draggable
   void moved(Plot* plot, cairowindow::Point const& new_position) override;
 
 #ifdef CWDEBUG
+ public:
   void print_on(std::ostream& os) const override { cairowindow::Point::print_on(os); }
 #endif
 };

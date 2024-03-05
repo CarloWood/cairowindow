@@ -81,6 +81,7 @@ target_sources(cairowindow_ObjLib
     "Direction.cxx"
     "Layer.cxx"
     "Line.cxx"
+    "LinePiece.cxx"
     "Point.cxx"
     "Pixel.cxx"
     "Window.cxx"

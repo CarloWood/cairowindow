@@ -39,8 +39,11 @@ class Vector
   double x() const { return x_; }
   double y() const { return y_; }
 
-  // Return dot product with d2.
+  // Return dot product with v2.
   double dot(Vector const& v2) const { return x_ * v2.x_ + y_ * v2.y_; }
+
+  // Return the cross product with v2.
+  double cross(Vector const& v2) const { return x_ * v2.y_ - y_ * v2.x_; }
 
   // Construct a Direction from this vector.
   Direction direction() const { return Direction{Point{x_, y_}}; }
