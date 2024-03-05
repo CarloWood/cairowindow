@@ -13,11 +13,6 @@
 #include <iostream>
 #include "debug.h"
 
-double angle_to_coordinate(double angle)
-{
-  return angle;
-}
-
 int main()
 {
   Debug(NAMESPACE_DEBUG::init());
@@ -69,17 +64,17 @@ int main()
     draw::ConnectorStyle connector_style(line_style({.line_color = color::coral, .dashes = {3.0, 3.0}}));
 
     // Create a point P₀.
-    auto plot_P0 = plot.create_point(second_layer, point_style, {-1.8849, -0.31415});
+    auto plot_P0 = plot.create_point(second_layer, point_style, {-2.59924, -1.09229});
     // Create a point P₁.
-    auto plot_P1 = plot.create_point(second_layer, point_style, {0.6283, -0.31415});
+    auto plot_P1 = plot.create_point(second_layer, point_style, {0.192162, 1.53729});
     // Create a point P₂₂.
-    auto plot_P2 = plot.create_point(second_layer, point_style, {1.811, 0.007943});
+    auto plot_P2 = plot.create_point(second_layer, point_style, {2.6397, 0.0});
 
     // Create a point Q on the circle.
     double const circle_radius = 1.0;
-    auto plot_Q0 = plot.create_point(second_layer, point_style({.color_index = 2}), plot_P0 + circle_radius * Direction{-0.628316});
-    auto plot_Q1 = plot.create_point(second_layer, point_style({.color_index = 2}), plot_P1 + circle_radius * Direction{-2.08921});
-    auto plot_Q2 = plot.create_point(second_layer, point_style({.color_index = 2}), plot_P2 + circle_radius * Direction{-0.933245});
+    auto plot_Q0 = plot.create_point(second_layer, point_style({.color_index = 2}), plot_P0 + circle_radius * Direction{1.04236});
+    auto plot_Q1 = plot.create_point(second_layer, point_style({.color_index = 2}), plot_P1 + circle_radius * Direction{-1.72993});
+    auto plot_Q2 = plot.create_point(second_layer, point_style({.color_index = 2}), plot_P2 + circle_radius * Direction{0.929324});
 
     // Make all points draggable.
     window.register_draggable(plot, &plot_P0);
@@ -180,89 +175,93 @@ int main()
       auto arrow_N1_label = plot.create_text(second_layer, label_style({.position = draw::centered_right_of}), plot_P0 + 0.5 * N1, "N₁");
 
       bool generate_rejections = false; //rejections.empty();
-      plot::BezierCurve plot_bezier_curve01;
-      plot::Point plot_angles_point;
-
-      if (generate_rejections)
-        Debug(dc::notice.off());
       int const steps_per_pi = 250;
       int const steps = steps_per_pi;
-      for (int a0 = -(steps - 1); a0 <= steps; ++a0)
+
+      double total_energy;
+      double bending_weight = 100.0;
+
+      plot::BezierCurve plot_bezier_curve01;
+      if (generate_rejections)
       {
-        double alpha0 = generate_rejections ? a0 * M_PI / steps_per_pi - plot_line_P0P1.direction().as_angle() : arc01_0;
-        for (int a1 = -(steps - 1); a1 < steps; ++a1)
+        Debug(dc::notice.off());
+
+        int const steps_per_pi = 250;
+        int const steps = steps_per_pi;
+        for (int a0 = -(steps - 1); a0 <= steps; ++a0)
         {
-          double alpha1 = generate_rejections ? a1 * M_PI / steps_per_pi - plot_line_P0P1.direction().as_angle() : arc01_1;
-
-          double v0_div_q1 = 2.0 * std::sin(alpha1) / std::sin(M_PI + alpha0 - alpha1);
-          Vector V0 = v0_div_q1 * std::cos(alpha0) * Q1 + v0_div_q1 * std::sin(alpha0) * N1;
-
-          BezierCurve qbc01(plot_P0, plot_P1);
-          qbc01.quadratic_from(V0);
-#if 0
-          double V0_dot_D0;
-          double V1_dot_D1;
-          if (generate_rejections)
+          double alpha0 = a0 * M_PI / steps_per_pi - plot_line_P0P1.direction().as_angle();
+          for (int a1 = -(steps - 1); a1 < steps; ++a1)
           {
-            Direction D0_(a0 * M_PI / steps_per_pi);
-            Direction D1_(a1 * M_PI / steps_per_pi);
-            V0_dot_D0 = V0.dot(D0_);
-            V1_dot_D1 = qbc01.velocity(1.0).dot(D1_);
-          }
-          else
-          {
-            V0_dot_D0 = V0.dot(D0);
-            V1_dot_D1 = qbc01.velocity(1.0).dot(D1);
-          }
-          bool reject = V0_dot_D0 <= 0.0 || V1_dot_D1 <= 0.0;
-#else
-          constexpr double to_loops = 1.0 / (2.0 * M_PI);
-          double alpha0_in_loops = to_loops * alpha0;
-          double alpha1_in_loops = to_loops * alpha1;
-          double foo0 = alpha0_in_loops - std::floor(alpha0_in_loops);
-          double foo1 = alpha1_in_loops - std::floor(alpha1_in_loops);
-          bool reject = std::abs(foo0 - foo1) < 0.5;
-#endif
+            double alpha1 = a1 * M_PI / steps_per_pi - plot_line_P0P1.direction().as_angle();
 
-          if (!generate_rejections)
-          {
-            plot_bezier_curve01 =
-              plot.create_bezier_curve(second_layer, curve_line_style({.line_color = reject ? color::red : color::black}), qbc01);
-            Dout(dc::notice, "Elastic energy 01 = " << utils::square(qbc01.quadratic_arc_length()));
-            Dout(dc::notice, "Bending energy 01 = " << qbc01.bending_energy(1e-6));
-            Dout(dc::notice, "Quadratic E    01 = " << qbc01.quadratic_bending_energy());
-          }
+            BezierCurve qbc01(plot_P0, plot_P1);
+            if (!qbc01.quadratic_from(alpha0, alpha1))
+              continue;
 
-          // Plot rejection.
-          double x = angle_to_coordinate(alpha0);
-          double y = angle_to_coordinate(alpha1);
-
-          if (generate_rejections)
-          {
-            Dout(dc::notice, "Adding point with reject=" << reject << " at " << x << ", " << y);
-            rejections.push_back(plot.create_point(reject_layer, point_style({.color_index = reject ? 13 : 10, .filled_shape = 3}), {x, y}));
-          }
-          else
-          {
-            plot_angles_point = plot.create_point(reject_layer, point_style({.color_index = 5, .filled_shape = 3}), {x, y});
-            break;
+            // Successful curve.
           }
         }
-        if (!generate_rejections)
-          break;
-      }
-      if (generate_rejections)
         Debug(dc::notice.on());
+      }
+      else
+      {
+        BezierCurve qbc01(plot_P0, plot_P1);
+        if (qbc01.quadratic_from(arc01_0, arc01_1))
+        {
+          plot_bezier_curve01 = plot.create_bezier_curve(second_layer, curve_line_style({.line_color = color::black}), qbc01);
+          Dout(dc::notice, "Stretching energy 01 = " << qbc01.quadratic_stretching_energy());
+          Dout(dc::notice, "Bending energy    01 = " << qbc01.quadratic_bending_energy());
+
+          total_energy = qbc01.quadratic_stretching_energy() + bending_weight * qbc01.quadratic_bending_energy();
+        }
+      }
+
+      Vector Q2 = plot_P2 - plot_P1;
+      Vector N2 = Q2.rotate_90_degrees();
+      auto plot_arrow_Q2 = plot.create_connector(second_layer, connector_style({.line_color = color::blue}), plot_P1, plot_P1 + Q2);
+      auto arrow_Q2_label = plot.create_text(second_layer, label_style({.position = draw::centered_right_of}), plot_P1 + 0.5 * Q2, "Q₂");
+      auto plot_arrow_N2 = plot.create_connector(second_layer, connector_style({.line_color = color::blue}), plot_P1, plot_P1 + N2);
+      auto arrow_N2_label = plot.create_text(second_layer, label_style({.position = draw::centered_right_of}), plot_P1 + 0.5 * N2, "N₂");
+
+      Dout(dc::notice, "Q2 = " << Q2);
+      Dout(dc::notice, "N2 = " << N2);
 
       plot::BezierCurve plot_bezier_curve12;
-      BezierCurve qbc12(plot_P1, plot_P2);
-      if (qbc12.quadratic_from(D1, D2))
+      if (generate_rejections)
       {
-        plot_bezier_curve12 = plot.create_bezier_curve(second_layer, curve_line_style, qbc12);
-        Dout(dc::notice, "Elastic energy 12 = " << utils::square(qbc12.quadratic_arc_length()));
-        Dout(dc::notice, "Bending energy 12 = " << qbc12.bending_energy(1e-6));
-        Dout(dc::notice, "Quadratic E    12 = " << qbc12.quadratic_bending_energy());
+        Debug(dc::notice.off());
+
+        for (int a0 = -(steps - 1); a0 <= steps; ++a0)
+        {
+          double alpha0 = a0 * M_PI / steps_per_pi - plot_line_P0P1.direction().as_angle();
+          for (int a1 = -(steps - 1); a1 < steps; ++a1)
+          {
+            double alpha1 = a1 * M_PI / steps_per_pi - plot_line_P0P1.direction().as_angle();
+
+            BezierCurve qbc12(plot_P1, plot_P2);
+            if (!qbc12.quadratic_from(alpha0, alpha1))
+              continue;
+
+            // Successful curve.
+          }
+        }
+        Debug(dc::notice.on());
       }
+      else
+      {
+        BezierCurve qbc12(plot_P1, plot_P2);
+        if (qbc12.quadratic_from(arc12_1, arc12_2))
+        {
+          plot_bezier_curve12 = plot.create_bezier_curve(second_layer, curve_line_style, qbc12);
+          Dout(dc::notice, "Stretching energy 12 = " << qbc12.quadratic_stretching_energy());
+          Dout(dc::notice, "Bending energy    12 = " << qbc12.quadratic_bending_energy());
+
+          total_energy += qbc12.quadratic_stretching_energy() + bending_weight * qbc12.quadratic_bending_energy();
+        }
+      }
+
+      Dout(dc::notice, "Total energy = " << total_energy);
 
       // Draw V0.
 //      auto plot_V0 = plot.create_connector(second_layer, connector_style, plot_P0, plot_P0 + 0.5 * qbc01.V0());

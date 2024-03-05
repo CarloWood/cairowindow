@@ -419,6 +419,29 @@ bool BezierCurve::quadratic_from(Vector P_beta, Vector P_gamma)
   return true;
 }
 
+bool BezierCurve::quadratic_from(double v0qa, double v1qa)
+{
+  constexpr double to_loops = 1.0 / (2.0 * M_PI);
+  double v0qa_in_loops = to_loops * v0qa;
+  double v1qa_in_loops = to_loops * v1qa;
+  double foo0 = v0qa_in_loops - std::floor(v0qa_in_loops);
+  double foo1 = v1qa_in_loops - std::floor(v1qa_in_loops);
+
+  if (std::abs(foo0 - foo1) < 0.5)
+    return false;
+
+  Vector const P0{m_.coefficient[0]};
+  Vector const P1{m_.coefficient[1]};
+
+  double v0_div_q1 = 2.0 * std::sin(v1qa) / std::sin(M_PI + v0qa - v1qa);
+  Vector Q1 = P1 - P0;
+  Vector N1 = Q1.rotate_90_degrees();
+  Vector V0 = v0_div_q1 * std::cos(v0qa) * Q1 + v0_div_q1 * std::sin(v0qa) * N1;
+  quadratic_from(V0);
+
+  return true;
+}
+
 // A tolerance of less than 1e-15 probably won't work,
 // due to round off errors of the double themselves.
 double BezierCurve::arc_length(double tolerance) const

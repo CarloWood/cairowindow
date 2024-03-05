@@ -179,6 +179,9 @@ class BezierCurve
   bool quadratic_from(Vector P_beta, Vector P_gamma);
   bool quadratic_from(Point P_beta, Point P_gamma) { return quadratic_from(Vector{P_beta}, Vector{P_gamma}); }
 
+  // Initialize a quadratic BezierCurve from the angles that V0 and V1 make with P₀P₁ (also called Q₁).
+  bool quadratic_from(double v0qa, double v1qa);
+
   // If this is a quadratic BezierCurve (constructed with quadratic_from) then this will return the exact arc length.
   // This uses an algebraic formula and therefore much faster than arc_length.
   double quadratic_arc_length() const;
