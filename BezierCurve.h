@@ -165,7 +165,19 @@ class BezierCurve
   void linear_from();
 
   // Initialize a quadratic BezierCurve from the velocity at P₀ (on top of going through the P₀ and P₁ passed to the constructor).
-  void quadratic_from(Vector const& V0);
+  void quadratic_from(Vector const& V0)
+  {
+    // m_.coefficient[0] was initialized with P₀.
+    Vector P0(m_.coefficient[0]);
+    // m_.coefficient[1] was (temporarily) initialized with P₁.
+    Vector P1(m_.coefficient[1]);
+
+    // Initialize the rest of the matrix.
+    m_.coefficient[1] = V0;
+    // P₁ = P₀ + V₀ + ½A₀ --> ½A₀ = P₁ - P₀ - V₀.
+    m_.coefficient[2] = P1 - P0 - V0;
+    // m_.coefficient[3] (J) should already be initialized with zeroes.
+  }
 
   // Initialize a quadratic BezierCurve from the direction of the tangents in P₀ and P₁.
   bool quadratic_from(Direction D0, Direction D1);

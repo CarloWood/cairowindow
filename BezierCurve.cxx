@@ -89,21 +89,6 @@ Rectangle BezierCurve::extents() const
   return {x_min, y_min, x_max - x_min, y_max - y_min};
 }
 
-void BezierCurve::quadratic_from(Vector const& V0)
-{
-  DoutEntering(dc::notice, "BezierCurve::quadratic_from(" << V0 << ")");
-
-  // m_.coefficient[0] was initialized with P₀.
-  Vector P0(m_.coefficient[0]);
-  // m_.coefficient[1] was initialized with P₁.
-  Vector P1(m_.coefficient[1]);
-
-  // Initialize the rest of the matrix.
-  m_.coefficient[1] = V0;
-  // P₁ = P₀ + V₀ + ½A₀ --> ½A₀ = P₁ - P₀ - V₀.
-  m_.coefficient[2] = P1 - P0 - V0;
-}
-
 void BezierCurve::linear_from()
 {
   // m_.coefficient[0] was initialized with P₀.
@@ -433,12 +418,17 @@ bool BezierCurve::quadratic_from(double v0qa, double v1qa)
   Vector const P0{m_.coefficient[0]};
   Vector const P1{m_.coefficient[1]};
 
-  double v0_div_q1 = 2.0 * std::sin(v1qa) / std::sin(M_PI + v0qa - v1qa);
+  // Work with a rotation and translation invariant basis.
   Vector Q1 = P1 - P0;
   Vector N1 = Q1.rotate_90_degrees();
-  Vector V0 = v0_div_q1 * std::cos(v0qa) * Q1 + v0_div_q1 * std::sin(v0qa) * N1;
-  quadratic_from(V0);
 
+  // Note that P0 + 0.5 * V0 is the control point (which is at the intersection of the tangent lines at P0 and P1).
+  // To get the length of |0.5 * V0| we can simply use the sine law:
+  double v0_div_q1 = 2.0 * std::sin(v1qa) / std::sin(v1qa - v0qa);
+  // Now calculate V0 by also giving it the correct direction.
+  Vector V0 = v0_div_q1 * std::cos(v0qa) * Q1 + v0_div_q1 * std::sin(v0qa) * N1;
+
+  quadratic_from(V0);
   return true;
 }
 
@@ -513,19 +503,21 @@ double BezierCurve::quadratic_bending_energy() const
   //                           = ((a₀_x² + a₀_y²)t² + 2(v₀_x a₀_x + v₀_y a₀_y)t + (v₀_x² + v₀_y²))³
   //                           = (|A₀|² t² + 2 V₀·A₀ t + |V₀|²)³
   //
-  double a = A0().length_squared();
-  double b = 2.0 * V0().dot(A0());
-  double c = V0().length_squared();
-  double d = utils::square(V0().cross(A0()));
-  double a2 = utils::square(a);
-  double b2 = utils::square(b);
-  double e = 4.0 * a * c - b2;
+  double a02 = A0().length_squared();
+  double z = V0().dot(A0());
+  double dz = 2.0 * z;
+  double v02 = V0().length_squared();
+  double cs = utils::square(V0().cross(A0()));
+  double a04 = utils::square(a02);
+  double dz2 = utils::square(dz);
+  double e = 4.0 * a02 * v02 - dz2;
   double e2 = utils::square(e);
-  double s = std::sqrt(e);
-  double i1 = (-(b + 2.0 * a) * (b2 - 6.0 * a * b - 2.0 * a * (5.0 * c + 3.0 * a))) / utils::square(a + b + c) +
-    24.0 * a2 * std::atan((b + 2.0 * a) / s) / s;
-  double i0 = (-b * (b2 - 2.0 * a * 5.0 * c)) / utils::square(c) + 24.0 * a2 * std::atan(b / s) / s;
-  return d * (i1 - i0) / (2.0 * e2);
+  double se = std::sqrt(e);
+  double i1 = (-(dz + 2.0 * a02) * (dz2 - 6.0 * a02 * dz - 2.0 * a02 * (5.0 * v02 + 3.0 * a02))) / utils::square(a02 + dz + v02) +
+    24.0 * a04 * std::atan((dz + 2.0 * a02) / se) / se;
+  double i0 = (-dz * (dz2 - 2.0 * a02 * 5.0 * v02)) / utils::square(v02) + 24.0 * a04 * std::atan(dz / se) / se;
+  double result = cs * (i1 - i0) / (2.0 * e2);
+  return result;
 }
 
 double BezierCurve::stretching_energy(double tolerance) const
