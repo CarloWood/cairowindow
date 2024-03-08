@@ -3,6 +3,7 @@
 #include "cairowindow/Layer.h"
 #include "cairowindow/Plot.h"
 #include "cairowindow/Matrix.h"
+#include "cairowindow/QuadraticArcLength.h"
 #include "cairowindow/draw/Shape.h"
 #include "cairowindow/draw/Line.h"
 #include "cairowindow/draw/Point.h"
@@ -215,6 +216,8 @@ int main()
 
           total_energy = qbc01.quadratic_stretching_energy() + bending_weight * qbc01.quadratic_bending_energy();
         }
+        autodiff::QuadraticArcLength arc_length(qbc01);
+        arc_length.test();
       }
 
       Vector Q2 = plot_P2 - plot_P1;

@@ -432,29 +432,6 @@ bool BezierCurve::quadratic_from(double v0qa, double v1qa)
   return true;
 }
 
-// A tolerance of less than 1e-15 probably won't work,
-// due to round off errors of the double themselves.
-double BezierCurve::arc_length(double tolerance) const
-{
-  double m00 = m_.coefficient[0].x();
-  double m10 = m_.coefficient[0].y();
-  double m01 = m_.coefficient[1].x();
-  double m11 = m_.coefficient[1].y();
-  double m02 = m_.coefficient[2].x();
-  double m12 = m_.coefficient[2].y();
-  double m03 = m_.coefficient[3].x();
-  double m13 = m_.coefficient[3].y();
-  double c0 = utils::square(m01) + utils::square(m11);
-  double c1 = 4 * m01 * m02 + 4 * m11 * m12;
-  double c2 = 4 * utils::square(m02) + 6 * m01 * m03 + 4 * utils::square(m12) + 6 * m11 * m13;
-  double c3 = 12 * m02 * m03 + 12 * m12 * m13;
-  double c4 = 9 * utils::square(m03) + 9 * utils::square(m13);
-  auto f = [c0, c1, c2, c3, c4](double t){
-    return std::sqrt(c0 + t * (c1 + t * (c2 + t * (c3 + t * c4))));
-  };
-  return boost::math::quadrature::gauss_kronrod<double, 31>::integrate(f, 0.0, 1.0, tolerance);
-}
-
 double BezierCurve::quadratic_arc_length() const
 {
   // Only call this for quadratic Bezier curves.
@@ -469,6 +446,7 @@ double BezierCurve::quadratic_arc_length() const
   double a03 = a02 * a0;
   return ((z * a0 + a03) * s - z * a0 * v0 + (v02 * a02 - z * z) * std::log((z + a02 + a0 * s) / (z + v0 * a0))) / (2.0 * a03);
 }
+// ∂
 
 double BezierCurve::quadratic_bending_energy() const
 {
@@ -518,6 +496,29 @@ double BezierCurve::quadratic_bending_energy() const
   double i0 = (-dz * (dz2 - 2.0 * a02 * 5.0 * v02)) / utils::square(v02) + 24.0 * a04 * std::atan(dz / se) / se;
   double result = cs * (i1 - i0) / (2.0 * e2);
   return result;
+}
+
+// A tolerance of less than 1e-15 probably won't work,
+// due to round off errors of the double themselves.
+double BezierCurve::arc_length(double tolerance) const
+{
+  double m00 = m_.coefficient[0].x();
+  double m10 = m_.coefficient[0].y();
+  double m01 = m_.coefficient[1].x();
+  double m11 = m_.coefficient[1].y();
+  double m02 = m_.coefficient[2].x();
+  double m12 = m_.coefficient[2].y();
+  double m03 = m_.coefficient[3].x();
+  double m13 = m_.coefficient[3].y();
+  double c0 = utils::square(m01) + utils::square(m11);
+  double c1 = 4 * m01 * m02 + 4 * m11 * m12;
+  double c2 = 4 * utils::square(m02) + 6 * m01 * m03 + 4 * utils::square(m12) + 6 * m11 * m13;
+  double c3 = 12 * m02 * m03 + 12 * m12 * m13;
+  double c4 = 9 * utils::square(m03) + 9 * utils::square(m13);
+  auto f = [c0, c1, c2, c3, c4](double t){
+    return std::sqrt(c0 + t * (c1 + t * (c2 + t * (c3 + t * c4))));
+  };
+  return boost::math::quadrature::gauss_kronrod<double, 31>::integrate(f, 0.0, 1.0, tolerance);
 }
 
 double BezierCurve::stretching_energy(double tolerance) const

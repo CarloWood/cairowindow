@@ -59,7 +59,7 @@ enum point_nt
 //
 class BezierCurve
 {
- private:
+ protected:
   BezierCurveMatrix m_; // A 2x4 matrix where each colum represents a vector, respectively B, V0, A0/2 and J/6,
                         // where B is the position at t=0: P(0), V0 is the velocity at t=0: P'(0),
                         // A0 is the acceleration at t=0: P''(0) and J is the (constant) jolt: P'''(0).
@@ -204,6 +204,7 @@ class BezierCurve
   double quadratic_bending_energy() const;
 
 #ifdef CWDEBUG
+ public:
   void print_on(std::ostream& os) const;
 #endif
 };
