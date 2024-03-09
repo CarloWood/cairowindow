@@ -10,9 +10,13 @@ using utils::has_print_on::operator<<;
 // Classes for automatic differentiation.
 
 struct AutoDiffTag { };
+struct AutoDiffExpressionTag : public AutoDiffTag { };
 
 template<typename T>
 concept AutoDiff = std::is_base_of_v<AutoDiffTag, T>;
+
+template<typename T>
+concept AutoDiffExceptSymbol = std::is_base_of_v<AutoDiffExpressionTag, T>;
 
 class Zero : public AutoDiffTag
 {
@@ -76,7 +80,7 @@ class Symbol : public AutoDiffTag
  public:
   Symbol(char const* name)
   {
-    // Only instantiate any given Symbol once.
+    // Only instantiate any given Symbol once (did you use the same symbol_id_bit for two different symbols?).
     ASSERT(!s_name);
     s_name = name;
   }
@@ -87,12 +91,12 @@ class Symbol : public AutoDiffTag
     return *this;
   }
 
-  static double value() const
+  static double value()
   {
     return s_value;
   }
 
-  static char const* name() const
+  static char const* name()
   {
     return s_name;
   }
@@ -109,9 +113,9 @@ template<uint32_t symbol_id_bit>
 class DifferentiableSymbol : public Symbol<symbol_id_bit>
 {
  public:
-  DifferentiableSymbol(char const* name) : Symbol(name) { }
+  DifferentiableSymbol(char const* name) : Symbol<symbol_id_bit>(name) { }
 
-  using Symbol::operator=;
+  using Symbol<symbol_id_bit>::operator=;
 };
 
 //static
@@ -121,13 +125,21 @@ char const* Symbol<symbol_id_bit>::s_name;
 template<uint32_t symbol_id_bit>
 double Symbol<symbol_id_bit>::s_value;
 
+enum Symbols : uint32_t
+{
+  q1x,
+  q1y,
+  v0qa,
+  v1qa
+};
+
 class QuadraticArcLength : public BezierCurve
 {
  private:
-  Symbol Q1x{"Q1x"};
-  Symbol Q1y{"Q1y"};
-  DifferentiableSymbol v0qa{"alpha0"};
-  Symbol v1qa{"alpha1"};
+  Symbol<q1x> Q1x{"Q1x"};
+  Symbol<q1y> Q1y{"Q1y"};
+  DifferentiableSymbol<v0qa> v0qa{"alpha0"};
+  Symbol<v1qa> v1qa{"alpha1"};
 
  public:
   QuadraticArcLength(BezierCurve const orig) : BezierCurve(orig) { }
