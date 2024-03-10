@@ -652,16 +652,16 @@ class Exponentiation : public AutoDiffExpressionTag
 {
  private:
   T1 arg1_;
-  int exponent_;
+  int const exponent_;
 
  public:
-  Exponentiation(T1 const& arg1, int exponent) : arg1_(arg1), exponent_(exponent)
+  constexpr Exponentiation(T1 const& arg1, int exponent) : arg1_(arg1), exponent_(exponent)
   {
     ASSERT(exponent < 0 || exponent > 1);
   }
 
   T1 const& arg1() const { return arg1_; }
-  int exponent() const { return exponent_; }
+  constexpr int exponent() const { return exponent_; }
 
 #ifdef CWDEBUG
   bool needs_parens(Operator op) const
@@ -731,7 +731,7 @@ auto operator^(Exponentiation<T1> const& arg, int exponent)
 }
 
 template<uint32_t symbol_id_bit, AutoDiff T1>
-auto differentiate(Exponentiation<T1> const& expression, DifferentiableSymbol<symbol_id_bit> const& symbol)
+auto differentiate(Exponentiation<T1> expression, DifferentiableSymbol<symbol_id_bit> symbol)
 {
   DoutEntering(dc::notice, "differentiate(" << expression << ", " << symbol << ")");
   return Constant{static_cast<double>(expression.exponent())} * Exponentiation{expression.arg1(), expression.exponent() - 1} *

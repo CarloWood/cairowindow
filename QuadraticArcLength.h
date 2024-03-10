@@ -113,7 +113,7 @@ template<uint32_t symbol_id_bit>
 class DifferentiableSymbol : public Symbol<symbol_id_bit>
 {
  public:
-  DifferentiableSymbol(char const* name) : Symbol<symbol_id_bit>(name) { }
+  constexpr DifferentiableSymbol(char const* name) : Symbol<symbol_id_bit>(name) { }
 
   using Symbol<symbol_id_bit>::operator=;
 };

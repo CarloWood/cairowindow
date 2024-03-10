@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12...3.27)
+cmake_minimum_required(VERSION 3.12...3.28)
 
 project(cairowindow
   DESCRIPTION "Window to draw in with cairo"
@@ -143,6 +143,8 @@ target_link_libraries(cairowindow_ObjLib
 
 # Create an ALIAS target.
 add_library(AICxx::cairowindow ALIAS cairowindow_ObjLib)
+
+add_subdirectory(symbolic)
 
 if (OptionEnableCairoWindowTests)
 add_subdirectory(tests)
