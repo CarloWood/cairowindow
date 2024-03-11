@@ -18,27 +18,28 @@ template<int Enumerator, int Denominator>
 class Constant : public ExpressionTag
 {
  public:
-  static constexpr precedence s_precedence = Denominator != 1 ? precedence::division : Enumerator < 0 ? precedence::negation : precedence::constant;
+  static constexpr precedence s_precedence =
+    Denominator != 1 ? precedence::division : Enumerator < 0 ? precedence::negation : precedence::constant;
 
  private:
   // Use this free function to create Constant objects.
   template<int enumerator, int denominator>
-  friend constexpr auto constant();
+  friend consteval auto constant();
 
   // Negation.
   template<int E, int D>
-  friend auto operator-(Constant<E, D>);
+  friend consteval auto operator-(Constant<E, D>);
 
   template<int E, int D, int exponent>
-  friend auto operator^(Constant<E, D>, Constant<exponent, 1>);
+  friend consteval auto operator^(Constant<E, D>, Constant<exponent, 1>);
 
   // Constructor.
-  constexpr Constant() = default;
+  consteval Constant() = default;
 
 #ifdef CWDEBUG
  public:
-  bool needs_parens(before_or_after position, precedence prec) const { return prec < s_precedence; }
-  bool needs_parens(precedence prec) const { return prec < s_precedence; }
+  constexpr bool needs_parens(before_or_after position, precedence prec) const { return prec < s_precedence; }
+  constexpr bool needs_parens(precedence prec) const { return prec < s_precedence; }
 
   void print_on(std::ostream& os) const
   {
@@ -59,7 +60,7 @@ class Constant : public ExpressionTag
 // and the GCD of enumerator and denominator will be 1.
 //
 template<int enumerator, int denominator>
-constexpr auto constant()
+consteval auto constant()
 {
   constexpr int abs_enumerator = enumerator < 0 ? -enumerator : enumerator;
   constexpr int abs_denominator = denominator < 0 ? -denominator : denominator;
@@ -72,49 +73,44 @@ constexpr auto constant()
 
 // Negation.
 template<int E, int D>
-auto operator-(Constant<E, D>)
+consteval auto operator-(Constant<E, D>)
 {
   return Constant<-E, D>{};
 }
 
 // Addition.
 template<int E1, int D1, int E2, int D2>
-auto operator+(Constant<E1, D1>, Constant<E2, D2>)
+consteval auto operator+(Constant<E1, D1>, Constant<E2, D2>)
 {
-  DoutEntering(dc::notice, "operator+(Constant<" << E1 << ", " << D1 << ">, Constant<" << E2 << ", " << D2 << ">)");
   return constant<E1 * D2 + E2 * D1, D1 * D2>();
 }
 
 // Subtraction.
 template<int E1, int D1, int E2, int D2>
-auto operator-(Constant<E1, D1>, Constant<E2, D2>)
+consteval auto operator-(Constant<E1, D1>, Constant<E2, D2>)
 {
-  DoutEntering(dc::notice, "operator-(Constant<" << E1 << ", " << D1 << ">, Constant<" << E2 << ", " << D2 << ">)");
   return constant<E1 * D2 - E2 * D1, D1 * D2>();
 }
 
 // Multiplication.
 template<int E1, int D1, int E2, int D2>
-auto operator*(Constant<E1, D1>, Constant<E2, D2>)
+consteval auto operator*(Constant<E1, D1>, Constant<E2, D2>)
 {
-  DoutEntering(dc::notice, "operator*(Constant<" << E1 << ", " << D1 << ">, Constant<" << E2 << ", " << D2 << ">)");
   return constant<E1 * E2, D1 * D2>();
 }
 
 // Division.
 template<int E1, int D1, int E2, int D2>
 requires (E2 != 0)
-auto operator/(Constant<E1, D1>, Constant<E2, D2>)
+consteval auto operator/(Constant<E1, D1>, Constant<E2, D2>)
 {
-  DoutEntering(dc::notice, "operator/(Constant<" << E1 << ", " << D1 << ">, Constant<" << E2 << ", " << D2 << ">)");
   return constant<E1 * D2, D1 * E2>();
 }
 
 // Exponentiation with an integer.
 template<int E, int D, int exponent>
-auto operator^(Constant<E, D>, Constant<exponent, 1>)
+consteval auto operator^(Constant<E, D>, Constant<exponent, 1>)
 {
-  DoutEntering(dc::notice, "operator^(Constant<" << E << ", " << D << ">, Constant<" << exponent << ", 1>)");
   if constexpr (exponent == 0)
   {
     static_assert(E != 0, "0^0 is undefined");

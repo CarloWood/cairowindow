@@ -69,11 +69,16 @@ int main()
   // Negation of a Constant.
   TEST("-B(-5/77)", -B, "5/77");
 
-  static constexpr Symbol x("x");
-  static constexpr Symbol y("y");
+  static constexpr auto x = make_symbol("x");
+  static constexpr auto y = make_symbol("y");
+  static constexpr auto z = make_symbol("z");
 
+  // Negation of a Symbol.
+  TEST("-x", -x, "-x");
   // Negation of a Negation.
   TEST("-(-x)", -(-x), "x");
 
   TEST("x * y", (x * y), "x * y");
+  TEST("y * x", (y * x), "x * y");
+  TEST("x * x", (x * x), "x^2");
 }

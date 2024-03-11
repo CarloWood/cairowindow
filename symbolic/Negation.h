@@ -23,13 +23,13 @@ class Negation : public ExpressionTag
   consteval E const& operator-() const { return expression_; }
 
 #ifdef CWDEBUG
-  bool needs_parens(before_or_after position, precedence prec) const { return prec < s_precedence; }
-  bool needs_parens(precedence prec) const { return prec < s_precedence; }
+  constexpr bool needs_parens(before_or_after position, precedence prec) const { return prec < s_precedence; }
+  constexpr bool needs_parens(precedence prec) const { return prec < s_precedence; }
 
   void print_on(std::ostream& os) const
   {
     bool need_parens = expression_.needs_parens(s_precedence);
-    os << "-!";
+    os << "-";
     if (need_parens)
       os << '(';
     expression_.print_on(os);

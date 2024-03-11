@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Expression.h"
+#include "Exponentiation.h"
 
 namespace symbolic {
 
@@ -21,8 +22,8 @@ class Product : public ExpressionTag
   consteval E2 const& arg2() const { return arg2_; }
 
 #ifdef CWDEBUG
-  bool needs_parens(before_or_after position, precedence prec) const { return prec < s_precedence; }
-  bool needs_parens(precedence prec) const { return prec < s_precedence; }
+  constexpr bool needs_parens(before_or_after position, precedence prec) const { return prec < s_precedence; }
+  constexpr bool needs_parens(precedence prec) const { return prec < s_precedence; }
 
   void print_on(std::ostream& os) const
   {
@@ -46,12 +47,15 @@ class Product : public ExpressionTag
 template<Expression E1, Expression E2>
 consteval auto operator*(E1 const& arg1, E2 const& arg2)
 {
-  static constexpr expression_order_less<E2, E1> eol(arg2, arg1);
-  static constexpr bool foo = eol();
-  if constexpr (foo)
+  if constexpr (expression_order_less(std::type_identity<E1>{}, std::type_identity<E2>{}))
+    return Product{arg1, arg2};
+  else if constexpr (expression_order_less(std::type_identity<E2>{}, std::type_identity<E1>{}))
     return Product{arg2, arg1};
   else
-    return Product{arg1, arg2};
+  {
+    ASSERT(is_same_expression(arg1, arg2));
+    return Exponentiation<E1, 2, 1>{arg1};
+  }
 }
 
 } // namespace symbolic
