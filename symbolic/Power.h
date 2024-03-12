@@ -6,7 +6,7 @@
 namespace symbolic {
 
 template<Expression E1, int Enumerator, int Denominator>
-class Exponentiation : public ExpressionTag
+class Power : public ExpressionTag
 {
  public:
   static constexpr precedence s_precedence = precedence::exponentiation;
@@ -16,7 +16,7 @@ class Exponentiation : public ExpressionTag
   E1 base_;
 
  public:
-  constexpr Exponentiation(E1 const& base) : base_(base) { }
+  constexpr Power(E1 const& base) : base_(base) { }
 
   consteval E1 const& base() const { return base_; }
 

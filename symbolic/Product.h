@@ -1,7 +1,7 @@
 #pragma once
 
 #include "IdRange.h"
-#include "Exponentiation.h"
+#include "Power.h"
 #include "Expression.h"
 
 namespace symbolic {
@@ -125,7 +125,7 @@ constexpr auto operator*(E1 const& arg1, E2 const& arg2)
   {
     static_assert(!(is_product_v<E1> && is_product_v<E2>), ""); // For this case the specialization below is called.
     ASSERT(is_same_expression(arg1, arg2));
-    return Exponentiation<E1, 2, 1>{arg1};
+    return Power<E1, 2, 1>{arg1};
   }
 }
 
