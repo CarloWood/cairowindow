@@ -129,6 +129,9 @@ constexpr auto operator*(E1 const& arg1, E2 const& arg2)
   }
 }
 
+// This is a work-around for the fact that you can't recursively call
+// a template function with a auto-deduced return type "before it is
+// defined".
 template<Expression E1, Expression E2, Expression E3, Expression E4>
 requires (!(Product<E1, E2>::id_range < Product<E3, E4>::id_range) &&           // The range of the two products
           !(Product<E3, E4>::id_range < Product<E1, E2>::id_range) &&           // must overlap.
@@ -143,7 +146,5 @@ constexpr auto operator*(Product<E1, E2> const& arg1, Product<E3, E4> const& arg
   else
   return Product{arg1.arg1(), arg2 * arg1.arg2()};              // a x ((b x d x f) * (c x e))
 }
-
-// (u # w # y) * (v # x # z)
 
 } // namespace symbolic
