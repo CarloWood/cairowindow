@@ -13,14 +13,14 @@ class Exponentiation : public ExpressionTag
   static constexpr auto s_exponent = constant<Enumerator, Denominator>();
 
  private:
-  E1 const& base_;
+  E1 base_;
 
  public:
-  consteval Exponentiation(E1 const& base) : base_(base) { }
+  constexpr Exponentiation(E1 const& base) : base_(base) { }
 
   consteval E1 const& base() const { return base_; }
 
-#ifdef CWDEBUG
+#ifdef SYMBOLIC_PRINTING
   constexpr bool needs_parens(before_or_after position, precedence prec) const { return prec < s_precedence; }
   constexpr bool needs_parens(precedence prec) const { return prec < s_precedence; }
 

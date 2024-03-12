@@ -1,10 +1,14 @@
 #pragma once
 
 #include "BezierCurve.h"
+#ifdef CWDEBUG
 #include "utils/has_print_on.h"
+#endif
 
 namespace cairowindow::autodiff {
+#ifdef CWDEBUG
 using utils::has_print_on::operator<<;
+#endif
 
 //----------------------------------------------------------------------------
 // Classes for automatic differentiation.

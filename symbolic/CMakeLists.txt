@@ -3,11 +3,36 @@ cmake_minimum_required(VERSION 3.12...3.28)
 include(AICxxProject)
 
 #==============================================================================
+# OPTIONS
+
+# Option 'EnableSymbolicPrinting' is ${OptionEnableLibcwd} by default.
+cw_option(EnableSymbolicPrinting
+  "Enable printing of symbolic expressions to an ostream" ${OptionEnableLibcwd}
+  "" OFF
+)
+
+message(DEBUG "OptionEnableSymbolicPrinting is ${OptionEnableSymbolicPrinting}")
+if (OptionEnableSymbolicPrinting)
+  set(SYMBOLIC_PRINTING 1)
+endif ()
+
+# Specify utils specific configure file.
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in
+               ${CMAKE_CURRENT_BINARY_DIR}/config.h
+               @ONLY)
+
+#==============================================================================
 # BUILD OBJECT LIBRARY
 #
 
 # This project is an OBJECT-library, used by other git submodules and the main project.
 add_library(symbolic_ObjLib OBJECT)
+
+# Tell sys.h that we have a config.h.
+target_compile_definitions(symbolic_ObjLib
+  PUBLIC
+    HAVE_SYMBOLIC_CONFIG_H
+)
 
 # Set SOURCE_DIR to the current directory.
 set_property(

@@ -2,16 +2,18 @@
 
 #include "Vector.h"
 #include "Rectangle.h"
-#include "utils/has_print_on.h"
 #include "utils/square.h"
 #include <array>
 #include <memory>
-#ifdef CWDEBUG
 #include "debug.h"
+#ifdef CWDEBUG
+#include "utils/has_print_on.h"
 #endif
 
 namespace cairowindow {
+#ifdef CWDEBUG
 using utils::has_print_on::operator<<;
+#endif
 
 struct BezierCurveMatrix
 {

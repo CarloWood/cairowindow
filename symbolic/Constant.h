@@ -3,14 +3,16 @@
 #include "Expression.h"
 #include "precedence.h"
 #include <numeric>
-#ifdef CWDEBUG
+#ifdef SYMBOLIC_PRINTING
 #include "utils/has_print_on.h"
 #include <iostream>
 #endif
 #include "debug.h"
 
 namespace symbolic {
+#ifdef SYMBOLIC_PRINTING
 using utils::has_print_on::operator<<;
+#endif
 
 // A rational constant.
 //
@@ -36,7 +38,7 @@ class Constant : public ExpressionTag
   // Constructor.
   consteval Constant() = default;
 
-#ifdef CWDEBUG
+#ifdef SYMBOLIC_PRINTING
  public:
   constexpr bool needs_parens(before_or_after position, precedence prec) const { return prec < s_precedence; }
   constexpr bool needs_parens(precedence prec) const { return prec < s_precedence; }

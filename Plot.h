@@ -43,7 +43,9 @@ namespace cairowindow {
 class Window;
 
 namespace plot {
+#ifdef CWDEBUG
 using utils::has_print_on::operator<<;
+#endif
 
 class Plot;
 

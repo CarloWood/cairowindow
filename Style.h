@@ -1,8 +1,10 @@
 #pragma once
 
-#include "utils/has_print_on.h"
 #include "utils/REMOVE_TRAILING_COMMA.h"
 #include "debug.h"
+#ifdef CWDEBUG
+#include "utils/has_print_on.h"
+#endif
 
 // Declare members of class Class##Style.
 // These members are protected and begin with `m_`.

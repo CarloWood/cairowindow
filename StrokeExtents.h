@@ -1,16 +1,18 @@
 #pragma once
 
 #include "IntersectRectangle.h"
-#include "utils/has_print_on.h"
 #include <cairo/cairo.h>
 #include <cmath>
 #include "debug.h"
 #ifdef CWDEBUG
 #include "cairowindow/debugcairo.h"
+#include "utils/has_print_on.h"
 #endif
 
 namespace cairowindow {
+#ifdef CWDEBUG
 using utils::has_print_on::operator<<;
+#endif
 
 class StrokeExtents
 {

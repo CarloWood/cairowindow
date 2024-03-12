@@ -1,10 +1,14 @@
 #pragma once
 
-#include "utils/has_print_on.h"
 #include <cmath>
+#ifdef CWDEBUG
+#include "utils/has_print_on.h"
+#endif
 
 namespace cairowindow {
+#ifdef CWDEBUG
 using utils::has_print_on::operator<<;
+#endif
 
 // Coordinates of a point in pixels (relative to the top-left corner of the Window).
 class Pixel

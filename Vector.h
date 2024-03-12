@@ -2,14 +2,16 @@
 
 #include "LinePiece.h"
 #include "Direction.h"
-#include "utils/has_print_on.h"
 #include <cmath>
 #ifdef CWDEBUG
+#include "utils/has_print_on.h"
 #include "debug.h"
 #endif
 
 namespace cairowindow {
+#ifdef CWDEBUG
 using utils::has_print_on::operator<<;
+#endif
 
 class Vector
 {

@@ -15,14 +15,14 @@ class Negation : public ExpressionTag
   static constexpr precedence s_precedence = precedence::negation;
 
  private:
-  E const& expression_;
+  E expression_;
 
  public:
-  consteval Negation(E const& expression) : expression_(expression) { }
+  constexpr Negation(E const& expression) : expression_(expression) { }
 
-  consteval E const& operator-() const { return expression_; }
+  constexpr E const& operator-() const { return expression_; }
 
-#ifdef CWDEBUG
+#ifdef SYMBOLIC_PRINTING
   constexpr bool needs_parens(before_or_after position, precedence prec) const { return prec < s_precedence; }
   constexpr bool needs_parens(precedence prec) const { return prec < s_precedence; }
 

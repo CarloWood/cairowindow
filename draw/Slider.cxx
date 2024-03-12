@@ -3,6 +3,7 @@
 #include "cairowindow/Layer.h"
 #include <string>
 #include <sstream>
+#include <iomanip>
 #include "debug.h"
 
 namespace cairowindow::draw {

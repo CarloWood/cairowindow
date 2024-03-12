@@ -15,11 +15,4 @@ struct DependentFalse : std::false_type
 {
 };
 
-template<Expression E1, Expression E2>
-consteval bool expression_order_less(std::type_identity<E1> e1, std::type_identity<E2> e2)
-{
-  static_assert(DependentFalse<E1>::value, "Implement expression_order_less<>");
-  return false;
-};
-
 } // namespace symbolic

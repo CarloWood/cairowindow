@@ -1,18 +1,25 @@
 #pragma once
 
+#include "IdRange.h"
 #include "Expression.h"
 #include "counter.h"
-#include "utils/has_print_on.h"
 #include <cstring>
+#ifdef SYMBOLIC_PRINTING
+#include "utils/has_print_on.h"
+#include <iostream>
+#endif
 
 namespace symbolic {
+#ifdef SYMBOLIC_PRINTING
 using utils::has_print_on::operator<<;
+#endif
 
 template<int Id>
 class Symbol : public ExpressionTag
 {
  public:
   static constexpr precedence s_precedence = precedence::symbol;
+  static constexpr IdRange<Id, Id + 1> id_range;
 
  private:
   char const* const name_;
@@ -30,7 +37,7 @@ class Symbol : public ExpressionTag
     return *this;
   }
 
-#ifdef CWDEBUG
+#ifdef SYMBOLIC_PRINTING
   constexpr bool needs_parens(before_or_after position, precedence prec) const { return prec < s_precedence; }
   constexpr bool needs_parens(precedence prec) const { return prec < s_precedence; }
 
@@ -60,12 +67,6 @@ constexpr auto make_symbol(char const* name)
 }
 
 template<int Id1, int Id2>
-consteval bool expression_order_less(std::type_identity<Symbol<Id1>>, std::type_identity<Symbol<Id2>>)
-{
-  return Id1 < Id2;
-};
-
-template<int Id1, int Id2>
-consteval bool is_same_expression(Symbol<Id1> const& arg1, Symbol<Id2> const& arg2) { return arg1.id() == arg2.id(); }
+constexpr bool is_same_expression(Symbol<Id1> const& arg1, Symbol<Id2> const& arg2) { return arg1.id() == arg2.id(); }
 
 } // namespace symbolic

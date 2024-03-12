@@ -1,11 +1,15 @@
 #pragma once
 
 #include "Draggable.h"
-#include "utils/has_print_on.h"
 #include <memory>
+#ifdef CWDEBUG
+#include "utils/has_print_on.h"
+#endif
 
 namespace cairowindow {
+#ifdef CWDEBUG
 using utils::has_print_on::operator<<;
+#endif
 
 class Direction;
 class Vector;
