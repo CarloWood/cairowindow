@@ -14,7 +14,7 @@ struct counter
     friend consteval auto is_defined(tag) { return true; }
   };
 
-PRAGMA_DIAGNOSTIC_PUSH_IGNORE("-Wnon-template-friend")
+PRAGMA_DIAGNOSTIC_PUSH_IGNORE_non_template_friend
   friend consteval auto is_defined(tag);
 PRAGMA_DIAGNOSTIC_POP
 
