@@ -11,7 +11,7 @@ class Product : public ExpressionTag
 {
  public:
   static constexpr precedence s_precedence = precedence::product;
-  static constexpr IdRange<E1::id_range.begin, E2::id_range.end> id_range;
+  static constexpr IdRange<E1::id_range.begin, E2::id_range.end> id_range{};
 
  private:
   E1 arg1_;
@@ -99,6 +99,9 @@ constexpr bool is_same_expression(Product<E1, E2> const& arg1, Product<E3, E4> c
 // for a Product operation. Thus (a x b x c) really is (a x (b x c))
 // (or rather, Product{a, Product{b, c}}).
 //
+// Note that any of the symbols in the comments can be a Symbol, or a Power
+// of that Symbol. Thus (a x b x c) can also be a^(3/2) x b^7 x c^(-1)).
+//
 template<Expression E1, Expression E2>
 constexpr auto operator*(E1 const& arg1, E2 const& arg2)
 {
@@ -106,6 +109,13 @@ constexpr auto operator*(E1 const& arg1, E2 const& arg2)
   {
     if constexpr (is_product_v<E1>)
       return Product{arg1.arg1(), arg1.arg2() * arg2};          // a x ((b x c) * (d x e x f)).
+    else if constexpr (is_constant_v<E1>)
+    {
+      if constexpr (E1::is_one())
+        return arg2;                                            // 1 * (d x e x f).
+      else
+        return Product{arg1, arg2};                             // arg1 is a Constant; keep the order (aka a x (d x e x f)).
+    }
     else
       return Product{arg1, arg2};                               // arg1 is a non-Product; keep the order (aka a x (d x e x f)).
   }
@@ -119,12 +129,27 @@ constexpr auto operator*(E1 const& arg1, E2 const& arg2)
   // The ranges overlap.
   else if constexpr (E2::id_range.begin < E1::id_range.begin)   // Make sure that E1::id_range.begin is not larger than that of E2.
     return arg2 * arg1;
-  else if constexpr (is_product_v<E1> && is_symbol_v<E2>)       // e.g. (a x b x d) * c, where c >= a.
+  else if constexpr (is_product_v<E1> && (is_constant_v<E2> || is_symbol_v<E2> || is_power_v<E2>))      // e.g. (a x b x d) * c, where c >= a.
     return arg1.arg1() * (arg2 * arg1.arg2());                  // a * (c * (b x d)).
+  else if constexpr ((is_constant_v<E1> || is_symbol_v<E1> || is_power_v<E1>) && is_product_v<E2>)      // e.g. a^n * (a^m x c x d).
+  {
+    auto power = make_power(arg1, arg2.arg1());
+    if constexpr (is_constant_v<std::decay_t<decltype(power)>>)
+    {
+      if constexpr (std::decay_t<decltype(power)>::is_zero())
+        return constant<0, 1>();
+      else if constexpr (std::decay_t<decltype(power)>::is_one())
+        return arg2.arg2();
+      else
+        return Product{power, arg2.arg2()};                     // constant x (c x d).
+    }
+    else
+      return Product{power, arg2.arg2()};                       // a^(n + m) x (c x d).
+  }
   else
   {
-    static_assert(!(is_product_v<E1> && is_product_v<E2>), ""); // For this case the specialization below is called.
-    ASSERT(is_same_expression(arg1, arg2));
+    static_assert(!(is_product_v<E1> && is_product_v<E2>), ""); // For this case the specialization below should be called.
+    static_assert(std::is_same_v<E1, E2>, "Expected product to be a square!");
     return Power<E1, 2, 1>{arg1};
   }
 }
@@ -140,11 +165,27 @@ requires (!(Product<E1, E2>::id_range < Product<E3, E4>::id_range) &&           
                                                                                 // range of the second product.
 constexpr auto operator*(Product<E1, E2> const& arg1, Product<E3, E4> const& arg2)
 {
-  // e.g. (a x c x e) * (b x d x f), where b >= a --> a has the smallest id.
-  if constexpr (is_product_v<E2>)
-    return Product{arg1.arg1(), arg2.arg1() * (arg1.arg2() * arg2.arg2())};
-  else
-  return Product{arg1.arg1(), arg2 * arg1.arg2()};              // a x ((b x d x f) * (c x e))
+  // e.g. (a x ...) * (b x ...), where b >= a --> a has the smallest id.
+  if constexpr (E1::id_range.begin == E3::id_range.begin)                       // (a^n x ...) * (a^m x ...).
+  {
+    auto power = make_power(arg1.arg1(), arg2.arg1());
+    if constexpr (is_constant_v<std::decay_t<decltype(power)>>)
+    {
+      if constexpr (std::decay_t<decltype(power)>::is_zero())
+        return constant<0, 1>();
+      if constexpr (std::decay_t<decltype(power)>::is_one())
+        return arg1.arg2() * arg2.arg2();
+      else
+        return Product{power, arg1.arg2() * arg2.arg2()};                       // constant x (... * ...).
+    }
+    else
+      return Product{power, arg2.arg2()};                       // a^(n + m) x (c x d).
+  }
+  // (a x ...) * (b x ...), where b > a.
+  else if constexpr (is_product_v<E2>)                                          // e.g. (a x (c x ...)) * (b x ...).
+    return Product{arg1.arg1(), arg2.arg1() * (arg1.arg2() * arg2.arg2())};     // a x (b * ((c x ...) * ...)).
+  else                                                                          // e.g. (a x c) * (b x ...).
+    return Product{arg1.arg1(), arg2 * arg1.arg2()};                            // a x ((b x ...) * c).
 }
 
 } // namespace symbolic

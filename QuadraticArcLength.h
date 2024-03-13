@@ -140,10 +140,10 @@ enum Symbols : uint32_t
 class QuadraticArcLength : public BezierCurve
 {
  private:
-  Symbol<q1x> Q1x{"Q1x"};
-  Symbol<q1y> Q1y{"Q1y"};
-  DifferentiableSymbol<v0qa> v0qa{"alpha0"};
-  Symbol<v1qa> v1qa{"alpha1"};
+  Symbol<q1x> Q1x_{"Q1x"};
+  Symbol<q1y> Q1y_{"Q1y"};
+  DifferentiableSymbol<v0qa> v0qa_{"alpha0"};
+  Symbol<v1qa> v1qa_{"alpha1"};
 
  public:
   QuadraticArcLength(BezierCurve const orig) : BezierCurve(orig) { }

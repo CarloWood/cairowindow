@@ -7,9 +7,9 @@ enum class precedence
   constant,
   symbol = constant,
   negation,
+  exponentiation,
   product,
-  division,
-  exponentiation
+  division
 };
 
 enum before_or_after

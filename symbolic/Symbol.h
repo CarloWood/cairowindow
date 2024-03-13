@@ -19,7 +19,8 @@ class Symbol : public ExpressionTag
 {
  public:
   static constexpr precedence s_precedence = precedence::symbol;
-  static constexpr IdRange<Id, Id + 1> id_range;
+  static constexpr int s_id = Id;
+  static constexpr IdRange<Id, Id + 1> id_range{};
 
  private:
   char const* const name_;
@@ -28,7 +29,6 @@ class Symbol : public ExpressionTag
  public:
   constexpr Symbol(char const* name) : name_(name), value_(0.0) { }
 
-  constexpr int id() const { return Id; }
   char const* name() const { return name_; }
 
   Symbol const& operator=(int value)

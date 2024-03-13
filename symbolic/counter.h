@@ -1,5 +1,7 @@
 #pragma once
 
+#include "utils/macros.h"
+
 namespace metahack {
 
 template<auto Id>
@@ -12,7 +14,9 @@ struct counter
     friend consteval auto is_defined(tag) { return true; }
   };
 
+PRAGMA_DIAGNOSTIC_PUSH_IGNORE("-Wnon-template-friend")
   friend consteval auto is_defined(tag);
+PRAGMA_DIAGNOSTIC_POP
 
   template<typename Tag = tag, auto = is_defined(Tag{})>
   static consteval bool exists(auto)

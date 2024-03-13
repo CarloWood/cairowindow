@@ -2,6 +2,7 @@
 
 #include "Expression.h"
 #include "precedence.h"
+#include "IdRange.h"
 #include <numeric>
 #ifdef SYMBOLIC_PRINTING
 #include "utils/has_print_on.h"
@@ -22,6 +23,9 @@ class Constant : public ExpressionTag
  public:
   static constexpr precedence s_precedence =
     Denominator != 1 ? precedence::division : Enumerator < 0 ? precedence::negation : precedence::constant;
+  static constexpr int s_enumerator = Enumerator;
+  static constexpr int s_denominator = Denominator;
+  static constexpr IdRange<-1, 0> id_range{};
 
  private:
   // Use this free function to create Constant objects.
@@ -37,6 +41,10 @@ class Constant : public ExpressionTag
 
   // Constructor.
   consteval Constant() = default;
+
+ public:
+  static consteval bool is_zero() { return Enumerator == 0; }
+  static consteval bool is_one() { return Enumerator == 1 && Denominator == 1; }
 
 #ifdef SYMBOLIC_PRINTING
  public:
@@ -61,7 +69,7 @@ class Constant : public ExpressionTag
 // The returned type is canonicalized: the denominator is always > 0
 // and the GCD of enumerator and denominator will be 1.
 //
-template<int enumerator, int denominator>
+template<int enumerator, int denominator = 1>
 consteval auto constant()
 {
   constexpr int abs_enumerator = enumerator < 0 ? -enumerator : enumerator;
