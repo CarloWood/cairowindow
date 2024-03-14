@@ -173,19 +173,32 @@ constexpr auto operator*(Product<E1, E2> const& arg1, Product<E3, E4> const& arg
     {
       if constexpr (std::decay_t<decltype(power)>::is_zero())
         return constant<0, 1>();
-      if constexpr (std::decay_t<decltype(power)>::is_one())
+      else if constexpr (std::decay_t<decltype(power)>::is_one())
         return arg1.arg2() * arg2.arg2();
       else
         return Product{power, arg1.arg2() * arg2.arg2()};                       // constant x (... * ...).
     }
     else
-      return Product{power, arg2.arg2()};                       // a^(n + m) x (c x d).
+      return Product{power, arg1.arg2() * arg2.arg2()};                         // a^(n + m) x (c x d).
   }
   // (a x ...) * (b x ...), where b > a.
   else if constexpr (is_product_v<E2>)                                          // e.g. (a x (c x ...)) * (b x ...).
     return Product{arg1.arg1(), arg2.arg1() * (arg1.arg2() * arg2.arg2())};     // a x (b * ((c x ...) * ...)).
   else                                                                          // e.g. (a x c) * (b x ...).
     return Product{arg1.arg1(), arg2 * arg1.arg2()};                            // a x ((b x ...) * c).
+}
+
+template<Expression E1, Expression E2>
+constexpr auto inverse(Product<E1, E2> const& arg)
+{
+  return Product{inverse(arg.arg1()), inverse(arg.arg2())};
+}
+
+template<Expression E1, Expression E2>
+requires (!is_constant_v<E1> || !is_constant_v<E2>)
+constexpr auto operator/(E1 const& arg1, E2 const& arg2)
+{
+  return arg1 * inverse(arg2);
 }
 
 } // namespace symbolic

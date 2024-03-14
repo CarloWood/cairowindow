@@ -32485,41 +32485,58 @@ int main()
   TESTT((a * c * d * e * f * g * h * i * j) * b, expected10);
   TESTT((b * c * d * e * f * g * h * i * j) * a, expected10);
 
+  constexpr auto zero = constant<0>();
+  constexpr auto one = constant<1>();
+  constexpr auto two = constant<2>();
+
   // Test exponentiation.
-  TESTS((a * (b^constant<-2>()) * c * d) * ((b^constant<-2>()) * d), "a * (b^-4 * (c * d^2))");
-  TESTS((a * (b^constant<-2>()) * c * d) * ((b^constant<-1>()) * d), "a * (b^-3 * (c * d^2))");
-  TESTS((a * (b^constant<-2>()) * c * d) * ((b^constant< 0>()) * d), "a * (b^-2 * (c * d^2))"); // ⎫ same
-  TESTS((a * (b^constant<-2>()) * c * d) * ( constant<1>()     * d), "a * (b^-2 * (c * d^2))"); // ⎭
-  TESTS((a * (b^constant<-2>()) * c * d) * ((b^constant< 1>()) * d), "a * (b^-1 * (c * d^2))"); // ⎫ same
-  TESTS((a * (b^constant<-2>()) * c * d) * ( b                 * d), "a * (b^-1 * (c * d^2))"); // ⎭
-  TESTS((a * (b^constant<-2>()) * c * d) * ((b^constant< 2>()) * d), "a * (c * d^2)");
+  TESTS((a * (b^-two) * c * d) * ((b^-two) * d), "a * (b^-4 * (c * d^2))");
+  TESTS((a * (b^-two) * c * d) * ((b^-one) * d), "a * (b^-3 * (c * d^2))");
+  TESTS((a * (b^-two) * c * d) * ((b^zero) * d), "a * (b^-2 * (c * d^2))"); // ⎫ same
+  TESTS((a * (b^-two) * c * d) * ( one     * d), "a * (b^-2 * (c * d^2))"); // ⎭
+  TESTS((a * (b^-two) * c * d) * ((b^one)  * d), "a * (b^-1 * (c * d^2))"); // ⎫ same
+  TESTS((a * (b^-two) * c * d) * ( b       * d), "a * (b^-1 * (c * d^2))"); // ⎭
+  TESTS((a * (b^-two) * c * d) * ((b^two)  * d), "a * (c * d^2)");
 
-  TESTS((a * (b^constant<-1>()) * c * d) * ((b^constant<-2>()) * d), "a * (b^-3 * (c * d^2))");
-  TESTS((a * (b^constant<-1>()) * c * d) * ((b^constant<-1>()) * d), "a * (b^-2 * (c * d^2))");
-  TESTS((a * (b^constant<-1>()) * c * d) * ((b^constant< 0>()) * d), "a * (b^-1 * (c * d^2))"); // ⎫ same
-  TESTS((a * (b^constant<-1>()) * c * d) * ( constant<1>()     * d), "a * (b^-1 * (c * d^2))"); // ⎭
-  TESTS((a * (b^constant<-1>()) * c * d) * ((b^constant< 1>()) * d), "a * (c * d^2)");          // ⎫ same
-  TESTS((a * (b^constant<-1>()) * c * d) * ( b                 * d), "a * (c * d^2)");          // ⎭
-  TESTS((a * (b^constant<-1>()) * c * d) * ((b^constant< 2>()) * d), "a * (b * (c * d^2))");
+  TESTS((a * (b^-one) * c * d) * ((b^-two) * d), "a * (b^-3 * (c * d^2))");
+  TESTS((a * (b^-one) * c * d) * ((b^-one) * d), "a * (b^-2 * (c * d^2))");
+  TESTS((a * (b^-one) * c * d) * ((b^zero) * d), "a * (b^-1 * (c * d^2))"); // ⎫ same
+  TESTS((a * (b^-one) * c * d) * ( one     * d), "a * (b^-1 * (c * d^2))"); // ⎭
+  TESTS((a * (b^-one) * c * d) * ((b^one)  * d), "a * (c * d^2)");          // ⎫ same
+  TESTS((a * (b^-one) * c * d) * ( b       * d), "a * (c * d^2)");          // ⎭
+  TESTS((a * (b^-one) * c * d) * ((b^two)  * d), "a * (b * (c * d^2))");
 
-  TESTS((a * b * c * d) * ((b^constant<-2>()) * d), "a * (b^-1 * (c * d^2))");
-  TESTS((a * b * c * d) * ((b^constant<-1>()) * d), "a * (c * d^2)");
-  TESTS((a * b * c * d) * ((b^constant< 0>()) * d), "a * (b * (c * d^2))");                     // ⎫ same
-  TESTS((a * b * c * d) * ( constant<1>()     * d), "a * (b * (c * d^2))");                     // ⎭
-  TESTS((a * b * c * d) * ((b^constant< 1>()) * d), "a * (b^2 * (c * d^2))");                   // ⎫ same
-  TESTS((a * b * c * d) * ( b                 * d), "a * (b^2 * (c * d^2))");                   // ⎭
-  TESTS((a * b * c * d) * ((b^constant< 2>()) * d), "a * (b^3 * (c * d^2))");
+  TESTS((a * b * c * d) * ((b^-two) * d), "a * (b^-1 * (c * d^2))");
+  TESTS((a * b * c * d) * ((b^-one) * d), "a * (c * d^2)");
+  TESTS((a * b * c * d) * ((b^zero) * d), "a * (b * (c * d^2))");           // ⎫ same
+  TESTS((a * b * c * d) * ( one     * d), "a * (b * (c * d^2))");           // ⎭
+  TESTS((a * b * c * d) * ((b^one)  * d), "a * (b^2 * (c * d^2))");         // ⎫ same
+  TESTS((a * b * c * d) * ( b       * d), "a * (b^2 * (c * d^2))");         // ⎭
+  TESTS((a * b * c * d) * ((b^two)  * d), "a * (b^3 * (c * d^2))");
 
-  TESTS((a * (b^constant<2>()) * c * d) * ((b^constant<-2>()) * d), "a * (c * d^2)");
-  TESTS((a * (b^constant<2>()) * c * d) * ((b^constant<-1>()) * d), "a * (b * (c * d^2))");
-  TESTS((a * (b^constant<2>()) * c * d) * ((b^constant< 0>()) * d), "a * (b^2 * (c * d^2))");   // ⎫ same
-  TESTS((a * (b^constant<2>()) * c * d) * ( constant<1>()     * d), "a * (b^2 * (c * d^2))");   // ⎭
-  TESTS((a * (b^constant<2>()) * c * d) * ((b^constant< 1>()) * d), "a * (b^3 * (c * d^2))");   // ⎫ same
-  TESTS((a * (b^constant<2>()) * c * d) * ( b                 * d), "a * (b^3 * (c * d^2))");   // ⎭
-  TESTS((a * (b^constant<2>()) * c * d) * ((b^constant< 2>()) * d), "a * (b^4 * (c * d^2))");
+  TESTS((a * (b^two) * c * d) * ((b^-two) * d), "a * (c * d^2)");
+  TESTS((a * (b^two) * c * d) * ((b^-one) * d), "a * (b * (c * d^2))");
+  TESTS((a * (b^two) * c * d) * ((b^zero) * d), "a * (b^2 * (c * d^2))");   // ⎫ same
+  TESTS((a * (b^two) * c * d) * ( one     * d), "a * (b^2 * (c * d^2))");   // ⎭
+  TESTS((a * (b^two) * c * d) * ((b^one)  * d), "a * (b^3 * (c * d^2))");   // ⎫ same
+  TESTS((a * (b^two) * c * d) * ( b       * d), "a * (b^3 * (c * d^2))");   // ⎭
+  TESTS((a * (b^two) * c * d) * ((b^two)  * d), "a * (b^4 * (c * d^2))");
+
+  TESTS((a * b) * ((a^-two) * (c^-one)), "a^-1 * (b * c^-1)");
 
   // Test combining constants.
   TESTS(constant<42>() * (constant<1, 42>() * a), "a");
   TESTS(constant<42>() * (constant<0, 42>() * a), "0");
+  TESTS(constant<42>() * (constant<2, 42>() * a), "2 * a");
   TESTS((a * constant<42>() * c * d) * (constant<1, 42>() * d), "a * (c * d^2)");
+  TESTS((a * constant<42>() * c * d) * (constant<0, 42>() * d), "0");
+  TESTS((a * constant<42>() * c * d) * (constant<2, 42>() * d), "2 * (a * (c * d^2))");
+
+  // Test division.
+  TESTS(a / b, "a * b^-1");
+  TESTS((a * b) / (b * c), "a * c^-1");
+  TESTS((a * b) / (a * c), "b * c^-1");
+  TESTS((a * b) / ((b^two) * c), "a * (b^-1 * c^-1)");
+  TESTS(one / ((a^two) * c), "a^-2 * c^-1");
+  TESTS((a * b) / -((a^two) * c), "a^-1 * (b * c^-1)");
 }

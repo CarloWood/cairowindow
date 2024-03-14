@@ -13,6 +13,7 @@ class Negation : public ExpressionTag
 {
  public:
   static constexpr precedence s_precedence = precedence::negation;
+  static constexpr auto id_range = E::id_range;
 
  private:
   E expression_;
@@ -56,6 +57,12 @@ requires (!NegationType<E>)
 consteval auto operator-(E const& expression)
 {
   return Negation<E>{expression};
+}
+
+template<Expression E>
+constexpr auto inverse(Negation<E> const& arg)
+{
+  return Negation{inverse(-arg)};
 }
 
 } // namespace symbolic

@@ -99,9 +99,24 @@ constexpr auto make_power(Constant<Enumerator1, Denominator1> const&, Constant<E
 }
 
 template<SymbolType E1, ConstantType E2>
-auto operator^(E1 const& base, E2 const& exponent)
+constexpr auto operator^(E1 const& base, E2 const& exponent)
 {
   return Power<E1, E2::s_enumerator, E2::s_denominator>{base};
+}
+
+template<int Id>
+constexpr auto inverse(Symbol<Id> symbol)
+{
+  return Power<Symbol<Id>, -1, 1>{symbol};
+}
+
+template<Expression E1, int Enumerator, int Denominator>
+constexpr auto inverse(Power<E1, Enumerator, Denominator> const& power)
+{
+  if constexpr (Enumerator == -1 && Denominator == 1)
+    return power.base();
+  else
+    return Power<E1, -Enumerator, Denominator>{power.base()};
 }
 
 } // namespace symbolic

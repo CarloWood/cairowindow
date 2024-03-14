@@ -43,6 +43,7 @@ class Constant : public ExpressionTag
   consteval Constant() = default;
 
  public:
+  static consteval bool is_less_than_zero() { return Enumerator < 0; }
   static consteval bool is_zero() { return Enumerator == 0; }
   static consteval bool is_one() { return Enumerator == 1 && Denominator == 1; }
 
@@ -150,5 +151,11 @@ struct is_constant<Constant<Enumerator, Denominator>> : std::true_type {};
 
 template<typename E>
 concept ConstantType = is_constant_v<E>;
+
+template<int Enumerator, int Denominator>
+constexpr auto inverse(Constant<Enumerator, Denominator> const&)
+{
+  return constant<Denominator, Enumerator>();
+}
 
 } // namespace symbolic
