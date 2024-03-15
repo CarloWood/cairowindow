@@ -11,7 +11,7 @@ requires (is_symbol_v<E1>)
 class Power : public ExpressionTag
 {
  public:
-  static constexpr precedence s_precedence = precedence::exponentiation;
+  static constexpr precedence s_precedence = precedence::power;
   static constexpr auto s_exponent = constant<Enumerator, Denominator>();
   static constexpr auto id_range = E1::id_range;
 

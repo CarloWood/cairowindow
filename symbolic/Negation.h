@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Product.h"
 #include "Expression.h"
 #include "Constant.h"
 #include "precedence.h"
@@ -19,7 +20,13 @@ class Negation : public ExpressionTag
   E expression_;
 
  public:
-  constexpr Negation(E const& expression) : expression_(expression) { }
+  constexpr Negation(E const& expression) : expression_(expression)
+  {
+    if constexpr (is_product_v<E>)
+    {
+      static_assert(!is_constant_v<std::decay_t<decltype(expression.arg1())>>, "This should never happen!");
+    }
+  }
 
   constexpr E const& operator-() const { return expression_; }
 
@@ -54,9 +61,31 @@ concept NegationType = is_negation_v<E>;
 
 template<Expression E>
 requires (!NegationType<E>)
-consteval auto operator-(E const& expression)
+constexpr auto operator-(E const& expression)
 {
-  return Negation<E>{expression};
+  if constexpr (is_product_v<E>)
+  {
+    if constexpr (is_constant_v<typename E::arg1_type>)
+      return Product{constant<-E::arg1_type::s_enumerator, E::arg1_type::s_denominator>(), expression.arg2()};
+    else
+      return Negation<E>{expression};
+  }
+  else
+    return Negation<E>{expression};
+}
+
+template<Expression E1, Expression E2>
+requires (!is_negation_v<E2>)
+constexpr auto operator*(Negation<E1> const& arg1, E2 const& arg2)
+{
+  return -(-arg1 * arg2);
+}
+
+// Push negations out of products to the front, or combine them with a Constant.
+template<Expression E1, Expression E2>
+constexpr auto operator*(E1 const& arg1, Negation<E2> const& arg2)
+{
+  return -arg1 * -arg2;
 }
 
 template<Expression E>

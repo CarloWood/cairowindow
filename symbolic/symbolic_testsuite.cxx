@@ -5,6 +5,7 @@
 #include "Symbol.h"
 #include "Product.h"
 #include "Power.h"
+#include "Sum.h"
 #include "debug.h"
 #include <cassert>
 
@@ -32538,5 +32539,21 @@ int main()
   TESTS((a * b) / (a * c), "b * c^-1");
   TESTS((a * b) / ((b^two) * c), "a * (b^-1 * c^-1)");
   TESTS(one / ((a^two) * c), "a^-2 * c^-1");
-  TESTS((a * b) / -((a^two) * c), "a^-1 * (b * c^-1)");
+  TESTS((a * constant<1, 2>() * b) / -((a^two) * c), "-1/2 * (a^-1 * (b * c^-1))");
+
+  // Test addition.
+  TESTS(a + b, "a + b");
+
+  using x_type = std::decay_t<decltype(x)>;
+  using y_type = std::decay_t<decltype(y)>;
+
+  // Negation tests.
+  Negation<x_type> minus_x{x};
+  TESTT(-x, minus_x);
+  TESTT(-minus_x, x);
+
+  Product<x_type, y_type> x_times_y{x, y};
+  Negation<Product<x_type, y_type>> minus__x_times_y{x_times_y};
+  Negation<y_type> minus_y{y};
+  TESTT(x * minus_y, minus__x_times_y);
 }

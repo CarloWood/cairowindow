@@ -1,6 +1,8 @@
 #pragma once
 
 #include "IdRange.h"
+#include "Constant.h"
+#include "Symbol.h"
 #include "Power.h"
 #include "Expression.h"
 
@@ -10,6 +12,9 @@ template<Expression E1, Expression E2>
 class Product : public ExpressionTag
 {
  public:
+  using arg1_type = E1;
+  using arg2_type = E2;
+
   static constexpr precedence s_precedence = precedence::product;
   static constexpr IdRange<E1::id_range.begin, E2::id_range.end> id_range{};
 

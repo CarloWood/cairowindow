@@ -15,6 +15,19 @@ namespace symbolic {
 using utils::has_print_on::operator<<;
 #endif
 
+// Forward declarations (needed for the friend declarations).
+template<int Enumerator, int Denominator>
+class Constant;
+
+template<int E, int D>
+consteval auto constant();
+
+template<int E, int D, int exponent>
+consteval auto operator^(Constant<E, D>, Constant<exponent, 1>);
+
+template<int E, int D>
+consteval auto operator-(Constant<E, D>);
+
 // A rational constant.
 //
 template<int Enumerator, int Denominator>
@@ -22,14 +35,14 @@ class Constant : public ExpressionTag
 {
  public:
   static constexpr precedence s_precedence =
-    Denominator != 1 ? precedence::division : Enumerator < 0 ? precedence::negation : precedence::constant;
+    Denominator != 1 ? precedence::product : Enumerator < 0 ? precedence::negation : precedence::constant;
   static constexpr int s_enumerator = Enumerator;
   static constexpr int s_denominator = Denominator;
   static constexpr IdRange<-1, 0> id_range{};
 
  private:
   // Use this free function to create Constant objects.
-  template<int enumerator, int denominator>
+  template<int E, int D>
   friend consteval auto constant();
 
   // Negation.
@@ -44,6 +57,7 @@ class Constant : public ExpressionTag
 
  public:
   static consteval bool is_less_than_zero() { return Enumerator < 0; }
+  static consteval bool is_minus_one() { return Enumerator == -1 && Denominator == 1; }
   static consteval bool is_zero() { return Enumerator == 0; }
   static consteval bool is_one() { return Enumerator == 1 && Denominator == 1; }
 
@@ -70,17 +84,20 @@ class Constant : public ExpressionTag
 // The returned type is canonicalized: the denominator is always > 0
 // and the GCD of enumerator and denominator will be 1.
 //
-template<int enumerator, int denominator = 1>
+template<int E, int D = 1>
 consteval auto constant()
 {
-  constexpr int abs_enumerator = enumerator < 0 ? -enumerator : enumerator;
-  constexpr int abs_denominator = denominator < 0 ? -denominator : denominator;
+  constexpr int abs_enumerator = E < 0 ? -E : E;
+  constexpr int abs_denominator = D < 0 ? -D : D;
   constexpr int gcd = std::gcd(abs_enumerator, abs_denominator);
-  if constexpr (denominator < 0)
-    return Constant<-enumerator / gcd, -denominator / gcd>{};
+  if constexpr (D < 0)
+    return Constant<-E / gcd, -D / gcd>{};
   else
-    return Constant<enumerator / gcd, denominator / gcd>{};
+    return Constant<E / gcd, D / gcd>{};
 }
+
+static consteval auto make_one() { return constant<1, 1>(); }
+static consteval auto make_minus_one() { return constant<-1, 1>(); }
 
 // Negation.
 template<int E, int D>
@@ -127,7 +144,7 @@ consteval auto operator^(Constant<E, D>, Constant<exponent, 1>)
     static_assert(E != 0, "0^0 is undefined");
     return Constant<1, 1>{};
   }
-  if constexpr (exponent == 1)
+  else if constexpr (exponent == 1)
     return Constant<E, D>{};
   else if constexpr (exponent < 0)
   {
