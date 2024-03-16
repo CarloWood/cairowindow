@@ -13,6 +13,8 @@ requires (!ConstantType<E>)
 class Negation : public ExpressionTag
 {
  public:
+  using base_type = E;
+
   static constexpr precedence s_precedence = precedence::negation;
   static constexpr auto id_range = E::id_range;
 
@@ -20,23 +22,14 @@ class Negation : public ExpressionTag
   E expression_;
 
  public:
-  constexpr Negation(E const& expression) : expression_(expression)
-  {
-    if constexpr (is_product_v<E>)
-    {
-      static_assert(!is_constant_v<std::decay_t<decltype(expression.arg1())>>, "This should never happen!");
-    }
-  }
+  inline constexpr Negation(E const& expression);
 
   constexpr E const& operator-() const { return expression_; }
 
 #ifdef SYMBOLIC_PRINTING
-  constexpr bool needs_parens(before_or_after position, precedence prec) const { return prec < s_precedence; }
-  constexpr bool needs_parens(precedence prec) const { return prec < s_precedence; }
-
   void print_on(std::ostream& os) const
   {
-    bool need_parens = expression_.needs_parens(s_precedence);
+    bool need_parens = needs_parens(expression_.s_precedence, s_precedence);
     os << "-";
     if (need_parens)
       os << '(';
@@ -58,6 +51,15 @@ struct is_negation<Negation<E>> : std::true_type {};
 
 template<typename E>
 concept NegationType = is_negation_v<E>;
+
+template<Expression E>
+requires (!ConstantType<E>)
+constexpr Negation<E>::Negation(E const& expression) : expression_(expression)
+{
+  if constexpr (is_product_v<E>)
+    static_assert(!is_constant_v<typename E::arg1_type>, "Should never get a Negation of a Product of a Constant times something.");
+  static_assert(!is_negation_v<E>, "It should never happen that a Negation of a Negation is constructed!");
+}
 
 template<Expression E>
 requires (!NegationType<E>)

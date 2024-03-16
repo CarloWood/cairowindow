@@ -6,41 +6,40 @@
 
 namespace symbolic {
 
-template<Expression E1, int Enumerator, int Denominator>
-requires (is_symbol_v<E1>)
+template<Expression E, int Enumerator, int Denominator>
+requires (is_symbol_v<E>)
 class Power : public ExpressionTag
 {
  public:
-  static constexpr precedence s_precedence = precedence::power;
+  using base_type = E;
   static constexpr auto s_exponent = constant<Enumerator, Denominator>();
-  static constexpr auto id_range = E1::id_range;
+
+  static constexpr precedence s_precedence = precedence::power;
+  static constexpr auto id_range = E::id_range;
 
  private:
-  E1 base_;
+  E base_;
 
  public:
-  constexpr Power(E1 const& base) : base_(base) { }
+  constexpr Power(E const& base) : base_(base) { }
 
-  constexpr E1 const& base() const { return base_; }
+  E const& base() const { return base_; }
 
 #ifdef SYMBOLIC_PRINTING
-  constexpr bool needs_parens(before_or_after position, precedence prec) const { return prec < s_precedence; }
-  constexpr bool needs_parens(precedence prec) const { return prec <= s_precedence; }
-
   void print_on(std::ostream& os) const
   {
-    bool need_parens = base_.needs_parens(s_precedence);
+    bool need_parens = needs_parens(base_.s_precedence, s_precedence, before);
     if (need_parens)
       os << '(';
     base_.print_on(os);
     if (need_parens)
       os << ')';
     os << '^';
-    constexpr bool need_parens2 = s_exponent.needs_parens(s_precedence);
-    if constexpr (need_parens2)
+    need_parens = needs_parens(s_exponent.s_precedence, s_precedence, after);
+    if (need_parens)
       os << '(';
     s_exponent.print_on(os);
-    if constexpr (need_parens2)
+    if (need_parens)
       os << ')';
   }
 #endif
@@ -52,8 +51,8 @@ struct is_power : std::false_type { };
 template<typename T>
 constexpr bool is_power_v = is_power<T>::value;
 
-template<Expression E1, int Enumerator, int Denominator>
-struct is_power<Power<E1, Enumerator, Denominator>> : std::true_type { };
+template<Expression E, int Enumerator, int Denominator>
+struct is_power<Power<E, Enumerator, Denominator>> : std::true_type { };
 
 template<typename E>
 concept PowerType = is_power_v<E>;
@@ -89,7 +88,7 @@ constexpr auto make_power(E1 const& arg1, E2 const& arg2)
   else if constexpr (is_symbol_v<E1>)
     return Power<E1, total_exponent.s_enumerator, total_exponent.s_denominator>{arg1};
   else
-    return Power<std::decay_t<decltype(arg1.base())>, total_exponent.s_enumerator, total_exponent.s_denominator>{arg1.base()};
+    return Power<typename E1::base_type, total_exponent.s_enumerator, total_exponent.s_denominator>{arg1.base()};
 }
 
 template<int Enumerator1, int Denominator1, int Enumerator2, int Denominator2>

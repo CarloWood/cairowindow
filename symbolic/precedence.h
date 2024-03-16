@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <array>
+#include "debug.h"
 
 namespace symbolic {
 
@@ -10,7 +11,8 @@ namespace symbolic {
 //            If we have a:
 //              negation   |    power    |   product   |    ratio    |    sum      | difference
 // of a:     +-----------------------------------------+----------------------------------------
-// negation  |   -(-s)     |  (-s)^n     | x * -y      |   p/-q      | a + -b      | i - -j
+// negation  |   -(-s)     |  (-s)^n     | x * -y      |   p/-q      | a + -b      | i - -j      < before
+//                            s^-n                                                               < after
 // power     |   -(s^n)    |  (s^n)^m    | x * s^n     |   p/s^n     | a + s^n     | i - j^n       of_a_expr (vertical) is used
 // product   |   -(x * y)  |  (x * y)^n  | x * y * z   |   x * y / q | a + x * y   | i - x * y   < before
 //                                                         p/(x * y)                             < after
@@ -43,15 +45,15 @@ struct ParenthesisTable : ParenthesisTableBase
     // This needs -.
     // parenthesis v
              /*symbol*/     0, // Never
-             /*negation*/   with(negation) | with(power),
+             /*negation*/   with(negation) | before(power),
              /*power*/      with(negation) | with(power),
              /*product*/    with(negation) | with(power) |                after(ratio),
              /*ratio*/      with(negation) | with(power) |                after(ratio),
              /*sum*/        with(negation) | with(power) | with(product) | with(ratio) |               after(difference),
              /*difference*/ with(negation) | with(power) | with(product) | with(ratio) | before(sum) | after(difference)
   };
-  // encoded returns a double mask: <vertical><horizontal>, where <horizontal> is the mask showns above
-  // and <vertical> just encodes the op as a mask: have both bits corresponding to the op set.
+  // encoded returns a double mask: <vertical><horizontal>, where <horizontal> is the mask shown above
+  // and <vertical> just encodes the op as a mask: have both bits set corresponding to the op.
   static consteval mask_type encoded(Operation op) { return (with(op) << operation_width) | table[op]; }
 };
 
@@ -75,10 +77,10 @@ enum before_or_after : ParenthesisTable::mask_type
 
 // Return true when `of_a_expr` needs parenthesis when used before/after `a_expr`
 // (in case `a_expr` is a binary operator; if it is not then position should be `before`).
-constexpr inline bool needs_parens(precedence of_a_expr, precedence a_expr, before_or_after position)
+constexpr inline bool needs_parens(precedence of_a_expr, precedence a_expr, before_or_after position = before)
 {
-  return (static_cast<ParenthesisTable::mask_type>(of_a_expr) >> ParenthesisTable::operation_width) &
-    static_cast<ParenthesisTable::mask_type>(a_expr) & position;
+  return (static_cast<ParenthesisTable::mask_type>(a_expr) >> ParenthesisTable::operation_width) &
+    static_cast<ParenthesisTable::mask_type>(of_a_expr) & position;
 }
 
 } // namespace symbolic

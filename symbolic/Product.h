@@ -29,19 +29,16 @@ class Product : public ExpressionTag
   constexpr E2 const& arg2() const { return arg2_; }
 
 #ifdef SYMBOLIC_PRINTING
-  constexpr bool needs_parens(before_or_after position, precedence prec) const { return prec <= s_precedence; }
-  constexpr bool needs_parens(precedence prec) const { return prec <= s_precedence; }
-
   void print_on(std::ostream& os) const
   {
-    bool need_parens = arg1_.needs_parens(before, s_precedence);
+    bool need_parens = needs_parens(arg1_.s_precedence, s_precedence, before);
     if (need_parens)
       os << '(';
     arg1_.print_on(os);
     if (need_parens)
       os << ')';
     os << " * ";
-    need_parens = arg2_.needs_parens(after, s_precedence);
+    need_parens = needs_parens(arg2_.s_precedence, s_precedence, after);
     if (need_parens)
       os << '(';
     arg2_.print_on(os);
@@ -139,11 +136,12 @@ constexpr auto operator*(E1 const& arg1, E2 const& arg2)
   else if constexpr ((is_constant_v<E1> || is_symbol_v<E1> || is_power_v<E1>) && is_product_v<E2>)      // e.g. a^n * (a^m x c x d).
   {
     auto power = make_power(arg1, arg2.arg1());
-    if constexpr (is_constant_v<std::decay_t<decltype(power)>>)
+    using type = std::decay_t<decltype(power)>;
+    if constexpr (is_constant_v<type>)
     {
-      if constexpr (std::decay_t<decltype(power)>::is_zero())
+      if constexpr (type::is_zero())
         return constant<0, 1>();
-      else if constexpr (std::decay_t<decltype(power)>::is_one())
+      else if constexpr (type::is_one())
         return arg2.arg2();
       else
         return Product{power, arg2.arg2()};                     // constant x (c x d).
@@ -174,11 +172,12 @@ constexpr auto operator*(Product<E1, E2> const& arg1, Product<E3, E4> const& arg
   if constexpr (E1::id_range.begin == E3::id_range.begin)                       // (a^n x ...) * (a^m x ...).
   {
     auto power = make_power(arg1.arg1(), arg2.arg1());
-    if constexpr (is_constant_v<std::decay_t<decltype(power)>>)
+    using type = std::decay_t<decltype(power)>;
+    if constexpr (is_constant_v<type>)
     {
-      if constexpr (std::decay_t<decltype(power)>::is_zero())
+      if constexpr (type::is_zero())
         return constant<0, 1>();
-      else if constexpr (std::decay_t<decltype(power)>::is_one())
+      else if constexpr (type::is_one())
         return arg1.arg2() * arg2.arg2();
       else
         return Product{power, arg1.arg2() * arg2.arg2()};                       // constant x (... * ...).
@@ -204,6 +203,12 @@ requires (!is_constant_v<E1> || !is_constant_v<E2>)
 constexpr auto operator/(E1 const& arg1, E2 const& arg2)
 {
   return arg1 * inverse(arg2);
+}
+
+template<ProductType E1, ConstantType E2>
+constexpr auto operator^(E1 const& arg1, E2 const& exponent)
+{
+  return Product{arg1.arg1()^exponent, arg1.arg2()^exponent};
 }
 
 } // namespace symbolic

@@ -38,9 +38,6 @@ class Symbol : public ExpressionTag
   }
 
 #ifdef SYMBOLIC_PRINTING
-  constexpr bool needs_parens(before_or_after position, precedence prec) const { return prec < s_precedence; }
-  constexpr bool needs_parens(precedence prec) const { return prec < s_precedence; }
-
   void print_on(std::ostream& os) const
   {
     os << name_;

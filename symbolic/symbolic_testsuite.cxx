@@ -112,145 +112,147 @@ int main()
   TESTT(x * minus_y, minus__x_times_y);
 
   // Multiplication of two symbols.
-  TEST("x * y", (x * y), "x * y");
-  TEST("y * x", (y * x), "x * y");
-  TEST("x * x", (x * x), "x^2");
+  TESTS(x * y, "x * y");
+  TESTS(y * x, "x * y");
+  TESTS(x * x, "x^2");
 
   // Multiplication of three symbols.
-  TEST("(x * y) * z", ((x * y) * z), "x * (y * z)");
-  TEST("(x * z) * y", ((x * z) * y), "x * (y * z)");
-  TEST("(y * x) * z", ((y * x) * z), "x * (y * z)");
-  TEST("(y * z) * x", ((y * z) * x), "x * (y * z)");
-  TEST("(z * x) * y", ((z * x) * y), "x * (y * z)");
-  TEST("(z * y) * x", ((z * y) * x), "x * (y * z)");
-  TEST("x * (y * z)", (x * (y * z)), "x * (y * z)");
-  TEST("x * (z * y)", (x * (z * y)), "x * (y * z)");
-  TEST("y * (x * z)", (y * (x * z)), "x * (y * z)");
-  TEST("y * (z * x)", (y * (z * x)), "x * (y * z)");
-  TEST("z * (x * y)", (z * (x * y)), "x * (y * z)");
-  TEST("z * (y * x)", (z * (y * x)), "x * (y * z)");
+  char const* expected3 = "x * y * z";
+  TESTS((x * y) * z, expected3);
+  TESTS((x * z) * y, expected3);
+  TESTS((y * x) * z, expected3);
+  TESTS((y * z) * x, expected3);
+  TESTS((z * x) * y, expected3);
+  TESTS((z * y) * x, expected3);
+  TESTS(x * (y * z), expected3);
+  TESTS(x * (z * y), expected3);
+  TESTS(y * (x * z), expected3);
+  TESTS(y * (z * x), expected3);
+  TESTS(z * (x * y), expected3);
+  TESTS(z * (y * x), expected3);
 
   // Multiplication of four symbols.
-  TEST("((w * x) * y) * z", ((w * x) * y) * z, "w * (x * (y * z))");
-  TEST("(w * x) * (y * z)", (w * x) * (y * z), "w * (x * (y * z))");
-  TEST("(w * (x * y)) * z", (w * (x * y)) * z, "w * (x * (y * z))");
-  TEST("w * ((x * y) * z)", w * ((x * y) * z), "w * (x * (y * z))");
-  TEST("w * (x * (y * z))", w * (x * (y * z)), "w * (x * (y * z))");
-  TEST("((w * x) * z) * y", ((w * x) * z) * y, "w * (x * (y * z))");
-  TEST("(w * x) * (z * y)", (w * x) * (z * y), "w * (x * (y * z))");
-  TEST("(w * (x * z)) * y", (w * (x * z)) * y, "w * (x * (y * z))");
-  TEST("w * ((x * z) * y)", w * ((x * z) * y), "w * (x * (y * z))");
-  TEST("w * (x * (z * y))", w * (x * (z * y)), "w * (x * (y * z))");
-  TEST("((w * y) * x) * z", ((w * y) * x) * z, "w * (x * (y * z))");
-  TEST("(w * y) * (x * z)", (w * y) * (x * z), "w * (x * (y * z))");
-  TEST("(w * (y * x)) * z", (w * (y * x)) * z, "w * (x * (y * z))");
-  TEST("w * ((y * x) * z)", w * ((y * x) * z), "w * (x * (y * z))");
-  TEST("w * (y * (x * z))", w * (y * (x * z)), "w * (x * (y * z))");
-  TEST("((w * y) * z) * x", ((w * y) * z) * x, "w * (x * (y * z))");
-  TEST("(w * y) * (z * x)", (w * y) * (z * x), "w * (x * (y * z))");
-  TEST("(w * (y * z)) * x", (w * (y * z)) * x, "w * (x * (y * z))");
-  TEST("w * ((y * z) * x)", w * ((y * z) * x), "w * (x * (y * z))");
-  TEST("w * (y * (z * x))", w * (y * (z * x)), "w * (x * (y * z))");
-  TEST("((w * z) * x) * y", ((w * z) * x) * y, "w * (x * (y * z))");
-  TEST("(w * z) * (x * y)", (w * z) * (x * y), "w * (x * (y * z))");
-  TEST("(w * (z * x)) * y", (w * (z * x)) * y, "w * (x * (y * z))");
-  TEST("w * ((z * x) * y)", w * ((z * x) * y), "w * (x * (y * z))");
-  TEST("w * (z * (x * y))", w * (z * (x * y)), "w * (x * (y * z))");
-  TEST("((w * z) * y) * x", ((w * z) * y) * x, "w * (x * (y * z))");
-  TEST("(w * z) * (y * x)", (w * z) * (y * x), "w * (x * (y * z))");
-  TEST("(w * (z * y)) * x", (w * (z * y)) * x, "w * (x * (y * z))");
-  TEST("w * ((z * y) * x)", w * ((z * y) * x), "w * (x * (y * z))");
-  TEST("w * (z * (y * x))", w * (z * (y * x)), "w * (x * (y * z))");
-  TEST("((x * w) * y) * z", ((x * w) * y) * z, "w * (x * (y * z))");
-  TEST("(x * w) * (y * z)", (x * w) * (y * z), "w * (x * (y * z))");
-  TEST("(x * (w * y)) * z", (x * (w * y)) * z, "w * (x * (y * z))");
-  TEST("x * ((w * y) * z)", x * ((w * y) * z), "w * (x * (y * z))");
-  TEST("x * (w * (y * z))", x * (w * (y * z)), "w * (x * (y * z))");
-  TEST("((x * w) * z) * y", ((x * w) * z) * y, "w * (x * (y * z))");
-  TEST("(x * w) * (z * y)", (x * w) * (z * y), "w * (x * (y * z))");
-  TEST("(x * (w * z)) * y", (x * (w * z)) * y, "w * (x * (y * z))");
-  TEST("x * ((w * z) * y)", x * ((w * z) * y), "w * (x * (y * z))");
-  TEST("x * (w * (z * y))", x * (w * (z * y)), "w * (x * (y * z))");
-  TEST("((x * y) * w) * z", ((x * y) * w) * z, "w * (x * (y * z))");
-  TEST("(x * y) * (w * z)", (x * y) * (w * z), "w * (x * (y * z))");
-  TEST("(x * (y * w)) * z", (x * (y * w)) * z, "w * (x * (y * z))");
-  TEST("x * ((y * w) * z)", x * ((y * w) * z), "w * (x * (y * z))");
-  TEST("x * (y * (w * z))", x * (y * (w * z)), "w * (x * (y * z))");
-  TEST("((x * y) * z) * w", ((x * y) * z) * w, "w * (x * (y * z))");
-  TEST("(x * y) * (z * w)", (x * y) * (z * w), "w * (x * (y * z))");
-  TEST("(x * (y * z)) * w", (x * (y * z)) * w, "w * (x * (y * z))");
-  TEST("x * ((y * z) * w)", x * ((y * z) * w), "w * (x * (y * z))");
-  TEST("x * (y * (z * w))", x * (y * (z * w)), "w * (x * (y * z))");
-  TEST("((x * z) * w) * y", ((x * z) * w) * y, "w * (x * (y * z))");
-  TEST("(x * z) * (w * y)", (x * z) * (w * y), "w * (x * (y * z))");
-  TEST("(x * (z * w)) * y", (x * (z * w)) * y, "w * (x * (y * z))");
-  TEST("x * ((z * w) * y)", x * ((z * w) * y), "w * (x * (y * z))");
-  TEST("x * (z * (w * y))", x * (z * (w * y)), "w * (x * (y * z))");
-  TEST("((x * z) * y) * w", ((x * z) * y) * w, "w * (x * (y * z))");
-  TEST("(x * z) * (y * w)", (x * z) * (y * w), "w * (x * (y * z))");
-  TEST("(x * (z * y)) * w", (x * (z * y)) * w, "w * (x * (y * z))");
-  TEST("x * ((z * y) * w)", x * ((z * y) * w), "w * (x * (y * z))");
-  TEST("x * (z * (y * w))", x * (z * (y * w)), "w * (x * (y * z))");
-  TEST("((y * w) * x) * z", ((y * w) * x) * z, "w * (x * (y * z))");
-  TEST("(y * w) * (x * z)", (y * w) * (x * z), "w * (x * (y * z))");
-  TEST("(y * (w * x)) * z", (y * (w * x)) * z, "w * (x * (y * z))");
-  TEST("y * ((w * x) * z)", y * ((w * x) * z), "w * (x * (y * z))");
-  TEST("y * (w * (x * z))", y * (w * (x * z)), "w * (x * (y * z))");
-  TEST("((y * w) * z) * x", ((y * w) * z) * x, "w * (x * (y * z))");
-  TEST("(y * w) * (z * x)", (y * w) * (z * x), "w * (x * (y * z))");
-  TEST("(y * (w * z)) * x", (y * (w * z)) * x, "w * (x * (y * z))");
-  TEST("y * ((w * z) * x)", y * ((w * z) * x), "w * (x * (y * z))");
-  TEST("y * (w * (z * x))", y * (w * (z * x)), "w * (x * (y * z))");
-  TEST("((y * x) * w) * z", ((y * x) * w) * z, "w * (x * (y * z))");
-  TEST("(y * x) * (w * z)", (y * x) * (w * z), "w * (x * (y * z))");
-  TEST("(y * (x * w)) * z", (y * (x * w)) * z, "w * (x * (y * z))");
-  TEST("y * ((x * w) * z)", y * ((x * w) * z), "w * (x * (y * z))");
-  TEST("y * (x * (w * z))", y * (x * (w * z)), "w * (x * (y * z))");
-  TEST("((y * x) * z) * w", ((y * x) * z) * w, "w * (x * (y * z))");
-  TEST("(y * x) * (z * w)", (y * x) * (z * w), "w * (x * (y * z))");
-  TEST("(y * (x * z)) * w", (y * (x * z)) * w, "w * (x * (y * z))");
-  TEST("y * ((x * z) * w)", y * ((x * z) * w), "w * (x * (y * z))");
-  TEST("y * (x * (z * w))", y * (x * (z * w)), "w * (x * (y * z))");
-  TEST("((y * z) * w) * x", ((y * z) * w) * x, "w * (x * (y * z))");
-  TEST("(y * z) * (w * x)", (y * z) * (w * x), "w * (x * (y * z))");
-  TEST("(y * (z * w)) * x", (y * (z * w)) * x, "w * (x * (y * z))");
-  TEST("y * ((z * w) * x)", y * ((z * w) * x), "w * (x * (y * z))");
-  TEST("y * (z * (w * x))", y * (z * (w * x)), "w * (x * (y * z))");
-  TEST("((y * z) * x) * w", ((y * z) * x) * w, "w * (x * (y * z))");
-  TEST("(y * z) * (x * w)", (y * z) * (x * w), "w * (x * (y * z))");
-  TEST("(y * (z * x)) * w", (y * (z * x)) * w, "w * (x * (y * z))");
-  TEST("y * ((z * x) * w)", y * ((z * x) * w), "w * (x * (y * z))");
-  TEST("y * (z * (x * w))", y * (z * (x * w)), "w * (x * (y * z))");
-  TEST("((z * w) * x) * y", ((z * w) * x) * y, "w * (x * (y * z))");
-  TEST("(z * w) * (x * y)", (z * w) * (x * y), "w * (x * (y * z))");
-  TEST("(z * (w * x)) * y", (z * (w * x)) * y, "w * (x * (y * z))");
-  TEST("z * ((w * x) * y)", z * ((w * x) * y), "w * (x * (y * z))");
-  TEST("z * (w * (x * y))", z * (w * (x * y)), "w * (x * (y * z))");
-  TEST("((z * w) * y) * x", ((z * w) * y) * x, "w * (x * (y * z))");
-  TEST("(z * w) * (y * x)", (z * w) * (y * x), "w * (x * (y * z))");
-  TEST("(z * (w * y)) * x", (z * (w * y)) * x, "w * (x * (y * z))");
-  TEST("z * ((w * y) * x)", z * ((w * y) * x), "w * (x * (y * z))");
-  TEST("z * (w * (y * x))", z * (w * (y * x)), "w * (x * (y * z))");
-  TEST("((z * x) * w) * y", ((z * x) * w) * y, "w * (x * (y * z))");
-  TEST("(z * x) * (w * y)", (z * x) * (w * y), "w * (x * (y * z))");
-  TEST("(z * (x * w)) * y", (z * (x * w)) * y, "w * (x * (y * z))");
-  TEST("z * ((x * w) * y)", z * ((x * w) * y), "w * (x * (y * z))");
-  TEST("z * (x * (w * y))", z * (x * (w * y)), "w * (x * (y * z))");
-  TEST("((z * x) * y) * w", ((z * x) * y) * w, "w * (x * (y * z))");
-  TEST("(z * x) * (y * w)", (z * x) * (y * w), "w * (x * (y * z))");
-  TEST("(z * (x * y)) * w", (z * (x * y)) * w, "w * (x * (y * z))");
-  TEST("z * ((x * y) * w)", z * ((x * y) * w), "w * (x * (y * z))");
-  TEST("z * (x * (y * w))", z * (x * (y * w)), "w * (x * (y * z))");
-  TEST("((z * y) * w) * x", ((z * y) * w) * x, "w * (x * (y * z))");
-  TEST("(z * y) * (w * x)", (z * y) * (w * x), "w * (x * (y * z))");
-  TEST("(z * (y * w)) * x", (z * (y * w)) * x, "w * (x * (y * z))");
-  TEST("z * ((y * w) * x)", z * ((y * w) * x), "w * (x * (y * z))");
-  TEST("z * (y * (w * x))", z * (y * (w * x)), "w * (x * (y * z))");
-  TEST("((z * y) * x) * w", ((z * y) * x) * w, "w * (x * (y * z))");
-  TEST("(z * y) * (x * w)", (z * y) * (x * w), "w * (x * (y * z))");
-  TEST("(z * (y * x)) * w", (z * (y * x)) * w, "w * (x * (y * z))");
-  TEST("z * ((y * x) * w)", z * ((y * x) * w), "w * (x * (y * z))");
-  TEST("z * (y * (x * w))", z * (y * (x * w)), "w * (x * (y * z))");
+  char const* expected4 = "w * x * y * z";
+  TESTS(((w * x) * y) * z, expected4);
+  TESTS((w * x) * (y * z), expected4);
+  TESTS((w * (x * y)) * z, expected4);
+  TESTS(w * ((x * y) * z), expected4);
+  TESTS(w * (x * (y * z)), expected4);
+  TESTS(((w * x) * z) * y, expected4);
+  TESTS((w * x) * (z * y), expected4);
+  TESTS((w * (x * z)) * y, expected4);
+  TESTS(w * ((x * z) * y), expected4);
+  TESTS(w * (x * (z * y)), expected4);
+  TESTS(((w * y) * x) * z, expected4);
+  TESTS((w * y) * (x * z), expected4);
+  TESTS((w * (y * x)) * z, expected4);
+  TESTS(w * ((y * x) * z), expected4);
+  TESTS(w * (y * (x * z)), expected4);
+  TESTS(((w * y) * z) * x, expected4);
+  TESTS((w * y) * (z * x), expected4);
+  TESTS((w * (y * z)) * x, expected4);
+  TESTS(w * ((y * z) * x), expected4);
+  TESTS(w * (y * (z * x)), expected4);
+  TESTS(((w * z) * x) * y, expected4);
+  TESTS((w * z) * (x * y), expected4);
+  TESTS((w * (z * x)) * y, expected4);
+  TESTS(w * ((z * x) * y), expected4);
+  TESTS(w * (z * (x * y)), expected4);
+  TESTS(((w * z) * y) * x, expected4);
+  TESTS((w * z) * (y * x), expected4);
+  TESTS((w * (z * y)) * x, expected4);
+  TESTS(w * ((z * y) * x), expected4);
+  TESTS(w * (z * (y * x)), expected4);
+  TESTS(((x * w) * y) * z, expected4);
+  TESTS((x * w) * (y * z), expected4);
+  TESTS((x * (w * y)) * z, expected4);
+  TESTS(x * ((w * y) * z), expected4);
+  TESTS(x * (w * (y * z)), expected4);
+  TESTS(((x * w) * z) * y, expected4);
+  TESTS((x * w) * (z * y), expected4);
+  TESTS((x * (w * z)) * y, expected4);
+  TESTS(x * ((w * z) * y), expected4);
+  TESTS(x * (w * (z * y)), expected4);
+  TESTS(((x * y) * w) * z, expected4);
+  TESTS((x * y) * (w * z), expected4);
+  TESTS((x * (y * w)) * z, expected4);
+  TESTS(x * ((y * w) * z), expected4);
+  TESTS(x * (y * (w * z)), expected4);
+  TESTS(((x * y) * z) * w, expected4);
+  TESTS((x * y) * (z * w), expected4);
+  TESTS((x * (y * z)) * w, expected4);
+  TESTS(x * ((y * z) * w), expected4);
+  TESTS(x * (y * (z * w)), expected4);
+  TESTS(((x * z) * w) * y, expected4);
+  TESTS((x * z) * (w * y), expected4);
+  TESTS((x * (z * w)) * y, expected4);
+  TESTS(x * ((z * w) * y), expected4);
+  TESTS(x * (z * (w * y)), expected4);
+  TESTS(((x * z) * y) * w, expected4);
+  TESTS((x * z) * (y * w), expected4);
+  TESTS((x * (z * y)) * w, expected4);
+  TESTS(x * ((z * y) * w), expected4);
+  TESTS(x * (z * (y * w)), expected4);
+  TESTS(((y * w) * x) * z, expected4);
+  TESTS((y * w) * (x * z), expected4);
+  TESTS((y * (w * x)) * z, expected4);
+  TESTS(y * ((w * x) * z), expected4);
+  TESTS(y * (w * (x * z)), expected4);
+  TESTS(((y * w) * z) * x, expected4);
+  TESTS((y * w) * (z * x), expected4);
+  TESTS((y * (w * z)) * x, expected4);
+  TESTS(y * ((w * z) * x), expected4);
+  TESTS(y * (w * (z * x)), expected4);
+  TESTS(((y * x) * w) * z, expected4);
+  TESTS((y * x) * (w * z), expected4);
+  TESTS((y * (x * w)) * z, expected4);
+  TESTS(y * ((x * w) * z), expected4);
+  TESTS(y * (x * (w * z)), expected4);
+  TESTS(((y * x) * z) * w, expected4);
+  TESTS((y * x) * (z * w), expected4);
+  TESTS((y * (x * z)) * w, expected4);
+  TESTS(y * ((x * z) * w), expected4);
+  TESTS(y * (x * (z * w)), expected4);
+  TESTS(((y * z) * w) * x, expected4);
+  TESTS((y * z) * (w * x), expected4);
+  TESTS((y * (z * w)) * x, expected4);
+  TESTS(y * ((z * w) * x), expected4);
+  TESTS(y * (z * (w * x)), expected4);
+  TESTS(((y * z) * x) * w, expected4);
+  TESTS((y * z) * (x * w), expected4);
+  TESTS((y * (z * x)) * w, expected4);
+  TESTS(y * ((z * x) * w), expected4);
+  TESTS(y * (z * (x * w)), expected4);
+  TESTS(((z * w) * x) * y, expected4);
+  TESTS((z * w) * (x * y), expected4);
+  TESTS((z * (w * x)) * y, expected4);
+  TESTS(z * ((w * x) * y), expected4);
+  TESTS(z * (w * (x * y)), expected4);
+  TESTS(((z * w) * y) * x, expected4);
+  TESTS((z * w) * (y * x), expected4);
+  TESTS((z * (w * y)) * x, expected4);
+  TESTS(z * ((w * y) * x), expected4);
+  TESTS(z * (w * (y * x)), expected4);
+  TESTS(((z * x) * w) * y, expected4);
+  TESTS((z * x) * (w * y), expected4);
+  TESTS((z * (x * w)) * y, expected4);
+  TESTS(z * ((x * w) * y), expected4);
+  TESTS(z * (x * (w * y)), expected4);
+  TESTS(((z * x) * y) * w, expected4);
+  TESTS((z * x) * (y * w), expected4);
+  TESTS((z * (x * y)) * w, expected4);
+  TESTS(z * ((x * y) * w), expected4);
+  TESTS(z * (x * (y * w)), expected4);
+  TESTS(((z * y) * w) * x, expected4);
+  TESTS((z * y) * (w * x), expected4);
+  TESTS((z * (y * w)) * x, expected4);
+  TESTS(z * ((y * w) * x), expected4);
+  TESTS(z * (y * (w * x)), expected4);
+  TESTS(((z * y) * x) * w, expected4);
+  TESTS((z * y) * (x * w), expected4);
+  TESTS((z * (y * x)) * w, expected4);
+  TESTS(z * ((y * x) * w), expected4);
+  TESTS(z * (y * (x * w)), expected4);
 
   static constexpr auto a = make_symbol("a");
   static constexpr auto b = make_symbol("b");
@@ -523,56 +525,95 @@ int main()
   constexpr auto two = constant<2>();
 
   // Test exponentiation.
-  TESTS((a * (b^-two) * c * d) * ((b^-two) * d), "a * (b^-4 * (c * d^2))");
-  TESTS((a * (b^-two) * c * d) * ((b^-one) * d), "a * (b^-3 * (c * d^2))");
-  TESTS((a * (b^-two) * c * d) * ((b^zero) * d), "a * (b^-2 * (c * d^2))"); // ⎫ same
-  TESTS((a * (b^-two) * c * d) * ( one     * d), "a * (b^-2 * (c * d^2))"); // ⎭
-  TESTS((a * (b^-two) * c * d) * ((b^one)  * d), "a * (b^-1 * (c * d^2))"); // ⎫ same
-  TESTS((a * (b^-two) * c * d) * ( b       * d), "a * (b^-1 * (c * d^2))"); // ⎭
-  TESTS((a * (b^-two) * c * d) * ((b^two)  * d), "a * (c * d^2)");
+  TESTS((a * (b^-two) * c * d) * ((b^-two) * d), "a * b^-4 * c * d^2");
+  TESTS((a * (b^-two) * c * d) * ((b^-one) * d), "a * b^-3 * c * d^2");
+  TESTS((a * (b^-two) * c * d) * ((b^zero) * d), "a * b^-2 * c * d^2"); // ⎫ same
+  TESTS((a * (b^-two) * c * d) * ( one     * d), "a * b^-2 * c * d^2"); // ⎭
+  TESTS((a * (b^-two) * c * d) * ((b^one)  * d), "a * b^-1 * c * d^2"); // ⎫ same
+  TESTS((a * (b^-two) * c * d) * ( b       * d), "a * b^-1 * c * d^2"); // ⎭
+  TESTS((a * (b^-two) * c * d) * ((b^two)  * d), "a * c * d^2");
 
-  TESTS((a * (b^-one) * c * d) * ((b^-two) * d), "a * (b^-3 * (c * d^2))");
-  TESTS((a * (b^-one) * c * d) * ((b^-one) * d), "a * (b^-2 * (c * d^2))");
-  TESTS((a * (b^-one) * c * d) * ((b^zero) * d), "a * (b^-1 * (c * d^2))"); // ⎫ same
-  TESTS((a * (b^-one) * c * d) * ( one     * d), "a * (b^-1 * (c * d^2))"); // ⎭
-  TESTS((a * (b^-one) * c * d) * ((b^one)  * d), "a * (c * d^2)");          // ⎫ same
-  TESTS((a * (b^-one) * c * d) * ( b       * d), "a * (c * d^2)");          // ⎭
-  TESTS((a * (b^-one) * c * d) * ((b^two)  * d), "a * (b * (c * d^2))");
+  TESTS((a * (b^-one) * c * d) * ((b^-two) * d), "a * b^-3 * c * d^2");
+  TESTS((a * (b^-one) * c * d) * ((b^-one) * d), "a * b^-2 * c * d^2");
+  TESTS((a * (b^-one) * c * d) * ((b^zero) * d), "a * b^-1 * c * d^2"); // ⎫ same
+  TESTS((a * (b^-one) * c * d) * ( one     * d), "a * b^-1 * c * d^2"); // ⎭
+  TESTS((a * (b^-one) * c * d) * ((b^one)  * d), "a * c * d^2");          // ⎫ same
+  TESTS((a * (b^-one) * c * d) * ( b       * d), "a * c * d^2");          // ⎭
+  TESTS((a * (b^-one) * c * d) * ((b^two)  * d), "a * b * c * d^2");
 
-  TESTS((a * b * c * d) * ((b^-two) * d), "a * (b^-1 * (c * d^2))");
-  TESTS((a * b * c * d) * ((b^-one) * d), "a * (c * d^2)");
-  TESTS((a * b * c * d) * ((b^zero) * d), "a * (b * (c * d^2))");           // ⎫ same
-  TESTS((a * b * c * d) * ( one     * d), "a * (b * (c * d^2))");           // ⎭
-  TESTS((a * b * c * d) * ((b^one)  * d), "a * (b^2 * (c * d^2))");         // ⎫ same
-  TESTS((a * b * c * d) * ( b       * d), "a * (b^2 * (c * d^2))");         // ⎭
-  TESTS((a * b * c * d) * ((b^two)  * d), "a * (b^3 * (c * d^2))");
+  TESTS((a * b * c * d) * ((b^-two) * d), "a * b^-1 * c * d^2");
+  TESTS((a * b * c * d) * ((b^-one) * d), "a * c * d^2");
+  TESTS((a * b * c * d) * ((b^zero) * d), "a * b * c * d^2");           // ⎫ same
+  TESTS((a * b * c * d) * ( one     * d), "a * b * c * d^2");           // ⎭
+  TESTS((a * b * c * d) * ((b^one)  * d), "a * b^2 * c * d^2");         // ⎫ same
+  TESTS((a * b * c * d) * ( b       * d), "a * b^2 * c * d^2");         // ⎭
+  TESTS((a * b * c * d) * ((b^two)  * d), "a * b^3 * c * d^2");
 
-  TESTS((a * (b^two) * c * d) * ((b^-two) * d), "a * (c * d^2)");
-  TESTS((a * (b^two) * c * d) * ((b^-one) * d), "a * (b * (c * d^2))");
-  TESTS((a * (b^two) * c * d) * ((b^zero) * d), "a * (b^2 * (c * d^2))");   // ⎫ same
-  TESTS((a * (b^two) * c * d) * ( one     * d), "a * (b^2 * (c * d^2))");   // ⎭
-  TESTS((a * (b^two) * c * d) * ((b^one)  * d), "a * (b^3 * (c * d^2))");   // ⎫ same
-  TESTS((a * (b^two) * c * d) * ( b       * d), "a * (b^3 * (c * d^2))");   // ⎭
-  TESTS((a * (b^two) * c * d) * ((b^two)  * d), "a * (b^4 * (c * d^2))");
+  TESTS((a * (b^two) * c * d) * ((b^-two) * d), "a * c * d^2");
+  TESTS((a * (b^two) * c * d) * ((b^-one) * d), "a * b * c * d^2");
+  TESTS((a * (b^two) * c * d) * ((b^zero) * d), "a * b^2 * c * d^2");   // ⎫ same
+  TESTS((a * (b^two) * c * d) * ( one     * d), "a * b^2 * c * d^2");   // ⎭
+  TESTS((a * (b^two) * c * d) * ((b^one)  * d), "a * b^3 * c * d^2");   // ⎫ same
+  TESTS((a * (b^two) * c * d) * ( b       * d), "a * b^3 * c * d^2");   // ⎭
+  TESTS((a * (b^two) * c * d) * ((b^two)  * d), "a * b^4 * c * d^2");
 
-  TESTS((a * b) * ((a^-two) * (c^-one)), "a^-1 * (b * c^-1)");
+  TESTS((a * b) * ((a^-two) * (c^-one)), "a^-1 * b * c^-1");
 
   // Test combining constants.
   TESTS(constant<42>() * (constant<1, 42>() * a), "a");
   TESTS(constant<42>() * (constant<0, 42>() * a), "0");
   TESTS(constant<42>() * (constant<2, 42>() * a), "2 * a");
-  TESTS((a * constant<42>() * c * d) * (constant<1, 42>() * d), "a * (c * d^2)");
+  TESTS((a * constant<42>() * c * d) * (constant<1, 42>() * d), "a * c * d^2");
   TESTS((a * constant<42>() * c * d) * (constant<0, 42>() * d), "0");
-  TESTS((a * constant<42>() * c * d) * (constant<2, 42>() * d), "2 * (a * (c * d^2))");
+  TESTS((a * constant<42>() * c * d) * (constant<2, 42>() * d), "2 * a * c * d^2");
 
   // Test division.
   TESTS(a / b, "a * b^-1");
   TESTS((a * b) / (b * c), "a * c^-1");
   TESTS((a * b) / (a * c), "b * c^-1");
-  TESTS((a * b) / ((b^two) * c), "a * (b^-1 * c^-1)");
+  TESTS((a * b) / ((b^two) * c), "a * b^-1 * c^-1");
   TESTS(one / ((a^two) * c), "a^-2 * c^-1");
-  TESTS((a * constant<1, 2>() * b) / -((a^two) * c), "-1/2 * (a^-1 * (b * c^-1))");
+  TESTS((a * constant<1, 2>() * b) / -((a^two) * c), "-1/2 * a^-1 * b * c^-1");
+
+  // Test printing of parenthesis.
+#if 0 // No longer allowed to create a Negation of a Negation.
+  Negation<Negation<x_type>> minus_minus_x{minus_x};
+  TESTS(minus_minus_x, "-(-x)");
+#endif
+#if 0 // Not allowed to construct the Power of a Negation.
+  Power<Negation<x_type>, 2, 1> power_of_negation(minus_x);
+  TESTS(power_of_negation, "(-x)^2");
+#endif
+  Product<x_type, Negation<y_type>> x_times_minus_y{x, minus_y};
+  TESTS(x_times_minus_y, "x * -y");
+#if 0 // Not possible to create a Ratio (which doesn't exist).
+  TESTS(x_div_minus_y, "x/-y");
+#endif
+  Sum<x_type, Negation<y_type>> x_plus_minus_y(x, minus_y);
+  TESTS(x_plus_minus_y, "x + -y");
+  Power<x_type, 2, 1> x_squared{x};
+  Negation<Power<x_type, 2, 1>> negation_of_power{x_squared};
+  TESTS(negation_of_power, "-(x^2)");
+#if 0 // Note allowed to create a Power of anything but a Symbol.
+  Power<Power<x_type, 2, 1>, 3, 1> power_of_power{x_squared};
+  TESTS(power_of_power, "(x^2)^3");
+#endif
+  TESTS(x * (y^two), "x * y^2");
+  TESTS(x + (y^two), "x + y^2");
+  TESTS(minus__x_times_y, "-(x * y)");
+#if 0 // Note allowed to create a Power of anything but a Symbol.
+  TESTS((x * y)^two, "(x * y)^2");
+#endif
+  TESTS(x * y * z, "x * y * z");
+  TESTS(w + x * y, "w + x * y");
+  TESTS(-(x + y), "-(x + y)");
+#if 0 // Note allowed to create a Power of anything but a Symbol.
+  TESTS("(x + y)^2");
+#endif
+  TESTS(w * (x + y), "w * (x + y)");
+  TESTS(w + x + y, "w + x + y");
 
   // Test addition.
   TESTS(a + b, "a + b");
+  //Dout(dc::notice, (x * z / y * (x^two) / -(z^(-two))));
 }

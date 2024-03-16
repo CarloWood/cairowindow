@@ -9,6 +9,9 @@ template<Expression E1, Expression E2>
 class Sum : public ExpressionTag
 {
  public:
+  using arg1_type = E1;
+  using arg2_type = E2;
+
   static constexpr precedence s_precedence = precedence::sum;
   static constexpr IdRange<E1::id_range.begin, E2::id_range.end> id_range{};
 
@@ -19,23 +22,20 @@ class Sum : public ExpressionTag
  public:
   inline constexpr Sum(E1 const& arg1, E2 const& arg2);
 
-  constexpr E1 const& arg1() const { return arg1_; }
-  constexpr E2 const& arg2() const { return arg2_; }
+  E1 const& arg1() const { return arg1_; }
+  E2 const& arg2() const { return arg2_; }
 
 #ifdef SYMBOLIC_PRINTING
-  constexpr bool needs_parens(before_or_after position, precedence prec) const { return prec <= s_precedence; }
-  constexpr bool needs_parens(precedence prec) const { return prec <= s_precedence; }
-
   void print_on(std::ostream& os) const
   {
-    bool need_parens = arg1_.needs_parens(before, s_precedence);
+    bool need_parens = needs_parens(arg1_.s_precedence, s_precedence, before);
     if (need_parens)
       os << '(';
     arg1_.print_on(os);
     if (need_parens)
       os << ')';
     os << " + ";
-    need_parens = arg2_.needs_parens(after, s_precedence);
+    need_parens = needs_parens(arg2_.s_precedence, s_precedence, after);
     if (need_parens)
       os << '(';
     arg2_.print_on(os);
@@ -72,7 +72,10 @@ constexpr bool is_same_expression(Sum<E1, E2> const& arg1, Sum<E3, E4> const& ar
 template<Expression E1, Expression E2>
 auto operator+(E1 const& arg1, E2 const& arg2)
 {
-  return Sum{arg1, arg2};
+  if constexpr (is_sum_v<E1>)
+    return arg1.arg1() + (arg1.arg2() + arg2);          // (a + b) + c = a + (b + c).
+  else
+    return Sum{arg1, arg2};
 }
 
 template<Expression E1, Expression E2>
