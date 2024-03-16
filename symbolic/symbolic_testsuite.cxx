@@ -574,6 +574,11 @@ int main()
   TESTS((a * b) / ((b^two) * c), "a * b^-1 * c^-1");
   TESTS(one / ((a^two) * c), "a^-2 * c^-1");
   TESTS((a * constant<1, 2>() * b) / -((a^two) * c), "-1/2 * a^-1 * b * c^-1");
+  TESTS((z^two) * z, "z^3");
+  TESTS(x * z / y * (x^two) / (z^(-two)), "x^3 * y^-1 * z^3");
+  TESTS(x * z / y * (x^two) / -(z^(-two)), "-(x^3 * y^-1 * z^3)");
+  TESTS(x * two * z / y * (x^two) / -(z^(-two)), "-2 * x^3 * y^-1 * z^3");
+  TESTS(y * x * two * z / y * (x^two) / -(z^(-two)) / z, "-2 * x^3 * z^2");
 
   // Test printing of parenthesis.
 #if 0 // No longer allowed to create a Negation of a Negation.
@@ -615,5 +620,4 @@ int main()
 
   // Test addition.
   TESTS(a + b, "a + b");
-  //Dout(dc::notice, (x * z / y * (x^two) / -(z^(-two))));
 }

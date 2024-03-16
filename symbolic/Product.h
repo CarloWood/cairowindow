@@ -151,9 +151,9 @@ constexpr auto operator*(E1 const& arg1, E2 const& arg2)
   }
   else
   {
-    static_assert(!(is_product_v<E1> && is_product_v<E2>), ""); // For this case the specialization below should be called.
-    static_assert(std::is_same_v<E1, E2>, "Expected product to be a square!");
-    return Power<E1, 2, 1>{arg1};
+    // arg1 and arg2 can be both a constant, or both a power
+    // of the same symbol (including the being the symbol itself).
+    return make_power(arg1, arg2);
   }
 }
 
