@@ -64,6 +64,10 @@ template<Expression E1, Expression E2>
 constexpr Product<E1, E2>::Product(E1 const& arg1, E2 const& arg2) : arg1_(arg1), arg2_(arg2)
 {
   static_assert(!is_product_v<E1>, "The first factor of a Product must not be a Product itself.");
+  if constexpr (is_constant_v<E1>)
+    static_assert(!E1::is_zero() && !E1::is_one(), "A Product should never contain zero or one as factor.");
+  if constexpr (is_constant_v<E2>)
+    static_assert(!E2::is_zero() && !E2::is_one(), "A Product should never contain zero or one as factor.");
 }
 
 template<Expression E1, Expression E2, Expression E3, Expression E4>
@@ -113,8 +117,10 @@ constexpr auto operator*(E1 const& arg1, E2 const& arg2)
       return Product{arg1.arg1(), arg1.arg2() * arg2};          // a x ((b x c) * (d x e x f)).
     else if constexpr (is_constant_v<E1>)
     {
-      if constexpr (E1::is_one())
-        return arg2;                                            // 1 * (d x e x f).
+      if constexpr (E1::is_zero())
+        return constant<0, 1>();
+      else if constexpr (E1::is_one())
+        return arg2;                                            // 1 * (d x e x f) --> d x e x f.
       else
         return Product{arg1, arg2};                             // arg1 is a Constant; keep the order (aka a x (d x e x f)).
     }

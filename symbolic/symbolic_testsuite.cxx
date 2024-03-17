@@ -618,6 +618,14 @@ int main()
   TESTS(w * (x + y), "w * (x + y)");
   TESTS(w + x + y, "w + x + y");
 
-  // Test addition.
+  // Addition of one symbol.
+//  TESTS(a + a, "2 * a");
+//  TESTS(a + two * a, "3 * a");
+//  TESTS(two * a + two * a, "4 * a");
+//  TESTS(two * a + (-one) * a, "a");
+//  TESTS(a + (-one) * a, "0");
+
+  // Addition of two symbols.
   TESTS(a + b, "a + b");
+  TESTS(b + a, "a + b");
 }

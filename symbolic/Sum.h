@@ -72,7 +72,19 @@ constexpr bool is_same_expression(Sum<E1, E2> const& arg1, Sum<E3, E4> const& ar
 template<Expression E1, Expression E2>
 auto operator+(E1 const& arg1, E2 const& arg2)
 {
-  if constexpr (is_sum_v<E1>)
+  // If the symbol id ranges do not overlap, rearrange them if necessary
+  // so that the symbols with the smallest id are on the left.
+  if constexpr (E2::id_range < E1::id_range)
+  {
+    // However, first term is not allowed to be a Sum itself.
+    // Therefore, if the second term is a Sum then we can't just swap the two arguments.
+    if constexpr (is_sum_v<E2>)
+      return Sum{arg2.arg1(), arg2.arg2() + arg1};      // (k + L) + (a + B) --> a + (B + (k + L)).
+                                                        // Note that the range of B is guaranteed to be less than that of k + L.
+    else
+      return Sum{arg2, arg1};                           // arg2 is not a Sum, so simply swapping is allowed.
+  }
+  else if constexpr (is_sum_v<E1>)
     return arg1.arg1() + (arg1.arg2() + arg2);          // (a + b) + c = a + (b + c).
   else
     return Sum{arg1, arg2};
