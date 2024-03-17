@@ -138,7 +138,14 @@ constexpr auto operator*(E1 const& arg1, E2 const& arg2)
   else if constexpr (E2::id_range.begin < E1::id_range.begin)   // Make sure that E1::id_range.begin is not larger than that of E2.
     return arg2 * arg1;
   else if constexpr (is_product_v<E1> && (is_constant_v<E2> || is_symbol_v<E2> || is_power_v<E2>))      // e.g. (a x b x d) * c, where c >= a.
-    return arg1.arg1() * (arg2 * arg1.arg2());                  // a * (c * (b x d)).
+  {
+    auto second_factor = arg2 * arg1.arg2();
+    using type = std::decay_t<decltype(second_factor)>;
+    if constexpr (is_constant_v<E2> && is_constant_v<type>)
+      return constant<E2::s_enumerator * type::s_enumerator, E2::s_denominator * type::s_denominator>();
+    else
+      return arg1.arg1() * second_factor;                       // a * (c * (b x d)).
+  }
   else if constexpr ((is_constant_v<E1> || is_symbol_v<E1> || is_power_v<E1>) && is_product_v<E2>)      // e.g. a^n * (a^m x c x d).
   {
     auto power = make_power(arg1, arg2.arg1());
