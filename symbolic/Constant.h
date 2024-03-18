@@ -172,4 +172,13 @@ constexpr auto inverse(Constant<Enumerator, Denominator> const&)
   return constant<Denominator, Enumerator>();
 }
 
+template<typename T>
+struct is_minus_one : std::false_type {};
+
+template<typename T>
+constexpr bool is_minus_one_v = is_minus_one<T>::value;
+
+template<>
+struct is_minus_one<Constant<-1, 1>> : std::true_type {};
+
 } // namespace symbolic

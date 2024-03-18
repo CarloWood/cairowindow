@@ -15,7 +15,7 @@ class Product : public ExpressionTag
   using arg1_type = E1;
   using arg2_type = E2;
 
-  static constexpr precedence s_precedence = precedence::product;
+  static constexpr precedence s_precedence = is_minus_one_v<E1> ? precedence::negation : precedence::product;
   static constexpr IdRange<E1::id_range.begin, E2::id_range.end> id_range{};
 
  private:
@@ -31,19 +31,32 @@ class Product : public ExpressionTag
 #ifdef SYMBOLIC_PRINTING
   void print_on(std::ostream& os) const
   {
-    bool need_parens = needs_parens(arg1_.s_precedence, s_precedence, before);
-    if (need_parens)
-      os << '(';
-    arg1_.print_on(os);
-    if (need_parens)
-      os << ')';
-    os << " * ";
-    need_parens = needs_parens(arg2_.s_precedence, s_precedence, after);
-    if (need_parens)
-      os << '(';
-    arg2_.print_on(os);
-    if (need_parens)
-      os << ')';
+    if constexpr (s_precedence == precedence::negation)
+    {
+      bool need_parens = needs_parens(arg2_.s_precedence, s_precedence);
+      os << "-";
+      if (need_parens)
+        os << '(';
+      arg2_.print_on(os);
+      if (need_parens)
+        os << ')';
+    }
+    else
+    {
+      bool need_parens = needs_parens(arg1_.s_precedence, s_precedence, before);
+      if (need_parens)
+        os << '(';
+      arg1_.print_on(os);
+      if (need_parens)
+        os << ')';
+      os << " * ";
+      need_parens = needs_parens(arg2_.s_precedence, s_precedence, after);
+      if (need_parens)
+        os << '(';
+      arg2_.print_on(os);
+      if (need_parens)
+        os << ')';
+    }
   }
 #endif
 };
@@ -222,6 +235,13 @@ template<ProductType E1, ConstantType E2>
 constexpr auto operator^(E1 const& arg1, E2 const& exponent)
 {
   return Product{arg1.arg1()^exponent, arg1.arg2()^exponent};
+}
+
+// Negation.
+template<Expression E>
+constexpr auto operator-(E const& expression)
+{
+  return constant<-1>() * expression;
 }
 
 } // namespace symbolic

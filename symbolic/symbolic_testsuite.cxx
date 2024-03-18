@@ -1,7 +1,7 @@
 #include "sys.h"
 #include <sstream>
 #include "Constant.h"
-#include "Negation.h"
+//#include "Negation.h"
 #include "Symbol.h"
 #include "Product.h"
 #include "Power.h"
@@ -102,13 +102,22 @@ int main()
   using x_type = std::decay_t<decltype(x)>;
   using y_type = std::decay_t<decltype(y)>;
 
+#if 0   // Class Negation no longer exists.
   Negation<x_type> minus_x{x};
+#else
+  Product<Constant<-1, 1>, x_type> minus_x{constant<-1>(), x};
+#endif
   TESTT(-x, minus_x);
   TESTT(-minus_x, x);
 
   Product<x_type, y_type> x_times_y{x, y};
+#if 0   // Class Negation no longer exists.
   Negation<Product<x_type, y_type>> minus__x_times_y{x_times_y};
   Negation<y_type> minus_y{y};
+#else
+  Product<Constant<-1, 1>, Product<x_type, y_type>> minus__x_times_y{constant<-1>(), x_times_y};
+  Product<Constant<-1, 1>, y_type> minus_y{constant<-1>(), y};
+#endif
   TESTT(x * minus_y, minus__x_times_y);
 
   // Multiplication of two symbols.
@@ -589,15 +598,25 @@ int main()
   Power<Negation<x_type>, 2, 1> power_of_negation(minus_x);
   TESTS(power_of_negation, "(-x)^2");
 #endif
+#if 0   // Class Negation no longer exists.
   Product<x_type, Negation<y_type>> x_times_minus_y{x, minus_y};
   TESTS(x_times_minus_y, "x * -y");
+#endif
 #if 0 // Not possible to create a Ratio (which doesn't exist).
   TESTS(x_div_minus_y, "x/-y");
 #endif
-  Sum<x_type, Negation<y_type>> x_plus_minus_y(x, minus_y);
+#if 0   // Class Negation no longer exists.
+  Sum<x_type, Negation<y_type>> x_plus_minus_y{x, minus_y};
+#else
+  Sum<x_type, Product<Constant<-1, 1>, y_type>> x_plus_minus_y{x, minus_y};
+#endif
   TESTS(x_plus_minus_y, "x + -y");
   Power<x_type, 2, 1> x_squared{x};
+#if 0   // Class Negation no longer exists.
   Negation<Power<x_type, 2, 1>> negation_of_power{x_squared};
+#else
+  Product<Constant<-1, 1>, Power<x_type, 2, 1>> negation_of_power{constant<-1>(), x_squared};
+#endif
   TESTS(negation_of_power, "-(x^2)");
 #if 0 // Note allowed to create a Power of anything but a Symbol.
   Power<Power<x_type, 2, 1>, 3, 1> power_of_power{x_squared};
