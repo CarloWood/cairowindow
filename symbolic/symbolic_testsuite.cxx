@@ -628,4 +628,7 @@ int main()
   // Addition of two symbols.
   TESTS(a + b, "a + b");
   TESTS(b + a, "a + b");
+
+  // Addition of three symbols.
+  TESTS((a + b) + (c + d), "a + b + c + d");
 }

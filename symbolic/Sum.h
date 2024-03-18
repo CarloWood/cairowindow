@@ -84,6 +84,20 @@ auto operator+(E1 const& arg1, E2 const& arg2)
     else
       return Sum{arg2, arg1};                           // arg2 is not a Sum, so simply swapping is allowed.
   }
+  else if constexpr (E1::id_range < E2::id_range)
+  {
+    if constexpr (is_sum_v<E1>)
+      return arg1.arg1() + (arg1.arg2() + arg2);
+    else if constexpr (is_constant_v<E1>)
+    {
+      if constexpr (E1::is_zero())
+        return arg2;
+      else
+        return Sum{arg1, arg2};
+    }
+    else
+      return Sum{arg1, arg2};
+  }
   else if constexpr (is_sum_v<E1>)
     return arg1.arg1() + (arg1.arg2() + arg2);          // (a + b) + c = a + (b + c).
   else
