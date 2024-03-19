@@ -168,8 +168,10 @@ constexpr auto operator*(E1 const& arg1, E2 const& arg2)
       else
         return Product{arg1, arg2};                             // arg1 is a Constant; keep the order (aka a x (d x e x f)).
     }
-    else
+    else if constexpr (is_less_v<E1, E2>)
       return Product{arg1, arg2};                               // arg1 is a non-Product; keep the order (aka a x (d x e x f)).
+    else
+      return Product{arg2, arg1};                               // Note: arg2 can't be a product because !is_less_v<E1, E2>.
   }
   else if constexpr (E2::id_range < E1::id_range)               // e.g. (d x e x f) * (a x b x c), or (d x e x f) * a  [non-overlapping ranges].
   {
@@ -184,8 +186,10 @@ constexpr auto operator*(E1 const& arg1, E2 const& arg2)
       else
         return Product{arg2, arg1};                             // arg1 is a Constant; keep the order (aka a x (d x e x f)).
     }
-    else
+    else if constexpr (is_less_v<E2, E1>)
       return Product{arg2, arg1};                               // arg2 is a non-Product; swap the order (aka a x (d x e x f)).
+    else
+      return Product{arg1, arg2};                               // Note: arg1 can't be a product because !is_less_v<E2, E1>.
   }
   // The ranges overlap.
   else if constexpr (E2::id_range.begin < E1::id_range.begin)   // Make sure that E1::id_range.begin is not larger than that of E2.
@@ -216,8 +220,10 @@ constexpr auto operator*(E1 const& arg1, E2 const& arg2)
       else
         return Product{power, arg2.arg2()};                     // constant x (c x d).
     }
-    else
+    else if constexpr (is_less_v<type, typename E2::arg2_type>)
       return Product{power, arg2.arg2()};                       // a^(n + m) x (c x d).
+    else
+      return Product{arg2.arg2(), power};
   }
   else
   {
@@ -265,7 +271,13 @@ constexpr auto operator*(Product<E1, E2> const& arg1, Product<E3, E4> const& arg
 template<Expression E1, Expression E2>
 constexpr auto inverse(Product<E1, E2> const& arg)
 {
-  return Product{inverse(arg.arg1()), inverse(arg.arg2())};
+  auto arg1_inverse = inverse(arg.arg1());
+  auto arg2_inverse = inverse(arg.arg2());
+  if constexpr (is_less_v<decltype(arg1_inverse), decltype(arg2_inverse)>)
+    return Product{arg1_inverse, arg2_inverse};
+  else
+    return Product{arg2_inverse, arg1_inverse};                                 // Note arg2_inverse can't be a product in this case,
+                                                                                // because arg1_inverse isn't and !is_less_v<...>.
 }
 
 template<Expression E1, Expression E2>

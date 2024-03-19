@@ -1,7 +1,6 @@
 #include "sys.h"
 #include <sstream>
 #include "Constant.h"
-//#include "Negation.h"
 #include "Symbol.h"
 #include "Product.h"
 #include "Power.h"
@@ -40,6 +39,21 @@ template<typename T, typename E>
 void TESTT(T const& expression, E const& expect)
 {
   static_assert(std::is_same_v<T, E>, "Failure!");
+}
+
+template<symbolic::Expression E1>
+void compare_equal()
+{
+  using namespace symbolic;
+  static_assert(!is_less_v<E1, E1>, "Expected E1 == E1");
+}
+
+template<symbolic::Expression E1, symbolic::Expression E2>
+void compare_less()
+{
+  using namespace symbolic;
+  static_assert(is_less_v<E1, E2>, "Expected E1 < E2");
+  static_assert(!is_less_v<E2, E1>, "Expected !(E2 < E1)");
 }
 
 int main()
@@ -701,29 +715,65 @@ int main()
   static_assert(is_less_v<some_low_product_type, some_high_product_type>, "");
   static_assert(!is_less_v<some_high_product_type, some_low_product_type>, "");
 
-  // Lets define three types that compare like K < L < M.
+  // Lets define four types that compare like K < L < M < N.
   using K = some_constant_type;
   using L = some_symbol_type;
   using M = some_power_type;
+  using N = Power<x_type, 3, 1>;
 
   static constexpr K k = constant<3, 1>();
   static constexpr L l = y;
   static constexpr M m{x};
+  static constexpr N n{x};
 
   // Any Product<X, Y> always must have X < Y; therefore we have the following possibilities:
   using KL = Product<K, L>;
   using KM = Product<K, M>;
+  using KN = Product<K, N>;
   using LM = Product<L, M>;
+  using LN = Product<L, N>;
+  using MN = Product<M, N>;
   // Test that we can't compile the other possibilities.
 #if 0
   Product<K, K> test1{k, k};  // error: static assertion [...]: The second factor of a Product can only be a Symbol, Power or another Product.
   Product<L, K> test2{l, k};  // Idem
   Product<M, K> test3{m, k};  // Idem
+  Product<L, L> test4{l, l};  // error: static assertion [...]: The first argument of a Product must be less than the second argument.
+  Product<M, L> test5{m, l};  // Idem
+  Product<M, M> test6{m, m};  // Idem
 #endif
-  Product<L, L> test4{l, l};  // compiled!
-  Product<M, L> test5{m, l};  // compiled!
-  Product<M, M> test6{m, m};  //
+  // But we can construct these.
   KL test7{k, l};
   KM test8{k, m};
-  LM test9{l, m};
+  KN test9{k, n};
+  LM test10{l, m};
+  LN test11{l, n};
+  MN test12{m, n};
+
+  compare_equal<KL>();
+  compare_less<KL, KM>();
+  compare_less<KL, KN>();
+  compare_less<KL, LM>();
+  compare_less<KL, LN>();
+  compare_less<KL, MN>();
+
+  compare_equal<KM>();
+  compare_less<KM, KN>();
+  compare_less<KM, LM>();
+  compare_less<KM, LN>();
+  compare_less<KM, MN>();
+
+  compare_equal<KN>();
+  compare_less<KN, LM>();
+  compare_less<KN, LN>();
+  compare_less<KN, MN>();
+
+  compare_equal<LM>();
+  compare_less<LM, LN>();
+  compare_less<LM, MN>();
+
+  compare_equal<LN>();
+  compare_less<LN, MN>();
+
+  compare_equal<MN>();
 }
