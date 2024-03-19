@@ -8,7 +8,28 @@
 
 namespace symbolic {
 
+// A Product is a product of- optionally exponentiated- symbols and an optional constant;
+// it has a canonical form which can be defined as:
+//
+//   ❮product❯                    ::= ❮product{-1,l}❯ | ❮product{f,l}❯ where f and l are integer identifiers and 0 <= f <= l.
+//   ❮product{-1,l}❯              ::= Product<❮constant❯, ❮power{l}❯> | Product<❮constant❯, ❮constant-free-product{f,l}❯>
+//   ❮product{f,l}❯               ::= ❮constant-free-product{f,l}❯
+//   ❮power{s}❯                   ::= ❮symbol{s}❯ | Power<❮symbol{s}❯, ❮constant-not-zero-or-one❯> where 0 <= s.
+//   ❮constant❯                   ::= Constant<E, D> (in its canonical form: gcd(E, D) = 1 and D > 0).
+//   ❮constant-not-zero-or-one❯   ::= ❮constant❯ - Constant<0, 1> - Constant<1, 1>
+//   ❮constant-free-product{f,l}❯ ::= Product<❮power{f}❯, ❮power{l}❯> | Product<❮power{f}❯, ❮constant-free-product{g,l}❯> where 0 <= f < g < l.
+//
+// Examples:
+//
+//   -x                                 Product<Constant<-1, 1>, Symbol<0>>
+//   2 * x^2                            Product<Constant<2, 1>, Power<Symbol<0>, 2, 1>>
+//   x * y                              Product<Symbol<0>, Symbol<1>>
+//   -3/2 * x^(-5/4) * y^(7/3)          Product<Constant<-3, 2>, Product<Power<Symbol<0>, -5, 4>, Power<Symbol<1>, 7, 3>>>
+//
+// Note that each symbol only occurs once and the product is sorted by Symbol Id.
+//
 template<Expression E1, Expression E2>
+requires (is_symbol_v<E1> || is_power_v<E1> || is_constant_v<E1>)
 class Product : public ExpressionTag
 {
  public:
@@ -73,20 +94,30 @@ struct is_product<Product<E1, E2>> : std::true_type { };
 template<typename E>
 concept ProductType = is_product_v<E>;
 
-template<Expression E1, Expression E2>
-constexpr Product<E1, E2>::Product(E1 const& arg1, E2 const& arg2) : arg1_(arg1), arg2_(arg2)
-{
-  static_assert(!is_product_v<E1>, "The first factor of a Product must not be a Product itself.");
-  if constexpr (is_constant_v<E1>)
-    static_assert(!E1::is_zero() && !E1::is_one(), "A Product should never contain zero or one as factor.");
-  if constexpr (is_constant_v<E2>)
-    static_assert(!E2::is_zero() && !E2::is_one(), "A Product should never contain zero or one as factor.");
-}
-
 template<Expression E1, Expression E2, Expression E3, Expression E4>
 constexpr bool is_same_expression(Product<E1, E2> const& arg1, Product<E3, E4> const& arg2)
 {
   return std::is_same_v<E1, E3> && std::is_same_v<E2, E4>;
+}
+
+template<Expression E1, Expression E2, Expression E3, Expression E4>
+requires (is_less_v<E1, E3> || (!is_less_v<E3, E1> && is_less_v<E2, E4>))
+struct is_less<Product<E1, E2>, Product<E3, E4>> : std::true_type { };
+
+template<Expression E1, Expression E2, Expression E3>
+requires (!is_constant_v<E3> && !is_symbol_v<E3> && !is_power_v<E3> && !is_product_v<E3>)
+struct is_less<Product<E1, E2>, E3> : std::true_type { };
+
+template<Expression E1, Expression E2>
+requires (is_symbol_v<E1> || is_power_v<E1> || is_constant_v<E1>)
+constexpr Product<E1, E2>::Product(E1 const& arg1, E2 const& arg2) : arg1_(arg1), arg2_(arg2)
+{
+  if constexpr (is_constant_v<E1>)
+    static_assert(!E1::is_zero() && !E1::is_one(), "A Product should never contain zero or one as factor.");
+  if constexpr (is_constant_v<E2>)
+    static_assert(!E2::is_zero() && !E2::is_one(), "A Product should never contain zero or one as factor.");
+  static_assert(is_symbol_v<E2> || is_power_v<E2> || is_product_v<E2>, "The second factor of a Product can only be a Symbol, Power or another Product.");
+  static_assert(is_less_v<E1, E2>, "The first argument of a Product must be less than the second argument.");
 }
 
 // The design of the following multiplication operator is as follows:
@@ -144,6 +175,15 @@ constexpr auto operator*(E1 const& arg1, E2 const& arg2)
   {
     if constexpr (is_product_v<E2>)
       return Product{arg2.arg1(), arg2.arg2() * arg1};          // a x ((b x c) * (d x e x f)).
+    else if constexpr (is_constant_v<E2>)
+    {
+      if constexpr (E2::is_zero())
+        return constant<0, 1>();
+      else if constexpr (E2::is_one())
+        return arg1;                                            // 1 * (d x e x f) --> d x e x f.
+      else
+        return Product{arg2, arg1};                             // arg1 is a Constant; keep the order (aka a x (d x e x f)).
+    }
     else
       return Product{arg2, arg1};                               // arg2 is a non-Product; swap the order (aka a x (d x e x f)).
   }
@@ -154,13 +194,17 @@ constexpr auto operator*(E1 const& arg1, E2 const& arg2)
   {
     auto second_factor = arg2 * arg1.arg2();
     using type = std::decay_t<decltype(second_factor)>;
-    if constexpr (is_constant_v<E2> && is_constant_v<type>)
-      return constant<E2::s_enumerator * type::s_enumerator, E2::s_denominator * type::s_denominator>();
+    // Both arg1.arg1() and second_factor can be constants when arg2 is zero.
+    if constexpr (is_constant_v<typename E1::arg1_type> && is_constant_v<type>)
+      return constant<E1::arg1_type::s_enumerator * type::s_enumerator, E1::arg1_type::s_denominator * type::s_denominator>();
     else
       return arg1.arg1() * second_factor;                       // a * (c * (b x d)).
   }
   else if constexpr ((is_constant_v<E1> || is_symbol_v<E1> || is_power_v<E1>) && is_product_v<E2>)      // e.g. a^n * (a^m x c x d).
   {
+    // Since arg1 exists of a single range (-1 for being a constant, or the symbol Id for Symbol and Power),
+    // and both not 'E1::id_range < E2::id_range' and 'E2::id_range.begin >= E1::id_range.begin',
+    // arg1 and arg2.arg1() must be two constants or twice the same symbol.
     auto power = make_power(arg1, arg2.arg1());
     using type = std::decay_t<decltype(power)>;
     if constexpr (is_constant_v<type>)

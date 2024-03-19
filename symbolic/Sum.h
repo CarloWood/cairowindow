@@ -81,6 +81,13 @@ auto operator+(E1 const& arg1, E2 const& arg2)
     if constexpr (is_sum_v<E2>)
       return Sum{arg2.arg1(), arg2.arg2() + arg1};      // (k + L) + (a + B) --> a + (B + (k + L)).
                                                         // Note that the range of B is guaranteed to be less than that of k + L.
+    else if constexpr (is_constant_v<E2>)
+    {
+      if constexpr (E2::is_zero())
+        return arg1;
+      else
+        return Sum{arg2, arg1};
+    }
     else
       return Sum{arg2, arg1};                           // arg2 is not a Sum, so simply swapping is allowed.
   }
@@ -98,9 +105,26 @@ auto operator+(E1 const& arg1, E2 const& arg2)
     else
       return Sum{arg1, arg2};
   }
+  // The ranges overlap.
   else if constexpr (is_sum_v<E1>)
-    return arg1.arg1() + (arg1.arg2() + arg2);          // (a + b) + c = a + (b + c).
+  {
+    auto second_term = arg2 + arg1.arg2();
+    using type = std::decay_t<decltype(second_term)>;
+    if constexpr (is_constant_v<typename E1::arg1_type> && is_constant_v<type>)
+      return constant<E1::arg1_type::s_enumerator + type::s_enumerator, E1::arg1_type::s_denominator + type::s_denominator>();
+    else
+      return arg1.arg1() + second_term;
+  }
+  else if constexpr (is_sum_v<E2>)
+  {
+  }
+  // Neither E1 nor E2 are Sum's.
+  else if constexpr (is_less_v<E2, E1>)
+    return Sum{arg2, arg1};
+  else if constexpr (is_less_v<E1, E2>)
+    return Sum{arg1, arg2};
   else
+    //FIXME
     return Sum{arg1, arg2};
 }
 
@@ -109,5 +133,13 @@ constexpr auto inverse(Sum<E1, E2> sum)
 {
   return Power<Sum<E1, E2>, -1, 1>{sum};
 }
+
+template<Expression E1, Expression E2, Expression E3, Expression E4>
+requires (is_less_v<E1, E3> || (!is_less_v<E3, E1> && is_less_v<E2, E4>))
+struct is_less<Sum<E1, E2>, Sum<E3, E4>> : std::true_type { };
+
+template<Expression E1, Expression E2, Expression E3>
+requires (!is_constant_v<E3> && !is_symbol_v<E3> && !is_power_v<E3> && !is_product_v<E3>)
+struct is_less<Sum<E1, E2>, E3> : std::true_type { };
 
 } // namespace symbolic
