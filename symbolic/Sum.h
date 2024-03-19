@@ -72,60 +72,46 @@ constexpr bool is_same_expression(Sum<E1, E2> const& arg1, Sum<E3, E4> const& ar
 template<Expression E1, Expression E2>
 auto operator+(E1 const& arg1, E2 const& arg2)
 {
-  // If the symbol id ranges do not overlap, rearrange them if necessary
-  // so that the symbols with the smallest id are on the left.
-  if constexpr (E2::id_range < E1::id_range)
+  if constexpr (!is_sum_v<E1> && !is_sum_v<E2>)
   {
-    // However, first term is not allowed to be a Sum itself.
-    // Therefore, if the second term is a Sum then we can't just swap the two arguments.
-    if constexpr (is_sum_v<E2>)
-      return Sum{arg2.arg1(), arg2.arg2() + arg1};      // (k + L) + (a + B) --> a + (B + (k + L)).
-                                                        // Note that the range of B is guaranteed to be less than that of k + L.
-    else if constexpr (is_constant_v<E2>)
-    {
-      if constexpr (E2::is_zero())
-        return arg1;
-      else
-        return Sum{arg2, arg1};
-    }
-    else
-      return Sum{arg2, arg1};                           // arg2 is not a Sum, so simply swapping is allowed.
-  }
-  else if constexpr (E1::id_range < E2::id_range)
-  {
-    if constexpr (is_sum_v<E1>)
-      return arg1.arg1() + (arg1.arg2() + arg2);
-    else if constexpr (is_constant_v<E1>)
-    {
-      if constexpr (E1::is_zero())
-        return arg2;
-      else
-        return Sum{arg1, arg2};
-    }
-    else
+    if constexpr (is_less_v<E1, E2>)
       return Sum{arg1, arg2};
-  }
-  // The ranges overlap.
-  else if constexpr (is_sum_v<E1>)
-  {
-    auto second_term = arg2 + arg1.arg2();
-    using type = std::decay_t<decltype(second_term)>;
-    if constexpr (is_constant_v<typename E1::arg1_type> && is_constant_v<type>)
-      return constant<E1::arg1_type::s_enumerator + type::s_enumerator, E1::arg1_type::s_denominator + type::s_denominator>();
+    else if constexpr (is_less_v<E2, E1>)
+      return Sum{arg2, arg1};
     else
-      return arg1.arg1() + second_term;
+      return constant<2>() * arg1;  //FIXME: add constants of arg1 and arg2.
   }
-  else if constexpr (is_sum_v<E2>)
+  else if constexpr (!is_sum_v<E1>)
   {
+    if constexpr (is_less_v<E1, typename E2::arg1_type>)
+      return Sum{arg1, arg2};
+    else if constexpr (is_less_v<typename E2::arg1_type, E1>)
+      return Sum{arg2.arg1(), arg1 + arg2.arg2()};
+    else
+      return constant<2>() * arg1 + arg2.arg2();  //FIXME: add constants of arg1 and arg2.
   }
-  // Neither E1 nor E2 are Sum's.
-  else if constexpr (is_less_v<E2, E1>)
-    return Sum{arg2, arg1};
-  else if constexpr (is_less_v<E1, E2>)
-    return Sum{arg1, arg2};
+  else if constexpr (!is_sum_v<E2>)
+  {
+    if constexpr (is_less_v<typename E1::arg1_type, E2>)
+      return Sum{arg1.arg1(), arg2 + arg1.arg2()};
+    else if constexpr (is_less_v<E2, typename E1::arg1_type>)
+      return Sum{arg2, arg1};
+    else
+      return constant<2>() * arg1.arg1() + arg1.arg2();     //FIXME
+  }
   else
-    //FIXME
-    return Sum{arg1, arg2};
+  {
+    if constexpr (is_less_v<typename E1::arg1_type, typename E2::arg1_type>)
+    {
+      return Sum{arg1.arg1(), arg1.arg2() + arg2};
+    }
+    else if constexpr (is_less_v<typename E2::arg1_type, typename E1::arg1_type>)
+    {
+      return Sum{arg2.arg1(), arg1 + arg2.arg2()};
+    }
+    else
+      return constant<2>() * arg1.arg1() + arg1.arg2() + arg2.arg2();   // FIXME
+  }
 }
 
 template<Expression E1, Expression E2>
