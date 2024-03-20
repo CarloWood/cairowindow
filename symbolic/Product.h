@@ -109,6 +109,24 @@ requires (!is_constant_v<E3> && !is_symbol_v<E3> && !is_power_v<E3> && !is_produ
 struct is_less<Product<E1, E2>, E3> : std::true_type { };
 
 template<Expression E1, Expression E2>
+struct is_product_less : std::false_type { };
+
+template<Expression E1, Expression E2>
+constexpr bool is_product_less_v = is_product_less<E1, E2>::value;
+
+template<int Enumerator1, int Denominator1, Expression E2>
+requires (!is_constant_v<E2>)
+struct is_product_less<Constant<Enumerator1, Denominator1>, E2> : std::true_type { };
+
+template<int Id1, SymbolPowerType E2>
+requires (Id1 < E2::s_id)
+struct is_product_less<Symbol<Id1>, E2> : std::true_type { };
+
+template<SymbolType E1, int Enumerator1, int Denominator1, SymbolPowerType E2>
+requires (E1::s_id < E2::s_id)
+struct is_product_less<Power<E1, Enumerator1, Denominator1>, E2> : std::true_type { };
+
+template<Expression E1, Expression E2>
 requires (is_symbol_v<E1> || is_power_v<E1> || is_constant_v<E1>)
 constexpr Product<E1, E2>::Product(E1 const& arg1, E2 const& arg2) : arg1_(arg1), arg2_(arg2)
 {
@@ -117,7 +135,33 @@ constexpr Product<E1, E2>::Product(E1 const& arg1, E2 const& arg2) : arg1_(arg1)
   if constexpr (is_constant_v<E2>)
     static_assert(!E2::is_zero() && !E2::is_one(), "A Product should never contain zero or one as factor.");
   static_assert(is_symbol_v<E2> || is_power_v<E2> || is_product_v<E2>, "The second factor of a Product can only be a Symbol, Power or another Product.");
-  static_assert(is_less_v<E1, E2>, "The first argument of a Product must be less than the second argument.");
+  if constexpr (!is_product_v<E2>)
+    static_assert(is_product_less_v<E1, E2>, "The first argument of a Product must be less than the second argument.");
+  else
+    static_assert(is_product_less_v<E1, typename E2::arg1_type>,
+        "The first argument of a Product must be less than the first argument of the second argument, if that is a Product.");
+}
+
+template<Expression E1, Expression E2>
+constexpr auto multiply_unequals(E1 const& arg1, E2 const& arg2)
+{
+  if constexpr (is_product_v<E2>)
+    static_assert(is_product_less_v<E1, typename E2::arg1_type>, "Only call multiply_unequals for E1 < E2.");
+  else
+    static_assert(is_product_less_v<E1, E2>, "Only call multiply_unequals for E1 < E2.");
+  static_assert(!is_product_v<E1>, "Only call multiply_unequals with a non-product arg1.");
+
+  if constexpr (is_constant_v<E1>)
+  {
+    if constexpr (E1::is_zero())
+      return constant<0>();
+    else if constexpr (E1::is_one())
+      return arg2;
+    else
+      return Product{arg1, arg2};
+  }
+  else
+    return Product{arg1, arg2};
 }
 
 // The design of the following multiplication operator is as follows:
@@ -152,120 +196,47 @@ constexpr Product<E1, E2>::Product(E1 const& arg1, E2 const& arg2) : arg1_(arg1)
 // Note that any of the symbols in the comments can be a Symbol, or a Power
 // of that Symbol. Thus (a x b x c) can also be a^(3/2) x b^7 x c^(-1)).
 //
+// In order to be able to combine constants and powers of the same symbol,
+// the ordering of factors must be as follows: constant < symbol/power,
+// symbol/power(x) < symbol/power(y), etc.
+
 template<Expression E1, Expression E2>
 constexpr auto operator*(E1 const& arg1, E2 const& arg2)
 {
-  if constexpr (E1::id_range < E2::id_range)                    // e.g. (a x b x c) * (d x e x f), or a * (d x e x f)   [non-overlapping ranges].
+  if constexpr (!is_product_v<E1> && !is_product_v<E2>)
   {
-    if constexpr (is_product_v<E1>)
-      return Product{arg1.arg1(), arg1.arg2() * arg2};          // a x ((b x c) * (d x e x f)).
-    else if constexpr (is_constant_v<E1>)
-    {
-      if constexpr (E1::is_zero())
-        return constant<0, 1>();
-      else if constexpr (E1::is_one())
-        return arg2;                                            // 1 * (d x e x f) --> d x e x f.
-      else
-        return Product{arg1, arg2};                             // arg1 is a Constant; keep the order (aka a x (d x e x f)).
-    }
-    else if constexpr (is_less_v<E1, E2>)
-      return Product{arg1, arg2};                               // arg1 is a non-Product; keep the order (aka a x (d x e x f)).
+    if constexpr (is_product_less_v<E1, E2>)
+      return multiply_unequals(arg1, arg2);
+    else if constexpr (is_product_less_v<E2, E1>)
+      return multiply_unequals(arg2, arg1);
     else
-      return Product{arg2, arg1};                               // Note: arg2 can't be a product because !is_less_v<E1, E2>.
+      return make_power(arg1, arg2);
   }
-  else if constexpr (E2::id_range < E1::id_range)               // e.g. (d x e x f) * (a x b x c), or (d x e x f) * a  [non-overlapping ranges].
+  else if constexpr (!is_product_v<E1>)
   {
-    if constexpr (is_product_v<E2>)
-      return Product{arg2.arg1(), arg2.arg2() * arg1};          // a x ((b x c) * (d x e x f)).
-    else if constexpr (is_constant_v<E2>)
-    {
-      if constexpr (E2::is_zero())
-        return constant<0, 1>();
-      else if constexpr (E2::is_one())
-        return arg1;                                            // 1 * (d x e x f) --> d x e x f.
-      else
-        return Product{arg2, arg1};                             // arg1 is a Constant; keep the order (aka a x (d x e x f)).
-    }
-    else if constexpr (is_less_v<E2, E1>)
-      return Product{arg2, arg1};                               // arg2 is a non-Product; swap the order (aka a x (d x e x f)).
+    if constexpr (is_product_less_v<E1, typename E2::arg1_type>)
+      return multiply_unequals(arg1, arg2);
+    else if constexpr (is_product_less_v<typename E2::arg1_type, E1>)
+      return multiply_unequals(arg2.arg1(), arg1 * arg2.arg2());
     else
-      return Product{arg1, arg2};                               // Note: arg1 can't be a product because !is_less_v<E2, E1>.
+      return make_power(arg1, arg2.arg1()) * arg2.arg2();
   }
-  // The ranges overlap.
-  else if constexpr (E2::id_range.begin < E1::id_range.begin)   // Make sure that E1::id_range.begin is not larger than that of E2.
-    return arg2 * arg1;
-  else if constexpr (is_product_v<E1> && (is_constant_v<E2> || is_symbol_v<E2> || is_power_v<E2>))      // e.g. (a x b x d) * c, where c >= a.
+  else if constexpr (!is_product_v<E2>)
   {
-    auto second_factor = arg2 * arg1.arg2();
-    using type = std::decay_t<decltype(second_factor)>;
-    // Both arg1.arg1() and second_factor can be constants when arg2 is zero.
-    if constexpr (is_constant_v<typename E1::arg1_type> && is_constant_v<type>)
-      return constant<E1::arg1_type::s_enumerator * type::s_enumerator, E1::arg1_type::s_denominator * type::s_denominator>();
+    if constexpr (is_product_less_v<typename E1::arg1_type, E2>)
+      return multiply_unequals(arg1.arg1(), arg1.arg2() * arg2);
+    else if constexpr (is_product_less_v<E2, typename E1::arg1_type>)
+      return multiply_unequals(arg2, arg1);
     else
-      return arg1.arg1() * second_factor;                       // a * (c * (b x d)).
+      return make_power(arg2, arg1.arg1()) * arg1.arg2();
   }
-  else if constexpr ((is_constant_v<E1> || is_symbol_v<E1> || is_power_v<E1>) && is_product_v<E2>)      // e.g. a^n * (a^m x c x d).
-  {
-    // Since arg1 exists of a single range (-1 for being a constant, or the symbol Id for Symbol and Power),
-    // and both not 'E1::id_range < E2::id_range' and 'E2::id_range.begin >= E1::id_range.begin',
-    // arg1 and arg2.arg1() must be two constants or twice the same symbol.
-    auto power = make_power(arg1, arg2.arg1());
-    using type = std::decay_t<decltype(power)>;
-    if constexpr (is_constant_v<type>)
-    {
-      if constexpr (type::is_zero())
-        return constant<0, 1>();
-      else if constexpr (type::is_one())
-        return arg2.arg2();
-      else
-        return Product{power, arg2.arg2()};                     // constant x (c x d).
-    }
-    else if constexpr (is_less_v<type, typename E2::arg2_type>)
-      return Product{power, arg2.arg2()};                       // a^(n + m) x (c x d).
-    else
-      return Product{arg2.arg2(), power};
-  }
+  // Both are a Product.
+  else if constexpr (is_product_less_v<typename E1::arg1_type, typename E2::arg1_type>)
+    return multiply_unequals(arg1.arg1(), arg1.arg2() * arg2);
+  else if constexpr (is_product_less_v<typename E2::arg1_type, typename E1::arg1_type>)
+    return multiply_unequals(arg2.arg1(), arg1 * arg2.arg2());
   else
-  {
-    // arg1 and arg2 can be both a constant, or both a power
-    // of the same symbol (including the being the symbol itself).
-    return make_power(arg1, arg2);
-  }
-}
-
-// This is a work-around for the fact that you can't recursively call
-// a template function with a auto-deduced return type "before it is
-// defined".
-template<Expression E1, Expression E2, Expression E3, Expression E4>
-requires (!(Product<E1, E2>::id_range < Product<E3, E4>::id_range) &&           // The range of the two products
-          !(Product<E3, E4>::id_range < Product<E1, E2>::id_range) &&           // must overlap.
-          !(Product<E3, E4>::id_range.begin < Product<E1, E2>::id_range.begin)) // The id of the start of the range of the first product
-                                                                                // maybe not be larger than the id of the start of the
-                                                                                // range of the second product.
-constexpr auto operator*(Product<E1, E2> const& arg1, Product<E3, E4> const& arg2)
-{
-  // e.g. (a x ...) * (b x ...), where b >= a --> a has the smallest id.
-  if constexpr (E1::id_range.begin == E3::id_range.begin)                       // (a^n x ...) * (a^m x ...).
-  {
-    auto power = make_power(arg1.arg1(), arg2.arg1());
-    using type = std::decay_t<decltype(power)>;
-    if constexpr (is_constant_v<type>)
-    {
-      if constexpr (type::is_zero())
-        return constant<0, 1>();
-      else if constexpr (type::is_one())
-        return arg1.arg2() * arg2.arg2();
-      else
-        return Product{power, arg1.arg2() * arg2.arg2()};                       // constant x (... * ...).
-    }
-    else
-      return Product{power, arg1.arg2() * arg2.arg2()};                         // a^(n + m) x (c x d).
-  }
-  // (a x ...) * (b x ...), where b > a.
-  else if constexpr (is_product_v<E2>)                                          // e.g. (a x (c x ...)) * (b x ...).
-    return Product{arg1.arg1(), arg2.arg1() * (arg1.arg2() * arg2.arg2())};     // a x (b * ((c x ...) * ...)).
-  else                                                                          // e.g. (a x c) * (b x ...).
-    return Product{arg1.arg1(), arg2 * arg1.arg2()};                            // a x ((b x ...) * c).
+    return make_power(arg1.arg1(), arg2.arg1()) * arg1.arg2() * arg2.arg2();
 }
 
 template<Expression E1, Expression E2>

@@ -6,24 +6,24 @@
 
 namespace symbolic {
 
-template<Expression E, int Enumerator, int Denominator>
-requires (is_symbol_v<E>)
+template<SymbolType S, int Enumerator, int Denominator>
 class Power : public ExpressionTag
 {
  public:
-  using base_type = E;
+  using base_type = S;
   static constexpr auto s_exponent = constant<Enumerator, Denominator>();
+  static constexpr int s_id = S::s_id;
 
   static constexpr precedence s_precedence = precedence::power;
-  static constexpr auto id_range = E::id_range;
+  static constexpr auto id_range = S::id_range;
 
  private:
-  E base_;
+  S base_;
 
  public:
-  constexpr Power(E const& base) : base_(base) { }
+  constexpr Power(S const& base) : base_(base) { }
 
-  E const& base() const { return base_; }
+  S const& base() const { return base_; }
 
 #ifdef SYMBOLIC_PRINTING
   void print_on(std::ostream& os) const
@@ -51,11 +51,14 @@ struct is_power : std::false_type { };
 template<typename T>
 constexpr bool is_power_v = is_power<T>::value;
 
-template<Expression E, int Enumerator, int Denominator>
-struct is_power<Power<E, Enumerator, Denominator>> : std::true_type { };
+template<SymbolType S, int Enumerator, int Denominator>
+struct is_power<Power<S, Enumerator, Denominator>> : std::true_type { };
+
+template<typename S>
+concept PowerType = is_power_v<S>;
 
 template<typename E>
-concept PowerType = is_power_v<E>;
+concept SymbolPowerType = is_symbol_v<E> || is_power_v<E>;
 
 template<SymbolType S>
 consteval Constant<1, 1> get_exponent()
@@ -69,8 +72,7 @@ consteval auto get_exponent()
   return P::s_exponent;
 }
 
-template<Expression E1, Expression E2>
-requires ((is_symbol_v<E1> || is_power_v<E1>) && (is_symbol_v<E2> || is_power_v<E2>))
+template<SymbolPowerType E1, SymbolPowerType E2>
 constexpr auto make_power(E1 const& arg1, E2 const& arg2)
 {
   static_assert(E1::id_range.begin == E2::id_range.begin, "Can only combine powers of the same symbol!");

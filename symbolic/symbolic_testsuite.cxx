@@ -115,6 +115,7 @@ int main()
   // Negation tests involving products.
   using x_type = std::decay_t<decltype(x)>;
   using y_type = std::decay_t<decltype(y)>;
+  using z_type = std::decay_t<decltype(z)>;
 
 #if 0   // Class Negation no longer exists.
   Negation<x_type> minus_x{x};
@@ -686,8 +687,8 @@ int main()
 
   // Test is_less_v.
   // Compare constants.
-  static_assert(is_less_v<Constant<3, 1>, Constant<10, 3>>, "3 < 10/3 should be true.");
-  static_assert(!is_less_v<Constant<10, 3>, Constant<3, 1>>, "10/3 < 3 should be false.)");
+  static_assert(!is_less_v<Constant<3, 1>, Constant<10, 3>>, "All constants must be treated as equal.");
+  static_assert(!is_less_v<Constant<10, 3>, Constant<3, 1>>, "All constants must be treated as equal.");
   static_assert(!is_less_v<some_constant_type, some_constant_type>, "A constant is not less than itself.");
   // Compare symbols.
   static_assert(is_less_v<Constant<1000, 1>, x_type>, "Any constant should always be considered less than a symbol.");
@@ -717,14 +718,14 @@ int main()
 
   // Lets define four types that compare like K < L < M < N.
   using K = some_constant_type;
-  using L = some_symbol_type;
-  using M = some_power_type;
-  using N = Power<x_type, 3, 1>;
+  using L = x_type;
+  using M = Power<y_type, 2, 1>;
+  using N = Power<z_type, 3, 1>;
 
   static constexpr K k = constant<3, 1>();
-  static constexpr L l = y;
-  static constexpr M m{x};
-  static constexpr N n{x};
+  static constexpr L l = x;
+  static constexpr M m{y};
+  static constexpr N n{z};
 
   // Any Product<X, Y> always must have X < Y; therefore we have the following possibilities:
   using KL = Product<K, L>;

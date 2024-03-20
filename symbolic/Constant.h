@@ -181,12 +181,7 @@ constexpr bool is_minus_one_v = is_minus_one<T>::value;
 template<>
 struct is_minus_one<Constant<-1, 1>> : std::true_type {};
 
-// Compare two constants.
-template<int Enumerator1, int Denominator1, int Enumerator2, int Denominator2>
-requires (Enumerator1 * Denominator2 < Enumerator2 * Denominator1)
-struct is_less<Constant<Enumerator1, Denominator1>, Constant<Enumerator2, Denominator2>> : std::true_type { };
-
-// Compare a constant with something else.
+// A Constant is (only) less than a non-constant.
 template<int Enumerator1, int Denominator1, Expression E2>
 requires (!is_constant_v<E2>)
 struct is_less<Constant<Enumerator1, Denominator1>, E2> : std::true_type { };
