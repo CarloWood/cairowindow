@@ -2,6 +2,7 @@
 
 #include "IdRange.h"
 #include "Expression.h"
+#include <algorithm>
 
 namespace symbolic {
 
@@ -13,7 +14,7 @@ class Sum : public ExpressionTag
   using arg2_type = E2;
 
   static constexpr precedence s_precedence = precedence::sum;
-  static constexpr IdRange<E1::id_range.begin, E2::id_range.end> id_range{};
+  static constexpr IdRange<std::min(E1::id_range.begin, E2::id_range.begin), std::max(E1::id_range.end, E2::id_range.end)> id_range{};
 
  private:
   E1 arg1_;

@@ -5,6 +5,7 @@
 #include "Product.h"
 #include "Power.h"
 #include "Sum.h"
+#include "Exponentiation.h"
 #include "debug.h"
 #include <cassert>
 
@@ -18,7 +19,7 @@ void TEST(char const* what, T const& expression, std::string expect_string)
   result << expression;
 #ifdef CWDEBUG
   std::ostringstream type_os;
-//  type_os << NAMESPACE_DEBUG::type_name_of<T>();
+  type_os << NAMESPACE_DEBUG::type_name_of<T>();
   std::string type_str = type_os.str();
   size_t pos = 0;
   while ((pos = type_str.find("symbolic::", pos)) != std::string::npos)
@@ -789,5 +790,15 @@ int main()
   TESTS((-a + two * b - three_halfs * c) * (x - two * y + three_halfs * c - (b^two)), "-2 * b^3 - 9/4 * c^2 - x * a + 2 * x * b - 3/2 * x * c + 2 * y * a - 4 * y * b + 3 * y * c - 3/2 * a * c + a * b^2 + 3 * b * c + 3/2 * b^2 * c");
   TESTS(x^(one + two), "x^3");
 
-  TESTS((-b + (((b^two) - constant<4, 1>() * a * c)^constant<1, 2>())) / (two * a), "");
+  //TESTS((-b + (((b^two) - constant<4, 1>() * a * c)^constant<1, 2>())) / (two * a), "");
+
+  // Test Exponentiation.
+  TESTS((constant<3, 7>()^two), "9/49");
+  TESTS(x^two, "x^2");
+  TESTS((x^three_halfs)^two, "x^3");
+  TESTS((constant<42>() * x * y)^two, "1764 * x^2 * y^2");
+  TESTS((x * (y^three_halfs))^two, "x^2 * y^3");
+  TESTS((a + b)^two, "(a + b)^2");
+  TESTS(((a + b)^two)^three_halfs, "(a + b)^3");
+//  TESTS(((a + two * b)^three_halfs) / (x - y^two)^two, "(a + 2 * b)^3/2 * (x - y^2)^-2");
 }

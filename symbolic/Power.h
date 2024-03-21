@@ -105,6 +105,13 @@ constexpr auto operator^(E1 const& base, E2 const& exponent)
   return Power<E1, E2::s_enumerator, E2::s_denominator>{base};
 }
 
+template<PowerType E1, ConstantType E2>
+constexpr auto operator^(E1 const& power, E2 const& exponent)
+{
+  constexpr auto new_exponent = constant<E1::s_exponent.s_enumerator * E2::s_enumerator, E1::s_exponent.s_denominator * E2::s_denominator>();
+  return Power<typename E1::base_type, new_exponent.s_enumerator, new_exponent.s_denominator>{power.base()};
+}
+
 template<int Id>
 constexpr auto inverse(Symbol<Id> symbol)
 {

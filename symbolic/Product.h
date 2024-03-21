@@ -254,9 +254,17 @@ constexpr auto operator/(E1 const& arg1, E2 const& arg2)
 }
 
 template<ProductType E1, ConstantType E2>
-constexpr auto operator^(E1 const& arg1, E2 const& exponent)
+constexpr auto operator^(E1 const& arg1, E2 const&)
 {
-  return Product{arg1.arg1()^exponent, arg1.arg2()^exponent};
+  constexpr auto exponent = constant<E2::s_enumerator, E2::s_denominator>();
+  if constexpr (is_constant_v<typename E1::arg1_type>)
+    return Product{constant<E1::arg1_type::s_enumerator, E1::arg1_type::s_denominator>()^exponent, arg1.arg2()^exponent};
+  else
+  {
+    auto factor1 = arg1.arg1()^exponent;
+    auto factor2 = arg1.arg2()^exponent;
+    return Product<decltype(factor1), decltype(factor2)>{factor1, factor2};
+  }
 }
 
 // Negation.
