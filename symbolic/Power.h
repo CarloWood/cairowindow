@@ -120,12 +120,4 @@ constexpr auto inverse(Power<E1, Enumerator, Denominator> const& power)
     return Power<E1, -Enumerator, Denominator>{power.base()};
 }
 
-template<SymbolType E1, int Enumerator1, int Denominator1, SymbolType E2, int Enumerator2, int Denominator2>
-requires (is_less_v<E1, E2> || Enumerator1 * Denominator2 < Enumerator2 * Denominator1)
-struct is_less<Power<E1, Enumerator1, Denominator1>, Power<E2, Enumerator2, Denominator2>> : std::true_type { };
-
-template<SymbolType E1, int Enumerator1, int Denominator1, Expression E2>
-requires (!is_constant_v<E2> && !is_symbol_v<E2> && !is_power_v<E2>)
-struct is_less<Power<E1, Enumerator1, Denominator1>, E2> : std::true_type { };
-
 } // namespace symbolic

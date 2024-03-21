@@ -66,14 +66,4 @@ constexpr auto make_symbol(char const* name)
 template<int Id1, int Id2>
 constexpr bool is_same_expression(Symbol<Id1> const& arg1, Symbol<Id2> const& arg2) { return arg1.id() == arg2.id(); }
 
-// Compare two symbols.
-template<int Id1, int Id2>
-requires (Id1 < Id2)
-struct is_less<Symbol<Id1>, Symbol<Id2>> : std::true_type { };
-
-// Compare a symbol with something not a constant or symbol.
-template<int Id1, Expression E2>
-requires (!is_constant_v<E2> && !is_symbol_v<E2>)
-struct is_less<Symbol<Id1>, E2> : std::true_type { };
-
 } // namespace symbolic

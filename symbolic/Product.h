@@ -100,14 +100,6 @@ constexpr bool is_same_expression(Product<E1, E2> const& arg1, Product<E3, E4> c
   return std::is_same_v<E1, E3> && std::is_same_v<E2, E4>;
 }
 
-template<Expression E1, Expression E2, Expression E3, Expression E4>
-requires (is_less_v<E1, E3> || (!is_less_v<E3, E1> && is_less_v<E2, E4>))
-struct is_less<Product<E1, E2>, Product<E3, E4>> : std::true_type { };
-
-template<Expression E1, Expression E2, Expression E3>
-requires (!is_constant_v<E3> && !is_symbol_v<E3> && !is_power_v<E3> && !is_product_v<E3>)
-struct is_less<Product<E1, E2>, E3> : std::true_type { };
-
 template<Expression E1, Expression E2>
 struct is_product_less : std::false_type { };
 
@@ -201,6 +193,9 @@ constexpr auto multiply_unequals(E1 const& arg1, E2 const& arg2)
 // symbol/power(x) < symbol/power(y), etc.
 
 template<Expression E1, Expression E2>
+requires (
+    ((is_constant_v<E1> && !is_constant_v<E2>) || is_symbol_v<E1> || is_power_v<E1> || is_product_v<E1>) &&
+    ((is_constant_v<E2> && !is_constant_v<E1>) || is_symbol_v<E2> || is_power_v<E2> || is_product_v<E2>))
 constexpr auto operator*(E1 const& arg1, E2 const& arg2)
 {
   if constexpr (!is_product_v<E1> && !is_product_v<E2>)
@@ -244,11 +239,11 @@ constexpr auto inverse(Product<E1, E2> const& arg)
 {
   auto arg1_inverse = inverse(arg.arg1());
   auto arg2_inverse = inverse(arg.arg2());
-  if constexpr (is_less_v<decltype(arg1_inverse), decltype(arg2_inverse)>)
+  if constexpr (is_product_less_v<decltype(arg1_inverse), decltype(arg2_inverse)>)
     return Product{arg1_inverse, arg2_inverse};
   else
     return Product{arg2_inverse, arg1_inverse};                                 // Note arg2_inverse can't be a product in this case,
-                                                                                // because arg1_inverse isn't and !is_less_v<...>.
+                                                                                // because arg1_inverse isn't and !is_product_less_v<...>.
 }
 
 template<Expression E1, Expression E2>

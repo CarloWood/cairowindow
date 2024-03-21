@@ -181,9 +181,4 @@ constexpr bool is_minus_one_v = is_minus_one<T>::value;
 template<>
 struct is_minus_one<Constant<-1, 1>> : std::true_type {};
 
-// A Constant is (only) less than a non-constant.
-template<int Enumerator1, int Denominator1, Expression E2>
-requires (!is_constant_v<E2>)
-struct is_less<Constant<Enumerator1, Denominator1>, E2> : std::true_type { };
-
 } // namespace symbolic

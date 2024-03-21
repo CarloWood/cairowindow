@@ -18,7 +18,7 @@ void TEST(char const* what, T const& expression, std::string expect_string)
   result << expression;
 #ifdef CWDEBUG
   std::ostringstream type_os;
-  type_os << NAMESPACE_DEBUG::type_name_of<T>();
+//  type_os << NAMESPACE_DEBUG::type_name_of<T>();
   std::string type_str = type_os.str();
   size_t pos = 0;
   while ((pos = type_str.find("symbolic::", pos)) != std::string::npos)
@@ -638,7 +638,7 @@ int main()
 #else
   Sum<x_type, Product<Constant<-1, 1>, y_type>> x_plus_minus_y{x, minus_y};
 #endif
-  TESTS(x_plus_minus_y, "x + -y");
+  TESTS(x_plus_minus_y, "x - y");
   Power<x_type, 2, 1> x_squared{x};
 #if 0   // Class Negation no longer exists.
   Negation<Power<x_type, 2, 1>> negation_of_power{x_squared};
@@ -646,35 +646,43 @@ int main()
   Product<Constant<-1, 1>, Power<x_type, 2, 1>> negation_of_power{constant<-1>(), x_squared};
 #endif
   TESTS(negation_of_power, "-(x^2)");
-#if 0 // Note allowed to create a Power of anything but a Symbol.
+#if 0 // Not allowed to create a Power of anything but a Symbol.
   Power<Power<x_type, 2, 1>, 3, 1> power_of_power{x_squared};
   TESTS(power_of_power, "(x^2)^3");
 #endif
   TESTS(x * (y^two), "x * y^2");
   TESTS(x + (y^two), "x + y^2");
   TESTS(minus__x_times_y, "-(x * y)");
-#if 0 // Note allowed to create a Power of anything but a Symbol.
+#if 0 // Not allowed to create a Power of anything but a Symbol.
   TESTS((x * y)^two, "(x * y)^2");
 #endif
   TESTS(x * y * z, "x * y * z");
   TESTS(w + x * y, "w + x * y");
-//  TESTS(-(x + y), "-(x + y)"); FIXME: uncomment once we can multiply a constant with a sum.
-#if 0 // Note allowed to create a Power of anything but a Symbol.
+  TESTS(-(x + y), "-x - y");
+#if 0 // Not allowed to create a Power of anything but a Symbol.
   TESTS("(x + y)^2");
 #endif
-//  TESTS(w * (x + y), "w * (x + y)"); FIXME: uncomment once we can multiply a symbol with a sum.
+  TESTS(w * (x + y), "w * x + w * y");
   TESTS(w + x + y, "w + x + y");
+  TESTS((x + y) * w, "w * x + w * y");
 
   // Addition of one symbol.
-//  TESTS(a + a, "2 * a");
-//  TESTS(a + two * a, "3 * a");
-//  TESTS(two * a + two * a, "4 * a");
-//  TESTS(two * a + (-one) * a, "a");
-//  TESTS(a + (-one) * a, "0");
+  TESTS(zero + d, "d");
+  TESTS(a + zero, "a");
+  TESTS(a + a, "2 * a");
+  TESTS(a + two * a, "3 * a");
+  TESTS(two * a + two * a, "4 * a");
+  TESTS(two * a + (-one) * a, "a");
+  TESTS(a + (-one) * a, "0");
+  TESTS((-one) * c + c + d, "d");
+  TESTS(d + (-one) * c, "-c + d");
+  TESTS((-c + d) + c, "d");
 
   // Addition of two symbols.
   TESTS(a + b, "a + b");
   TESTS(b + a, "a + b");
+  TESTS(a - b, "a - b");
+  TESTS(a + two * b - c + two * (c^two) + (-one) * b - a, "b - c + 2 * c^2");
 
   // Addition of three symbols.
   TESTS((a + b) + (c + d), "a + b + c + d");
@@ -709,10 +717,10 @@ int main()
   // Compare products.
   static_assert(is_less_v<some_constant_type, some_low_product_type>, "Constants are always less.");
   static_assert(!is_less_v<some_low_product_type, some_constant_type>, "Constants are always less.");
-  static_assert(is_less_v<some_symbol_type, some_low_product_type>, "Symbols are always less.");
-  static_assert(!is_less_v<some_low_product_type, some_symbol_type>, "Symbols are always less.");
-  static_assert(is_less_v<some_power_type, some_low_product_type>, "Powers are always less.");
-  static_assert(!is_less_v<some_low_product_type, some_power_type>, "Powers are always less.");
+  static_assert(!is_less_v<some_symbol_type, some_low_product_type>, "some_low_product_type is a constant times some_symbol_type.");
+  static_assert(!is_less_v<some_low_product_type, some_symbol_type>, "some_low_product_type is a constant times some_symbol_type.");
+  static_assert(!is_less_v<some_power_type, some_low_product_type>, "some_low_product_type is a constant times some_symbol_type.");
+  static_assert(is_less_v<some_low_product_type, some_power_type>, "some_low_product_type is a constant times some_symbol_type.");
   static_assert(is_less_v<some_low_product_type, some_high_product_type>, "");
   static_assert(!is_less_v<some_high_product_type, some_low_product_type>, "");
 
@@ -777,4 +785,9 @@ int main()
   compare_less<LN, MN>();
 
   compare_equal<MN>();
+
+  TESTS((-a + two * b - three_halfs * c) * (x - two * y + three_halfs * c - (b^two)), "-2 * b^3 - 9/4 * c^2 - x * a + 2 * x * b - 3/2 * x * c + 2 * y * a - 4 * y * b + 3 * y * c - 3/2 * a * c + a * b^2 + 3 * b * c + 3/2 * b^2 * c");
+  TESTS(x^(one + two), "x^3");
+
+  TESTS((-b + (((b^two) - constant<4, 1>() * a * c)^constant<1, 2>())) / (two * a), "");
 }
