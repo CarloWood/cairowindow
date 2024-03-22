@@ -1,9 +1,9 @@
 #pragma once
 
 #include "IdRange.h"
-#include "Expression.h"
 #include "counter.h"
-#include <cstring>
+#include "precedence.h"
+#include "expression_traits.h"
 #ifdef SYMBOLIC_PRINTING
 #include "utils/has_print_on.h"
 #include <iostream>
@@ -14,8 +14,20 @@ namespace symbolic {
 using utils::has_print_on::operator<<;
 #endif
 
+template<int Id, typename T>
+inline constexpr auto make_symbol(char const* name);
+
+class SymbolRegistry
+{
+ protected:
+  static void register_symbol(int id, char const* name);
+  static char const* get_name(int id);
+  static void set_value(int id, double value);
+  static double get_value(int id);
+};
+
 template<int Id>
-class Symbol : public ExpressionTag
+class Symbol : public ExpressionTag, public SymbolRegistry
 {
  public:
   static constexpr precedence s_precedence = precedence::symbol;
@@ -23,44 +35,51 @@ class Symbol : public ExpressionTag
   static constexpr IdRange<Id, Id + 1> id_range{};
 
  private:
-  char const* const name_;
-  int value_;
+  // The constructor is private. Use make_symbol to create a new symbol.
+  template<int Id2, typename T2>
+  friend constexpr auto make_symbol(char const* name);
+
+  Symbol(char const* name) { SymbolRegistry::register_symbol(s_id, name); }
+
+  // Only to be used by instance.
+  Symbol() = default;
 
  public:
-  constexpr Symbol(char const* name) : name_(name), value_(0.0) { }
-
-  char const* name() const { return name_; }
+  static char const* name() { return SymbolRegistry::get_name(s_id); }
 
   Symbol const& operator=(int value)
   {
-    value_ = value;
+    SymbolRegistry::set_value(s_id, value);
     return *this;
   }
 
+  static Symbol instance() { return {}; }
+
 #ifdef SYMBOLIC_PRINTING
-  void print_on(std::ostream& os) const
+  static void print_on(std::ostream& os)
   {
-    os << name_;
+    os << name();
   }
 #endif
 };
 
-template<typename T>
-struct is_symbol : std::false_type { };
-
-template<typename T>
-constexpr bool is_symbol_v = is_symbol<T>::value;
+template<int Id>
+struct get_exponent<Symbol<Id>>
+{
+  using type = Constant<1, 1>;
+};
 
 template<int Id>
-struct is_symbol<Symbol<Id>> : std::true_type { };
+struct get_base<Symbol<Id>>
+{
+  using type = Symbol<Id>;
+};
 
-template<typename E>
-concept SymbolType = is_symbol_v<E>;
-
-template<auto Id = int{}, typename T = decltype([]{})>
+template<int Id = 0, typename T = decltype([]{})>
 constexpr auto make_symbol(char const* name)
 {
-  return Symbol<metahack::unique_id<Id, T>()>(name);
+  auto symbol = Symbol<metahack::unique_id<Id, T>()>(name);
+  return symbol;
 }
 
 template<int Id1, int Id2>

@@ -45,7 +45,7 @@ file(GLOB HEADER_FILES "*.h")
 # The list of source files.
 target_sources(symbolic_ObjLib
   PRIVATE
-    "Constant.cxx"
+    "Symbol.cxx"
 
     ${HEADER_FILES}
 )

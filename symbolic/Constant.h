@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Expression.h"
+#include "multiply_fwd.h"
 #include "precedence.h"
 #include "IdRange.h"
-#include <numeric>
+#include <numeric>              // std::gcd
 #ifdef SYMBOLIC_PRINTING
 #include "utils/has_print_on.h"
 #include <iostream>
@@ -11,13 +11,12 @@
 #include "debug.h"
 
 namespace symbolic {
+
 #ifdef SYMBOLIC_PRINTING
 using utils::has_print_on::operator<<;
 #endif
 
 // Forward declarations (needed for the friend declarations).
-template<int Enumerator, int Denominator>
-class Constant;
 
 template<int E, int D>
 consteval auto constant();
@@ -33,6 +32,9 @@ consteval auto operator-(Constant<E, D>);
 template<int Enumerator, int Denominator>
 class Constant : public ExpressionTag
 {
+  static_assert(Denominator > 0, "The denominator should always be positive.");
+  static_assert(std::gcd(Enumerator, Denominator) == 1, "A Constant must be constructed in canonical form.");
+
  public:
   static constexpr precedence s_precedence =
     Denominator != 1 ? precedence::product : Enumerator < 0 ? precedence::negation : precedence::constant;
@@ -52,24 +54,40 @@ class Constant : public ExpressionTag
   template<int E, int D, int exponent>
   friend consteval auto operator^(Constant<E, D>, Constant<exponent, 1>);
 
-  // Constructor.
-  consteval Constant() = default;
-
  public:
-  static consteval bool is_less_than_zero() { return Enumerator < 0; }
-  static consteval bool is_minus_one() { return Enumerator == -1 && Denominator == 1; }
-  static consteval bool is_zero() { return Enumerator == 0; }
-  static consteval bool is_one() { return Enumerator == 1 && Denominator == 1; }
+  static constexpr Constant instance() { return {}; }
 
 #ifdef SYMBOLIC_PRINTING
  public:
-  void print_on(std::ostream& os) const
+  static void print_on(std::ostream& os)
   {
     os << Enumerator;
     if constexpr (Denominator > 1)
       os << "/" << Denominator;
   }
 #endif
+};
+
+} // namespace symbolic
+
+#include "is_constant.h"
+#include "canonical_constant.h"
+
+namespace symbolic {
+
+template<Expression E1, Expression E2>
+class add;
+
+template<int Enumerator1, int Denominator1, int Enumerator2, int Denominator2>
+struct add<Constant<Enumerator1, Denominator1>, Constant<Enumerator2, Denominator2>>
+{
+  using type = canonical_constant_t<Enumerator1 * Denominator2 + Enumerator2 * Denominator1, Denominator1 * Denominator2>;
+};
+
+template<int Enumerator1, int Denominator1, int Enumerator2, int Denominator2>
+struct multiply<Constant<Enumerator1, Denominator1>, Constant<Enumerator2, Denominator2>, not_a_Product>
+{
+  using type = canonical_constant_t<Enumerator1 * Enumerator2, Denominator1 * Denominator2>;
 };
 
 // Create a rational constant.
@@ -84,17 +102,8 @@ class Constant : public ExpressionTag
 template<int E, int D = 1>
 consteval auto constant()
 {
-  constexpr int abs_enumerator = E < 0 ? -E : E;
-  constexpr int abs_denominator = D < 0 ? -D : D;
-  constexpr int gcd = std::gcd(abs_enumerator, abs_denominator);
-  if constexpr (D < 0)
-    return Constant<-E / gcd, -D / gcd>{};
-  else
-    return Constant<E / gcd, D / gcd>{};
+  return canonical_constant_t<E, D>::instance();
 }
-
-static consteval auto make_one() { return constant<1, 1>(); }
-static consteval auto make_minus_one() { return constant<-1, 1>(); }
 
 // Negation.
 template<int E, int D>
@@ -153,32 +162,5 @@ consteval auto operator^(Constant<E, D>, Constant<exponent, 1>)
   else
     return constant<E * E, D * D>() ^ Constant<exponent / 2, 1>{};;
 }
-
-template<typename T>
-struct is_constant : std::false_type {};
-
-template<typename T>
-constexpr bool is_constant_v = is_constant<T>::value;
-
-template<int Enumerator, int Denominator>
-struct is_constant<Constant<Enumerator, Denominator>> : std::true_type {};
-
-template<typename E>
-concept ConstantType = is_constant_v<E>;
-
-template<int Enumerator, int Denominator>
-constexpr auto inverse(Constant<Enumerator, Denominator> const&)
-{
-  return constant<Denominator, Enumerator>();
-}
-
-template<typename T>
-struct is_minus_one : std::false_type {};
-
-template<typename T>
-constexpr bool is_minus_one_v = is_minus_one<T>::value;
-
-template<>
-struct is_minus_one<Constant<-1, 1>> : std::true_type {};
 
 } // namespace symbolic

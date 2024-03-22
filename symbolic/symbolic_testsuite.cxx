@@ -1,11 +1,6 @@
 #include "sys.h"
+#include "operators.h"
 #include <sstream>
-#include "Constant.h"
-#include "Symbol.h"
-#include "Product.h"
-#include "Power.h"
-#include "Sum.h"
-#include "Exponentiation.h"
 #include "debug.h"
 #include <cassert>
 
@@ -46,15 +41,15 @@ template<symbolic::Expression E1>
 void compare_equal()
 {
   using namespace symbolic;
-  static_assert(!is_less_v<E1, E1>, "Expected E1 == E1");
+  static_assert(!is_less_Sum_v<E1, E1>, "Expected E1 == E1");
 }
 
 template<symbolic::Expression E1, symbolic::Expression E2>
 void compare_less()
 {
   using namespace symbolic;
-  static_assert(is_less_v<E1, E2>, "Expected E1 < E2");
-  static_assert(!is_less_v<E2, E1>, "Expected !(E2 < E1)");
+  static_assert(is_less_Sum_v<E1, E2>, "Expected E1 < E2");
+  static_assert(!is_less_Sum_v<E2, E1>, "Expected !(E2 < E1)");
 }
 
 int main()
@@ -62,6 +57,30 @@ int main()
   Debug(NAMESPACE_DEBUG::init());
 
   using namespace symbolic;
+
+  constexpr auto zero = constant<0>();
+  constexpr auto one = constant<1>();
+  constexpr auto two = constant<2>();
+  constexpr auto three_halfs = constant<3, 2>();
+
+  auto a = make_symbol("a");
+  auto b = make_symbol("b");
+  auto c = make_symbol("c");
+  auto d = make_symbol("d");
+  auto e = make_symbol("e");
+  auto f = make_symbol("f");
+  auto g = make_symbol("g");
+  auto h = make_symbol("h");
+
+  auto v = make_symbol("v");
+  auto w = make_symbol("w");
+  auto x = make_symbol("x");
+  auto y = make_symbol("y");
+  auto z = make_symbol("z");
+
+  using x_type = std::decay_t<decltype(x)>;
+  using y_type = std::decay_t<decltype(y)>;
+  using z_type = std::decay_t<decltype(z)>;
 
   // Constant creation.
   TEST("42 / 1", constant<42, 1>(), "42");
@@ -102,44 +121,30 @@ int main()
   // Negation of a Constant.
   TEST("-B(-5/77)", -B, "5/77");
 
-  static constexpr auto v = make_symbol("v");
-  static constexpr auto w = make_symbol("w");
-  static constexpr auto x = make_symbol("x");
-  static constexpr auto y = make_symbol("y");
-  static constexpr auto z = make_symbol("z");
-
   // Negation of a Symbol.
   TEST("-x", -x, "-x");
   // Negation of a Negation.
   TEST("-(-x)", -(-x), "x");
 
   // Negation tests involving products.
-  using x_type = std::decay_t<decltype(x)>;
-  using y_type = std::decay_t<decltype(y)>;
-  using z_type = std::decay_t<decltype(z)>;
 
 #if 0   // Class Negation no longer exists.
   Negation<x_type> minus_x{x};
 #else
-  Product<Constant<-1, 1>, x_type> minus_x{constant<-1>(), x};
+  Product<Constant<-1, 1>, x_type> minus_x{};
 #endif
   TESTT(-x, minus_x);
   TESTT(-minus_x, x);
 
-  Product<x_type, y_type> x_times_y{x, y};
+  Product<x_type, y_type> x_times_y{};
 #if 0   // Class Negation no longer exists.
   Negation<Product<x_type, y_type>> minus__x_times_y{x_times_y};
   Negation<y_type> minus_y{y};
 #else
-  Product<Constant<-1, 1>, Product<x_type, y_type>> minus__x_times_y{constant<-1>(), x_times_y};
-  Product<Constant<-1, 1>, y_type> minus_y{constant<-1>(), y};
+  Product<Constant<-1, 1>, Product<x_type, y_type>> minus__x_times_y{};
+  Product<Constant<-1, 1>, y_type> minus_y{};
 #endif
   TESTT(x * minus_y, minus__x_times_y);
-
-  constexpr auto zero = constant<0>();
-  constexpr auto one = constant<1>();
-  constexpr auto two = constant<2>();
-  constexpr auto three_halfs = constant<3, 2>();
 
   // Multiplication of a symbol and a constant.
   TESTS(x * zero, "0");
@@ -293,15 +298,6 @@ int main()
   TESTS((z * (y * x)) * w, expected4);
   TESTS(z * ((y * x) * w), expected4);
   TESTS(z * (y * (x * w)), expected4);
-
-  static constexpr auto a = make_symbol("a");
-  static constexpr auto b = make_symbol("b");
-  static constexpr auto c = make_symbol("c");
-  static constexpr auto d = make_symbol("d");
-  static constexpr auto e = make_symbol("e");
-  static constexpr auto f = make_symbol("f");
-  static constexpr auto g = make_symbol("g");
-  static constexpr auto h = make_symbol("h");
 
   // Test sorting of 8 symbols during multiplication.
   auto expected8 = a * (b * (c * (d * (e * (f * (g * h))))));
@@ -624,31 +620,31 @@ int main()
   TESTS(minus_minus_x, "-(-x)");
 #endif
 #if 0 // Not allowed to construct the Power of a Negation.
-  Power<Negation<x_type>, 2, 1> power_of_negation(minus_x);
+  Power<Negation<x_type>, Constant<2, 1>> power_of_negation;
   TESTS(power_of_negation, "(-x)^2");
 #endif
 #if 0   // Class Negation no longer exists.
-  Product<x_type, Negation<y_type>> x_times_minus_y{x, minus_y};
+  Product<x_type, Negation<y_type>> x_times_minus_y{};
   TESTS(x_times_minus_y, "x * -y");
 #endif
 #if 0 // Not possible to create a Ratio (which doesn't exist).
   TESTS(x_div_minus_y, "x/-y");
 #endif
 #if 0   // Class Negation no longer exists.
-  Sum<x_type, Negation<y_type>> x_plus_minus_y{x, minus_y};
+  Sum<x_type, Negation<y_type>> x_plus_minus_y;
 #else
-  Sum<x_type, Product<Constant<-1, 1>, y_type>> x_plus_minus_y{x, minus_y};
+  Sum<x_type, Product<Constant<-1, 1>, y_type>> x_plus_minus_y;
 #endif
   TESTS(x_plus_minus_y, "x - y");
-  Power<x_type, 2, 1> x_squared{x};
+  Power<x_type, Constant<2, 1>> x_squared;
 #if 0   // Class Negation no longer exists.
-  Negation<Power<x_type, 2, 1>> negation_of_power{x_squared};
+  Negation<Power<x_type, Constant<2, 1>>> negation_of_power;
 #else
-  Product<Constant<-1, 1>, Power<x_type, 2, 1>> negation_of_power{constant<-1>(), x_squared};
+  Product<Constant<-1, 1>, Power<x_type, Constant<2, 1>>> negation_of_power;
 #endif
   TESTS(negation_of_power, "-(x^2)");
 #if 0 // Not allowed to create a Power of anything but a Symbol.
-  Power<Power<x_type, 2, 1>, 3, 1> power_of_power{x_squared};
+  Power<Power<x_type, Constant<2, 1>>, Constant<3, 1>> power_of_power;
   TESTS(power_of_power, "(x^2)^3");
 #endif
   TESTS(x * (y^two), "x * y^2");
@@ -690,51 +686,51 @@ int main()
 
   using some_constant_type = Constant<3, 1>;
   using some_symbol_type = y_type;
-  using some_power_type = Power<x_type, 2, 1>;
+  using some_power_type = Power<x_type, Constant<2, 1>>;
   using some_low_product_type = Product<some_constant_type, some_symbol_type>;
   using some_high_product_type = Product<some_power_type, some_low_product_type>;
 
-  // Test is_less_v.
+  // Test is_less_Sum_v.
   // Compare constants.
-  static_assert(!is_less_v<Constant<3, 1>, Constant<10, 3>>, "All constants must be treated as equal.");
-  static_assert(!is_less_v<Constant<10, 3>, Constant<3, 1>>, "All constants must be treated as equal.");
-  static_assert(!is_less_v<some_constant_type, some_constant_type>, "A constant is not less than itself.");
+  static_assert(!is_less_Sum_v<Constant<3, 1>, Constant<10, 3>>, "All constants must be treated as equal.");
+  static_assert(!is_less_Sum_v<Constant<10, 3>, Constant<3, 1>>, "All constants must be treated as equal.");
+  static_assert(!is_less_Sum_v<some_constant_type, some_constant_type>, "A constant is not less than itself.");
   // Compare symbols.
-  static_assert(is_less_v<Constant<1000, 1>, x_type>, "Any constant should always be considered less than a symbol.");
-  static_assert(!is_less_v<x_type, Constant<-1000, 1>>, "A symbol is never less than a constant.");
-  static_assert(is_less_v<x_type, y_type>, "Symbols should compare like their Id.");
-  static_assert(!is_less_v<y_type, x_type>, "Symbols should compare like their Id.");
-  static_assert(!is_less_v<y_type, y_type>, "A symbol is not less than itself.");
+  static_assert(is_less_Sum_v<Constant<1000, 1>, x_type>, "Any constant should always be considered less than a symbol.");
+  static_assert(!is_less_Sum_v<x_type, Constant<-1000, 1>>, "A symbol is never less than a constant.");
+  static_assert(is_less_Sum_v<x_type, y_type>, "Symbols should compare like their Id.");
+  static_assert(!is_less_Sum_v<y_type, x_type>, "Symbols should compare like their Id.");
+  static_assert(!is_less_Sum_v<y_type, y_type>, "A symbol is not less than itself.");
   // Compare powers.
-  static_assert(is_less_v<some_constant_type, some_power_type>, "Any constant should always be considered less than a power.");
-  static_assert(!is_less_v<some_power_type, some_constant_type>, "Any power is never less than a constant.");
-  static_assert(is_less_v<some_symbol_type, some_power_type>, "Any symbol should always be considered less than a power.");
-  static_assert(!is_less_v<some_power_type, some_symbol_type>, "Any power is never less than a symbol.");
-  static_assert(is_less_v<Power<x_type, 3, 1>, Power<x_type, 10, 3>>, "Powers of equal symbol should be compared by their exponent.");
-  static_assert(!is_less_v<Power<x_type, 10, 3>, Power<x_type, 3, 1>>, "Powers of equal symbol should be compared by their exponent.");
-  static_assert(is_less_v<Power<x_type, 3, 1>, Power<y_type, 3, 1>>, "Powers should first be compared by base symbol.");
-  static_assert(!is_less_v<Power<y_type, 3, 1>, Power<x_type, 3, 1>>, "Powers should first be compared by base symbol.");
-  static_assert(!is_less_v<some_power_type, some_power_type>, "A power is not less than itself.");
+  static_assert(is_less_Sum_v<some_constant_type, some_power_type>, "Any constant should always be considered less than a power.");
+  static_assert(!is_less_Sum_v<some_power_type, some_constant_type>, "Any power is never less than a constant.");
+  static_assert(is_less_Sum_v<some_symbol_type, some_power_type>, "Any symbol should always be considered less than a power.");
+  static_assert(!is_less_Sum_v<some_power_type, some_symbol_type>, "Any power is never less than a symbol.");
+  static_assert(is_less_Sum_v<Power<x_type, Constant<3, 1>>, Power<x_type, Constant<10, 3>>>, "Powers of equal symbol should be compared by their exponent.");
+  static_assert(!is_less_Sum_v<Power<x_type, Constant<10, 3>>, Power<x_type, Constant<3, 1>>>, "Powers of equal symbol should be compared by their exponent.");
+  static_assert(is_less_Sum_v<Power<x_type, Constant<3, 1>>, Power<y_type, Constant<3, 1>>>, "Powers should first be compared by base symbol.");
+  static_assert(!is_less_Sum_v<Power<y_type, Constant<3, 1>>, Power<x_type, Constant<3, 1>>>, "Powers should first be compared by base symbol.");
+  static_assert(!is_less_Sum_v<some_power_type, some_power_type>, "A power is not less than itself.");
   // Compare products.
-  static_assert(is_less_v<some_constant_type, some_low_product_type>, "Constants are always less.");
-  static_assert(!is_less_v<some_low_product_type, some_constant_type>, "Constants are always less.");
-  static_assert(!is_less_v<some_symbol_type, some_low_product_type>, "some_low_product_type is a constant times some_symbol_type.");
-  static_assert(!is_less_v<some_low_product_type, some_symbol_type>, "some_low_product_type is a constant times some_symbol_type.");
-  static_assert(!is_less_v<some_power_type, some_low_product_type>, "some_low_product_type is a constant times some_symbol_type.");
-  static_assert(is_less_v<some_low_product_type, some_power_type>, "some_low_product_type is a constant times some_symbol_type.");
-  static_assert(is_less_v<some_low_product_type, some_high_product_type>, "");
-  static_assert(!is_less_v<some_high_product_type, some_low_product_type>, "");
+  static_assert(is_less_Sum_v<some_constant_type, some_low_product_type>, "Constants are always less.");
+  static_assert(!is_less_Sum_v<some_low_product_type, some_constant_type>, "Constants are always less.");
+  static_assert(!is_less_Sum_v<some_symbol_type, some_low_product_type>, "some_low_product_type is a constant times some_symbol_type.");
+  static_assert(!is_less_Sum_v<some_low_product_type, some_symbol_type>, "some_low_product_type is a constant times some_symbol_type.");
+  static_assert(!is_less_Sum_v<some_power_type, some_low_product_type>, "some_low_product_type is a constant times some_symbol_type.");
+  static_assert(is_less_Sum_v<some_low_product_type, some_power_type>, "some_low_product_type is a constant times some_symbol_type.");
+  static_assert(is_less_Sum_v<some_low_product_type, some_high_product_type>, "");
+  static_assert(!is_less_Sum_v<some_high_product_type, some_low_product_type>, "");
 
   // Lets define four types that compare like K < L < M < N.
   using K = some_constant_type;
   using L = x_type;
-  using M = Power<y_type, 2, 1>;
-  using N = Power<z_type, 3, 1>;
+  using M = Power<y_type, Constant<2, 1>>;
+  using N = Power<z_type, Constant<3, 1>>;
 
-  static constexpr K k = constant<3, 1>();
-  static constexpr L l = x;
-  static constexpr M m{y};
-  static constexpr N n{z};
+  K k = constant<3, 1>();
+  L l = x;
+  M m;
+  N n;
 
   // Any Product<X, Y> always must have X < Y; therefore we have the following possibilities:
   using KL = Product<K, L>;
@@ -753,12 +749,12 @@ int main()
   Product<M, M> test6{m, m};  // Idem
 #endif
   // But we can construct these.
-  KL test7{k, l};
-  KM test8{k, m};
-  KN test9{k, n};
-  LM test10{l, m};
-  LN test11{l, n};
-  MN test12{m, n};
+  KL test7;
+  KM test8;
+  KN test9;
+  LM test10;
+  LN test11;
+  MN test12;
 
   compare_equal<KL>();
   compare_less<KL, KM>();
@@ -787,7 +783,7 @@ int main()
 
   compare_equal<MN>();
 
-  TESTS((-a + two * b - three_halfs * c) * (x - two * y + three_halfs * c - (b^two)), "-2 * b^3 - 9/4 * c^2 - x * a + 2 * x * b - 3/2 * x * c + 2 * y * a - 4 * y * b + 3 * y * c - 3/2 * a * c + a * b^2 + 3 * b * c + 3/2 * b^2 * c");
+  TESTS((-a + two * b - three_halfs * c) * (x - two * y + three_halfs * c - (b^two)), "-2 * b^3 - 9/4 * c^2 - 3/2 * a * c - a * x + 2 * a * y + a * b^2 + 3 * b * c + 2 * b * x - 4 * b * y - 3/2 * c * x + 3 * c * y + 3/2 * b^2 * c");
   TESTS(x^(one + two), "x^3");
 
   //TESTS((-b + (((b^two) - constant<4, 1>() * a * c)^constant<1, 2>())) / (two * a), "");
