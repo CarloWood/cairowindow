@@ -786,7 +786,9 @@ int main()
   TESTS((-a + two * b - three_halfs * c) * (x - two * y + three_halfs * c - (b^two)), "-2 * b^3 - 9/4 * c^2 - 3/2 * a * c - a * x + 2 * a * y + a * b^2 + 3 * b * c + 2 * b * x - 4 * b * y - 3/2 * c * x + 3 * c * y + 3/2 * b^2 * c");
   TESTS(x^(one + two), "x^3");
 
-  //TESTS((-b + (((b^two) - constant<4, 1>() * a * c)^constant<1, 2>())) / (two * a), "");
+  TESTS((-b + (((b^two) - constant<4, 1>() * a * c)^constant<1, 2>())) / (two * a), "-1/2 * a^-1 * b + (b^2 - 4 * a * c)^(1/2) * 1/2 * a^-1");
+  TESTS((a + b + c + d) * (x + y + z), "a * x + a * y + a * z + b * x + b * y + b * z + c * x + c * y + c * z + d * x + d * y + d * z");
+  TESTS(((a + b)^constant<3>()) * x, "(a + b)^3 * x");
 
   // Test Exponentiation.
   TESTS((constant<3, 7>()^two), "9/49");
@@ -800,7 +802,7 @@ int main()
   TESTS((x * (y^three_halfs))^two, "x^2 * y^3");
   TESTS((a + b)^two, "(a + b)^2");
   TESTS(((a + b)^two)^three_halfs, "(a + b)^3");
-//  TESTS(((a + two * b)^three_halfs) / (x - y^two)^two, "(a + 2 * b)^3/2 * (x - y^2)^-2");
+  TESTS(((a + two * b)^three_halfs) / ((x - (y^two))^two), "(a + 2 * b)^(3/2) * (x - y^2)^-2");
 
   // Test Division.
   TESTS(x / (y^constant<-1>()), "x * y");

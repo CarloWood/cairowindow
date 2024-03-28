@@ -5,6 +5,7 @@
 #include "Product.h"
 #include "Sum.h"
 #include "Exponentiation.h"
+#include "Multiplication.h"
 #include "negate.h"
 #include "multiply.h"
 #include "invert.h"

@@ -68,16 +68,17 @@ struct exponentiate<Product<E1, E2>, Exponent, isProduct>
   using type = Product<exponentiate_t<E1, Exponent>, exponentiate_t<E2, Exponent>>;
 };
 
-template<Expression E1, Expression E2, NonTrivialExponent Exponent>
-struct exponentiate<Sum<E1, E2>, Exponent, not_a_Product>
-{
-  using type = Exponentiation<Sum<E1, E2>, Exponent>;
-};
-
 template<Expression E, ConstantType Exponent1, NonTrivialExponent Exponent2>
 struct exponentiate<Exponentiation<E, Exponent1>, Exponent2>
 {
   using type = exponentiate_t<E, multiply_t<Exponent1, Exponent2>>;
+};
+
+template<Expression E, NonTrivialExponent Exponent>
+requires (!is_constant_v<E> && !is_exponentiation_v<E>)
+struct exponentiate<E, Exponent, not_a_Product>
+{
+  using type = Exponentiation<E, Exponent>;
 };
 
 } // namespace symbolic

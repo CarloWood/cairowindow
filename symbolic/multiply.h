@@ -44,6 +44,37 @@ struct multiply_unequals
 template<Expression E1, Expression E2>
 using multiply_unequals_t = typename multiply_unequals<E1, E2>::type;
 
+template<Expression E1, Expression E2>
+struct make_power
+{
+  static_assert(is_symbol_v<E1> || is_power_v<E1>, "E1 must be a SymbolPowerType");
+  static_assert(is_symbol_v<E2> || is_power_v<E2>, "E2 must be a SymbolPowerType");
+  static_assert(E1::id_range.begin == E2::id_range.begin, "Can only combine powers of the same symbol!");
+
+ private:
+  static consteval auto eval()
+  {
+    using Base = get_base_t<E1>;
+    using NewExponent = typename add<get_exponent_t<E1>, get_exponent_t<E2>>::type;
+
+    if constexpr (is_constant_zero_v<NewExponent>)
+      return Constant<1, 1>::instance();
+    else if constexpr (is_constant_one_v<NewExponent>)
+      return Base::instance();
+    else
+      return Power<Base, NewExponent>::instance();
+  }
+
+ public:
+  using type = decltype(eval());
+};
+
+template<int Enumerator1, int Denominator1, int Enumerator2, int Denominator2>
+struct make_power<Constant<Enumerator1, Denominator1>, Constant<Enumerator2, Denominator2>>
+{
+  using type = multiply_t<Constant<Enumerator1, Denominator1>, Constant<Enumerator2, Denominator2>>;
+};
+
 // The design of the multiply specialization with isProduct set is as follows:
 //
 // Prerequisite is that all Product types have the form: Product<non-Product, Expression>,
@@ -186,34 +217,13 @@ struct multiply<Sum<E1, E2>, Sum<E3, E4>, not_a_Product>
 };
 
 template<Expression E1, Expression E2>
-struct make_power
+class Multiplication;
+
+template<Expression E1, Expression E2>
+requires (!is_sum_v<E1> && !is_sum_v<E2>)
+struct multiply<E1, E2, not_a_Product>
 {
-  static_assert(is_symbol_v<E1> || is_power_v<E1>, "E1 must be a SymbolPowerType");
-  static_assert(is_symbol_v<E2> || is_power_v<E2>, "E2 must be a SymbolPowerType");
-  static_assert(E1::id_range.begin == E2::id_range.begin, "Can only combine powers of the same symbol!");
-
- private:
-  static consteval auto eval()
-  {
-    using Base = get_base_t<E1>;
-    using NewExponent = typename add<get_exponent_t<E1>, get_exponent_t<E2>>::type;
-
-    if constexpr (is_constant_zero_v<NewExponent>)
-      return Constant<1, 1>::instance();
-    else if constexpr (is_constant_one_v<NewExponent>)
-      return Base::instance();
-    else
-      return Power<Base, NewExponent>::instance();
-  }
-
- public:
-  using type = decltype(eval());
-};
-
-template<int Enumerator1, int Denominator1, int Enumerator2, int Denominator2>
-struct make_power<Constant<Enumerator1, Denominator1>, Constant<Enumerator2, Denominator2>>
-{
-  using type = multiply_t<Constant<Enumerator1, Denominator1>, Constant<Enumerator2, Denominator2>>;
+  using type = Multiplication<E1, E2>;
 };
 
 } // namespace symbolic
