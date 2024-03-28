@@ -67,8 +67,8 @@ constexpr auto operator^(Product<E1, E2> const&, Exponent const&)
 {
   return Product<exponentiate_t<E1, Exponent>, exponentiate_t<E2, Exponent>>::instance();
 }
-template<SumType Base, ConstantType Exponent>
 
+template<SumType Base, ConstantType Exponent>
 auto operator^(Base const& sum, Exponent const& exponent)
 {
   return Exponentiation<Base, Exponent>{sum};
