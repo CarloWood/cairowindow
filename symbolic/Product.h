@@ -27,6 +27,9 @@ namespace symbolic {
 // Note that each symbol only occurs once and the product is sorted by Symbol Id.
 //
 template<Expression E1, Expression E2>
+requires (((is_constant_v<E1> && !is_constant_zero_v<E1> && !is_constant_one_v<E1>) ||
+           is_symbol_v<E1> || is_power_v<E1>) &&
+          (is_symbol_v<E2> || is_power_v<E2> || is_product_v<E2>))
 class Product : public ExpressionTag
 {
  public:
@@ -39,7 +42,7 @@ class Product : public ExpressionTag
  public:
   inline constexpr Product();
 
-  static Product instance() { return {}; }
+  static constexpr Product instance() { return {}; }
 
 #ifdef SYMBOLIC_PRINTING
   static void print_on(std::ostream& os)
@@ -84,14 +87,11 @@ constexpr bool is_same_expression(Product<E1, E2> const& arg1, Product<E3, E4> c
 }
 
 template<Expression E1, Expression E2>
+requires (((is_constant_v<E1> && !is_constant_zero_v<E1> && !is_constant_one_v<E1>) ||
+           is_symbol_v<E1> || is_power_v<E1>) &&
+          (is_symbol_v<E2> || is_power_v<E2> || is_product_v<E2>))
 constexpr Product<E1, E2>::Product()
 {
-  static_assert(is_constant_v<E1> || is_symbol_v<E1> || is_power_v<E1>, "The first argument of a Product must be a constant, symbol or power.");
-  if constexpr (is_constant_v<E1>)
-    static_assert(!is_constant_zero_v<E1> && !is_constant_one_v<E1>, "A Product should never contain zero or one as factor.");
-  if constexpr (is_constant_v<E2>)
-    static_assert(!is_constant_zero_v<E2> && !is_constant_one_v<E2>, "A Product should never contain zero or one as factor.");
-  static_assert(is_symbol_v<E2> || is_power_v<E2> || is_product_v<E2>, "The second factor of a Product can only be a Symbol, Power or another Product.");
   if constexpr (!is_product_v<E2>)
     static_assert(is_less_Product_v<E1, E2>, "The first argument of a Product must be less than the second argument.");
   else

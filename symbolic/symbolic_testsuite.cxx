@@ -790,11 +790,19 @@ int main()
 
   // Test Exponentiation.
   TESTS((constant<3, 7>()^two), "9/49");
+  TESTS((constant<3, 7>()^constant<3>()), "27/343");
+  TESTS((constant<3, 7>()^constant<5>()), "243/16807");
   TESTS(x^two, "x^2");
   TESTS((x^three_halfs)^two, "x^3");
+  TESTS(((x^constant<3, 1>())^constant<1, 3>()), "x");
+  TESTS((((a + b)^constant<3, 1>())^constant<1, 3>()), "a + b");
   TESTS((constant<42>() * x * y)^two, "1764 * x^2 * y^2");
   TESTS((x * (y^three_halfs))^two, "x^2 * y^3");
   TESTS((a + b)^two, "(a + b)^2");
   TESTS(((a + b)^two)^three_halfs, "(a + b)^3");
 //  TESTS(((a + two * b)^three_halfs) / (x - y^two)^two, "(a + 2 * b)^3/2 * (x - y^2)^-2");
+
+  // Test Division.
+  TESTS(x / (y^constant<-1>()), "x * y");
+  TESTS(x / ((a + b)^constant<-1>()), "a * x + b * x");
 }

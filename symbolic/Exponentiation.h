@@ -6,6 +6,7 @@
 namespace symbolic {
 
 template<Expression Base, ConstantType Exponent>
+requires (!is_constant_zero_v<Exponent> && !is_constant_one_v<Exponent>)
 class Exponentiation : public ExpressionTag
 {
   static_assert(!is_symbol_v<Base>, "Use Power to exponentiate symbols.");

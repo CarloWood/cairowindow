@@ -6,6 +6,7 @@
 namespace symbolic {
 
 template<Expression Base, ConstantType Exponent>
+requires (!is_constant_zero_v<Exponent> && !is_constant_one_v<Exponent>)
 class Power : public ExpressionTag
 {
   static_assert(is_symbol_v<Base>, "Base must be a Symbol.");
@@ -18,7 +19,7 @@ class Power : public ExpressionTag
   static constexpr precedence s_precedence = precedence::power;
   static constexpr auto id_range = Base::id_range;
 
-  static Power instance() { return {}; }
+  static constexpr Power instance() { return {}; }
 
 #ifdef SYMBOLIC_PRINTING
  public:

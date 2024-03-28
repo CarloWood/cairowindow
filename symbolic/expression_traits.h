@@ -12,15 +12,14 @@ template<int Id>
 class Symbol;
 
 template<Expression Base, ConstantType Exponent>
+requires (!is_constant_zero_v<Exponent> && !is_constant_one_v<Exponent>)
 class Power;
-
-template<Expression E1, Expression E2>
-class Product;
 
 template<Expression E1, Expression E2>
 class Sum;
 
 template<Expression Base, ConstantType Exponent>
+requires (!is_constant_zero_v<Exponent> && !is_constant_one_v<Exponent>)
 class Exponentiation;
 
 template<typename T>
@@ -55,6 +54,12 @@ struct is_product : std::false_type { };
 
 template<typename T>
 constexpr bool is_product_v = is_product<T>::value;
+
+template<Expression E1, Expression E2>
+requires (((is_constant_v<E1> && !is_constant_zero_v<E1> && !is_constant_one_v<E1>) ||
+           is_symbol_v<E1> || is_power_v<E1>) &&
+          (is_symbol_v<E2> || is_power_v<E2> || is_product_v<E2>))
+class Product;
 
 template<Expression E1, Expression E2>
 struct is_product<Product<E1, E2>> : std::true_type { };

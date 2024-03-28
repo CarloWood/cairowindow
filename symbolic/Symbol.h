@@ -53,7 +53,7 @@ class Symbol : public ExpressionTag, public SymbolRegistry
     return *this;
   }
 
-  static Symbol instance() { return {}; }
+  static constexpr Symbol instance() { return {}; }
 
 #ifdef SYMBOLIC_PRINTING
   static void print_on(std::ostream& os)

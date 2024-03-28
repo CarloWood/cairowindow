@@ -7,6 +7,7 @@ namespace symbolic {
 // Forward declarations.
 
 template<Expression Base, ConstantType Exponent>
+requires (!is_constant_zero_v<Exponent> && !is_constant_one_v<Exponent>)
 class Exponentiation;
 
 // Define invert for all types.
@@ -34,11 +35,17 @@ struct invert<Symbol<Id>>
 template<Expression Base, ConstantType Exponent>
 struct invert<Power<Base, Exponent>>
 {
-  using type =
-    /*if*/ std::conditional_t<is_constant_minus_one_v<Exponent>,
-      Base,
-    /*else*/
-      Power<Base, negate_t<Exponent>> >;
+ private:
+  static consteval auto eval()
+  {
+    if constexpr (is_constant_minus_one_v<Exponent>)
+      return Base::instance();
+    else
+      return Power<Base, negate_t<Exponent>>::instance();
+  }
+
+ public:
+  using type = decltype(eval());
 };
 
 template<Expression E1, Expression E2>
@@ -47,12 +54,18 @@ struct invert<Product<E1, E2>>
   using arg1_inverse_t = invert_t<E1>;
   using arg2_inverse_t = invert_t<E2>;
 
-  using type =
-    /*if*/ std::conditional_t<is_less_Product<arg1_inverse_t, arg2_inverse_t>::value,
-      Product<arg1_inverse_t, arg2_inverse_t>,
-    /*else*/
-      Product<arg2_inverse_t, arg1_inverse_t> >;        // Note arg2_inverse_t can't be a Product in this case,
-                                                        // because arg1_inverse_t isn't and !is_less_Product_v<...>.
+ private:
+  static consteval auto eval()
+  {
+    if constexpr (is_less_Product_v<arg1_inverse_t, arg2_inverse_t>)
+      return Product<arg1_inverse_t, arg2_inverse_t>::instance();
+    else
+      return Product<arg2_inverse_t, arg1_inverse_t>::instance();       // Note arg2_inverse_t can't be a Product in this case,
+                                                                        // because arg1_inverse_t isn't and !is_less_Product_v<...>.
+  }
+
+ public:
+  using type = decltype(eval());
 };
 
 template<Expression E1, Expression E2>
@@ -64,17 +77,17 @@ struct invert<Sum<E1, E2>>
 template<Expression Base, ConstantType Exponent>
 struct invert<Exponentiation<Base, Exponent>>
 {
-  using type =
-  /*if*/ std::conditional_t<is_constant_minus_one_v<Exponent>,
-    Base,
-  /*else*/
-    Exponentiation<Base, negate_t<Exponent>> >;
-};
+ private:
+  static consteval auto eval()
+  {
+    if constexpr (is_constant_minus_one_v<Exponent>)
+     return Base::instance();
+    else
+     return Exponentiation<Base, negate_t<Exponent>>::instance();
+  }
 
-template<Expression E>
-auto old_invert(E const&)
-{
-  return invert_t<E>::instance();
-}
+ public:
+  using type = decltype(eval());
+};
 
 } // namespace symbolic

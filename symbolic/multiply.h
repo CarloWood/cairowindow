@@ -26,13 +26,19 @@ struct multiply_unequals
   static_assert(!is_product_v<E1>, "Only call multiply_unequals with a non-product arg1.");
   static_assert(sanity_check(), "Only call multiply_unequals for E1 < E2.");
 
-  using type =
-    /*if*/ std::conditional_t<is_constant_zero_v<E1>,
-      Constant<0, 1>,
-    /*else if*/ std::conditional_t<is_constant_one_v<E1>,
-      E2,
-    /*else*/
-      Product<E1, E2> >>;
+ private:
+  static consteval auto eval()
+  {
+    if constexpr (is_constant_zero_v<E1>)
+      return Constant<0, 1>::instance();
+    else if constexpr (is_constant_one_v<E1>)
+      return E2::instance();
+    else
+      return Product<E1, E2>::instance();
+  }
+
+ public:
+  using type = decltype(eval());
 };
 
 template<Expression E1, Expression E2>
@@ -186,16 +192,22 @@ struct make_power
   static_assert(is_symbol_v<E2> || is_power_v<E2>, "E2 must be a SymbolPowerType");
   static_assert(E1::id_range.begin == E2::id_range.begin, "Can only combine powers of the same symbol!");
 
-  using base = get_base_t<E1>;
-  using new_exponent = typename add<get_exponent_t<E1>, get_exponent_t<E2>>::type;
+ private:
+  static consteval auto eval()
+  {
+    using Base = get_base_t<E1>;
+    using NewExponent = typename add<get_exponent_t<E1>, get_exponent_t<E2>>::type;
 
-  using type =
-    /*if*/ std::conditional_t<is_constant_zero_v<new_exponent>,
-      Constant<1, 1>,
-    /*else if*/ std::conditional_t<is_constant_one_v<new_exponent>,
-      base,
-    /*else*/
-      Power<base, new_exponent> >>;
+    if constexpr (is_constant_zero_v<NewExponent>)
+      return Constant<1, 1>::instance();
+    else if constexpr (is_constant_one_v<NewExponent>)
+      return Base::instance();
+    else
+      return Power<Base, NewExponent>::instance();
+  }
+
+ public:
+  using type = decltype(eval());
 };
 
 template<int Enumerator1, int Denominator1, int Enumerator2, int Denominator2>

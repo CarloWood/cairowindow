@@ -24,7 +24,7 @@ class Sum : public ExpressionTag
   static constexpr IdRange<std::min(E1::id_range.begin, E2::id_range.begin), std::max(E1::id_range.end, E2::id_range.end)> id_range{};
 
  public:
-  static Sum instance() { return {}; }
+  static constexpr Sum instance() { return {}; }
 
 #ifdef SYMBOLIC_PRINTING
   static void print_on(std::ostream& os);

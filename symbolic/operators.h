@@ -37,47 +37,23 @@ constexpr auto operator-(E const&)
 
 // Addition.
 template<Expression E1, Expression E2>
-auto operator+(E1 const&, E2 const&)
+constexpr auto operator+(E1 const&, E2 const&)
 {
   return add_t<E1, E2>::instance();
 }
 
 // Subtraction.
 template<Expression E1, Expression E2>
-auto operator-(E1 const&, E2 const&)
+constexpr auto operator-(E1 const&, E2 const&)
 {
   return add_t<E1, negate_t<E2>>::instance();
 }
 
 // Exponentiation.
-template<SymbolType E1, ConstantType E2>
-constexpr auto operator^(E1 const& base, E2 const& exponent)
+template<Expression Base, ConstantType Exponent>
+constexpr auto operator^(Base const&, Exponent const&)
 {
-  return Power<E1, E2>::instance();
-}
-
-template<PowerType Base, ConstantType Exponent>
-constexpr auto operator^(Base const& power, Exponent const& exponent)
-{
-  return Power<typename Base::base_type, multiply_t<typename Base::exponent_type, Exponent>>::instance();
-}
-
-template<Expression E1, Expression E2, ConstantType Exponent>
-constexpr auto operator^(Product<E1, E2> const&, Exponent const&)
-{
-  return Product<exponentiate_t<E1, Exponent>, exponentiate_t<E2, Exponent>>::instance();
-}
-
-template<SumType Base, ConstantType Exponent>
-auto operator^(Base const& sum, Exponent const& exponent)
-{
-  return Exponentiation<Base, Exponent>{sum};
-}
-
-template<ExponentiationType Base, ConstantType Exponent>
-auto operator^(Base const& exponentiation, Exponent const& exponent)
-{
-  return Exponentiation<typename Base::base_type, multiply_t<typename Base::exponent_type, Exponent>>::instance();
+  return exponentiate_t<Base, Exponent>::instance();
 }
 
 } // namespace symbolic
