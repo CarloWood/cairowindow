@@ -63,7 +63,9 @@ int main()
   constexpr auto two = constant<2>();
   constexpr auto three_halfs = constant<3, 2>();
 
-  auto a = make_symbol("a");
+  constexpr auto a = make_symbol();
+  a.register_name("a");
+
   auto b = make_symbol("b");
   auto c = make_symbol("c");
   auto d = make_symbol("d");
@@ -786,9 +788,9 @@ int main()
   TESTS((-a + two * b - three_halfs * c) * (x - two * y + three_halfs * c - (b^two)), "-2 * b^3 - 9/4 * c^2 - 3/2 * a * c - a * x + 2 * a * y + a * b^2 + 3 * b * c + 2 * b * x - 4 * b * y - 3/2 * c * x + 3 * c * y + 3/2 * b^2 * c");
   TESTS(x^(one + two), "x^3");
 
-  TESTS((-b + (((b^two) - constant<4, 1>() * a * c)^constant<1, 2>())) / (two * a), "-1/2 * a^-1 * b + (b^2 - 4 * a * c)^(1/2) * 1/2 * a^-1");
+  TESTS((-b + (((b^two) - constant<4, 1>() * a * c)^constant<1, 2>())) / (two * a), "-1/2 * a^-1 * b + 1/2 * a^-1 * (b^2 - 4 * a * c)^(1/2)");
   TESTS((a + b + c + d) * (x + y + z), "a * x + a * y + a * z + b * x + b * y + b * z + c * x + c * y + c * z + d * x + d * y + d * z");
-  TESTS(((a + b)^constant<3>()) * x, "(a + b)^3 * x");
+  TESTS(((a + b)^constant<3>()) * x, "x * (a + b)^3");
 
   // Test Exponentiation.
   TESTS((constant<3, 7>()^two), "9/49");
@@ -807,4 +809,12 @@ int main()
   // Test Division.
   TESTS(x / (y^constant<-1>()), "x * y");
   TESTS(x / ((a + b)^constant<-1>()), "a * x + b * x");
+
+  auto formula1 = (x + y)^three_halfs;
+  TESTS(formula1, "(x + y)^(3/2)");
+  auto formula2 = constant<-1, 2>() * formula1;
+  TESTS(formula2, "-1/2 * (x + y)^(3/2)");
+  TESTS(((x + y)^three_halfs) * (constant<7>() * x - constant<1, 7>() * y), "7 * x * (x + y)^(3/2) - 1/7 * y * (x + y)^(3/2)");
+
+  TESTS((-two * x) * (constant<5>() * ((y - (x^two))^constant<4>())), "-10 * x * (y - x^2)^4");
 }

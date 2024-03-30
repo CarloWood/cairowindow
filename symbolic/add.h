@@ -99,36 +99,6 @@ class add<Sum<E1, E2>, Sum<E3, E4>>
   using type = decltype(eval());
 };
 
-template<Expression E>
-struct get_constant_factor
-{
-  using type = Constant<1, 1>;
-};
-
-template<Expression E>
-using get_constant_factor_t = typename get_constant_factor<E>::type;
-
-template<int Enumerator1, int Denominator1, Expression E2>
-struct get_constant_factor<Product<Constant<Enumerator1, Denominator1>, E2>>
-{
-  using type = Constant<Enumerator1, Denominator1>;
-};
-
-template<Expression E>
-struct get_nonconstant_factor
-{
-  using type = E;
-};
-
-template<Expression E>
-using get_nonconstant_factor_t = typename get_nonconstant_factor<E>::type;
-
-template<int Enumerator1, int Denominator1, Expression E2>
-struct get_nonconstant_factor<Product<Constant<Enumerator1, Denominator1>, E2>>
-{
-  using type = E2;
-};
-
 template<Expression E1, Expression E2>
 class add_equals
 {
@@ -136,7 +106,7 @@ class add_equals
   using non_constant_factor1 = get_nonconstant_factor_t<E1>;
   using constant_factor2 = get_constant_factor_t<E2>;
   using non_constant_factor2 = get_nonconstant_factor_t<E2>;
-  using ConstantFactor = typename add<constant_factor1, constant_factor2>::type;
+  using ConstantFactor = add_t<constant_factor1, constant_factor2>;
 
   static_assert(!is_sum_v<E1>, "The first term of add_equals must not be a Sum.");
   static_assert(!is_constant_v<E1> || is_constant_v<E2>, "Equals means that if E1 is a constant then so should be E2!");

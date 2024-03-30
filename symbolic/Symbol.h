@@ -15,7 +15,10 @@ using utils::has_print_on::operator<<;
 #endif
 
 template<int Id, typename T>
-inline constexpr auto make_symbol(char const* name);
+inline consteval auto make_symbol();
+
+template<int Id, typename T>
+inline auto make_symbol(char const* name);
 
 class SymbolRegistry
 {
@@ -23,6 +26,8 @@ class SymbolRegistry
   static void register_symbol(int id, char const* name);
   static char const* get_name(int id);
   static void set_value(int id, double value);
+
+ public:
   static double get_value(int id);
 };
 
@@ -36,13 +41,19 @@ class Symbol : public ExpressionTag, public SymbolRegistry
 
  private:
   // The constructor is private. Use make_symbol to create a new symbol.
+
   template<int Id2, typename T2>
-  friend constexpr auto make_symbol(char const* name);
+  friend consteval auto make_symbol();
+
+  template<int Id2, typename T2>
+  friend auto make_symbol(char const* name);
 
   Symbol(char const* name) { SymbolRegistry::register_symbol(s_id, name); }
 
-  // Only to be used by instance.
-  Symbol() = default;
+  // Or, use these:
+  consteval Symbol() = default;
+ public:
+  static void register_name(char const* name) { SymbolRegistry::register_symbol(s_id, name); }
 
  public:
   static char const* name() { return SymbolRegistry::get_name(s_id); }
@@ -76,9 +87,16 @@ struct get_base<Symbol<Id>>
 };
 
 template<int Id = 0, typename T = decltype([]{})>
-constexpr auto make_symbol(char const* name)
+auto make_symbol(char const* name)
 {
   auto symbol = Symbol<metahack::unique_id<Id, T>()>(name);
+  return symbol;
+}
+
+template<int Id = 0, typename T = decltype([]{})>
+consteval auto make_symbol()
+{
+  auto symbol = Symbol<metahack::unique_id<Id, T>()>();
   return symbol;
 }
 

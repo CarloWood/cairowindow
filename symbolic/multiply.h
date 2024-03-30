@@ -6,14 +6,11 @@
 
 namespace symbolic {
 
-template<Expression E1, Expression E2>
-struct make_power;
+template<Expression E1, Expression E2, IsProduct is_product>
+struct multiply_unequals;
 
 template<Expression E1, Expression E2>
-using make_power_t = typename make_power<E1, E2>::type;
-
-template<Expression E1, Expression E2>
-struct multiply_unequals
+struct multiply_unequals<E1, E2, isProduct>
 {
   static consteval bool sanity_check()
   {
@@ -23,12 +20,12 @@ struct multiply_unequals
       return is_less_Product_v<E1, E2>;
   }
 
-  static_assert(!is_product_v<E1>, "Only call multiply_unequals with a non-product arg1.");
-  static_assert(sanity_check(), "Only call multiply_unequals for E1 < E2.");
-
  private:
   static consteval auto eval()
   {
+    static_assert(!is_product_v<E1>, "Only call multiply_unequals<..., isProduct> with a non-product arg1.");
+    static_assert(sanity_check(), "Only call multiply_unequals for E1 < E2.");
+
     if constexpr (is_constant_zero_v<E1>)
       return Constant<0, 1>::instance();
     else if constexpr (is_constant_one_v<E1>)
@@ -42,18 +39,18 @@ struct multiply_unequals
 };
 
 template<Expression E1, Expression E2>
-using multiply_unequals_t = typename multiply_unequals<E1, E2>::type;
+using make_product = typename multiply_unequals<E1, E2, isProduct>::type;
 
 template<Expression E1, Expression E2>
 struct make_power
 {
-  static_assert(is_symbol_v<E1> || is_power_v<E1>, "E1 must be a SymbolPowerType");
-  static_assert(is_symbol_v<E2> || is_power_v<E2>, "E2 must be a SymbolPowerType");
-  static_assert(E1::id_range.begin == E2::id_range.begin, "Can only combine powers of the same symbol!");
-
  private:
   static consteval auto eval()
   {
+    static_assert(is_symbol_v<E1> || is_power_v<E1>, "E1 must be a SymbolPowerType");
+    static_assert(is_symbol_v<E2> || is_power_v<E2>, "E2 must be a SymbolPowerType");
+    static_assert(E1::id_range.begin == E2::id_range.begin, "Can only combine powers of the same symbol!");
+
     using Base = get_base_t<E1>;
     using NewExponent = typename add<get_exponent_t<E1>, get_exponent_t<E2>>::type;
 
@@ -68,6 +65,9 @@ struct make_power
  public:
   using type = decltype(eval());
 };
+
+template<Expression E1, Expression E2>
+using make_power_t = typename make_power<E1, E2>::type;
 
 template<int Enumerator1, int Denominator1, int Enumerator2, int Denominator2>
 struct make_power<Constant<Enumerator1, Denominator1>, Constant<Enumerator2, Denominator2>>
@@ -126,9 +126,9 @@ struct multiply<E1, E2, isProduct>
   static consteval auto eval()
   {
     if constexpr (is_less_Product_v<E1, E2>)
-      return multiply_unequals_t<E1, E2>::instance();
+      return make_product<E1, E2>::instance();
     else if constexpr (is_less_Product_v<E2, E1>)
-      return multiply_unequals_t<E2, E1>::instance();
+      return make_product<E2, E1>::instance();
     else
       return make_power_t<E1, E2>::instance();
   }
@@ -144,9 +144,9 @@ struct multiply<E1, Product<E2, E3>, isProduct>
   static consteval auto eval()
   {
     if constexpr (is_less_Product_v<E1, E2>)
-      return multiply_unequals_t<E1, Product<E2, E3>>::instance();
+      return make_product<E1, Product<E2, E3>>::instance();
     else if constexpr (is_less_Product_v<E2, E1>)
-      return multiply_unequals_t<E2, multiply_t<E1, E3>>::instance();
+      return make_product<E2, multiply_t<E1, E3>>::instance();
     else
       return multiply_t<make_power_t<E1, E2>, E3>::instance();
   }
@@ -162,9 +162,9 @@ struct multiply<Product<E1, E2>, E3, isProduct>
   static consteval auto eval()
   {
     if constexpr (is_less_Product_v<E1, E3>)
-      return multiply_unequals_t<E1, multiply_t<E2, E3>>::instance();
+      return make_product<E1, multiply_t<E2, E3>>::instance();
     else if constexpr (is_less_Product_v<E3, E1>)
-      return multiply_unequals_t<E3, Product<E1, E2>>::instance();
+      return make_product<E3, Product<E1, E2>>::instance();
     else
       return multiply_t<make_power_t<E3, E1>, E2>::instance();
   }
@@ -184,11 +184,177 @@ struct multiply<Product<E1, E2>, Product<E3, E4>, isProduct>
   static consteval auto eval()
   {
     if constexpr (is_less_Product_v<E1, E3>)
-      return multiply_unequals_t<E1, multiply_t<E2, Product<E3, E4>>>::instance();
+      return make_product<E1, multiply_t<E2, Product<E3, E4>>>::instance();
     else if constexpr (is_less_Product_v<E3, E1>)
-      return multiply_unequals_t<E3, multiply_t<Product<E1, E2>, E4>>::instance();
+      return make_product<E3, multiply_t<Product<E1, E2>, E4>>::instance();
     else
       return multiply_t<multiply_t<make_power_t<E1, E3>, E2>, E4>::instance();
+  }
+
+ public:
+  using type = decltype(eval());
+};
+
+template<Expression E1, Expression E2>
+struct multiply_unequals<E1, E2, not_a_Product>
+{
+ private:
+  template<typename T>
+  static void ShowMeTheType()
+  {
+    static_assert(DependentFalse<T>::value, "WE GET HERE");
+  }
+
+  static consteval auto eval()
+  {
+    static_assert(!is_multiplication_v<E1>, "Only call multiply_unequals<..., not_a_Product> with a non-multiplication arg1.");
+    static_assert(is_less_Multiplication_v<E1, E2>, "Only call multiply_unequals for E1 < E2.");
+
+    // [with E1 = Constant<-1, 2>; E2 = Exponentiation<Sum<Symbol<10>, Symbol<11> >, Constant<3, 2> >]
+
+    if constexpr (is_constant_zero_v<E1>)
+      return Constant<0, 1>::instance();
+    else if constexpr (is_constant_one_v<E1>)
+      return E2::instance();
+    else
+    {
+      using constant_factor1 = get_constant_factor_t<E1>;
+      using constant_factor2 = get_constant_factor_t<E2>;
+      using non_constant_factor2 = get_nonconstant_factor_t<E2>;
+      using ConstantFactor = multiply_t<constant_factor1, constant_factor2>;
+
+      static_assert(!is_constant_zero_v<ConstantFactor>, "Unexpected zero?!");
+
+      if constexpr (is_constant_v<E1>)
+      {
+        if constexpr (is_constant_one_v<ConstantFactor>)
+          return non_constant_factor2::instance();
+        else
+          return Multiplication<ConstantFactor, non_constant_factor2>::instance();
+      }
+      else
+      {
+        using non_constant_factor1 = get_nonconstant_factor_t<E1>;
+
+        if constexpr (is_constant_one_v<ConstantFactor>)
+          return Multiplication<non_constant_factor1, non_constant_factor2>::instance();
+        else
+        {
+          using new_factor1 = multiply_t<ConstantFactor, non_constant_factor1>;
+          if constexpr (is_product_v<new_factor1>)
+            return Multiplication<new_factor1, non_constant_factor2>::instance();
+          else
+            return Multiplication<ConstantFactor, Multiplication<non_constant_factor1, non_constant_factor2>>::instance();
+        }
+      }
+    }
+  }
+
+ public:
+  using type = decltype(eval());
+};
+
+template<Expression E1, Expression E2>
+using make_multiplication = typename multiply_unequals<E1, E2, not_a_Product>::type;
+
+template<Expression E1, Expression E2>
+struct make_exponentiation
+{
+ private:
+  static consteval auto eval()
+  {
+#if 0
+    using Base = get_base_t<E1>;
+    using NewExponent = typename add<get_exponent_t<E1>, get_exponent_t<E2>>::type;
+
+    if constexpr (is_constant_zero_v<NewExponent>)
+      return Constant<1, 1>::instance();
+    else if constexpr (is_constant_one_v<NewExponent>)
+      return Base::instance();
+    else
+      return Power<Base, NewExponent>::instance();
+#endif
+    //FIXME
+    return Multiplication<E1, E2>::instance();
+  }
+
+ public:
+  using type = decltype(eval());
+};
+
+template<Expression E1, Expression E2>
+using make_exponentiation_t = typename make_exponentiation<E1, E2>::type;
+
+template<Expression E1, Expression E2>
+struct multiply<E1, E2, not_a_Product>
+{
+ private:
+  static consteval auto eval()
+  {
+    if constexpr (is_less_Multiplication_v<E1, E2>)
+      return make_multiplication<E1, E2>::instance();
+    else if constexpr (is_less_Multiplication_v<E2, E1>)
+      return make_multiplication<E2, E1>::instance();
+    else
+      return make_exponentiation_t<E1, E2>::instance();
+  }
+
+ public:
+  using type = decltype(eval());
+};
+
+template<Expression E1, Expression E2, Expression E3>
+struct multiply<E1, Multiplication<E2, E3>, not_a_Product>
+{
+ private:
+  static consteval auto eval()
+  {
+    if constexpr (is_less_Multiplication_v<E1, E2>)
+      return make_multiplication<E1, Multiplication<E2, E3>>::instance();
+    else if constexpr (is_less_Multiplication_v<E2, E1>)
+      return make_multiplication<E2, multiply_t<E1, E3>>::instance();
+    else
+      return multiply_t<make_exponentiation_t<E1, E2>, E3>::instance();
+  }
+
+ public:
+  using type = decltype(eval());
+};
+
+template<Expression E1, Expression E2, Expression E3>
+struct multiply<Multiplication<E1, E2>, E3, not_a_Product>
+{
+ private:
+  static consteval auto eval()
+  {
+    if constexpr (is_less_Multiplication_v<E1, E3>)
+      return make_multiplication<E1, multiply_t<E2, E3>>::instance();
+    else if constexpr (is_less_Multiplication_v<E3, E1>)
+      return make_multiplication<E3, Multiplication<E1, E2>>::instance();
+    else
+      return multiply_t<make_exponentiation_t<E3, E1>, E2>::instance();
+  }
+
+ public:
+  using type = decltype(eval());
+};
+
+template<Expression E1, Expression E2, Expression E3, Expression E4>
+struct multiply<Multiplication<E1, E2>, Multiplication<E3, E4>, not_a_Product>
+{
+  static constexpr bool E1_less_than_E3 = is_less_Multiplication_v<E1, E3>;
+  static constexpr bool E3_less_than_E1 = is_less_Multiplication_v<E3, E1>;
+  static constexpr bool E1_equal_E3 = !E1_less_than_E3 && !E3_less_than_E1;
+
+ private:
+  static consteval auto eval()
+  {
+    if constexpr (is_less_Multiplication_v<E1, E3>)
+      return make_multiplication<E1, multiply_t<E2, Multiplication<E3, E4>>>::instance();
+    else if constexpr (is_less_Multiplication_v<E3, E1>)
+      return make_multiplication<E3, multiply_t<Multiplication<E1, E2>, E4>>::instance();
+    else
+      return multiply_t<multiply_t<make_exponentiation_t<E1, E3>, E2>, E4>::instance();
   }
 
  public:
@@ -214,16 +380,6 @@ struct multiply<Sum<E1, E2>, Sum<E3, E4>, not_a_Product>
 {
   using type =
     add_t<add_t<add_t<multiply_t<E1, E3>, multiply_t<E1, E4>>, multiply_t<E2, E3>>, multiply_t<E2, E4>>;
-};
-
-template<Expression E1, Expression E2>
-class Multiplication;
-
-template<Expression E1, Expression E2>
-requires (!is_sum_v<E1> && !is_sum_v<E2>)
-struct multiply<E1, E2, not_a_Product>
-{
-  using type = Multiplication<E1, E2>;
 };
 
 } // namespace symbolic

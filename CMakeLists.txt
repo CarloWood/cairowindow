@@ -135,6 +135,7 @@ target_compile_features(cairowindow_ObjLib
 # Set link dependencies.
 target_link_libraries(cairowindow_ObjLib
   PUBLIC
+    AICxx::symbolic
     AICxx::utils
     Eigen3::Eigen
   INTERFACE

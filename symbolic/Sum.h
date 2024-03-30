@@ -38,6 +38,24 @@ constexpr bool is_same_expression(Sum<E1, E2> const& arg1, Sum<E3, E4> const& ar
 }
 
 #ifdef SYMBOLIC_PRINTING
+template<typename T>
+struct has_negative_factor : std::false_type { };
+
+template<typename T>
+constexpr bool has_negative_factor_v = has_negative_factor<T>::value;
+
+template<int Enumerator, int Denominator>
+requires (Enumerator < 0)
+struct has_negative_factor<Constant<Enumerator, Denominator>> : std::true_type { };
+
+template<ConstantType E1, Expression E2>
+requires (is_constant_less_than_zero_v<E1>)
+struct has_negative_factor<Product<E1, E2>> : std::true_type { };
+
+template<Expression E1, Expression E2>
+requires (has_negative_factor_v<E1>)
+struct has_negative_factor<Multiplication<E1, E2>> : std::true_type { };
+
 //static
 template<Expression E1, Expression E2>
 void Sum<E1, E2>::print_on(std::ostream& os)
@@ -48,20 +66,17 @@ void Sum<E1, E2>::print_on(std::ostream& os)
   E1::print_on(os);
   if (need_parens)
     os << ')';
-  if constexpr (is_product_v<E2>)
+  if constexpr (has_negative_factor_v<E2>)
   {
-    if constexpr (is_constant_less_than_zero_v<typename E2::arg1_type>)
-    {
-      os << " - ";
-      using Term = negate_t<E2>;
-      need_parens = needs_parens(Term::s_precedence, precedence::difference, after);
-      if (need_parens)
-        os << '(';
-      Term::print_on(os);
-      if (need_parens)
-        os << ')';
-      return;
-    }
+    os << " - ";
+    using Term = negate_t<E2>;
+    need_parens = needs_parens(Term::s_precedence, precedence::difference, after);
+    if (need_parens)
+      os << '(';
+    Term::print_on(os);
+    if (need_parens)
+      os << ')';
+    return;
   }
   else if constexpr (is_sum_v<E2>)
   {

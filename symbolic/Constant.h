@@ -11,7 +11,6 @@
 #include "debug.h"
 
 namespace symbolic {
-
 #ifdef SYMBOLIC_PRINTING
 using utils::has_print_on::operator<<;
 #endif

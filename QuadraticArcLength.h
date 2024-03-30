@@ -1,152 +1,33 @@
 #pragma once
 
 #include "BezierCurve.h"
+#include "symbolic/Symbol.h"
 #ifdef CWDEBUG
 #include "utils/has_print_on.h"
 #endif
 
 namespace cairowindow::autodiff {
+using namespace symbolic;
 #ifdef CWDEBUG
-using utils::has_print_on::operator<<;
+//using utils::has_print_on::operator<<;
 #endif
-
-//----------------------------------------------------------------------------
-// Classes for automatic differentiation.
-
-struct AutoDiffTag { };
-struct AutoDiffExpressionTag : public AutoDiffTag { };
-
-template<typename T>
-concept AutoDiff = std::is_base_of_v<AutoDiffTag, T>;
-
-template<typename T>
-concept AutoDiffExceptSymbol = std::is_base_of_v<AutoDiffExpressionTag, T>;
-
-class Zero : public AutoDiffTag
-{
- public:
-  friend Zero operator-(Zero const&)
-  {
-    return {};
-  }
-
-#ifdef CWDEBUG
-  void print_on(std::ostream& os) const
-  {
-    os << 0;
-  }
-#endif
-};
-
-template<typename T>
-concept AutoDiffExceptZero = std::is_base_of_v<AutoDiffTag, T> && !std::is_same_v<T, Zero>;
-
-class Constant : public AutoDiffTag
-{
- private:
-  double const value_;
-
- public:
-  Constant(double value) : value_(value)
-  {
-    // Use class Zero.
-    ASSERT(value != 0.0);
-  }
-
-  double value() const
-  {
-    return value_;
-  }
-
-  friend Constant operator-(Constant const& arg)
-  {
-    return {-arg.value()};
-  }
-
-#ifdef CWDEBUG
-  void print_on(std::ostream& os) const
-  {
-    os << value_;
-  }
-#endif
-};
-
-template<AutoDiff T1>
-class Negation;
-
-template<uint32_t symbol_id_bit>
-class Symbol : public AutoDiffTag
-{
- private:
-  static char const* s_name;
-  static double s_value;
-
- public:
-  Symbol(char const* name)
-  {
-    // Only instantiate any given Symbol once (did you use the same symbol_id_bit for two different symbols?).
-    ASSERT(!s_name);
-    s_name = name;
-  }
-
-  Symbol& operator=(double value)
-  {
-    s_value = value;
-    return *this;
-  }
-
-  static double value()
-  {
-    return s_value;
-  }
-
-  static char const* name()
-  {
-    return s_name;
-  }
-
-#ifdef CWDEBUG
-  void print_on(std::ostream& os) const
-  {
-    os << s_name;
-  }
-#endif
-};
-
-template<uint32_t symbol_id_bit>
-class DifferentiableSymbol : public Symbol<symbol_id_bit>
-{
- public:
-  constexpr DifferentiableSymbol(char const* name) : Symbol<symbol_id_bit>(name) { }
-
-  using Symbol<symbol_id_bit>::operator=;
-};
-
-//static
-template<uint32_t symbol_id_bit>
-char const* Symbol<symbol_id_bit>::s_name;
-//static
-template<uint32_t symbol_id_bit>
-double Symbol<symbol_id_bit>::s_value;
-
-enum Symbols : uint32_t
-{
-  q1x,
-  q1y,
-  v0qa,
-  v1qa
-};
 
 class QuadraticArcLength : public BezierCurve
 {
  private:
-  Symbol<q1x> Q1x_{"Q1x"};
-  Symbol<q1y> Q1y_{"Q1y"};
-  DifferentiableSymbol<v0qa> v0qa_{"alpha0"};
-  Symbol<v1qa> v1qa_{"alpha1"};
+  static constexpr auto Q1x_ = make_symbol();
+  static constexpr auto Q1y_ = make_symbol();
+  static constexpr auto v0qa_ = make_symbol();
+  static constexpr auto v1qa_ = make_symbol();
 
  public:
-  QuadraticArcLength(BezierCurve const orig) : BezierCurve(orig) { }
+  QuadraticArcLength(BezierCurve const orig) : BezierCurve(orig)
+  {
+    Q1x_.register_name("Q1x");
+    Q1y_.register_name("Q1y");
+    v0qa_.register_name("alpha0");
+    v1qa_.register_name("alpha1");
+  }
 
   void test();
 

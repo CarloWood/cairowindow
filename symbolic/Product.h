@@ -77,9 +77,6 @@ class Product : public ExpressionTag
 #endif
 };
 
-template<typename E>
-concept ProductType = is_product_v<E>;
-
 template<Expression E1, Expression E2, Expression E3, Expression E4>
 constexpr bool is_same_expression(Product<E1, E2> const& arg1, Product<E3, E4> const& arg2)
 {

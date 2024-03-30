@@ -22,6 +22,9 @@ template<Expression Base, ConstantType Exponent>
 requires (!is_constant_zero_v<Exponent> && !is_constant_one_v<Exponent>)
 class Exponentiation;
 
+template<Expression E1, Expression E2>
+class Multiplication;
+
 template<typename T>
 struct is_symbol : std::false_type { };
 
@@ -64,6 +67,9 @@ class Product;
 template<Expression E1, Expression E2>
 struct is_product<Product<E1, E2>> : std::true_type { };
 
+template<typename E>
+concept ProductType = is_product_v<E>;
+
 template<typename T>
 struct is_sum : std::false_type { };
 
@@ -87,6 +93,18 @@ struct is_exponentiation<Exponentiation<Base, Exponent>> : std::true_type { };
 
 template<typename T>
 concept ExponentiationType = is_exponentiation_v<T>;
+
+template<typename T>
+struct is_multiplication : std::false_type { };
+
+template<typename T>
+constexpr bool is_multiplication_v = is_multiplication<T>::value;
+
+template<Expression E1, Expression E2>
+struct is_multiplication<Multiplication<E1, E2>> : std::true_type { };
+
+template<typename T>
+concept MultiplicationType = is_multiplication_v<T>;
 
 template<Expression E1, Expression E2>
 struct is_less_Sum : std::false_type { };
@@ -155,6 +173,17 @@ template<Expression E1, Expression E2, Expression E3>
 requires (!is_constant_v<E3> && !is_symbol_v<E3> && !is_power_v<E3> && !is_product_v<E3>)
 struct is_less_Sum<Sum<E1, E2>, E3> : std::true_type { };
 
+template<Expression Base1, ConstantType Exponent1, Expression Base2, ConstantType Exponent2>
+requires (is_less_Sum_v<Base1, Base2> || (!is_less_Sum_v<Base2, Base1> && is_less_Sum_v<Exponent1, Exponent2>))
+struct is_less_Sum<Exponentiation<Base1, Exponent1>, Exponentiation<Base2, Exponent2>> : std::true_type { };
+
+template<Expression Base, ConstantType Exponent, Expression E1, Expression E2>
+struct is_less_Sum<Exponentiation<Base, Exponent>, Multiplication<E1, E2>> : std::true_type { };
+
+template<Expression E1, Expression E2, Expression E3, Expression E4>
+requires (is_less_Sum_v<E1, E3> || (!is_less_Sum_v<E3, E1> && is_less_Sum_v<E2, E4>))
+struct is_less_Sum<Multiplication<E1, E2>, Multiplication<E3, E4>> : std::true_type { };
+
 template<Expression E1, Expression E2>
 struct is_less_Product : std::false_type { };
 
@@ -181,6 +210,27 @@ template<int Id1, ConstantType Exponent1, int Id2, ConstantType Exponent2>
 requires (Id1 < Id2)
 struct is_less_Product<Power<Symbol<Id1>, Exponent1>, Power<Symbol<Id2>, Exponent2>> : std::true_type { };
 
+template<Expression E1, Expression E2>
+struct is_less_Multiplication : std::false_type { };
+
+template<typename T>
+concept NonProductLevelType = !is_constant_v<T> && !is_symbol_v<T> && !is_power_v<T> && !is_product_v<T>;
+
+template<Expression E1, Expression E2>
+constexpr bool is_less_Multiplication_v = is_less_Multiplication<E1, E2>::value;
+
+template<int Enumerator1, int Denominator1, NonProductLevelType E2>
+struct is_less_Multiplication<Constant<Enumerator1, Denominator1>, E2> : std::true_type { };
+
+template<int Id, NonProductLevelType E2>
+struct is_less_Multiplication<Symbol<Id>, E2> : std::true_type { };
+
+template<int Id, ConstantType Exponent, NonProductLevelType E2>
+struct is_less_Multiplication<Power<Symbol<Id>, Exponent>, E2> : std::true_type { };
+
+template<Expression E1, Expression E2, NonProductLevelType E3>
+struct is_less_Multiplication<Product<E1, E2>, E3> : std::true_type { };
+
 template<Expression E>
 struct get_exponent;
 
@@ -192,5 +242,69 @@ struct get_base;
 
 template<SymbolPowerType E>
 using get_base_t = typename get_base<E>::type;
+
+template<Expression E>
+struct get_constant_factor
+{
+  using type = Constant<1, 1>;
+};
+
+template<Expression E>
+using get_constant_factor_t = typename get_constant_factor<E>::type;
+
+template<int Enumerator1, int Denominator1>
+struct get_constant_factor<Constant<Enumerator1, Denominator1>>
+{
+  using type = Constant<Enumerator1, Denominator1>;
+};
+
+template<int Enumerator1, int Denominator1, Expression E2>
+struct get_constant_factor<Product<Constant<Enumerator1, Denominator1>, E2>>
+{
+  using type = Constant<Enumerator1, Denominator1>;
+};
+
+template<Expression E1, Expression E2>
+struct get_constant_factor<Multiplication<E1, E2>>
+{
+  using type = get_constant_factor_t<E1>;
+};
+
+template<Expression E>
+requires (!is_constant_v<E>)
+struct get_nonconstant_factor
+{
+  using type = E;
+};
+
+template<Expression E>
+using get_nonconstant_factor_t = typename get_nonconstant_factor<E>::type;
+
+template<int Enumerator1, int Denominator1, Expression E2>
+struct get_nonconstant_factor<Product<Constant<Enumerator1, Denominator1>, E2>>
+{
+  using type = E2;
+};
+
+} // namespace symbolic
+
+#include "multiply_fwd.h"
+
+namespace symbolic {
+
+template<Expression E1, Expression E2>
+struct get_nonconstant_factor<Multiplication<E1, E2>>
+{
+  static consteval auto eval()
+  {
+    if constexpr (is_constant_v<E1>)
+      return get_nonconstant_factor_t<E2>::instance();
+    else
+      return multiply_t<get_nonconstant_factor_t<E1>, get_nonconstant_factor_t<E2>>::instance();
+  }
+
+ public:
+  using type = decltype(eval());
+};
 
 } // namespace symbolic
