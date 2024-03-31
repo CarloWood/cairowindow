@@ -2,6 +2,10 @@
 
 #include "expression_traits.h"
 
+#ifndef MULTIPLY_H
+#error "multiply<> should be fully defined before using it."
+#endif
+
 namespace symbolic {
 
 template<Expression E, SymbolType S>

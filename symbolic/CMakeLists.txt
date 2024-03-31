@@ -34,12 +34,6 @@ target_compile_definitions(symbolic_ObjLib
     HAVE_SYMBOLIC_CONFIG_H
 )
 
-# Set SOURCE_DIR to the current directory.
-set_property(
-  TARGET symbolic_ObjLib
-  PROPERTY SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}"
-)
-
 file(GLOB HEADER_FILES "*.h")
 
 # The list of source files.

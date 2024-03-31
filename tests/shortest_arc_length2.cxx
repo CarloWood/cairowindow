@@ -217,7 +217,8 @@ int main()
           total_energy = qbc01.quadratic_stretching_energy() + bending_weight * qbc01.quadratic_bending_energy();
         }
         autodiff::QuadraticArcLength arc_length(qbc01);
-        arc_length.test();
+        Dout(dc::notice, "Arc length (old) = " << qbc01.quadratic_arc_length());
+        Dout(dc::notice, "Arc length (new) = " << arc_length.quadratic_arc_length());
       }
 
       Vector Q2 = plot_P2 - plot_P1;

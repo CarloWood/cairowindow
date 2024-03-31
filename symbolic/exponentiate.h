@@ -23,8 +23,12 @@ struct exponentiate<E, Constant<0, 1>, is_product>
 template<typename Exponent>
 concept NonTrivialExponent = is_constant_v<Exponent> && !is_constant_zero_v<Exponent> && !is_constant_one_v<Exponent>;
 
+#ifndef MULTIPLY_H
+#error "multiply<> should be fully defined before using it in exponentiate<>::eval."
+#endif
+
 template<ConstantType Base, NonTrivialExponent Exponent>
-struct exponentiate<Base, Exponent>
+struct exponentiate<Base, Exponent, not_a_Product>
 {
   static_assert(Exponent::s_denominator == 1, "Fractional exponents of constants are not (yet) supported.");
 
@@ -69,7 +73,7 @@ struct exponentiate<Product<E1, E2>, Exponent, isProduct>
 };
 
 template<Expression E, ConstantType Exponent1, NonTrivialExponent Exponent2>
-struct exponentiate<Exponentiation<E, Exponent1>, Exponent2>
+struct exponentiate<Exponentiation<E, Exponent1>, Exponent2, not_a_Product>
 {
   using type = exponentiate_t<E, multiply_t<Exponent1, Exponent2>>;
 };

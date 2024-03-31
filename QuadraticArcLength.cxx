@@ -10,11 +10,20 @@ namespace cairowindow::autodiff {
 // V₀_x.
 double QuadraticArcLength::v0x(double v0qa, double v1qa)
 {
+#if 0
   // Q1 and N1 are constants (do not depend on v0qa or v1qa).
   double Q1x = m_.coefficient[2].x() + m_.coefficient[1].x();
   double N1x = -(m_.coefficient[2].y() + m_.coefficient[1].y());
   double v0_div_q1 = 2.0 * std::sin(v1qa) / std::sin(v1qa - v0qa);
   return v0_div_q1 * (std::cos(v0qa) * Q1x + std::sin(v0qa) * N1x);
+#endif
+
+  Q1x_ = m_.coefficient[2].x() + m_.coefficient[1].x();
+  N1x_ = -(m_.coefficient[2].y() + m_.coefficient[1].y());
+  v0qa_ = v0qa;
+  v1qa_ = v1qa;
+
+  return evaluate(v0x_);
 }
 
 // V₀_y.
@@ -118,7 +127,7 @@ double QuadraticArcLength::the_enumerator()
   return za0pa03s() - za0v0() + v02a02mz2() * the_log();
 }
 
-double QuadraticArcLength::q_arc_length()
+double QuadraticArcLength::quadratic_arc_length()
 {
   return the_enumerator() / (2.0 * a03());
 }

@@ -286,9 +286,39 @@ struct get_nonconstant_factor<Product<Constant<Enumerator1, Denominator1>, E2>>
   using type = E2;
 };
 
+template<Expression E>
+class Sin;
+
+template<typename T>
+struct is_sin : std::false_type { };
+
+template<typename T>
+constexpr bool is_sin_v = is_sin<T>::value;
+
+template<Expression E>
+struct is_sin<Sin<E>> : std::true_type { };
+
+template<typename T>
+concept SinType = is_sin_v<T>;
+
+template<Expression E>
+class Cos;
+
+template<typename T>
+struct is_cos : std::false_type { };
+
+template<typename T>
+constexpr bool is_cos_v = is_cos<T>::value;
+
+template<Expression E>
+struct is_cos<Cos<E>> : std::true_type { };
+
+template<typename T>
+concept CosType = is_cos_v<T>;
+
 } // namespace symbolic
 
-#include "multiply_fwd.h"
+#include "multiply.h"
 
 namespace symbolic {
 

@@ -13,7 +13,10 @@ class Exponentiation;
 // Define invert for all types.
 
 template<Expression E>
-struct invert;
+struct invert
+{
+  using type = Exponentiation<E, Constant<-1, 1>>;
+};
 
 template<Expression E>
 using invert_t = typename invert<E>::type;
@@ -66,12 +69,6 @@ struct invert<Product<E1, E2>>
 
  public:
   using type = decltype(eval());
-};
-
-template<Expression E1, Expression E2>
-struct invert<Sum<E1, E2>>
-{
-  using type = Exponentiation<Sum<E1, E2>, Constant<-1, 1>>;
 };
 
 template<Expression Base, ConstantType Exponent>

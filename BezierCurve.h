@@ -197,7 +197,7 @@ class BezierCurve
   bool quadratic_from(double v0qa, double v1qa);
 
   // If this is a quadratic BezierCurve (constructed with quadratic_from) then this will return the exact arc length.
-  // This uses an algebraic formula and therefore much faster than arc_length.
+  // This uses an algebraic formula and is therefore much faster than arc_length.
   double quadratic_arc_length() const;
   // Returns the square of the above.
   double quadratic_stretching_energy() const { return utils::square(quadratic_arc_length()); }

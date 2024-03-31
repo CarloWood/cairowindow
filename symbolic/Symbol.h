@@ -58,7 +58,7 @@ class Symbol : public ExpressionTag, public SymbolRegistry
  public:
   static char const* name() { return SymbolRegistry::get_name(s_id); }
 
-  Symbol const& operator=(int value)
+  Symbol const& operator=(int value) const
   {
     SymbolRegistry::set_value(s_id, value);
     return *this;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "expression_traits.h"
+#include <cmath>
 
 namespace symbolic {
 

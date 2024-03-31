@@ -66,12 +66,6 @@ target_compile_options(cairowindow_ObjLib
     ${CAIRO_CFLAGS} ${X11_CFLAGS}
 )
 
-# Set SOURCE_DIR to the current directory.
-set_property(
-  TARGET cairowindow_ObjLib
-  PROPERTY SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}"
-)
-
 file(GLOB HEADER_FILES "*.h" "draw/*.h")
 
 # The list of source files.

@@ -4,7 +4,51 @@
 #include "add.h"
 #include "Product.h"
 
+#ifndef MULTIPLY_H
+#define MULTIPLY_H
+
 namespace symbolic {
+
+//-----------------------------------------------------------------------------
+// Forward declare all specializations of multiply.
+
+template<Expression E1, Expression E2>
+struct multiply<E1, E2, isProduct>;
+
+template<Expression E1, Expression E2, Expression E3>
+struct multiply<E1, Product<E2, E3>, isProduct>;
+
+template<Expression E1, Expression E2, Expression E3>
+struct multiply<Product<E1, E2>, E3, isProduct>;
+
+template<Expression E1, Expression E2, Expression E3, Expression E4>
+struct multiply<Product<E1, E2>, Product<E3, E4>, isProduct>;
+
+template<Expression E1, Expression E2>
+requires (!is_multiplication_v<E1> && !is_multiplication_v<E2> && !is_sum_v<E1> && !is_sum_v<E2>)
+struct multiply<E1, E2, not_a_Product>;
+
+template<Expression E1, Expression E2, Expression E3>
+requires (!is_multiplication_v<E1> && !is_sum_v<E1>)
+struct multiply<E1, Multiplication<E2, E3>, not_a_Product>;
+
+template<Expression E1, Expression E2, Expression E3>
+requires (!is_multiplication_v<E3> && !is_sum_v<E3>)
+struct multiply<Multiplication<E1, E2>, E3, not_a_Product>;
+
+template<Expression E1, Expression E2, Expression E3, Expression E4>
+struct multiply<Multiplication<E1, E2>, Multiplication<E3, E4>, not_a_Product>;
+
+template<Expression E1, Expression E2, Expression E3>
+struct multiply<E1, Sum<E2, E3>, not_a_Product>;
+
+template<Expression E1, Expression E2, Expression E3>
+struct multiply<Sum<E1, E2>, E3, not_a_Product>;
+
+template<Expression E1, Expression E2, Expression E3, Expression E4>
+struct multiply<Sum<E1, E2>, Sum<E3, E4>, not_a_Product>;
+
+//-----------------------------------------------------------------------------
 
 template<Expression E1, Expression E2, IsProduct is_product>
 struct multiply_unequals;
@@ -275,6 +319,7 @@ struct make_exponentiation
       return Power<Base, NewExponent>::instance();
 #endif
     //FIXME
+//  static_assert(std::is_same_v<E1, E2>, "WE GET HERE");
     return Multiplication<E1, E2>::instance();
   }
 
@@ -286,6 +331,7 @@ template<Expression E1, Expression E2>
 using make_exponentiation_t = typename make_exponentiation<E1, E2>::type;
 
 template<Expression E1, Expression E2>
+requires (!is_multiplication_v<E1> && !is_multiplication_v<E2> && !is_sum_v<E1> && !is_sum_v<E2>)
 struct multiply<E1, E2, not_a_Product>
 {
  private:
@@ -304,6 +350,7 @@ struct multiply<E1, E2, not_a_Product>
 };
 
 template<Expression E1, Expression E2, Expression E3>
+requires (!is_multiplication_v<E1> && !is_sum_v<E1>)
 struct multiply<E1, Multiplication<E2, E3>, not_a_Product>
 {
  private:
@@ -322,6 +369,7 @@ struct multiply<E1, Multiplication<E2, E3>, not_a_Product>
 };
 
 template<Expression E1, Expression E2, Expression E3>
+requires (!is_multiplication_v<E3> && !is_sum_v<E3>)
 struct multiply<Multiplication<E1, E2>, E3, not_a_Product>
 {
  private:
@@ -383,3 +431,5 @@ struct multiply<Sum<E1, E2>, Sum<E3, E4>, not_a_Product>
 };
 
 } // namespace symbolic
+
+#endif // MULTIPLY_H
