@@ -254,8 +254,6 @@ struct multiply_unequals<E1, E2, not_a_Product>
     static_assert(!is_multiplication_v<E1>, "Only call multiply_unequals<..., not_a_Product> with a non-multiplication arg1.");
     static_assert(is_less_Multiplication_v<E1, E2>, "Only call multiply_unequals for E1 < E2.");
 
-    // [with E1 = Constant<-1, 2>; E2 = Exponentiation<Sum<Symbol<10>, Symbol<11> >, Constant<3, 2> >]
-
     if constexpr (is_constant_zero_v<E1>)
       return Constant<0, 1>::instance();
     else if constexpr (is_constant_one_v<E1>)
@@ -307,8 +305,10 @@ struct make_exponentiation
  private:
   static consteval auto eval()
   {
-#if 0
     using Base = get_base_t<E1>;
+
+    static_assert(std::is_same_v<Base, get_base_t<E2>>, "Can only combine exponents of the same expression!");
+
     using NewExponent = typename add<get_exponent_t<E1>, get_exponent_t<E2>>::type;
 
     if constexpr (is_constant_zero_v<NewExponent>)
@@ -316,11 +316,7 @@ struct make_exponentiation
     else if constexpr (is_constant_one_v<NewExponent>)
       return Base::instance();
     else
-      return Power<Base, NewExponent>::instance();
-#endif
-    //FIXME
-//  static_assert(std::is_same_v<E1, E2>, "WE GET HERE");
-    return Multiplication<E1, E2>::instance();
+      return Exponentiation<Base, NewExponent>::instance();
   }
 
  public:

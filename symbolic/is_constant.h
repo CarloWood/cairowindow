@@ -59,4 +59,7 @@ template<int Enumerator, int Denominator>
 requires (Enumerator < 0)
 struct is_constant_less_than_zero<Constant<Enumerator, Denominator>> : std::true_type {};
 
+template<typename E>
+concept ConstantType = is_constant_v<std::remove_const_t<E>>;
+
 } // namespace symbolic

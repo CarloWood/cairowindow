@@ -32,11 +32,21 @@ double evaluate()
   return evaluate<typename T::arg1_type>() * evaluate<typename T::arg2_type>();
 }
 
+// Forward declarations of all evaluate specializations.
+
 template<ExponentiationType T>
 double evaluate();
 
 template<MultiplicationType T>
 double evaluate();
+
+template<SinType T>
+double evaluate();
+
+template<CosType T>
+double evaluate();
+
+//
 
 template<SumType T>
 double evaluate()
@@ -60,6 +70,18 @@ template<Expression T>
 double evaluate(T const&)
 {
   return evaluate<T>();
+}
+
+template<SinType T>
+double evaluate()
+{
+  return std::sin(evaluate<typename T::arg_type>());
+}
+
+template<CosType T>
+double evaluate()
+{
+  return std::cos(evaluate<typename T::arg_type>());
 }
 
 } // namespace symbolic

@@ -84,7 +84,6 @@ int main()
   using y_type = std::decay_t<decltype(y)>;
   using z_type = std::decay_t<decltype(z)>;
 
-#if 0
   // Constant creation.
   TEST("42 / 1", constant<42, 1>(), "42");
   TEST("-42 / 1", constant<-42, 1>(), "-42");
@@ -821,22 +820,4 @@ int main()
 
   // Test Sin.
   TESTS(constant<2>() * sin(x), "2 * sin(x)");
-#endif
-
-  using Sum_type = Sum<Symbol<8>, Symbol<9>>;
-  using Exp_type = Exponentiation<Sum<Symbol<8>, Symbol<9>>, Constant<-1, 1>>;
-  using Product_type = Product<Symbol<8>, Symbol<9>>;
-  using Power_type = Power<Symbol<8>, Constant<-1, 1>>;
-  using Q1x_type = Multiplication<Constant<2, 1>, Multiplication<Sin<Symbol<10>>, Exponentiation<Sin<Sum<Symbol<10>, Product<Constant<-1, 1>, Symbol<11>>>>, Constant<-1, 1>>>>;
-  using COS_type = Cos<Symbol<10>>;
-  auto Q1x_ = Q1x_type::instance();
-  TESTS(Q1x_, "2 * sin(x) * sin(x - y)^-1");
-  auto COS = COS_type::instance();
-  auto EXP = Exp_type::instance();
-  auto SUM = Sum_type::instance();
-  auto PRODUCT = Product_type::instance();
-  auto POWER = Power_type::instance();
-  TESTS(COS, "cos(x)");
-  auto t1 = Q1x_ * EXP;
-//  TESTS(t1, "2 * sin(x) * sin(x - y)^-1");
 }

@@ -68,3 +68,6 @@ add_library(AICxx::symbolic ALIAS symbolic_ObjLib)
 # Testsuite.
 add_executable(symbolic_testsuite symbolic_testsuite.cxx)
 target_link_libraries(symbolic_testsuite AICxx::symbolic ${AICXX_OBJECTS_LIST})
+
+add_executable(header_test EXCLUDE_FROM_ALL header_test.cxx)
+target_link_libraries(header_test AICxx::symbolic ${AICXX_OBJECTS_LIST})

@@ -74,18 +74,6 @@ class Symbol : public ExpressionTag, public SymbolRegistry
 #endif
 };
 
-template<int Id>
-struct get_exponent<Symbol<Id>>
-{
-  using type = Constant<1, 1>;
-};
-
-template<int Id>
-struct get_base<Symbol<Id>>
-{
-  using type = Symbol<Id>;
-};
-
 template<int Id = 0, typename T = decltype([]{})>
 auto make_symbol(char const* name)
 {

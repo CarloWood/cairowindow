@@ -48,4 +48,10 @@ struct get_exponent<Exponentiation<Base, Exponent>>
   using type = Exponent;
 };
 
+template<Expression Base, ConstantType Exponent>
+struct get_base<Exponentiation<Base, Exponent>>
+{
+  using type = Base;
+};
+
 } // namespace symbolic

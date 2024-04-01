@@ -21,23 +21,9 @@ class QuadraticArcLength : public BezierCurve
   static constexpr auto N1y_ = make_symbol();
   static constexpr auto v0qa_ = make_symbol();
   static constexpr auto v1qa_ = make_symbol();
-
-  static constexpr auto v0x_ = [](){
+  static constexpr auto v0x_ = []() constexpr {
     auto v0_div_q1 = constant<2>() * sin(v1qa_) / sin(v1qa_ - v0qa_);
-    auto t1 = cos(v0qa_) * Q1x_;
-    auto t2 = sin(v0qa_) * N1x_;
-    // multiply<
-    //   Multiplication<
-    //     Sin<Symbol<5>>,
-    //     Exponentiation< Sin<Sum<Product<Constant<-1, 1>, Symbol<4>>, Symbol<5>>>, Constant<-1, 1>>
-    //   >,
-    //   Cos<Symbol<4>>,
-    //   not_a_Product>
-    auto s1 = v0_div_q1 * t1;
-    auto s2 = v0_div_q1 * t2;
-    auto r = s1 + s2;
-    return r;
-//    return v0_div_q1 * (cos(v0qa_) * Q1x_ + sin(v0qa_) * N1x_);
+    return v0_div_q1 * (cos(v0qa_) * Q1x_ + sin(v0qa_) * N1x_);
   }();
 
  public:
