@@ -1,8 +1,9 @@
 #pragma once
 
-#include "expression_traits.h"
-#include "precedence.h"
 #include "IdRange.h"
+#include "precedence.h"
+#include "Expression.h"
+#include "is_constant.h"
 
 namespace symbolic {
 

@@ -39,6 +39,7 @@ class Constant : public ExpressionTag
     Denominator != 1 ? precedence::product : Enumerator < 0 ? precedence::negation : precedence::constant;
   static constexpr int s_enumerator = Enumerator;
   static constexpr int s_denominator = Denominator;
+  static constexpr int s_id = - 1;
   static constexpr IdRange<-1, 0> id_range{};
 
  private:

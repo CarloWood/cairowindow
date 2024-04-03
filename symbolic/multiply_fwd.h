@@ -1,7 +1,7 @@
 #pragma once
 
-#include "expression_traits.h"
 #include "Expression.h"
+#include "is_product.h"
 
 namespace symbolic {
 

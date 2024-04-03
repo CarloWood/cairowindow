@@ -1,15 +1,11 @@
 #pragma once
 
-#include "expression_traits.h"
 #include "Constant.h"
+#include "is_less_Sum.h"
+#include "add_equals.h"
+#include "Sum.h"
 
 namespace symbolic {
-
-template<Expression E1, Expression E2>
-struct add_equals;
-
-template<Expression E1, Expression E2>
-using add_equals_t = typename add_equals<E1, E2>::type;
 
 // This default is for when E1 nor E2 is a Sum. If one or both are a Sum then
 // one of the specializations below will be used.
@@ -93,35 +89,6 @@ class add<Sum<E1, E2>, Sum<E3, E4>>
       return Sum<E3, add_t<Sum<E1, E2>, E4>>{};
     else
       return add_t<add_t<add_equals_t<E1, E3>, E2>, E4>{};
-  }
-
- public:
-  using type = decltype(eval());
-};
-
-template<Expression E1, Expression E2>
-class add_equals
-{
-  using constant_factor1 = get_constant_factor_t<E1>;
-  using non_constant_factor1 = get_nonconstant_factor_t<E1>;
-  using constant_factor2 = get_constant_factor_t<E2>;
-  using non_constant_factor2 = get_nonconstant_factor_t<E2>;
-  using ConstantFactor = add_t<constant_factor1, constant_factor2>;
-
-  static_assert(!is_sum_v<E1>, "The first term of add_equals must not be a Sum.");
-  static_assert(!is_constant_v<E1> || is_constant_v<E2>, "Equals means that if E1 is a constant then so should be E2!");
-  static_assert(is_constant_v<E1> || std::is_same_v<non_constant_factor1, non_constant_factor2>, "Expected the same non-constant type.");
-
-  static consteval auto eval()
-  {
-    if constexpr (is_constant_v<E1>)
-      return add<E1, E2>::type::instance();
-    else if constexpr (is_constant_zero_v<ConstantFactor>)
-      return Constant<0, 1>::instance();
-    else if constexpr (is_constant_one_v<ConstantFactor>)
-      return non_constant_factor1::instance();
-    else
-      return Product<ConstantFactor, non_constant_factor1>{};
   }
 
  public:

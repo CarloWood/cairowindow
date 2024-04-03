@@ -1,16 +1,16 @@
 #pragma once
 
-#include "expression_traits.h"
 #include "precedence.h"
+#include "is_symbol.h"
+#include "is_constant.h"
+#include "get_exponent.h"
 
 namespace symbolic {
 
-template<Expression Base, ConstantType Exponent>
+template<SymbolType Base, ConstantType Exponent>
 requires (!is_constant_zero_v<Exponent> && !is_constant_one_v<Exponent>)
 class Power : public ExpressionTag
 {
-  static_assert(is_symbol_v<Base>, "Base must be a Symbol.");
-
  public:
   using base_type = Base;
   using exponent_type = Exponent;
@@ -46,12 +46,6 @@ template<SymbolType Base, ConstantType Exponent>
 struct get_exponent<Power<Base, Exponent>>
 {
   using type = Exponent;
-};
-
-template<SymbolType Base, ConstantType Exponent>
-struct get_base<Power<Base, Exponent>>
-{
-  using type = Base;
 };
 
 } // namespace symbolic

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "expression_traits.h"
-#include "precedence.h"
 #include "IdRange.h"
+#include "precedence.h"
+#include "is_product.h"
 
 namespace symbolic {
 
@@ -82,6 +82,12 @@ constexpr bool is_same_expression(Product<E1, E2> const& arg1, Product<E3, E4> c
 {
   return std::is_same_v<E1, E3> && std::is_same_v<E2, E4>;
 }
+
+} // namespace symbolic
+
+#include "is_less_Product.h"
+
+namespace symbolic {
 
 template<Expression E1, Expression E2>
 requires (((is_constant_v<E1> && !is_constant_zero_v<E1> && !is_constant_one_v<E1>) ||

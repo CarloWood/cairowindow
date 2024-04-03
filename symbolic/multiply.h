@@ -1,8 +1,10 @@
 #pragma once
 
 #include "expression_traits.h"
-#include "add.h"
 #include "Product.h"
+#include "get_exponent.h"
+#include "get_constant_factor.h"
+#include "get_nonconstant_factor.h"
 
 #ifndef MULTIPLY_H
 #define MULTIPLY_H
@@ -305,18 +307,25 @@ struct make_exponentiation
  private:
   static consteval auto eval()
   {
-    using Base = get_base_t<E1>;
-
-    static_assert(std::is_same_v<Base, get_base_t<E2>>, "Can only combine exponents of the same expression!");
-
-    using NewExponent = typename add<get_exponent_t<E1>, get_exponent_t<E2>>::type;
-
-    if constexpr (is_constant_zero_v<NewExponent>)
-      return Constant<1, 1>::instance();
-    else if constexpr (is_constant_one_v<NewExponent>)
-      return Base::instance();
+    if constexpr (is_constant_v<E1> && is_constant_v<E2>)
+      return multiply_t<E1, E2>::instance();
     else
-      return Exponentiation<Base, NewExponent>::instance();
+    {
+      using Base = get_base_t<E1>;
+
+      static_assert(std::is_same_v<Base, get_base_t<E2>>, "Can only combine exponents of the same expression!");
+
+      using NewExponent = typename add<get_exponent_t<E1>, get_exponent_t<E2>>::type;
+
+      if constexpr (is_constant_zero_v<NewExponent>)
+        return Constant<1, 1>::instance();
+      else if constexpr (is_constant_one_v<NewExponent>)
+        return Base::instance();
+      else if constexpr (is_symbol_v<Base>)
+        return Power<Base, NewExponent>::instance();
+      else
+        return Exponentiation<Base, NewExponent>::instance();
+    }
   }
 
  public:
@@ -404,6 +413,12 @@ struct multiply<Multiplication<E1, E2>, Multiplication<E3, E4>, not_a_Product>
  public:
   using type = decltype(eval());
 };
+
+} // namespace symbolic
+
+#include "add.h"
+
+namespace symbolic {
 
 template<Expression E1, Expression E2, Expression E3>
 struct multiply<E1, Sum<E2, E3>, not_a_Product>

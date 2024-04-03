@@ -7,94 +7,64 @@ namespace cairowindow::autodiff {
 // After calling BezierCurve::quadratic_from(double v0qa, double v1qa) (and that returned true),
 // the following functions can be called to (redo) the calculations for the arc length;
 
-// V₀_x.
-double QuadraticArcLength::v0x(double v0qa, double v1qa)
-{
-#if 0
-  // Q1 and N1 are constants (do not depend on v0qa or v1qa).
-  double Q1x = m_.coefficient[2].x() + m_.coefficient[1].x();
-  double N1x = -(m_.coefficient[2].y() + m_.coefficient[1].y());
-  double v0_div_q1 = 2.0 * std::sin(v1qa) / std::sin(v1qa - v0qa);
-  return v0_div_q1 * (std::cos(v0qa) * Q1x + std::sin(v0qa) * N1x);
-#endif
-
-  Q1x_ = m_.coefficient[2].x() + m_.coefficient[1].x();
-  N1x_ = -(m_.coefficient[2].y() + m_.coefficient[1].y());
-  v0qa_ = v0qa;
-  v1qa_ = v1qa;
-
-  return evaluate(v0x_);
-}
-
-// V₀_y.
-double QuadraticArcLength::v0y(double v0qa, double v1qa)
-{
-  double Q1y = m_.coefficient[2].y() + m_.coefficient[1].y();
-  double N1y = m_.coefficient[2].x() + m_.coefficient[1].x();
-  double v0_div_q1 = 2.0 * std::sin(v1qa) / std::sin(v1qa - v0qa);
-  return v0_div_q1 * (std::cos(v0qa) * Q1y + std::sin(v0qa) * N1y);
-}
-
 // |V₀|² = V₀_x² + V₀_y².
 double QuadraticArcLength::v02()
 {
-  return V0().length_squared();
+  return evaluate(v02_);
 }
 
 // A₀_x = 2 (Q1_x - V₀_x).
 double QuadraticArcLength::A0x()
 {
-  double Q1x = m_.coefficient[2].x() + m_.coefficient[1].x();
-  return 2.0 * (Q1x - V0().x());
+  return evaluate(A0x_);
 }
 
 // A₀_y = 2 (Q1_y - V₀_y).
 double QuadraticArcLength::A0y()
 {
-  double Q1y = m_.coefficient[2].y() + m_.coefficient[1].y();
-  return 2.0 * (Q1y - V0().y());
+  return evaluate(A0y_);
 }
 
 // |A₀|² = A₀_x² + A₀_y².
 double QuadraticArcLength::a02()
 {
-  return A0().length_squared();
+  return evaluate(a02_);
 }
 
 // v0 = |V₀| = √(V₀_x² + V₀_y²).
 double QuadraticArcLength::v0()
 {
-  return std::sqrt(v02());
+  return evaluate(v0_);
 }
 
 // a0 = |A₀| = √(A₀_x² + A₀_y²) = 2√((Q1_x - V₀_x)² + (Q1_y - V₀_y)²).
 double QuadraticArcLength::a0()
 {
-  return std::sqrt(a02());
+  return evaluate(a0_);
 }
 
 // z = V₀·A₀ = V₀_x A₀_x + V₀_y A₀_y = V₀_x (2 (Q1_x - V₀_x)) + V₀_y (2 (Q1_y - V₀_y)) =
 //     2 (V₀_x Q1_x - V₀_x² + V₀_y Q1_y - V₀_y²).
 double QuadraticArcLength::z()
 {
-  return V0().dot(A0());
+  return evaluate(z_);
 }
 
 double QuadraticArcLength::s()
 {
-  return std::sqrt(v02() + 2.0 * z() + a02());
+  return evaluate(s_);
 }
 
 // a03 = |A₀|³
 double QuadraticArcLength::a03()
 {
-  return a02() * a0();
+  return evaluate(a03_);
 }
 
 // (z * a0 + a03) * s
 double QuadraticArcLength::za0pa03s()
 {
-  return (z() * a0() + a03()) * s();
+  return evaluate(za0pa03s_);
 }
 
 double QuadraticArcLength::za0v0()
@@ -127,8 +97,12 @@ double QuadraticArcLength::the_enumerator()
   return za0pa03s() - za0v0() + v02a02mz2() * the_log();
 }
 
-double QuadraticArcLength::quadratic_arc_length()
+double QuadraticArcLength::quadratic_arc_length(double v0qa, double v1qa)
 {
+  test_v0qa_ = v0qa;
+  test_v1qa_ = v1qa;
+  v0qa_ = v0qa;
+  v1qa_ = v1qa;
   return the_enumerator() / (2.0 * a03());
 }
 

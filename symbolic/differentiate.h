@@ -1,10 +1,12 @@
 #pragma once
 
 #include "expression_traits.h"
-
-#ifndef MULTIPLY_H
-#error "multiply<> should be fully defined before using it."
-#endif
+#include "multiply.h"
+#include "exponentiate.h"
+#include "Constant.h"
+#include "Symbol.h"
+#include "Power.h"
+#include "Product.h"
 
 namespace symbolic {
 

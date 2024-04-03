@@ -1,6 +1,7 @@
 #pragma once
 
 #include "negate.h"
+#include "is_less_Product.h"
 
 namespace symbolic {
 

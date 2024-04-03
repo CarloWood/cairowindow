@@ -2,6 +2,7 @@
 
 #include "canonical_constant.h"
 #include "multiply_fwd.h"
+#include "Constant.h"
 
 namespace symbolic {
 

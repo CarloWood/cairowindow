@@ -1,7 +1,11 @@
 #pragma once
 
-#include "expression_traits.h"
+#include "Expression.h"
 #include "precedence.h"
+#include "is_constant.h"
+#include "is_symbol.h"
+#include "get_exponent.h"
+#include "get_base.h"
 
 namespace symbolic {
 

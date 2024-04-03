@@ -1,6 +1,6 @@
 #pragma once
 
-#include "multiply_fwd.h"
+#include "multiply.h"
 #include "Constant.h"
 #include <utility>
 
@@ -22,10 +22,6 @@ struct exponentiate<E, Constant<0, 1>, is_product>
 
 template<typename Exponent>
 concept NonTrivialExponent = is_constant_v<Exponent> && !is_constant_zero_v<Exponent> && !is_constant_one_v<Exponent>;
-
-#ifndef MULTIPLY_H
-#error "multiply<> should be fully defined before using it in exponentiate<>::eval."
-#endif
 
 template<ConstantType Base, NonTrivialExponent Exponent>
 struct exponentiate<Base, Exponent, not_a_Product>

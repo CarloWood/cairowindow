@@ -1,10 +1,10 @@
 #pragma once
 
-#include "expression_traits.h"
+#include "IdRange.h"
+#include "precedence.h"
 #include "add.h"
 #include "negate.h"
-#include "precedence.h"
-#include "IdRange.h"
+#include "is_product.h"
 #include <algorithm>
 
 namespace symbolic {
@@ -85,7 +85,10 @@ void Sum<E1, E2>::print_on(std::ostream& os)
       if constexpr (is_constant_less_than_zero_v<typename E2::arg1_type::arg1_type>)
       {
         os << " - ";
-        add_t<negate_t<typename E2::arg1_type>, typename E2::arg2_type>::print_on(os);
+        negate_t<typename E2::arg1_type>::print_on(os);
+        //FIXME: E2 might be negative again...
+        os << " + ";
+        E2::arg2_type::print_on(os);
         return;
       }
     }
