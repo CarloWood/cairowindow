@@ -59,18 +59,19 @@ void compare_less()
 
   if (constants_compare_equal == ConstantsCompareNotEqual || constants_compare_equal == ConstantsCompareEitherWay)
   {
-    int value = is_less_Sum<E1, E2, false>::value;
-    bool should_be_true = value;
+    bool should_be_true = is_less_Sum_exact_v<E1, E2>;
     if (!should_be_true)
     {
+      int value = (sum_order_v<E1> == sum_order_v<E2>) ? is_less_same_kind_exact<E1, E2>::value : -1;
       Dout(dc::warning, "Expected \"" << NAMESPACE_DEBUG::type_name_of<E1>() <<
           "\" to be less than \"" << NAMESPACE_DEBUG::type_name_of<E2>() << "\" when constants do not compare equal - value = " << value);
       fail = true;
     }
-    value = is_less_Sum<E2, E1, false>::value;
-    bool should_be_false = value;
+    //value = is_less_Sum<E2, E1, false>::value;
+    bool should_be_false = is_less_Sum_exact_v<E2, E1>;
     if (should_be_false)
     {
+      int value = (sum_order_v<E1> == sum_order_v<E2>) ? is_less_same_kind_exact<E2, E1>::value : -1;
       Dout(dc::warning, "Expected \"" << NAMESPACE_DEBUG::type_name_of<E2>() <<
           "\" NOT to be less than \"" << NAMESPACE_DEBUG::type_name_of<E1>() << "\" when constants do not compare equal - value = " << value);
       fail = true;
@@ -78,18 +79,18 @@ void compare_less()
   }
   if (constants_compare_equal == ConstantsCompareEqual || constants_compare_equal == ConstantsCompareEitherWay)
   {
-    int value = is_less_Sum<E1, E2, true>::value;
-    bool should_be_true = value;
+    bool should_be_true = is_less_Sum_v<E1, E2>;
     if (!should_be_true)
     {
+      int value = is_less_Sum<E1, E2>::value;
       Dout(dc::warning, "Expected \"" << NAMESPACE_DEBUG::type_name_of<E1>() <<
           "\" to be less than \"" << NAMESPACE_DEBUG::type_name_of<E2>() << "\" when constants compare equal - value = " << value);
       fail = true;
     }
-    value = is_less_Sum<E2, E1, true>::value;
-    bool should_be_false = value;
+    bool should_be_false = is_less_Sum_v<E2, E1>;
     if (should_be_false)
     {
+      int value = is_less_Sum<E2, E1>::value;
       Dout(dc::warning, "Expected \"" << NAMESPACE_DEBUG::type_name_of<E2>() <<
           "\" NOT to be less than \"" << NAMESPACE_DEBUG::type_name_of<E1>() << "\" when constants compare equal - value = " << value);
       fail = true;
@@ -106,18 +107,19 @@ void compare_equal()
 
   if (constants_compare_equal == ConstantsCompareNotEqual || constants_compare_equal == ConstantsCompareEitherWay)
   {
-    int value = is_less_Sum<E1, E2, false>::value;
-    bool should_be_false = value;
+    bool should_be_false = is_less_Sum_exact_v<E1, E2>;
     if (should_be_false)
     {
+      int value = (sum_order_v<E1> == sum_order_v<E2>) ? is_less_same_kind_exact<E1, E2>::value : -1;
       Dout(dc::warning, "Expected \"" << NAMESPACE_DEBUG::type_name_of<E1>() <<
           "\" NOT to be less than \"" << NAMESPACE_DEBUG::type_name_of<E2>() << "\" when constants do not compare equal - value = " << value);
       fail = true;
     }
-    value = is_less_Sum<E2, E1, false>::value;
-    should_be_false = value;
+    //value = is_less_Sum<E2, E1, false>::value;
+    should_be_false = is_less_Sum_exact_v<E2, E1>;
     if (should_be_false)
     {
+      int value = (sum_order_v<E1> == sum_order_v<E2>) ? is_less_same_kind_exact<E2, E1>::value : -1;
       Dout(dc::warning, "Expected \"" << NAMESPACE_DEBUG::type_name_of<E2>() <<
           "\" NOT to be less than \"" << NAMESPACE_DEBUG::type_name_of<E1>() << "\" when constants do not compare equal - value = " << value);
       fail = true;
@@ -125,18 +127,19 @@ void compare_equal()
   }
   if (constants_compare_equal == ConstantsCompareEqual || constants_compare_equal == ConstantsCompareEitherWay)
   {
-    int value = is_less_Sum<E1, E2, true>::value;
-    bool should_be_false = value;
+    bool should_be_false = is_less_Sum_v<E1, E2>;
     if (should_be_false)
     {
+      int value = is_less_Sum<E1, E2>::value;
       Dout(dc::warning, "Expected \"" << NAMESPACE_DEBUG::type_name_of<E1>() <<
           "\" NOT to be less than \"" << NAMESPACE_DEBUG::type_name_of<E2>() << "\" when constants compare equal - value = " << value);
       fail = true;
     }
-    value = is_less_Sum<E2, E1, true>::value;
-    should_be_false = value;
+    //value = is_less_Sum<E2, E1, true>::value;
+    should_be_false = is_less_Sum_v<E2, E1>;
     if (should_be_false)
     {
+      int value = is_less_Sum<E2, E1>::value;
       Dout(dc::warning, "Expected \"" << NAMESPACE_DEBUG::type_name_of<E2>() <<
           "\" NOT to be less than \"" << NAMESPACE_DEBUG::type_name_of<E1>() << "\" when constants compare equal - value = " << value);
       fail = true;
@@ -144,6 +147,9 @@ void compare_equal()
   }
   ASSERT(!fail);
 }
+
+#define HISTORIC 0
+#define WONT_COMPILE 0
 
 int main()
 {
@@ -177,7 +183,6 @@ int main()
   using y_type = std::decay_t<decltype(y)>;
   using z_type = std::decay_t<decltype(z)>;
 
-#if 0
   // Constant creation.
   TEST("42 / 1", constant<42, 1>(), "42");
   TEST("-42 / 1", constant<-42, 1>(), "-42");
@@ -224,7 +229,7 @@ int main()
 
   // Negation tests involving products.
 
-#if 0   // Class Negation no longer exists.
+#if HISTORIC   // Class Negation no longer exists.
   Negation<x_type> minus_x{x};
 #else
   Product<Constant<-1, 1>, x_type> minus_x{};
@@ -233,7 +238,7 @@ int main()
   TESTT(-minus_x, x);
 
   Product<x_type, y_type> x_times_y{};
-#if 0   // Class Negation no longer exists.
+#if HISTORIC   // Class Negation no longer exists.
   Negation<Product<x_type, y_type>> minus__x_times_y{x_times_y};
   Negation<y_type> minus_y{y};
 #else
@@ -711,50 +716,37 @@ int main()
   TESTS(y * x * two * z / y * (x^two) / -(z^(-two)) / z, "-2 * x^3 * z^2");
 
   // Test printing of parenthesis.
-#if 0 // No longer allowed to create a Negation of a Negation.
+#if HISTORIC // No longer allowed to create a Negation of a Negation.
   Negation<Negation<x_type>> minus_minus_x{minus_x};
   TESTS(minus_minus_x, "-(-x)");
 #endif
-#if 0 // Not allowed to construct the Power of a Negation.
+#if HISTORIC // Not allowed to construct the Power of a Negation.
   Power<Negation<x_type>, Constant<2, 1>> power_of_negation;
   TESTS(power_of_negation, "(-x)^2");
 #endif
-#if 0   // Class Negation no longer exists.
+#if HISTORIC   // Class Negation no longer exists.
   Product<x_type, Negation<y_type>> x_times_minus_y{};
   TESTS(x_times_minus_y, "x * -y");
 #endif
-#if 0 // Not possible to create a Ratio (which doesn't exist).
-  TESTS(x_div_minus_y, "x/-y");
-#endif
-#if 0   // Class Negation no longer exists.
+#if HISTORIC   // Class Negation no longer exists.
   Sum<x_type, Negation<y_type>> x_plus_minus_y;
 #else
   Sum<x_type, Product<Constant<-1, 1>, y_type>> x_plus_minus_y;
 #endif
   TESTS(x_plus_minus_y, "x - y");
   Power<x_type, Constant<2, 1>> x_squared;
-#if 0   // Class Negation no longer exists.
+#if HISTORIC   // Class Negation no longer exists.
   Negation<Power<x_type, Constant<2, 1>>> negation_of_power;
 #else
   Product<Constant<-1, 1>, Power<x_type, Constant<2, 1>>> negation_of_power;
 #endif
   TESTS(negation_of_power, "-(x^2)");
-#if 0 // Not allowed to create a Power of anything but a Symbol.
-  Power<Power<x_type, Constant<2, 1>>, Constant<3, 1>> power_of_power;
-  TESTS(power_of_power, "(x^2)^3");
-#endif
   TESTS(x * (y^two), "x * y^2");
   TESTS(x + (y^two), "x + y^2");
   TESTS(minus__x_times_y, "-(x * y)");
-#if 0 // Not allowed to create a Power of anything but a Symbol.
-  TESTS((x * y)^two, "(x * y)^2");
-#endif
   TESTS(x * y * z, "x * y * z");
   TESTS(w + x * y, "w + x * y");
   TESTS(-(x + y), "-x - y");
-#if 0 // Not allowed to create a Power of anything but a Symbol.
-  TESTS("(x + y)^2");
-#endif
   TESTS(w * (x + y), "w * x + w * y");
   TESTS(w + x + y, "w + x + y");
   TESTS((x + y) * w, "w * x + w * y");
@@ -784,7 +776,8 @@ int main()
   using some_symbol_type = y_type;
   using some_power_type = Power<x_type, Constant<2, 1>>;
   using some_low_product_type = Product<some_constant_type, some_symbol_type>;
-  using some_high_product_type = Product<some_power_type, some_low_product_type>;
+  using some_product_type = Product<some_symbol_type, z_type>;
+  using some_high_product_type = Product<some_power_type, some_product_type>;
 
   // Test is_less_Sum_v.
   // Compare constants.
@@ -836,13 +829,13 @@ int main()
   using LN = Product<L, N>;
   using MN = Product<M, N>;
   // Test that we can't compile the other possibilities.
-#if 0
-  Product<K, K> test1{k, k};  // error: static assertion [...]: The second factor of a Product can only be a Symbol, Power or another Product.
-  Product<L, K> test2{l, k};  // Idem
-  Product<M, K> test3{m, k};  // Idem
-  Product<L, L> test4{l, l};  // error: static assertion [...]: The first argument of a Product must be less than the second argument.
-  Product<M, L> test5{m, l};  // Idem
-  Product<M, M> test6{m, m};  // Idem
+#if WONT_COMPILE
+  Product<K, K> test1;  // error: static assertion [...]: The second factor of a Product can only be a Symbol, Power or another Product.
+  Product<L, K> test2;  // Idem
+  Product<M, K> test3;  // Idem
+  Product<L, L> test4;  // error: static assertion [...]: The first argument of a Product must be less than the second argument.
+  Product<M, L> test5;  // Idem
+  Product<M, M> test6;  // Idem
 #endif
   // But we can construct these.
   KL test7;
@@ -879,7 +872,8 @@ int main()
 
   compare_equal1<MN>();
 
-  TESTS((-a + two * b - three_halfs * c) * (x - two * y + three_halfs * c - (b^two)), "-2 * b^3 - 9/4 * c^2 - 3/2 * a * c - a * x + 2 * a * y + a * b^2 + 3 * b * c + 2 * b * x - 4 * b * y - 3/2 * c * x + 3 * c * y + 3/2 * b^2 * c");
+  TESTS((-a + two * b - three_halfs * c) * (x - two * y + three_halfs * c - (b^two)),
+      "-2 * b^3 - 9/4 * c^2 - 3/2 * a * c - a * x + 2 * a * y + a * b^2 + 3 * b * c + 2 * b * x - 4 * b * y - 3/2 * c * x + 3 * c * y + 3/2 * b^2 * c");
   TESTS(x^(one + two), "x^3");
 
   TESTS((-b + (((b^two) - constant<4, 1>() * a * c)^constant<1, 2>())) / (two * a), "-1/2 * a^-1 * b + 1/2 * a^-1 * (b^2 - 4 * a * c)^(1/2)");
@@ -914,7 +908,6 @@ int main()
 
   // Test Sin.
   TESTS(constant<2>() * sin(x), "2 * sin(x)");
-#endif
 
   // Testing is_less_Sum.
   using constant_m1 = Constant<37, 41>; // 0.902439024...
@@ -959,7 +952,8 @@ int main()
   compare_equal<symbol0, symbol0>();
   compare_less<symbol0, symbol1>();
   compare_less<symbol0, power0>();
-  compare_equal<symbol0, product_c0>();
+  compare_equal<symbol0, product_c0, ConstantsCompareEqual>();
+  compare_less<symbol0, product_c0, ConstantsCompareNotEqual>();
   compare_less<symbol0, product_c1>();
   compare_less<symbol0, product_01>();
   compare_less<symbol0, exponentiation>();
@@ -981,7 +975,8 @@ int main()
   compare_equal<power0, power0>();
   compare_less<power0, power0b>();
   compare_less<power0b, power1>();
-  compare_equal<power0, product_d0>();
+  compare_equal<power0, product_d0, ConstantsCompareEqual>();
+  compare_less<power0, product_d0, ConstantsCompareNotEqual>();
   compare_less<power0, product_d0b>();
   compare_less<power0b, product_d1>();
   compare_less<power0, product_01>();
@@ -996,7 +991,8 @@ int main()
   // It compares less than another Product if the first argument compares less than the first argument of the second Product,
   // or when those are equal and the second argument compares less than the second argument of the second Product.
   compare_equal<product_01, product_01>();
-  compare_equal<product_01, Product<constant_m1, product_01>>();
+  compare_equal<Product<constant_m1, product_01>, product_01, ConstantsCompareEqual>();
+  compare_less<Product<constant_m1, product_01>, product_01, ConstantsCompareNotEqual>();
   compare_less<product_01, exponentiation>();
   compare_less<product_01, Multiplication<constant_m1, exponentiation>>();
   compare_less<product_01, multiplication_0E>();
@@ -1008,9 +1004,12 @@ int main()
   compare_less<product_01, sum_c0>();
   compare_less<product_01, Multiplication<constant_m1, sum_c0>>();
 
-  compare_equal<product_c0, symbol0>();
-  compare_less<product_c0, symbol1>();
-  compare_less<product_c0, power0>();
+  compare_equal<product_c0, symbol0, ConstantsCompareEqual>();
+  compare_less<symbol0, product_c0, ConstantsCompareNotEqual>();
+  compare_less<product_c0, symbol1, ConstantsCompareEqual>();
+  compare_less<symbol1, product_c0, ConstantsCompareNotEqual>();
+  compare_less<product_c0, power0, ConstantsCompareEqual>();
+  compare_less<power0, product_c0, ConstantsCompareNotEqual>();
   compare_equal<product_c0, product_c0>();
   compare_less<product_c0, product_c1>();
   compare_less<product_c0, product_01>();
@@ -1021,10 +1020,14 @@ int main()
   compare_less<product_c0, cos0>();
   compare_less<product_c0, sum_c0>();
 
-  compare_equal<Product<constant_m1, power0>, power0>();
-  compare_less<Product<constant_m1, power0>, power0b>();
-  compare_less<Product<constant_m1, power0b>, power1>();
-  compare_equal<Product<constant_m1, power0>, product_d0>();
+  compare_equal<Product<constant_m1, power0>, power0, ConstantsCompareEqual>();
+  compare_less<power0, Product<constant_m1, power0>, ConstantsCompareNotEqual>();
+  compare_less<Product<constant_m1, power0>, power0b, ConstantsCompareEqual>();
+  compare_less<power0b, Product<constant_m1, power0>, ConstantsCompareNotEqual>();
+  compare_less<Product<constant_m1, power0b>, power1, ConstantsCompareEqual>();
+  compare_less<power1, Product<constant_m1, power0b>, ConstantsCompareNotEqual>();
+  compare_equal<Product<constant_m1, power0>, product_d0, ConstantsCompareEqual>();
+  compare_less<Product<constant_m1, power0>, product_d0, ConstantsCompareNotEqual>();
   compare_less<Product<constant_m1, power0>, product_d0b>();
   compare_less<Product<constant_m1, power0b>, product_d1>();
   compare_less<Product<constant_m1, power0>, product_01>();
@@ -1052,13 +1055,13 @@ int main()
   compare_less<exponentiation, exponentiation0b>();
   compare_less<exponentiation0b, exponentiation1>();
 
-  compare_equal<exponentiation, Multiplication<constant_m1, exponentiation>>();
-  compare_less<exponentiation, Multiplication<constant_m1, multiplication_0E>>();
-  compare_less<exponentiation, Multiplication<constant_m1, sin0>>();
-  compare_less<exponentiation, Multiplication<constant_m1, cos0>>();
-  compare_less<exponentiation, Multiplication<constant_m1, sum_c0>>();
-  compare_less<exponentiation, Multiplication<constant_m1, exponentiation0b>>();
-  compare_less<exponentiation0b, Multiplication<constant_m1, exponentiation1>>();
+  compare_equal<exponentiation, Multiplication<constant_m1, exponentiation>, ConstantsCompareEqual>();
+  compare_less<exponentiation, Multiplication<constant_m1, multiplication_0E>, ConstantsCompareEqual>();
+  compare_less<exponentiation, Multiplication<constant_m1, sin0>, ConstantsCompareEqual>();
+  compare_less<exponentiation, Multiplication<constant_m1, cos0>, ConstantsCompareEqual>();
+  compare_less<exponentiation, Multiplication<constant_m1, sum_c0>, ConstantsCompareEqual>();
+  compare_less<exponentiation, Multiplication<constant_m1, exponentiation0b>, ConstantsCompareEqual>();
+  compare_less<exponentiation0b, Multiplication<constant_m1, exponentiation1>, ConstantsCompareEqual>();
 
   // A Multiplication compares less than anything "larger than" a Multiplication.
   // It compares less than another Multiplication if either the first argument is
@@ -1070,22 +1073,12 @@ int main()
   compare_less<multiplication_0E, sum_c0>();
   compare_less<multiplication_cS0, multiplication_cS1>();
 
-  compare_equal<multiplication_cS0, Multiplication<constant_m1, multiplication_cS0>>();
-  compare_equal<multiplication_0E, Multiplication<constant_m1, multiplication_0E>>();
-  compare_less<multiplication_0E, Multiplication<constant_m1, sin0>>();
-  compare_less<multiplication_0E, Multiplication<constant_m1, cos0>>();
-  compare_less<multiplication_0E, Multiplication<constant_m1, sum_c0>>();
-  compare_less<multiplication_cS0, Multiplication<constant_m1, multiplication_cS1>>();
-
   // Symbol < Power < get_nonconstant_factor_t<Product> < Exponentiation < get_nonconstant_factor_t<Multiplication> < Sin < Cos < Sum
   compare_equal<sin0, sin0>();
   compare_less<sin0, cos0>();
   compare_less<sin0, sum_c0>();
-
   compare_equal<cos0, cos0>();
   compare_less<cos0, sum_c0>();
 
   compare_equal<sum_c0, sum_c0>();
-
-  //is_less_Sum
 }

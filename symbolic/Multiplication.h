@@ -8,6 +8,7 @@
 namespace symbolic {
 
 template<Expression E1, Expression E2>
+requires ((!ProductLevelType<E1> || !ProductLevelType<E2>) && !is_multiplication_v<E1> && is_constant_factor_free_v<E2>)
 class Multiplication : public ExpressionTag
 {
  public:

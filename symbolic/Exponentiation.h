@@ -10,14 +10,16 @@
 namespace symbolic {
 
 template<Expression Base, ConstantType Exponent>
-requires (!is_constant_zero_v<Exponent> && !is_constant_one_v<Exponent>)
+requires (!is_symbol_v<Base> && !is_constant_zero_v<Exponent> && !is_constant_one_v<Exponent>)
 class Exponentiation : public ExpressionTag
 {
-  static_assert(!is_symbol_v<Base>, "Use Power to exponentiate symbols.");
-
  public:
   using base_type = Base;
   using exponent_type = Exponent;
+
+  // Used for is_less_Sum.
+  using arg1_type = Base;
+  using arg2_type = Exponent;
 
   static constexpr precedence s_precedence = precedence::power;
   static constexpr auto id_range = Base::id_range;

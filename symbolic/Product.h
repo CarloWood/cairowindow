@@ -27,9 +27,8 @@ namespace symbolic {
 // Note that each symbol only occurs once and the product is sorted by Symbol Id.
 //
 template<Expression E1, Expression E2>
-requires (((is_constant_v<E1> && !is_constant_zero_v<E1> && !is_constant_one_v<E1>) ||
-           is_symbol_v<E1> || is_power_v<E1>) &&
-          (is_symbol_v<E2> || is_power_v<E2> || is_product_v<E2>))
+requires (((is_constant_v<E1> && !is_constant_zero_v<E1> && !is_constant_one_v<E1>) || is_symbol_v<E1> || is_power_v<E1>) &&
+          (is_symbol_v<E2> || is_power_v<E2> || (is_product_v<E2> && is_constant_factor_free_v<E2>)))
 class Product : public ExpressionTag
 {
  public:
@@ -90,9 +89,8 @@ constexpr bool is_same_expression(Product<E1, E2> const& arg1, Product<E3, E4> c
 namespace symbolic {
 
 template<Expression E1, Expression E2>
-requires (((is_constant_v<E1> && !is_constant_zero_v<E1> && !is_constant_one_v<E1>) ||
-           is_symbol_v<E1> || is_power_v<E1>) &&
-          (is_symbol_v<E2> || is_power_v<E2> || is_product_v<E2>))
+requires (((is_constant_v<E1> && !is_constant_zero_v<E1> && !is_constant_one_v<E1>) || is_symbol_v<E1> || is_power_v<E1>) &&
+          (is_symbol_v<E2> || is_power_v<E2> || (is_product_v<E2> && is_constant_factor_free_v<E2>)))
 constexpr Product<E1, E2>::Product()
 {
   if constexpr (!is_product_v<E2>)

@@ -8,7 +8,7 @@ namespace symbolic {
 // Forward declarations.
 
 template<Expression Base, ConstantType Exponent>
-requires (!is_constant_zero_v<Exponent> && !is_constant_one_v<Exponent>)
+requires (!is_symbol_v<Base> && !is_constant_zero_v<Exponent> && !is_constant_one_v<Exponent>)
 class Exponentiation;
 
 // Define invert for all types.

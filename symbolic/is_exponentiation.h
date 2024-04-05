@@ -2,11 +2,12 @@
 
 #include "Expression.h"
 #include "is_constant.h"
+#include "is_symbol.h"
 
 namespace symbolic {
 
 template<Expression Base, ConstantType Exponent>
-requires (!is_constant_zero_v<Exponent> && !is_constant_one_v<Exponent>)
+requires (!is_symbol_v<Base> && !is_constant_zero_v<Exponent> && !is_constant_one_v<Exponent>)
 class Exponentiation;
 
 template<typename T>

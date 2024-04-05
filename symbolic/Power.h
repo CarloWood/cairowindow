@@ -14,6 +14,11 @@ class Power : public ExpressionTag
  public:
   using base_type = Base;
   using exponent_type = Exponent;
+
+  // Used for is_less_Sum.
+  using arg1_type = Base;
+  using arg2_type = Exponent;
+
   static constexpr int s_id = Base::s_id;
 
   static constexpr precedence s_precedence = precedence::power;

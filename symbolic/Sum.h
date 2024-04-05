@@ -10,12 +10,9 @@
 namespace symbolic {
 
 template<Expression E1, Expression E2>
+requires (!is_sum_v<E1> && !is_constant_zero_v<E1> && !is_constant_v<E2>)
 class Sum : public ExpressionTag
 {
-  static_assert(!is_sum_v<E1>, "The first term of a Sum must not be a Sum itself.");
-  static_assert(!is_constant_v<E2>, "The second term of a Sum is not allowed to be a constant.");
-  static_assert(!is_constant_zero_v<E1>, "Don't construct a Sum with a zero constant.");
-
  public:
   using arg1_type = E1;
   using arg2_type = E2;
@@ -58,6 +55,7 @@ struct has_negative_factor<Multiplication<E1, E2>> : std::true_type { };
 
 //static
 template<Expression E1, Expression E2>
+requires (!is_sum_v<E1> && !is_constant_zero_v<E1> && !is_constant_v<E2>)
 void Sum<E1, E2>::print_on(std::ostream& os)
 {
   bool need_parens = needs_parens(E1::s_precedence, s_precedence, before);
@@ -80,17 +78,17 @@ void Sum<E1, E2>::print_on(std::ostream& os)
   }
   else if constexpr (is_sum_v<E2>)
   {
-    if constexpr (is_product_v<typename E2::arg1_type>)
+    if constexpr (has_negative_factor_v<typename E2::arg1_type>)
     {
-      if constexpr (is_constant_less_than_zero_v<typename E2::arg1_type::arg1_type>)
-      {
-        os << " - ";
-        negate_t<typename E2::arg1_type>::print_on(os);
-        //FIXME: E2 might be negative again...
-        os << " + ";
-        E2::arg2_type::print_on(os);
-        return;
-      }
+      os << " - ";
+      using SumWithNegatedFirstTerm = add_t<negate_t<typename E2::arg1_type>, typename E2::arg2_type>;
+      need_parens = needs_parens(SumWithNegatedFirstTerm::s_precedence, s_precedence, after);
+      if (need_parens)
+        os << '(';
+      SumWithNegatedFirstTerm::print_on(os);
+      if (need_parens)
+        os << ')';
+      return;
     }
   }
   os << " + ";
