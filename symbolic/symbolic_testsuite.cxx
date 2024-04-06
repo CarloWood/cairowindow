@@ -59,19 +59,19 @@ void compare_less()
 
   if (constants_compare_equal == ConstantsCompareNotEqual || constants_compare_equal == ConstantsCompareEitherWay)
   {
-    bool should_be_true = is_less_Sum_exact_v<E1, E2>;
+    bool should_be_true = is_less_exact_v<E1, E2>;
     if (!should_be_true)
     {
-      int value = (sum_order_v<E1> == sum_order_v<E2>) ? is_less_same_kind_exact<E1, E2>::value : -1;
+      int value = (expression_order_v<E1> == expression_order_v<E2>) ? is_less_same_kind_exact<E1, E2>::value : -1;
       Dout(dc::warning, "Expected \"" << NAMESPACE_DEBUG::type_name_of<E1>() <<
           "\" to be less than \"" << NAMESPACE_DEBUG::type_name_of<E2>() << "\" when constants do not compare equal - value = " << value);
       fail = true;
     }
     //value = is_less_Sum<E2, E1, false>::value;
-    bool should_be_false = is_less_Sum_exact_v<E2, E1>;
+    bool should_be_false = is_less_exact_v<E2, E1>;
     if (should_be_false)
     {
-      int value = (sum_order_v<E1> == sum_order_v<E2>) ? is_less_same_kind_exact<E2, E1>::value : -1;
+      int value = (expression_order_v<E1> == expression_order_v<E2>) ? is_less_same_kind_exact<E2, E1>::value : -1;
       Dout(dc::warning, "Expected \"" << NAMESPACE_DEBUG::type_name_of<E2>() <<
           "\" NOT to be less than \"" << NAMESPACE_DEBUG::type_name_of<E1>() << "\" when constants do not compare equal - value = " << value);
       fail = true;
@@ -107,19 +107,19 @@ void compare_equal()
 
   if (constants_compare_equal == ConstantsCompareNotEqual || constants_compare_equal == ConstantsCompareEitherWay)
   {
-    bool should_be_false = is_less_Sum_exact_v<E1, E2>;
+    bool should_be_false = is_less_exact_v<E1, E2>;
     if (should_be_false)
     {
-      int value = (sum_order_v<E1> == sum_order_v<E2>) ? is_less_same_kind_exact<E1, E2>::value : -1;
+      int value = (expression_order_v<E1> == expression_order_v<E2>) ? is_less_same_kind_exact<E1, E2>::value : -1;
       Dout(dc::warning, "Expected \"" << NAMESPACE_DEBUG::type_name_of<E1>() <<
           "\" NOT to be less than \"" << NAMESPACE_DEBUG::type_name_of<E2>() << "\" when constants do not compare equal - value = " << value);
       fail = true;
     }
     //value = is_less_Sum<E2, E1, false>::value;
-    should_be_false = is_less_Sum_exact_v<E2, E1>;
+    should_be_false = is_less_exact_v<E2, E1>;
     if (should_be_false)
     {
-      int value = (sum_order_v<E1> == sum_order_v<E2>) ? is_less_same_kind_exact<E2, E1>::value : -1;
+      int value = (expression_order_v<E1> == expression_order_v<E2>) ? is_less_same_kind_exact<E2, E1>::value : -1;
       Dout(dc::warning, "Expected \"" << NAMESPACE_DEBUG::type_name_of<E2>() <<
           "\" NOT to be less than \"" << NAMESPACE_DEBUG::type_name_of<E1>() << "\" when constants do not compare equal - value = " << value);
       fail = true;
