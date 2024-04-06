@@ -160,6 +160,7 @@ int main()
   constexpr auto zero = constant<0>();
   constexpr auto one = constant<1>();
   constexpr auto two = constant<2>();
+  constexpr auto three = constant<3>();
   constexpr auto three_halfs = constant<3, 2>();
 
   constexpr auto a = make_symbol();
@@ -1081,4 +1082,8 @@ int main()
   compare_less<cos0, sum_c0>();
 
   compare_equal<sum_c0, sum_c0>();
+
+  TESTS(((x + y)^two) * (((x + y + a)^two) * ((x + y)^three)), "(a + x + y)^2 * (x + y)^5");
+//  TESTS(((constant<2>() * a)^constant<1, 2>()) * ((constant<4>() * a)^constant<3, 4>()), "4 * a^(5/4)");
+  TESTS(((constant<2>() * a)^constant<2>()) * ((constant<4>() * a)^constant<3>()), "256 * a^5");
 }

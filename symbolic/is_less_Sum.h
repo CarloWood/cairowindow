@@ -22,7 +22,8 @@ constexpr bool is_less_Sum_v = is_less_Sum<E1, E2>::value;
 
 // If both compared expressions are constant-free (not a Product or Multiplication that contains a constant factor),
 // then we might as well compare them using is_less_exact_v<> (the value of which we have as third parameter).
-// The exception is when both expressions are constants; we must never return true in that case.
+// The exception is when both expressions are constants; we must never return true in that case, because all
+// constants are considered equal at this level.
 template<Expression E1, Expression E2>
 requires (!(is_constant_v<E1> && is_constant_v<E2>))
 struct is_less_Sum<E1, E2, true> : TrueType<6> { };
