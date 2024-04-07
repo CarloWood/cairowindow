@@ -7,6 +7,7 @@
 #include "is_multiplication.h"
 #include "is_sin.h"
 #include "is_cos.h"
+#include "is_log.h"
 #include "is_less_Sum.h"
 #include "is_less_Product.h"
 #include "is_less_Multiplication.h"

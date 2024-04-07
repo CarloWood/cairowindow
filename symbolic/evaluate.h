@@ -46,6 +46,9 @@ double evaluate();
 template<CosType T>
 double evaluate();
 
+template<LogType T>
+double evaluate();
+
 //
 
 template<SumType T>
@@ -82,6 +85,12 @@ template<CosType T>
 double evaluate()
 {
   return std::cos(evaluate<typename T::arg_type>());
+}
+
+template<LogType T>
+double evaluate()
+{
+  return std::log(evaluate<typename T::arg_type>());
 }
 
 } // namespace symbolic

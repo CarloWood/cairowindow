@@ -1,13 +1,14 @@
 #pragma once
 
-#include "Expression.h"
-#include "is_constant.h"
+#include "is_multiplication.h"
 #include "is_symbol.h"
+#include "is_constant.h"
+#include "Expression.h"
 
 namespace symbolic {
 
 template<Expression Base, ConstantType Exponent>
-requires (!is_symbol_v<Base> && !is_constant_zero_v<Exponent> && !is_constant_one_v<Exponent>)
+requires (!is_symbol_v<Base> && !is_constant_zero_v<Exponent> && !is_constant_one_v<Exponent> && !is_multiplication_v<Base>)
 class Exponentiation;
 
 template<typename T>

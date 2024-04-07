@@ -10,7 +10,7 @@
 namespace symbolic {
 
 template<Expression Base, ConstantType Exponent>
-requires (!is_symbol_v<Base> && !is_constant_zero_v<Exponent> && !is_constant_one_v<Exponent>)
+requires (!is_symbol_v<Base> && !is_constant_zero_v<Exponent> && !is_constant_one_v<Exponent> && !is_multiplication_v<Base>)
 class Exponentiation : public ExpressionTag
 {
  public:

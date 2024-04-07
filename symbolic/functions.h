@@ -61,4 +61,32 @@ constexpr auto cos(E const&)
   return Cos<E>{};
 }
 
+template<Expression E>
+class Log : public ExpressionTag
+{
+ public:
+  using arg_type = E;
+
+  static constexpr precedence s_precedence = precedence::symbol;
+  static constexpr auto id_range = E::id_range;
+
+ public:
+  static constexpr Log instance() { return {}; }
+
+#ifdef SYMBOLIC_PRINTING
+  static void print_on(std::ostream& os)
+  {
+    os << "log(";
+    E::print_on(os);
+    os << ")";
+  }
+#endif
+};
+
+template<Expression E>
+constexpr auto log(E const&)
+{
+  return Log<E>{};
+}
+
 } // namespace symbolic

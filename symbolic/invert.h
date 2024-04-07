@@ -1,5 +1,6 @@
 #pragma once
 
+#include "is_multiplication.h"
 #include "negate.h"
 #include "is_less_Product.h"
 
@@ -8,7 +9,7 @@ namespace symbolic {
 // Forward declarations.
 
 template<Expression Base, ConstantType Exponent>
-requires (!is_symbol_v<Base> && !is_constant_zero_v<Exponent> && !is_constant_one_v<Exponent>)
+requires (!is_symbol_v<Base> && !is_constant_zero_v<Exponent> && !is_constant_one_v<Exponent> && !is_multiplication_v<Base>)
 class Exponentiation;
 
 // Define invert for all types.

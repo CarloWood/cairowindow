@@ -6,6 +6,7 @@
 #include "is_sum.h"
 #include "is_sin.h"
 #include "is_cos.h"
+#include "is_log.h"
 
 namespace symbolic {
 
@@ -15,7 +16,7 @@ namespace symbolic {
 //
 // Neverless, we use the following ordering:
 //
-//   Constant < Symbol < Power < Product < Exponentiation < Multiplication < Sin < Cos < Sum.
+//   Constant < Symbol < Power < Product < Exponentiation < Multiplication < Sin < Cos < Log < Sum.
 //
 // where we can assume that a Power and Exponentiation never have an exponent of 0 or 1
 // and the Product nor Multiplication begin with a constant (if they do, then the non-constant
@@ -35,6 +36,7 @@ namespace symbolic {
 //   6) two Multiplication's : first compared by first argument, then by second argument.
 //   7) two Sin : compared by argument.
 //   8) two Cos : compared by argument.
+//   9) two Log : compared by argument.
 //
 
 #if 0
@@ -81,6 +83,8 @@ struct expression_order
       return unary_op;                          // 01000
     else if constexpr (is_cos_v<E>)
       return unary_op | 1;                      // 01001
+    else if constexpr (is_log_v<E>)
+      return unary_op | 4;                      // 01100
     // Binary operators:
     else if constexpr (is_sum_v<E>)
       return binary_op | 16;                    // 10010

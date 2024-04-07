@@ -84,11 +84,11 @@ class add<Sum<E1, E2>, Sum<E3, E4>>
   static consteval auto eval()
   {
     if constexpr (is_less_Sum_v<E1, E3>)
-      return Sum<E1, add_t<E2, Sum<E3, E4>>>{};
+      return add_t<E1, add_t<E2, Sum<E3, E4>>>::instance();
     else if constexpr (is_less_Sum_v<E3, E1>)
-      return Sum<E3, add_t<Sum<E1, E2>, E4>>{};
+      return add_t<E3, add_t<Sum<E1, E2>, E4>>::instance();
     else
-      return add_t<add_t<add_equals_t<E1, E3>, E2>, E4>{};
+      return add_t<add_t<add_equals_t<E1, E3>, E2>, E4>::instance();
   }
 
  public:

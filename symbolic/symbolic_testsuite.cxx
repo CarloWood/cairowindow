@@ -929,9 +929,10 @@ int main()
   using product_c0 = Product<constant_m1, symbol0>;
   using sin0 = Sin<symbol0>;
   using multiplication_cS0 = Multiplication<constant_m1, sin0>;
-  using exponentiation = Exponentiation<multiplication_cS0, constant_m1>;
   using cos0 = Cos<symbol0>;
   using sum_c0 = Sum<constant_m1, symbol0>;
+  using sum_c1 = Sum<constant_m1, symbol1>;
+  using exponentiation = Exponentiation<sum_c0, constant_m1>;
 
   // A constant compares less than anything else.
   compare_less<constant_m1, symbol0>();
@@ -1041,9 +1042,9 @@ int main()
 
   using multiplication_cS1 = Multiplication<constant_m1, sin1>;
 
-  //using exponentiation = Exponentiation<multiplication_cS0, constant_m1>;
-  using exponentiation0b = Exponentiation<multiplication_cS0, constant2>;
-  using exponentiation1 = Exponentiation<multiplication_cS1, constant_m1>;
+  //using exponentiation = Exponentiation<sum_c0, constant_m1>;
+  using exponentiation0b = Exponentiation<sum_c0, constant2>;
+  using exponentiation1 = Exponentiation<sum_c1, constant_m1>;
 
   // An Exponentiation compares less than anything "larger than" an Exponentiation.
   // It compares less than another Exponentiation if either the base is less, or

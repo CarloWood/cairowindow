@@ -2,15 +2,9 @@
 
 #include "BezierCurve.h"
 #include "symbolic/symbolic.h"
-#ifdef CWDEBUG
-#include "utils/has_print_on.h"
-#endif
 
 namespace cairowindow::autodiff {
 using namespace symbolic;
-#ifdef CWDEBUG
-//using utils::has_print_on::operator<<;
-#endif
 
 class QuadraticArcLength : public BezierCurve
 {
@@ -52,7 +46,6 @@ class QuadraticArcLength : public BezierCurve
   static constexpr auto z_ = []() constexpr {
     return v0x_ * A0x_ + v0y_ * A0y_;
   }();
- public:
   static constexpr auto s_ = []() constexpr {
     return (v02_ + constant<2>() * z_ + a02_) ^ constant<1, 2>();
   }();
@@ -61,6 +54,27 @@ class QuadraticArcLength : public BezierCurve
   }();
   static constexpr auto za0pa03s_ = []() constexpr {
     return (z_ * a0_ + a03_) * s_;
+  }();
+  static constexpr auto za0v0_ = []() constexpr {
+    return z_ * a0_ * v0_;
+  }();
+  static constexpr auto v02a02mz2_ = []() constexpr {
+    return v02_ * a02_ - utils::square(z_);
+  }();
+  static constexpr auto zpa02pa0s_ = []() constexpr {
+    return z_ + a02_ + a0_ * s_;
+  }();
+  static constexpr auto zpv0a0_ = []() constexpr {
+    return z_ + v0_ * a0_;
+  }();
+  static constexpr auto the_log_ = []() constexpr {
+    return log(zpa02pa0s_ / zpv0a0_);
+  }();
+  static constexpr auto the_enumerator_ = []() constexpr {
+    return za0pa03s_ - za0v0_ + v02a02mz2_ * the_log_;
+  }();
+  static constexpr auto quadratic_arc_length_ = []() constexpr {
+    return the_enumerator_ / (constant<2>() * a03_);
   }();
 
  public:
@@ -81,29 +95,7 @@ class QuadraticArcLength : public BezierCurve
     v1qa_.register_name("alpha1");
   }
 
-  void test();
-
  public:
-  double test_v0qa_;
-  double test_v1qa_;
-
-  // Functions that returning intermediate values used to calculate quadratic_arc_length().
-  double v02();
-  double A0x();
-  double A0y();
-  double a02();
-  double v0();
-  double a0();
-  double z();
-  double s();
-  double a03();
-  double za0pa03s();
-  double za0v0();
-  double v02a02mz2();
-  double zpa02pa0s();
-  double zpv0a0();
-  double the_log();
-  double the_enumerator();
   double quadratic_arc_length(double v0qa, double v1qa);
 };
 
