@@ -49,6 +49,9 @@ double evaluate();
 template<LogType T>
 double evaluate();
 
+template<AtanType T>
+double evaluate();
+
 //
 
 template<SumType T>
@@ -91,6 +94,12 @@ template<LogType T>
 double evaluate()
 {
   return std::log(evaluate<typename T::arg_type>());
+}
+
+template<AtanType T>
+double evaluate()
+{
+  return std::atan(evaluate<typename T::arg_type>());
 }
 
 } // namespace symbolic

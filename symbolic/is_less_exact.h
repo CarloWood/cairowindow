@@ -7,6 +7,7 @@
 #include "is_sin.h"
 #include "is_cos.h"
 #include "is_log.h"
+#include "is_atan.h"
 
 namespace symbolic {
 
@@ -85,6 +86,8 @@ struct expression_order
       return unary_op | 1;                      // 01001
     else if constexpr (is_log_v<E>)
       return unary_op | 4;                      // 01100
+    else if constexpr (is_atan_v<E>)
+      return unary_op | 5;                      // 01101
     // Binary operators:
     else if constexpr (is_sum_v<E>)
       return binary_op | 16;                    // 10010

@@ -89,4 +89,32 @@ constexpr auto log(E const&)
   return Log<E>{};
 }
 
+template<Expression E>
+class Atan : public ExpressionTag
+{
+ public:
+  using arg_type = E;
+
+  static constexpr precedence s_precedence = precedence::symbol;
+  static constexpr auto id_range = E::id_range;
+
+ public:
+  static constexpr Atan instance() { return {}; }
+
+#ifdef SYMBOLIC_PRINTING
+  static void print_on(std::ostream& os)
+  {
+    os << "atan(";
+    E::print_on(os);
+    os << ")";
+  }
+#endif
+};
+
+template<Expression E>
+constexpr auto atan(E const&)
+{
+  return Atan<E>{};
+}
+
 } // namespace symbolic
