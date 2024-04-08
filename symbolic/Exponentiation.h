@@ -3,14 +3,14 @@
 #include "Expression.h"
 #include "precedence.h"
 #include "is_constant.h"
-#include "is_symbol.h"
+#include "is_product.h"
 #include "get_exponent.h"
 #include "get_base.h"
 
 namespace symbolic {
 
 template<Expression Base, ConstantType Exponent>
-requires (!is_symbol_v<Base> && !is_constant_zero_v<Exponent> && !is_constant_one_v<Exponent> && !is_multiplication_v<Base>)
+requires (!ProductLevelType<Base> && !is_constant_zero_v<Exponent> && !is_constant_one_v<Exponent> && !is_multiplication_v<Base>)
 class Exponentiation : public ExpressionTag
 {
  public:

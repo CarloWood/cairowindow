@@ -84,7 +84,7 @@ target_sources(cairowindow_ObjLib
     "Plot.cxx"
     "BezierFitter.cxx"
     "BezierCurve.cxx"
-    "QuadraticArcLength.cxx"
+    "QuadraticEnergy.cxx"
     "draw/PlotArea.cxx"
     "draw/Grid.cxx"
     "draw/Shape.cxx"

@@ -6,7 +6,7 @@
 namespace cairowindow::autodiff {
 using namespace symbolic;
 
-class QuadraticArcLength : public BezierCurve
+class QuadraticEnergy : public BezierCurve
 {
  private:
   static constexpr auto Q1x_ = make_symbol();
@@ -73,12 +73,15 @@ class QuadraticArcLength : public BezierCurve
   static constexpr auto the_enumerator_ = []() constexpr {
     return za0pa03s_ - za0v0_ + v02a02mz2_ * the_log_;
   }();
-  static constexpr auto quadratic_arc_length_ = []() constexpr {
+  static constexpr auto arc_length_ = []() constexpr {
     return the_enumerator_ / (constant<2>() * a03_);
+  }();
+  static constexpr auto stretching_energy_ = []() constexpr {
+    return utils::square(arc_length_);
   }();
 
  public:
-  QuadraticArcLength(BezierCurve const orig) : BezierCurve(orig)
+  QuadraticEnergy(BezierCurve const orig) : BezierCurve(orig)
   {
     Q1x_.register_name("Q1x");
     Q1y_.register_name("Q1y");
@@ -96,7 +99,8 @@ class QuadraticArcLength : public BezierCurve
   }
 
  public:
-  double quadratic_arc_length(double v0qa, double v1qa);
+  double arc_length(double v0qa, double v1qa);
+  double stretching_energy(double v0qa, double v1qa);
 };
 
 } // namespace cairowindow::autodiff

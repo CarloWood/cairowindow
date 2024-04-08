@@ -1,6 +1,8 @@
 #include <iostream>
 #include <vector>
 #include <array>
+#include <fstream>
+#include <cassert>
 
 std::string get_trailing_alpha(std::string const& text)
 {
@@ -15,9 +17,10 @@ class Decoder
  private:
   std::string substring;
 
-  std::array<std::string, 200> a;
+  std::array<std::string, 1000> a;
   int depth_ = 0;
   int print_no_new_lines = 0;
+  bool consume_spaces = false;
 
  public:
   int depth() const { return depth_; }
@@ -25,7 +28,10 @@ class Decoder
  public:
   void add_char(char c)
   {
+    if (consume_spaces && c == ' ')
+      return;
     substring += c;
+    consume_spaces = false;
   }
 
   void add_substring()
@@ -47,23 +53,27 @@ class Decoder
     else if (!print_no_new_lines)
     {
       std::cout << '\n';
+      consume_spaces = true;
       for (int i = 0; i <= depth_; ++i)
         std::cout << "  ";
     }
     else
       ++print_no_new_lines;
     ++depth_;
+    assert(depth_ < a.size());
   }
 
   void close()
   {
     add_substring();
+    assert(depth_ > 0);
     --depth_;
     if (print_no_new_lines)
       --print_no_new_lines;
     else
     {
       std::cout << '\n';
+      consume_spaces = true;
       for (int i = 0; i < depth_; ++i)
         std::cout << "  ";
     }
@@ -80,6 +90,7 @@ class Decoder
       if (!print_no_new_lines)
       {
         std::cout << ",\n";
+        consume_spaces = true;
         for (int i = 0; i < depth_; ++i)
           std::cout << "  ";
       }
@@ -98,10 +109,19 @@ class Decoder
 int main()
 {
   Decoder decoder;
+  std::ifstream file("troep");
 
   std::string line;
-  while (std::getline(std::cin, line))
+  while (std::getline(file, line))
   {
+    if (!line.empty() && *line.rbegin() == '\r')
+      line.erase(line.end() - 1);
+    if (line.rfind("cairowindow", 0) != 0)
+    {
+      decoder.add_substring();
+      std::cout << line << '\n';
+      continue;
+    }
     for (char c : line)
     {
       if (c == '<')

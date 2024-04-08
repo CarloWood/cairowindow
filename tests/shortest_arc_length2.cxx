@@ -3,7 +3,7 @@
 #include "cairowindow/Layer.h"
 #include "cairowindow/Plot.h"
 #include "cairowindow/Matrix.h"
-#include "cairowindow/QuadraticArcLength.h"
+#include "cairowindow/QuadraticEnergy.h"
 #include "cairowindow/draw/Shape.h"
 #include "cairowindow/draw/Line.h"
 #include "cairowindow/draw/Point.h"
@@ -216,7 +216,7 @@ int main()
 
           total_energy = qbc01.quadratic_stretching_energy() + bending_weight * qbc01.quadratic_bending_energy();
         }
-        autodiff::QuadraticArcLength arc_length(qbc01);
+        autodiff::QuadraticEnergy arc_length(qbc01);
         Dout(dc::notice, "Arc length (old) = " << qbc01.quadratic_arc_length());
         Dout(dc::notice, "Arc length (new) = " << arc_length.quadratic_arc_length(arc01_0, arc01_1));
       }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "exponentiate.h"
 #include "expression_traits.h"
 #include "Product.h"
 #include "get_exponent.h"
@@ -323,6 +324,8 @@ struct make_exponentiation
         return Base::instance();
       else if constexpr (is_symbol_v<Base>)
         return Power<Base, NewExponent>::instance();
+      else if constexpr (is_product_v<Base>)
+        return Product<exponentiate_t<typename Base::arg1_type, NewExponent>, exponentiate_t<typename Base::arg2_type, NewExponent>>::instance();
       else
         return Exponentiation<Base, NewExponent>::instance();
     }
