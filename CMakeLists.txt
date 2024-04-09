@@ -140,6 +140,7 @@ target_link_libraries(cairowindow_ObjLib
 add_library(AICxx::cairowindow ALIAS cairowindow_ObjLib)
 
 add_subdirectory(symbolic)
+add_subdirectory(symbolic2)
 
 if (OptionEnableCairoWindowTests)
 add_subdirectory(tests)

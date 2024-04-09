@@ -3,6 +3,7 @@
 #include <sstream>
 #include "debug.h"
 #include <cassert>
+#include "utils/square.h"
 
 #define TESTS(x, y) TEST(#x, x, y)
 
@@ -1087,4 +1088,19 @@ int main()
   TESTS(((x + y)^two) * (((x + y + a)^two) * ((x + y)^three)), "(a + x + y)^2 * (x + y)^5");
 //  TESTS(((constant<2>() * a)^constant<1, 2>()) * ((constant<4>() * a)^constant<3, 4>()), "4 * a^(5/4)");
   TESTS(((constant<2>() * a)^constant<2>()) * ((constant<4>() * a)^constant<3>()), "256 * a^5");
+
+  static constexpr auto v0_div_q1_ = [&]() constexpr {
+    return constant<2>() * sin(y) / sin(y - x);
+  }();
+  static constexpr auto v0x_ = [&]() constexpr {
+    return v0_div_q1_ * (cos(x) * c + sin(x) * a);
+  }();
+  static constexpr auto v0y_ = [&]() constexpr {
+    return v0_div_q1_ * (cos(x) * d + sin(x) * b);
+  }();
+  static constexpr auto v02_ = [&]() constexpr {
+    return utils::square(v0x_) + utils::square(v0y_);
+  }();
+
+  Dout(dc::notice, v02_);
 }

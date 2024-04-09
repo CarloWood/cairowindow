@@ -1,0 +1,11 @@
+#pragma once
+
+namespace config {
+
+// SYMBOLIC2_PRINTING
+//
+// Allow printing symbolic objects (Constant, Symbol, Negation, Product, ...) to a std::ostream.
+
+#cmakedefine SYMBOLIC2_PRINTING 1
+
+} // namespace config

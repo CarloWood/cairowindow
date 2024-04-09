@@ -13,11 +13,13 @@ double QuadraticEnergy::arc_length(double v0qa, double v1qa)
   return evaluate(arc_length_);
 }
 
+#if 0
 double QuadraticEnergy::stretching_energy(double v0qa, double v1qa)
 {
   v0qa_ = v0qa;
   v1qa_ = v1qa;
   return evaluate(stretching_energy_);
 }
+#endif
 
 } // namespace cairowindow::autodiff

@@ -76,9 +76,11 @@ class QuadraticEnergy : public BezierCurve
   static constexpr auto arc_length_ = []() constexpr {
     return the_enumerator_ / (constant<2>() * a03_);
   }();
+#if 0
   static constexpr auto stretching_energy_ = []() constexpr {
     return utils::square(arc_length_);
   }();
+#endif
 
  public:
   QuadraticEnergy(BezierCurve const orig) : BezierCurve(orig)
@@ -100,7 +102,7 @@ class QuadraticEnergy : public BezierCurve
 
  public:
   double arc_length(double v0qa, double v1qa);
-  double stretching_energy(double v0qa, double v1qa);
+//  double stretching_energy(double v0qa, double v1qa);
 };
 
 } // namespace cairowindow::autodiff

@@ -218,7 +218,7 @@ int main()
         }
         autodiff::QuadraticEnergy arc_length(qbc01);
         Dout(dc::notice, "Arc length (old) = " << qbc01.quadratic_arc_length());
-        Dout(dc::notice, "Arc length (new) = " << arc_length.quadratic_arc_length(arc01_0, arc01_1));
+        Dout(dc::notice, "Arc length (new) = " << arc_length.arc_length(arc01_0, arc01_1));
       }
 
       Vector Q2 = plot_P2 - plot_P1;
