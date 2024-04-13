@@ -3,9 +3,6 @@
 
 namespace symbolic2 {
 
-Expression const& Constant::s_cached_zero = get<Constant>(0);
-Expression const& Constant::s_cached_one= get<Constant>(1);
-
 bool Constant::equals(Expression const& other) const
 {
   Constant const* other_constant = dynamic_cast<Constant const*>(&other);

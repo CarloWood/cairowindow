@@ -13,13 +13,14 @@ class Symbol;
 class Constant : public Expression
 {
  public:
-  static Expression const& s_cached_zero;
-  static Expression const& s_cached_one;
+  static Constant const& s_cached_zero;
+  static Constant const& s_cached_one;
+  static Constant const& s_cached_minus_one;
+
+  int const enumerator_;
+  int const denominator_;
 
  private:
-  int enumerator_;
-  int denominator_;
-
   mutable uint64_t cached_hash_ = 0;
 
  private:
@@ -39,9 +40,21 @@ class Constant : public Expression
   template<std::intmax_t Num, std::intmax_t Denom>
   Constant(std::ratio<Num, Denom>);
 
+  Precedence precedence() const override final { return denominator_ != 1 ? Precedence::ratio : enumerator_ < 0 ? Precedence::negation : Precedence::constant; }
+
  public:
   static Constant const& realize(int n) { return static_cast<Constant const&>(get<Constant>(n)); }
   static Constant const& realize(int e, int d) { return static_cast<Constant const&>(get<Constant>(e, d)); }
+
+  static bool is_zero(Expression const& arg) { return &arg == &s_cached_zero; }
+  static bool is_one(Expression const& arg) { return &arg == &s_cached_one; }
+  static bool is_minus_one(Expression const& arg) { return &arg == &s_cached_minus_one; }
+
+  bool is_negative() const { return enumerator_ < 0; }
+
+  ExpressionType type() const override final { return constantT; }
+
+  static bool is_constant(Expression const& arg) { return arg.type() == constantT; }
 
   uint64_t hash() const override
   {
@@ -65,6 +78,18 @@ class Constant : public Expression
   Expression const& differentiate(Symbol const&) const override
   {
     return s_cached_zero;
+  }
+
+  bool operator<(Constant const& other) const { return enumerator_ * other.denominator_ < other.enumerator_ * denominator_; }
+
+  friend Constant const& operator+(Constant const& arg1, Constant const& arg2)
+  {
+    return realize(arg1.enumerator_ * arg2.denominator_ + arg2.enumerator_ * arg1.denominator_, arg1.denominator_ * arg2.denominator_);
+  }
+
+  friend Constant const& operator*(Constant const& arg1, Constant const& arg2)
+  {
+    return realize(arg1.enumerator_ * arg2.enumerator_, arg1.denominator_ * arg2.denominator_);
   }
 
 #ifdef SYMBOLIC2_PRINTING
