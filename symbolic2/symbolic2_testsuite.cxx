@@ -7,6 +7,40 @@
 
 using namespace symbolic2;
 
+void test_print(char const* what, Expression const& expression, std::string expect_string, int line)
+{
+#ifdef SYMBOLIC2_PRINTING
+  std::ostringstream result;
+  result << expression;
+#ifdef CWDEBUG
+  Dout(dc::notice, what << " = " << result.str());
+  if (result.str() != expect_string)
+  {
+    DoutFatal(dc::core, "symbolic2_testsuite.cxx:" << line << ": expected \"" << expect_string << "\" got \"" << result.str() << "\".");
+  }
+#else
+  std::cout << what << " = " << result.str() << std::endl;
+  assert(result.str() == expect_string);
+#endif
+#endif  // SYMBOLIC2_PRINTING
+}
+
+void test_same_expression(Expression const& expression, Expression const& expect, int line)
+{
+  if (&expression != &expect)
+  {
+    DoutFatal(dc::core, "symbolic2_testsuite.cxx:" << line << ": expected \"" << expression << "\" and \"" << expect << "\" to be the same expression.");
+  }
+}
+
+#define TEST(what, expression, expect_string) \
+  test_print((what), (expression), (expect_string), __LINE__)
+
+#define TESTT(expression, expect) \
+  test_same_expression((expression), (expect), __LINE__)
+
+#define TESTS(x, y) TEST(#x, x, y)
+
 void test_differentiate(Expression const& expression, Symbol const& symbol)
 {
   Dout(dc::notice, "∂/∂" << symbol << " (" << expression << ") = " << expression.differentiate(symbol));
@@ -16,9 +50,594 @@ int main()
 {
   Debug(NAMESPACE_DEBUG::init());
 
+  Constant const& zero = Constant::realize(0);
+  Constant const& one = Constant::realize(1);
   Constant const& two = Constant::realize(2);
+  Constant const& three = Constant::realize(3);
+  Constant const& three_halfs = Constant::realize(3, 2);
+
+  Symbol const& a = Symbol::realize("a");
+  Symbol const& b = Symbol::realize("b");
+  Symbol const& c = Symbol::realize("c");
+  Symbol const& d = Symbol::realize("d");
+  Symbol const& e = Symbol::realize("e");
+  Symbol const& f = Symbol::realize("f");
+  Symbol const& g = Symbol::realize("g");
+  Symbol const& h = Symbol::realize("h");
+
+  Symbol const& v = Symbol::realize("v");
+  Symbol const& w = Symbol::realize("w");
   Symbol const& x = Symbol::realize("x");
   Symbol const& y = Symbol::realize("y");
+  Symbol const& z = Symbol::realize("z");
+
+  // Constant creation.
+  auto constant = [](int e, int d = 1){ return Constant::realize(e, d); };
+
+#if 0
+  TEST("42 / 1", constant(42, 1), "42");
+  TEST("-42 / 1", constant(-42, 1), "-42");
+  TEST("42 / -1", constant(42, -1), "-42");
+  TEST("369 / 3", constant(369, 3), "123");
+  TEST("-369 / -3", constant(-369, -3), "123");
+  TEST("(2 * 3 * 7 * 13 / (2 * 7 * 11 * 17)", constant(2 * 3 * 7 * 13, 2 * 7 * 11 * 17), "39/187");
+
+  // Constant negation.
+  TEST("-(13/42)", -constant(13, 42), "-13/42");
+  TEST("-(-13/42)", -constant(-13, 42), "13/42");
+
+  Constant const& A = constant(2, 3 * 7);
+  Constant const& B = constant(-5, 7 * 11);
+  Constant const& C = constant(5, 7 * 11);
+
+  // Addition of two Constant's.
+  TEST("A(2/21) + B(-5/77)", A + B, "1/33");
+
+  // Subtraction of two Constant's.
+  TEST("A(2/21) - B(-5/77)", A - B, "37/231");
+  TEST("A(2/21) - C(5/77)", A - C, "1/33");
+
+  // Multiplication of two Constant's.
+  TEST("A(2/21) * B(-5/77)", A * B, "-10/1617");
+
+  // Division of two Constant's.
+  TEST("A(2/21) / B(-5/77)", A / B, "-22/15");
+
+  Constant const& C2 = constant(2);
+  Constant const& C29 = constant(29);
+
+  // Exponentiation of a Constant.
+  TEST("B(-5/77) ^ 3", B^3, "-125/456533");
+  TEST("C2(2) ^ C29(29)", C2^C29, "536870912");
+
+  // Negation of a Constant.
+  TEST("-B(-5/77)", -B, "5/77");
+
+  // Negation of a Symbol.
+  TEST("-x", -x, "-x");
+  // Negation of a Negation.
+  TEST("-(-x)", -(-x), "x");
+
+  // Negation tests involving products.
+
+  auto& minus_x = -x;
+  TESTT(-x, minus_x);
+  TESTT(-minus_x, x);
+
+  auto& x_times_y = x * y;
+  auto& minus__x_times_y = minus_x * y;
+  auto& minus_y = -y;
+  TESTT(x * minus_y, minus__x_times_y);
+
+  // Multiplication of a symbol and a constant.
+  TESTS(x * zero, "0");
+  TESTS(zero * x, "0");
+  TESTS(x * one, "x");
+  TESTS(one * x, "x");
+  TESTS((x^three_halfs) * zero, "0");
+  TESTS(zero * (x^three_halfs), "0");
+  TESTS((x^three_halfs) * one, "x^(3/2)");
+  TESTS(one * (x^three_halfs), "x^(3/2)");
+
+  // Multiplication of two symbols.
+  TESTS(x * y, "x * y");
+  TESTS(y * x, "x * y");
+  TESTS(x * x, "x^2");
+
+  // Multiplication of three symbols.
+  char const* expected3 = "x * y * z";
+  TESTS((x * y) * z, expected3);
+  TESTS((x * z) * y, expected3);
+  TESTS((y * x) * z, expected3);
+  TESTS((y * z) * x, expected3);
+  TESTS((z * x) * y, expected3);
+  TESTS((z * y) * x, expected3);
+  TESTS(x * (y * z), expected3);
+  TESTS(x * (z * y), expected3);
+  TESTS(y * (x * z), expected3);
+  TESTS(y * (z * x), expected3);
+  TESTS(z * (x * y), expected3);
+  TESTS(z * (y * x), expected3);
+
+  // Multiplication of four symbols.
+  char const* expected4 = "w * x * y * z";
+  TESTS(((w * x) * y) * z, expected4);
+  TESTS((w * x) * (y * z), expected4);
+  TESTS((w * (x * y)) * z, expected4);
+  TESTS(w * ((x * y) * z), expected4);
+  TESTS(w * (x * (y * z)), expected4);
+  TESTS(((w * x) * z) * y, expected4);
+  TESTS((w * x) * (z * y), expected4);
+  TESTS((w * (x * z)) * y, expected4);
+  TESTS(w * ((x * z) * y), expected4);
+  TESTS(w * (x * (z * y)), expected4);
+  TESTS(((w * y) * x) * z, expected4);
+  TESTS((w * y) * (x * z), expected4);
+  TESTS((w * (y * x)) * z, expected4);
+  TESTS(w * ((y * x) * z), expected4);
+  TESTS(w * (y * (x * z)), expected4);
+  TESTS(((w * y) * z) * x, expected4);
+  TESTS((w * y) * (z * x), expected4);
+  TESTS((w * (y * z)) * x, expected4);
+  TESTS(w * ((y * z) * x), expected4);
+  TESTS(w * (y * (z * x)), expected4);
+  TESTS(((w * z) * x) * y, expected4);
+  TESTS((w * z) * (x * y), expected4);
+  TESTS((w * (z * x)) * y, expected4);
+  TESTS(w * ((z * x) * y), expected4);
+  TESTS(w * (z * (x * y)), expected4);
+  TESTS(((w * z) * y) * x, expected4);
+  TESTS((w * z) * (y * x), expected4);
+  TESTS((w * (z * y)) * x, expected4);
+  TESTS(w * ((z * y) * x), expected4);
+  TESTS(w * (z * (y * x)), expected4);
+  TESTS(((x * w) * y) * z, expected4);
+  TESTS((x * w) * (y * z), expected4);
+  TESTS((x * (w * y)) * z, expected4);
+  TESTS(x * ((w * y) * z), expected4);
+  TESTS(x * (w * (y * z)), expected4);
+  TESTS(((x * w) * z) * y, expected4);
+  TESTS((x * w) * (z * y), expected4);
+  TESTS((x * (w * z)) * y, expected4);
+  TESTS(x * ((w * z) * y), expected4);
+  TESTS(x * (w * (z * y)), expected4);
+  TESTS(((x * y) * w) * z, expected4);
+  TESTS((x * y) * (w * z), expected4);
+  TESTS((x * (y * w)) * z, expected4);
+  TESTS(x * ((y * w) * z), expected4);
+  TESTS(x * (y * (w * z)), expected4);
+  TESTS(((x * y) * z) * w, expected4);
+  TESTS((x * y) * (z * w), expected4);
+  TESTS((x * (y * z)) * w, expected4);
+  TESTS(x * ((y * z) * w), expected4);
+  TESTS(x * (y * (z * w)), expected4);
+  TESTS(((x * z) * w) * y, expected4);
+  TESTS((x * z) * (w * y), expected4);
+  TESTS((x * (z * w)) * y, expected4);
+  TESTS(x * ((z * w) * y), expected4);
+  TESTS(x * (z * (w * y)), expected4);
+  TESTS(((x * z) * y) * w, expected4);
+  TESTS((x * z) * (y * w), expected4);
+  TESTS((x * (z * y)) * w, expected4);
+  TESTS(x * ((z * y) * w), expected4);
+  TESTS(x * (z * (y * w)), expected4);
+  TESTS(((y * w) * x) * z, expected4);
+  TESTS((y * w) * (x * z), expected4);
+  TESTS((y * (w * x)) * z, expected4);
+  TESTS(y * ((w * x) * z), expected4);
+  TESTS(y * (w * (x * z)), expected4);
+  TESTS(((y * w) * z) * x, expected4);
+  TESTS((y * w) * (z * x), expected4);
+  TESTS((y * (w * z)) * x, expected4);
+  TESTS(y * ((w * z) * x), expected4);
+  TESTS(y * (w * (z * x)), expected4);
+  TESTS(((y * x) * w) * z, expected4);
+  TESTS((y * x) * (w * z), expected4);
+  TESTS((y * (x * w)) * z, expected4);
+  TESTS(y * ((x * w) * z), expected4);
+  TESTS(y * (x * (w * z)), expected4);
+  TESTS(((y * x) * z) * w, expected4);
+  TESTS((y * x) * (z * w), expected4);
+  TESTS((y * (x * z)) * w, expected4);
+  TESTS(y * ((x * z) * w), expected4);
+  TESTS(y * (x * (z * w)), expected4);
+  TESTS(((y * z) * w) * x, expected4);
+  TESTS((y * z) * (w * x), expected4);
+  TESTS((y * (z * w)) * x, expected4);
+  TESTS(y * ((z * w) * x), expected4);
+  TESTS(y * (z * (w * x)), expected4);
+  TESTS(((y * z) * x) * w, expected4);
+  TESTS((y * z) * (x * w), expected4);
+  TESTS((y * (z * x)) * w, expected4);
+  TESTS(y * ((z * x) * w), expected4);
+  TESTS(y * (z * (x * w)), expected4);
+  TESTS(((z * w) * x) * y, expected4);
+  TESTS((z * w) * (x * y), expected4);
+  TESTS((z * (w * x)) * y, expected4);
+  TESTS(z * ((w * x) * y), expected4);
+  TESTS(z * (w * (x * y)), expected4);
+  TESTS(((z * w) * y) * x, expected4);
+  TESTS((z * w) * (y * x), expected4);
+  TESTS((z * (w * y)) * x, expected4);
+  TESTS(z * ((w * y) * x), expected4);
+  TESTS(z * (w * (y * x)), expected4);
+  TESTS(((z * x) * w) * y, expected4);
+  TESTS((z * x) * (w * y), expected4);
+  TESTS((z * (x * w)) * y, expected4);
+  TESTS(z * ((x * w) * y), expected4);
+  TESTS(z * (x * (w * y)), expected4);
+  TESTS(((z * x) * y) * w, expected4);
+  TESTS((z * x) * (y * w), expected4);
+  TESTS((z * (x * y)) * w, expected4);
+  TESTS(z * ((x * y) * w), expected4);
+  TESTS(z * (x * (y * w)), expected4);
+  TESTS(((z * y) * w) * x, expected4);
+  TESTS((z * y) * (w * x), expected4);
+  TESTS((z * (y * w)) * x, expected4);
+  TESTS(z * ((y * w) * x), expected4);
+  TESTS(z * (y * (w * x)), expected4);
+  TESTS(((z * y) * x) * w, expected4);
+  TESTS((z * y) * (x * w), expected4);
+  TESTS((z * (y * x)) * w, expected4);
+  TESTS(z * ((y * x) * w), expected4);
+  TESTS(z * (y * (x * w)), expected4);
+
+  // Test sorting of 8 symbols during multiplication.
+  Expression const& expected8 = a * (b * (c * (d * (e * (f * (g * h))))));
+  TESTT(a * (b * c * d * e * f * g * h), expected8);
+  TESTT(b * (a * c * d * e * f * g * h), expected8);
+  TESTT(c * (a * b * d * e * f * g * h), expected8);
+  TESTT(d * (a * b * c * e * f * g * h), expected8);
+  TESTT(e * (a * b * c * d * f * g * h), expected8);
+  TESTT(f * (a * b * c * d * e * g * h), expected8);
+  TESTT(g * (a * b * c * d * e * f * h), expected8);
+  TESTT(h * (a * b * c * d * e * f * g), expected8);
+  TESTT((a * b) * (c * d * e * f * g * h), expected8);
+  TESTT((a * c) * (b * d * e * f * g * h), expected8);
+  TESTT((a * d) * (b * c * e * f * g * h), expected8);
+  TESTT((a * e) * (b * c * d * f * g * h), expected8);
+  TESTT((a * f) * (b * c * d * e * g * h), expected8);
+  TESTT((a * g) * (b * c * d * e * f * h), expected8);
+  TESTT((a * h) * (b * c * d * e * f * g), expected8);
+  TESTT((b * c) * (a * d * e * f * g * h), expected8);
+  TESTT((b * d) * (a * c * e * f * g * h), expected8);
+  TESTT((b * e) * (a * c * d * f * g * h), expected8);
+  TESTT((b * f) * (a * c * d * e * g * h), expected8);
+  TESTT((b * g) * (a * c * d * e * f * h), expected8);
+  TESTT((b * h) * (a * c * d * e * f * g), expected8);
+  TESTT((c * d) * (a * b * e * f * g * h), expected8);
+  TESTT((c * e) * (a * b * d * f * g * h), expected8);
+  TESTT((c * f) * (a * b * d * e * g * h), expected8);
+  TESTT((c * g) * (a * b * d * e * f * h), expected8);
+  TESTT((c * h) * (a * b * d * e * f * g), expected8);
+  TESTT((d * e) * (a * b * c * f * g * h), expected8);
+  TESTT((d * f) * (a * b * c * e * g * h), expected8);
+  TESTT((d * g) * (a * b * c * e * f * h), expected8);
+  TESTT((d * h) * (a * b * c * e * f * g), expected8);
+  TESTT((e * f) * (a * b * c * d * g * h), expected8);
+  TESTT((e * g) * (a * b * c * d * f * h), expected8);
+  TESTT((e * h) * (a * b * c * d * f * g), expected8);
+  TESTT((f * g) * (a * b * c * d * e * h), expected8);
+  TESTT((f * h) * (a * b * c * d * e * g), expected8);
+  TESTT((g * h) * (a * b * c * d * e * f), expected8);
+  TESTT((a * b * c) * (d * e * f * g * h), expected8);
+  TESTT((a * b * d) * (c * e * f * g * h), expected8);
+  TESTT((a * b * e) * (c * d * f * g * h), expected8);
+  TESTT((a * b * f) * (c * d * e * g * h), expected8);
+  TESTT((a * b * g) * (c * d * e * f * h), expected8);
+  TESTT((a * b * h) * (c * d * e * f * g), expected8);
+  TESTT((a * c * d) * (b * e * f * g * h), expected8);
+  TESTT((a * c * e) * (b * d * f * g * h), expected8);
+  TESTT((a * c * f) * (b * d * e * g * h), expected8);
+  TESTT((a * c * g) * (b * d * e * f * h), expected8);
+  TESTT((a * c * h) * (b * d * e * f * g), expected8);
+  TESTT((a * d * e) * (b * c * f * g * h), expected8);
+  TESTT((a * d * f) * (b * c * e * g * h), expected8);
+  TESTT((a * d * g) * (b * c * e * f * h), expected8);
+  TESTT((a * d * h) * (b * c * e * f * g), expected8);
+  TESTT((a * e * f) * (b * c * d * g * h), expected8);
+  TESTT((a * e * g) * (b * c * d * f * h), expected8);
+  TESTT((a * e * h) * (b * c * d * f * g), expected8);
+  TESTT((a * f * g) * (b * c * d * e * h), expected8);
+  TESTT((a * f * h) * (b * c * d * e * g), expected8);
+  TESTT((a * g * h) * (b * c * d * e * f), expected8);
+  TESTT((b * c * d) * (a * e * f * g * h), expected8);
+  TESTT((b * c * e) * (a * d * f * g * h), expected8);
+  TESTT((b * c * f) * (a * d * e * g * h), expected8);
+  TESTT((b * c * g) * (a * d * e * f * h), expected8);
+  TESTT((b * c * h) * (a * d * e * f * g), expected8);
+  TESTT((b * d * e) * (a * c * f * g * h), expected8);
+  TESTT((b * d * f) * (a * c * e * g * h), expected8);
+  TESTT((b * d * g) * (a * c * e * f * h), expected8);
+  TESTT((b * d * h) * (a * c * e * f * g), expected8);
+  TESTT((b * e * f) * (a * c * d * g * h), expected8);
+  TESTT((b * e * g) * (a * c * d * f * h), expected8);
+  TESTT((b * e * h) * (a * c * d * f * g), expected8);
+  TESTT((b * f * g) * (a * c * d * e * h), expected8);
+  TESTT((b * f * h) * (a * c * d * e * g), expected8);
+  TESTT((b * g * h) * (a * c * d * e * f), expected8);
+  TESTT((c * d * e) * (a * b * f * g * h), expected8);
+  TESTT((c * d * f) * (a * b * e * g * h), expected8);
+  TESTT((c * d * g) * (a * b * e * f * h), expected8);
+  TESTT((c * d * h) * (a * b * e * f * g), expected8);
+  TESTT((c * e * f) * (a * b * d * g * h), expected8);
+  TESTT((c * e * g) * (a * b * d * f * h), expected8);
+  TESTT((c * e * h) * (a * b * d * f * g), expected8);
+  TESTT((c * f * g) * (a * b * d * e * h), expected8);
+  TESTT((c * f * h) * (a * b * d * e * g), expected8);
+  TESTT((c * g * h) * (a * b * d * e * f), expected8);
+  TESTT((d * e * f) * (a * b * c * g * h), expected8);
+  TESTT((d * e * g) * (a * b * c * f * h), expected8);
+  TESTT((d * e * h) * (a * b * c * f * g), expected8);
+  TESTT((d * f * g) * (a * b * c * e * h), expected8);
+  TESTT((d * f * h) * (a * b * c * e * g), expected8);
+  TESTT((d * g * h) * (a * b * c * e * f), expected8);
+  TESTT((e * f * g) * (a * b * c * d * h), expected8);
+  TESTT((e * f * h) * (a * b * c * d * g), expected8);
+  TESTT((e * g * h) * (a * b * c * d * f), expected8);
+  TESTT((f * g * h) * (a * b * c * d * e), expected8);
+  TESTT((a * b * c * d) * (e * f * g * h), expected8);
+  TESTT((a * b * c * e) * (d * f * g * h), expected8);
+  TESTT((a * b * c * f) * (d * e * g * h), expected8);
+  TESTT((a * b * c * g) * (d * e * f * h), expected8);
+  TESTT((a * b * c * h) * (d * e * f * g), expected8);
+  TESTT((a * b * d * e) * (c * f * g * h), expected8);
+  TESTT((a * b * d * f) * (c * e * g * h), expected8);
+  TESTT((a * b * d * g) * (c * e * f * h), expected8);
+  TESTT((a * b * d * h) * (c * e * f * g), expected8);
+  TESTT((a * b * e * f) * (c * d * g * h), expected8);
+  TESTT((a * b * e * g) * (c * d * f * h), expected8);
+  TESTT((a * b * e * h) * (c * d * f * g), expected8);
+  TESTT((a * b * f * g) * (c * d * e * h), expected8);
+  TESTT((a * b * f * h) * (c * d * e * g), expected8);
+  TESTT((a * b * g * h) * (c * d * e * f), expected8);
+  TESTT((a * c * d * e) * (b * f * g * h), expected8);
+  TESTT((a * c * d * f) * (b * e * g * h), expected8);
+  TESTT((a * c * d * g) * (b * e * f * h), expected8);
+  TESTT((a * c * d * h) * (b * e * f * g), expected8);
+  TESTT((a * c * e * f) * (b * d * g * h), expected8);
+  TESTT((a * c * e * g) * (b * d * f * h), expected8);
+  TESTT((a * c * e * h) * (b * d * f * g), expected8);
+  TESTT((a * c * f * g) * (b * d * e * h), expected8);
+  TESTT((a * c * f * h) * (b * d * e * g), expected8);
+  TESTT((a * c * g * h) * (b * d * e * f), expected8);
+  TESTT((a * d * e * f) * (b * c * g * h), expected8);
+  TESTT((a * d * e * g) * (b * c * f * h), expected8);
+  TESTT((a * d * e * h) * (b * c * f * g), expected8);
+  TESTT((a * d * f * g) * (b * c * e * h), expected8);
+  TESTT((a * d * f * h) * (b * c * e * g), expected8);
+  TESTT((a * d * g * h) * (b * c * e * f), expected8);
+  TESTT((a * e * f * g) * (b * c * d * h), expected8);
+  TESTT((a * e * f * h) * (b * c * d * g), expected8);
+  TESTT((a * e * g * h) * (b * c * d * f), expected8);
+  TESTT((a * f * g * h) * (b * c * d * e), expected8);
+  TESTT((b * c * d * e) * (a * f * g * h), expected8);
+  TESTT((b * c * d * f) * (a * e * g * h), expected8);
+  TESTT((b * c * d * g) * (a * e * f * h), expected8);
+  TESTT((b * c * d * h) * (a * e * f * g), expected8);
+  TESTT((b * c * e * f) * (a * d * g * h), expected8);
+  TESTT((b * c * e * g) * (a * d * f * h), expected8);
+  TESTT((b * c * e * h) * (a * d * f * g), expected8);
+  TESTT((b * c * f * g) * (a * d * e * h), expected8);
+  TESTT((b * c * f * h) * (a * d * e * g), expected8);
+  TESTT((b * c * g * h) * (a * d * e * f), expected8);
+  TESTT((b * d * e * f) * (a * c * g * h), expected8);
+  TESTT((b * d * e * g) * (a * c * f * h), expected8);
+  TESTT((b * d * e * h) * (a * c * f * g), expected8);
+  TESTT((b * d * f * g) * (a * c * e * h), expected8);
+  TESTT((b * d * f * h) * (a * c * e * g), expected8);
+  TESTT((b * d * g * h) * (a * c * e * f), expected8);
+  TESTT((b * e * f * g) * (a * c * d * h), expected8);
+  TESTT((b * e * f * h) * (a * c * d * g), expected8);
+  TESTT((b * e * g * h) * (a * c * d * f), expected8);
+  TESTT((b * f * g * h) * (a * c * d * e), expected8);
+  TESTT((c * d * e * f) * (a * b * g * h), expected8);
+  TESTT((c * d * e * g) * (a * b * f * h), expected8);
+  TESTT((c * d * e * h) * (a * b * f * g), expected8);
+  TESTT((c * d * f * g) * (a * b * e * h), expected8);
+  TESTT((c * d * f * h) * (a * b * e * g), expected8);
+  TESTT((c * d * g * h) * (a * b * e * f), expected8);
+  TESTT((c * e * f * g) * (a * b * d * h), expected8);
+  TESTT((c * e * f * h) * (a * b * d * g), expected8);
+  TESTT((c * e * g * h) * (a * b * d * f), expected8);
+  TESTT((c * f * g * h) * (a * b * d * e), expected8);
+  TESTT((d * e * f * g) * (a * b * c * h), expected8);
+  TESTT((d * e * f * h) * (a * b * c * g), expected8);
+  TESTT((d * e * g * h) * (a * b * c * f), expected8);
+  TESTT((d * f * g * h) * (a * b * c * e), expected8);
+  TESTT((e * f * g * h) * (a * b * c * d), expected8);
+  TESTT((a * b * c * d * e) * (f * g * h), expected8);
+  TESTT((a * b * c * d * f) * (e * g * h), expected8);
+  TESTT((a * b * c * d * g) * (e * f * h), expected8);
+  TESTT((a * b * c * d * h) * (e * f * g), expected8);
+  TESTT((a * b * c * e * f) * (d * g * h), expected8);
+  TESTT((a * b * c * e * g) * (d * f * h), expected8);
+  TESTT((a * b * c * e * h) * (d * f * g), expected8);
+  TESTT((a * b * c * f * g) * (d * e * h), expected8);
+  TESTT((a * b * c * f * h) * (d * e * g), expected8);
+  TESTT((a * b * c * g * h) * (d * e * f), expected8);
+  TESTT((a * b * d * e * f) * (c * g * h), expected8);
+  TESTT((a * b * d * e * g) * (c * f * h), expected8);
+  TESTT((a * b * d * e * h) * (c * f * g), expected8);
+  TESTT((a * b * d * f * g) * (c * e * h), expected8);
+  TESTT((a * b * d * f * h) * (c * e * g), expected8);
+  TESTT((a * b * d * g * h) * (c * e * f), expected8);
+  TESTT((a * b * e * f * g) * (c * d * h), expected8);
+  TESTT((a * b * e * f * h) * (c * d * g), expected8);
+  TESTT((a * b * e * g * h) * (c * d * f), expected8);
+  TESTT((a * b * f * g * h) * (c * d * e), expected8);
+  TESTT((a * c * d * e * f) * (b * g * h), expected8);
+  TESTT((a * c * d * e * g) * (b * f * h), expected8);
+  TESTT((a * c * d * e * h) * (b * f * g), expected8);
+  TESTT((a * c * d * f * g) * (b * e * h), expected8);
+  TESTT((a * c * d * f * h) * (b * e * g), expected8);
+  TESTT((a * c * d * g * h) * (b * e * f), expected8);
+  TESTT((a * c * e * f * g) * (b * d * h), expected8);
+  TESTT((a * c * e * f * h) * (b * d * g), expected8);
+  TESTT((a * c * e * g * h) * (b * d * f), expected8);
+  TESTT((a * c * f * g * h) * (b * d * e), expected8);
+  TESTT((a * d * e * f * g) * (b * c * h), expected8);
+  TESTT((a * d * e * f * h) * (b * c * g), expected8);
+  TESTT((a * d * e * g * h) * (b * c * f), expected8);
+  TESTT((a * d * f * g * h) * (b * c * e), expected8);
+  TESTT((a * e * f * g * h) * (b * c * d), expected8);
+  TESTT((b * c * d * e * f) * (a * g * h), expected8);
+  TESTT((b * c * d * e * g) * (a * f * h), expected8);
+  TESTT((b * c * d * e * h) * (a * f * g), expected8);
+  TESTT((b * c * d * f * g) * (a * e * h), expected8);
+  TESTT((b * c * d * f * h) * (a * e * g), expected8);
+  TESTT((b * c * d * g * h) * (a * e * f), expected8);
+  TESTT((b * c * e * f * g) * (a * d * h), expected8);
+  TESTT((b * c * e * f * h) * (a * d * g), expected8);
+  TESTT((b * c * e * g * h) * (a * d * f), expected8);
+  TESTT((b * c * f * g * h) * (a * d * e), expected8);
+  TESTT((b * d * e * f * g) * (a * c * h), expected8);
+  TESTT((b * d * e * f * h) * (a * c * g), expected8);
+  TESTT((b * d * e * g * h) * (a * c * f), expected8);
+  TESTT((b * d * f * g * h) * (a * c * e), expected8);
+  TESTT((b * e * f * g * h) * (a * c * d), expected8);
+  TESTT((c * d * e * f * g) * (a * b * h), expected8);
+  TESTT((c * d * e * f * h) * (a * b * g), expected8);
+  TESTT((c * d * e * g * h) * (a * b * f), expected8);
+  TESTT((c * d * f * g * h) * (a * b * e), expected8);
+  TESTT((c * e * f * g * h) * (a * b * d), expected8);
+  TESTT((d * e * f * g * h) * (a * b * c), expected8);
+  TESTT((a * b * c * d * e * f) * (g * h), expected8);
+  TESTT((a * b * c * d * e * g) * (f * h), expected8);
+  TESTT((a * b * c * d * e * h) * (f * g), expected8);
+  TESTT((a * b * c * d * f * g) * (e * h), expected8);
+  TESTT((a * b * c * d * f * h) * (e * g), expected8);
+  TESTT((a * b * c * d * g * h) * (e * f), expected8);
+  TESTT((a * b * c * e * f * g) * (d * h), expected8);
+  TESTT((a * b * c * e * f * h) * (d * g), expected8);
+  TESTT((a * b * c * e * g * h) * (d * f), expected8);
+  TESTT((a * b * c * f * g * h) * (d * e), expected8);
+  TESTT((a * b * d * e * f * g) * (c * h), expected8);
+  TESTT((a * b * d * e * f * h) * (c * g), expected8);
+  TESTT((a * b * d * e * g * h) * (c * f), expected8);
+  TESTT((a * b * d * f * g * h) * (c * e), expected8);
+  TESTT((a * b * e * f * g * h) * (c * d), expected8);
+  TESTT((a * c * d * e * f * g) * (b * h), expected8);
+  TESTT((a * c * d * e * f * h) * (b * g), expected8);
+  TESTT((a * c * d * e * g * h) * (b * f), expected8);
+  TESTT((a * c * d * f * g * h) * (b * e), expected8);
+  TESTT((a * c * e * f * g * h) * (b * d), expected8);
+  TESTT((a * d * e * f * g * h) * (b * c), expected8);
+  TESTT((b * c * d * e * f * g) * (a * h), expected8);
+  TESTT((b * c * d * e * f * h) * (a * g), expected8);
+  TESTT((b * c * d * e * g * h) * (a * f), expected8);
+  TESTT((b * c * d * f * g * h) * (a * e), expected8);
+  TESTT((b * c * e * f * g * h) * (a * d), expected8);
+  TESTT((b * d * e * f * g * h) * (a * c), expected8);
+  TESTT((c * d * e * f * g * h) * (a * b), expected8);
+  TESTT((a * b * c * d * e * f * g) * h, expected8);
+  TESTT((a * b * c * d * e * f * h) * g, expected8);
+  TESTT((a * b * c * d * e * g * h) * f, expected8);
+  TESTT((a * b * c * d * f * g * h) * e, expected8);
+  TESTT((a * b * c * e * f * g * h) * d, expected8);
+  TESTT((a * b * d * e * f * g * h) * c, expected8);
+  TESTT((a * c * d * e * f * g * h) * b, expected8);
+  TESTT((b * c * d * e * f * g * h) * a, expected8);
+
+  // Test exponentiation.
+  TESTS((a * (b^-two) * c * d) * ((b^-two) * d), "a * b^-4 * c * d^2");
+  TESTS((a * (b^-two) * c * d) * ((b^-one) * d), "a * b^-3 * c * d^2");
+  TESTS((a * (b^-two) * c * d) * ((b^zero) * d), "a * b^-2 * c * d^2"); // ⎫ same
+  TESTS((a * (b^-two) * c * d) * ( one     * d), "a * b^-2 * c * d^2"); // ⎭
+  TESTS((a * (b^-two) * c * d) * ((b^one)  * d), "a * b^-1 * c * d^2"); // ⎫ same
+  TESTS((a * (b^-two) * c * d) * ( b       * d), "a * b^-1 * c * d^2"); // ⎭
+  TESTS((a * (b^-two) * c * d) * ((b^two)  * d), "a * c * d^2");
+
+  TESTS((a * (b^-one) * c * d) * ((b^-two) * d), "a * b^-3 * c * d^2");
+  TESTS((a * (b^-one) * c * d) * ((b^-one) * d), "a * b^-2 * c * d^2");
+  TESTS((a * (b^-one) * c * d) * ((b^zero) * d), "a * b^-1 * c * d^2"); // ⎫ same
+  TESTS((a * (b^-one) * c * d) * ( one     * d), "a * b^-1 * c * d^2"); // ⎭
+  TESTS((a * (b^-one) * c * d) * ((b^one)  * d), "a * c * d^2");        // ⎫ same
+  TESTS((a * (b^-one) * c * d) * ( b       * d), "a * c * d^2");        // ⎭
+  TESTS((a * (b^-one) * c * d) * ((b^two)  * d), "a * b * c * d^2");
+
+  TESTS((a * b * c * d) * ((b^-two) * d), "a * b^-1 * c * d^2");
+  TESTS((a * b * c * d) * ((b^-one) * d), "a * c * d^2");
+  TESTS((a * b * c * d) * ((b^zero) * d), "a * b * c * d^2");           // ⎫ same
+  TESTS((a * b * c * d) * ( one     * d), "a * b * c * d^2");           // ⎭
+  TESTS((a * b * c * d) * ((b^one)  * d), "a * b^2 * c * d^2");         // ⎫ same
+  TESTS((a * b * c * d) * ( b       * d), "a * b^2 * c * d^2");         // ⎭
+  TESTS((a * b * c * d) * ((b^two)  * d), "a * b^3 * c * d^2");
+
+  TESTS((a * (b^two) * c * d) * ((b^-two) * d), "a * c * d^2");
+  TESTS((a * (b^two) * c * d) * ((b^-one) * d), "a * b * c * d^2");
+  TESTS((a * (b^two) * c * d) * ((b^zero) * d), "a * b^2 * c * d^2");   // ⎫ same
+  TESTS((a * (b^two) * c * d) * ( one     * d), "a * b^2 * c * d^2");   // ⎭
+  TESTS((a * (b^two) * c * d) * ((b^one)  * d), "a * b^3 * c * d^2");   // ⎫ same
+  TESTS((a * (b^two) * c * d) * ( b       * d), "a * b^3 * c * d^2");   // ⎭
+  TESTS((a * (b^two) * c * d) * ((b^two)  * d), "a * b^4 * c * d^2");
+
+  TESTS((a * b) * ((a^-two) * (c^-one)), "a^-1 * b * c^-1");
+
+  // Test combining constants.
+  TESTS(constant(42) * (constant(1, 42) * a), "a");
+  TESTS(constant(42) * (constant(0, 42) * a), "0");
+  TESTS(constant(42) * (constant(2, 42) * a), "2 * a");
+  TESTS((a * constant(42) * c * d) * (constant(1, 42) * d), "a * c * d^2");
+  TESTS((a * constant(42) * c * d) * (constant(0, 42) * d), "0");
+  TESTS((a * constant(42) * c * d) * (constant(2, 42) * d), "2 * a * c * d^2");
+  TESTS((two * a) * zero, "0");
+  TESTS((x * y) * (x^-one), "y");
+
+  // Test division.
+  TESTS(a / b, "a * b^-1");
+  TESTS((a * b) / (b * c), "a * c^-1");
+  TESTS((a * b) / (a * c), "b * c^-1");
+  TESTS((a * b) / ((b^two) * c), "a * b^-1 * c^-1");
+  TESTS(one / ((a^two) * c), "a^-2 * c^-1");
+#endif
+  TESTS((a * constant(1, 2) * b) / -((a^two) * c), "-1/2 * a^-1 * b * c^-1");
+#if 0
+  TESTS((z^two) * z, "z^3");
+  TESTS(x * z / y * (x^two) / (z^(-two)), "x^3 * y^-1 * z^3");
+  TESTS(x * z / y * (x^two) / -(z^(-two)), "-(x^3 * y^-1 * z^3)");
+  TESTS(x * two * z / y * (x^two) / -(z^(-two)), "-2 * x^3 * y^-1 * z^3");
+  TESTS(y * x * two * z / y * (x^two) / -(z^(-two)) / z, "-2 * x^3 * z^2");
+
+  // Test printing of parenthesis.
+  auto& x_plus_minus_y = x + -y;
+  TESTS(x_plus_minus_y, "x - y");
+  auto& x_squared = x^2;
+  auto& negation_of_power = -x_squared;
+  TESTS(negation_of_power, "-(x^2)");
+  TESTS(x * (y^two), "x * y^2");
+  TESTS(x + (y^two), "x + y^2");
+  TESTS(minus__x_times_y, "-(x * y)");
+  TESTS(x * y * z, "x * y * z");
+  TESTS(w + x * y, "w + x * y");
+  TESTS(-(x + y), "-x - y");
+  TESTS(w * (x + y), "w * x + w * y");
+  TESTS(w + x + y, "w + x + y");
+  TESTS((x + y) * w, "w * x + w * y");
+
+  // Addition of one symbol.
+  TESTS(zero + d, "d");
+  TESTS(a + zero, "a");
+  TESTS(a + a, "2 * a");
+  TESTS(a + two * a, "3 * a");
+  TESTS(two * a + two * a, "4 * a");
+  TESTS(two * a + (-one) * a, "a");
+  TESTS(a + (-one) * a, "0");
+  TESTS((-one) * c + c + d, "d");
+  TESTS(d + (-one) * c, "-c + d");
+  TESTS((-c + d) + c, "d");
+
+  // Addition of two symbols.
+  TESTS(a + b, "a + b");
+  TESTS(b + a, "a + b");
+  TESTS(a - b, "a - b");
+  TESTS(a + two * b - c + two * (c^two) + (-one) * b - a, "b - c + 2 * c^2");
+
+  // Addition of three symbols.
+  TESTS((a + b) + (c + d), "a + b + c + d");
+
+  //==========================================================================
+  // Old testsuite:
 
   test_differentiate(two, x);
   test_differentiate(x, x);
@@ -30,8 +649,8 @@ int main()
   Dout(dc::notice, "x = " << x.evaluate());
   Dout(dc::notice, "y = " << y.evaluate());
 
-  Symbol const& z = Symbol::realize("y");
-  Dout(dc::notice, "z = " << z.evaluate());
+  Symbol const& y_again = Symbol::realize("y");
+  Dout(dc::notice, "y_again = " << y_again.evaluate());
 
   Dout(dc::notice, "two.evaluate() = " << two.evaluate());
 
@@ -51,11 +670,9 @@ int main()
   Expression const& q = x^3;
   Dout(dc::notice, q << " [evaluate] = " << q.evaluate());
 
-  auto& minus_x = -x;
-  Dout(dc::notice, "-x = " << minus_x);
-
   auto& x_div_y = x / y;
   Dout(dc::notice, "x / y = " << x_div_y);
 
   Debug(Expression::dump_database());
+#endif
 }

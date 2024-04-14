@@ -1,14 +1,9 @@
 #pragma once
 
-#include "BinaryOperator.h"
-#include "Constant.h"
-#include "Expression.h"
-#include "Hash.h"
+#include "Product.h"
 #include "debug.h"
 
 namespace symbolic2 {
-
-class Symbol;
 
 class Sum : public BinaryOperator<Sum>
 {
@@ -24,7 +19,7 @@ class Sum : public BinaryOperator<Sum>
     // arg1 must always be "less than" arg2.
     ASSERT(Sum::is_less(arg1, arg2));
     // arg2 is not allowed to be a Sum that has a constant as first argument.
-    ASSERT(!arg2.is_sum() || !Constant::is_constant(arg2.arg1()));
+    ASSERT(!arg2.is_sum() || !arg2.arg1().is_constant());
   }
 
   Precedence precedence() const override final { return Precedence::sum; }
@@ -51,6 +46,11 @@ class Sum : public BinaryOperator<Sum>
 inline Expression const& operator+(Expression const& arg1, Expression const& arg2)
 {
   return Sum::add(arg1, arg2);
+}
+
+inline Expression const& operator-(Expression const& arg1, Expression const& arg2)
+{
+  return Sum::add(arg1, Product::negate(arg2));
 }
 
 } // namespace symbolic2

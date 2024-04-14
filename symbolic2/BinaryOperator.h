@@ -101,8 +101,12 @@ bool BinaryOperator<OpT>::is_less_exact(Expression const& arg1, Expression const
 template<BinaryOp OpT>
 bool BinaryOperator<OpT>::is_less(Expression const& arg1, Expression const& arg2)
 {
+  static_assert(!std::is_same_v<OpT, Power>, "we should never get here?!");
+
   if constexpr (std::is_same_v<OpT, Sum>)
     return is_less_exact(arg1.get_nonconstant_factor(), arg2.get_nonconstant_factor());
+  else if (arg1.is_constant() && arg2.is_constant())
+    return false;
   else
     return is_less_exact(arg1.get_base(), arg2.get_base());
 }

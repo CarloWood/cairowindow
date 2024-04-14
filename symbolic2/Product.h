@@ -18,7 +18,7 @@ class Product : public BinaryOperator<Product>
     // arg1 must always be "less than" arg2.
     ASSERT(Product::is_less(arg1, arg2));
     // arg2 is not allowed to be a Product that has a constant as first argument.
-    ASSERT(!arg2.is_product() || !Constant::is_constant(arg2.arg1()));
+    ASSERT(!arg2.is_product() || !arg2.arg1().is_constant());
   }
 
   Precedence precedence() const override final
@@ -38,7 +38,7 @@ class Product : public BinaryOperator<Product>
 
   Expression const& get_nonconstant_factor() const override final
   {
-    return Constant::is_constant(arg1_) ? arg2_ : *this;
+    return arg1_.is_constant() ? arg2_ : *this;
   }
 
   Constant const& get_constant_factor() const override final
@@ -50,7 +50,7 @@ class Product : public BinaryOperator<Product>
   static bool has_constant_factor(Expression const& arg)
   {
     Product const* product = dynamic_cast<Product const*>(&arg);
-    return product && Constant::is_constant(product->arg1());
+    return product && product->arg1().is_constant();
   }
 
   double evaluate() const override final

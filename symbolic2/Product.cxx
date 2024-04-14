@@ -31,6 +31,13 @@ Expression const& Product::make_product(Expression const& arg1, Expression const
 //static
 Expression const& Product::combine(Expression const& arg1, Expression const& arg2)
 {
+  Constant const* constant1 = dynamic_cast<Constant const*>(&arg1);
+  if (constant1)
+  {
+    ASSERT(arg2.type() == constantT);
+    return *constant1 * static_cast<Constant const&>(arg2);
+  }
+
   Expression const& base1 = arg1.get_base();
   Expression const& base2 = arg2.get_base();
 
@@ -101,7 +108,7 @@ Expression const& Product::multiply(Expression const& arg1, Expression const& ar
     return make_product(arg2, arg1);
   else if (Constant const* constant1 = dynamic_cast<Constant const*>(&arg1))
   {
-    ASSERT(Constant::is_constant(arg2));
+    ASSERT(arg2.is_constant());
     Constant const& constant2 = static_cast<Constant const&>(arg2);
     return Constant::realize(constant1->enumerator_ * constant2.enumerator_, constant1->denominator_ * constant2.denominator_);
   }
@@ -119,7 +126,8 @@ Expression const& Product::negate(Expression const& arg)
   // If arg has a constant factor that is not one, then it must be a product (get_constant_factor() called on a Constant return one).
   ASSERT(arg.is_product());
   Product const& product = static_cast<Product const&>(arg);
-  return realize(Constant::s_cached_minus_one * static_cast<Constant const&>(product.arg1()), product.arg2());
+  Constant const& negated_constant_factor = Constant::s_cached_minus_one * static_cast<Constant const&>(product.arg1());
+  return make_product(negated_constant_factor, product.arg2());
 }
 
 #ifdef SYMBOLIC2_PRINTING

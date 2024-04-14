@@ -10,12 +10,15 @@ class Power : public BinaryOperator<Power>
  private:
   Precedence precedence() const override final { return Precedence::power; }
 
+  // When it is known that exponent isn't zero or one.
+  static Expression const& make_power2(Expression const& base, Constant const& exponent);
+
  public:
   template<typename T, typename... Args>
   friend Expression const& Expression::get(Args&&... args);
   Power(Expression const& arg1, Expression const& arg2);
 
-  static Expression const& make_power(Expression const& base, Expression const& exponent);
+  static Expression const& make_power(Expression const& base, Constant const& exponent);
 
   ExpressionType type() const override final { return powerT; }
 
@@ -44,7 +47,7 @@ inline Expression const& operator^(Expression const& arg1, Expression const& arg
   ASSERT(exponent);
 
   if (!base)
-    return Power::make_power(arg1, arg2);
+    return Power::make_power(arg1, *exponent);
 
   // For example, when trying to calculate: (27/8)^(5/3)
 

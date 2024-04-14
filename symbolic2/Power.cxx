@@ -8,26 +8,53 @@ namespace symbolic2 {
 Power::Power(Expression const& arg1, Expression const& arg2) : BinaryOperator<Power>(arg1, arg2)
 {
   // Can only raise expressions to constant powers.
-  ASSERT(Constant::is_constant(arg2));
+  ASSERT(arg2.is_constant());
   // Don't use Power when arg2 is zero or one.
   ASSERT(!Constant::is_zero(arg2) && !Constant::is_one(arg2));
   // arg1 is not allowed to be a constant.
-  ASSERT(!Constant::is_constant(arg1));
-  // arg1 is not allowed to contain a constant factor.
-  ASSERT(!Product::has_constant_factor(arg1));
+  ASSERT(!arg1.is_constant());
+  // arg1 is not allowed to be a product.
+  ASSERT(!arg1.is_product());
+  // arg1 is not allowed to be a power.
+  ASSERT(!arg1.is_power());
 }
 
 //static
-Expression const& Power::make_power(Expression const& base, Expression const& exponent)
+Expression const& Power::make_power2(Expression const& base, Constant const& exponent)
 {
-  ASSERT(!Constant::is_constant(base));
+  if (base.is_product())
+  {
+    Product const& product = static_cast<Product const&>(base);
+    if (product.arg1().is_power())
+    {
+      Power const& power = static_cast<Power const&>(product.arg1());
+      return Product::multiply(realize(power.get_base(), power.get_exponent() * exponent), make_power2(product.arg2(), exponent));
+    }
+    if (product.arg1().is_constant())
+      return Product::multiply(product.arg1() ^ exponent, make_power2(product.arg2(), exponent));
+    return Product::multiply(realize(product.arg1(), exponent), make_power2(product.arg2(), exponent));
+  }
+
+  if (base.is_power())
+  {
+    Power const& power = static_cast<Power const&>(base);
+    return realize(power.get_base(), power.get_exponent() * exponent);
+  }
+
+  return realize(base, exponent);
+}
+
+//static
+Expression const& Power::make_power(Expression const& base, Constant const& exponent)
+{
+  ASSERT(!base.is_constant());
 
   if (Constant::is_zero(exponent))
     return Constant::s_cached_one;
   else if (Constant::is_one(exponent))
     return base;
 
-  return realize(base, exponent);
+  return make_power2(base, exponent);
 }
 
 Expression const& Power::differentiate(Symbol const& symbol) const

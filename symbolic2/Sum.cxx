@@ -10,6 +10,13 @@ namespace symbolic2 {
 //static
 Expression const& Sum::combine(Expression const& arg1, Expression const& arg2)
 {
+  Constant const* constant1 = dynamic_cast<Constant const*>(&arg1);
+  if (constant1)
+  {
+    ASSERT(arg2.type() == constantT);
+    return *constant1 + static_cast<Constant const&>(arg2);
+  }
+
   Expression const& factor1 = arg1.get_nonconstant_factor();
   Expression const& factor2 = arg2.get_nonconstant_factor();
 
