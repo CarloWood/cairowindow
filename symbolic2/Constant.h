@@ -45,8 +45,16 @@ class Constant : public Expression
   Expression const& get_nonconstant_factor() const override final { return s_cached_one; }
 
  public:
-  static Constant const& realize(int n) { return static_cast<Constant const&>(get<Constant>(n)); }
-  static Constant const& realize(int e, int d) { return static_cast<Constant const&>(get<Constant>(e, d)); }
+  static Constant const& realize(int n)
+  {
+    DoutEntering(dc::symbolic, "Constant::realize(" << n << ")");
+    return static_cast<Constant const&>(get<Constant>(n));
+  }
+  static Constant const& realize(int e, int d)
+  {
+    DoutEntering(dc::symbolic, "Constant::realize(" << e << ", " << d << ")");
+    return static_cast<Constant const&>(get<Constant>(e, d));
+  }
 
   static bool is_zero(Expression const& arg) { return &arg == &s_cached_zero; }
   static bool is_one(Expression const& arg) { return &arg == &s_cached_one; }

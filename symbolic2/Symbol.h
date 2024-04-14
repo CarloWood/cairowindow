@@ -21,8 +21,16 @@ class Symbol : public Expression
   Precedence precedence() const override final { return Precedence::symbol; }
 
  public:
-  static Symbol const& realize(std::string const& name) { return static_cast<Symbol const&>(get<Symbol>(name)); }
-  static Symbol const& realize(std::string const& name, double value) { return static_cast<Symbol const&>(get<Symbol>(name, value)); }
+  static Symbol const& realize(std::string const& name)
+  {
+    DoutEntering(dc::symbolic, "Symbol::realize(\"" << name << "\")");
+    return static_cast<Symbol const&>(get<Symbol>(name));
+  }
+  static Symbol const& realize(std::string const& name, double value)
+  {
+    DoutEntering(dc::symbolic, "Symbol::realize(\"" << name << ", " << value <<  "\")");
+    return static_cast<Symbol const&>(get<Symbol>(name, value));
+  }
 
   ExpressionType type() const override final { return symbolT; }
 

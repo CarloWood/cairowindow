@@ -22,39 +22,63 @@ Power::Power(Expression const& arg1, Expression const& arg2) : BinaryOperator<Po
 //static
 Expression const& Power::make_power2(Expression const& base, Constant const& exponent)
 {
+  DoutEntering(dc::symbolic|continued_cf, "Power::make_power2(" << base << ", " << exponent << ") --> ");
+
   if (base.is_product())
   {
     Product const& product = static_cast<Product const&>(base);
     if (product.arg1().is_power())
     {
       Power const& power = static_cast<Power const&>(product.arg1());
-      return Product::multiply(realize(power.get_base(), power.get_exponent() * exponent), make_power2(product.arg2(), exponent));
+      Expression const& result = Product::multiply(make_power(power.get_base(), power.get_exponent() * exponent), make_power2(product.arg2(), exponent));
+      Dout(dc::finish, result);
+      return result;
     }
     if (product.arg1().is_constant())
-      return Product::multiply(product.arg1() ^ exponent, make_power2(product.arg2(), exponent));
-    return Product::multiply(realize(product.arg1(), exponent), make_power2(product.arg2(), exponent));
+    {
+      Expression const& result = Product::multiply(product.arg1() ^ exponent, make_power2(product.arg2(), exponent));
+      Dout(dc::finish, result);
+      return result;
+    }
+    Expression const& result = Product::multiply(realize(product.arg1(), exponent), make_power2(product.arg2(), exponent));
+    Dout(dc::finish, result);
+    return result;
   }
 
   if (base.is_power())
   {
     Power const& power = static_cast<Power const&>(base);
-    return realize(power.get_base(), power.get_exponent() * exponent);
+    Expression const& result = make_power(power.get_base(), power.get_exponent() * exponent);
+    Dout(dc::finish, result);
+    return result;
   }
 
-  return realize(base, exponent);
+  Expression const& result = realize(base, exponent);
+  Dout(dc::finish, result);
+  return result;
 }
 
 //static
 Expression const& Power::make_power(Expression const& base, Constant const& exponent)
 {
+  DoutEntering(dc::symbolic|continued_cf, "Power::make_power(" << base << ", " << exponent << ") --> ");
+
   ASSERT(!base.is_constant());
 
   if (Constant::is_zero(exponent))
+  {
+    Dout(dc::finish, "-1");
     return Constant::s_cached_one;
+  }
   else if (Constant::is_one(exponent))
+  {
+    Dout(dc::finish, base);
     return base;
+  }
 
-  return make_power2(base, exponent);
+  Expression const& result = make_power2(base, exponent);
+  Dout(dc::finish, result);
+  return result;
 }
 
 Expression const& Power::differentiate(Symbol const& symbol) const

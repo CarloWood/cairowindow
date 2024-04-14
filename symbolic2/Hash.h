@@ -9,6 +9,10 @@ class Symbol;
 class Sum;
 class Product;
 class Power;
+class Sin;
+class Cos;
+class Atan;
+class Log;
 
 template<typename T>
 struct Hash;
@@ -44,6 +48,30 @@ template<>
 struct Hash<Power>
 {
   static constexpr uint64_t value = 0x1B156634A99A6A12;
+};
+
+template<>
+struct Hash<Sin>
+{
+  static constexpr uint64_t value = 0x8B92C1E8AB8BF76B;
+};
+
+template<>
+struct Hash<Cos>
+{
+  static constexpr uint64_t value = 0x514EC2A8F6B3F521;
+};
+
+template<>
+struct Hash<Atan>
+{
+  static constexpr uint64_t value = 0xBD0BF25373FC829F;
+};
+
+template<>
+struct Hash<Log>
+{
+  static constexpr uint64_t value = 0x3F3EBCCAA947563D;
 };
 
 } // namespace symbolic2

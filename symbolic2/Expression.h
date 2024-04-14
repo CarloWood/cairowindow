@@ -9,6 +9,12 @@
 #include <iostream>
 #endif
 
+#ifdef CWDEBUG
+NAMESPACE_DEBUG_CHANNELS_START
+extern channel_ct symbolic;
+NAMESPACE_DEBUG_CHANNELS_END
+#endif
+
 namespace symbolic2 {
 #ifdef SYMBOLIC2_PRINTING
 using utils::has_print_on::operator<<;

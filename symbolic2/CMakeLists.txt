@@ -45,6 +45,10 @@ target_sources(symbolic2_ObjLib
     "Sum.cxx"
     "Product.cxx"
     "Power.cxx"
+    "Sin.cxx"
+    "Cos.cxx"
+    "Atan.cxx"
+    "Log.cxx"
 
     ${HEADER_FILES}
 )

@@ -6,6 +6,12 @@
 #include <iomanip>
 #endif
 
+#ifdef CWDEBUG
+NAMESPACE_DEBUG_CHANNELS_START
+channel_ct symbolic("SYMBOLIC");
+NAMESPACE_DEBUG_CHANNELS_END
+#endif
+
 namespace symbolic2 {
 
 //static

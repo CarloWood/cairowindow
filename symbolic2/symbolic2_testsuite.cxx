@@ -1,8 +1,11 @@
 #include "sys.h"
+#include "Sin.h"
+#include "Power.h"
 #include "Product.h"
 #include "Sum.h"
 #include "Symbol.h"
 #include "Constant.h"
+#include "utils/square.h"
 #include "debug.h"
 
 using namespace symbolic2;
@@ -41,6 +44,101 @@ void test_same_expression(Expression const& expression, Expression const& expect
 
 #define TESTS(x, y) TEST(#x, x, y)
 
+void compare_equal1(Expression const& expression)
+{
+  // "Expected E1 == E1";
+  ASSERT(!Sum::is_less(expression, expression));
+}
+
+enum What
+{
+  ConstantsCompareNotEqual = 0,
+  ConstantsCompareEqual,
+  ConstantsCompareEitherWay
+};
+
+void test_compare_less(Expression const& E1, Expression const& E2, int line, What constants_compare_equal = ConstantsCompareEitherWay)
+{
+  bool fail = false;
+
+  if (constants_compare_equal == ConstantsCompareNotEqual || constants_compare_equal == ConstantsCompareEitherWay)
+  {
+    bool should_be_true = Sum::is_less_exact(E1, E2);
+    if (!should_be_true)
+    {
+      Dout(dc::warning, "symbolic2_testsuite.cxx:" << line << ": expected \"" << E1 << "\" to be less than \"" << E2 << "\" when constants do not compare equal");
+      fail = true;
+    }
+    bool should_be_false = Sum::is_less_exact(E2, E1);
+    if (should_be_false)
+    {
+      Dout(dc::warning, "symbolic2_testsuite.cxx:" << line << ": expected \"" << E2 << "\" NOT to be less than \"" << E1 << "\" when constants do not compare equal");
+      fail = true;
+    }
+  }
+  if (constants_compare_equal == ConstantsCompareEqual || constants_compare_equal == ConstantsCompareEitherWay)
+  {
+    bool should_be_true = Sum::is_less(E1, E2);
+    if (!should_be_true)
+    {
+      Dout(dc::warning, "symbolic2_testsuite.cxx:" << line << ": expected \"" << E1 << "\" to be less than \"" << E2 << "\" when constants compare equal");
+      fail = true;
+    }
+    bool should_be_false = Sum::is_less(E2, E1);
+    if (should_be_false)
+    {
+      Dout(dc::warning, "symbolic2_testsuite.cxx:" << line << ": expected \"" << E2 << "\" NOT to be less than \"" << E1 << "\" when constants compare equal");
+      fail = true;
+    }
+  }
+  ASSERT(!fail);
+}
+
+#define compare_less(E1, E2) test_compare_less(E1, E2, __LINE__)
+#define compare_less_ConstantsCompareEqual(E1, E2) test_compare_less(E1, E2, __LINE__, ConstantsCompareEqual)
+#define compare_less_ConstantsCompareNotEqual(E1, E2) test_compare_less(E1, E2, __LINE__, ConstantsCompareNotEqual)
+
+void test_compare_equal(Expression const& E1, Expression const& E2, int line, What constants_compare_equal = ConstantsCompareEitherWay)
+{
+  bool fail = false;
+
+  if (constants_compare_equal == ConstantsCompareNotEqual || constants_compare_equal == ConstantsCompareEitherWay)
+  {
+    bool should_be_false = Sum::is_less_exact(E1, E2);
+    if (should_be_false)
+    {
+      Dout(dc::warning, "symbolic2_testsuite.cxx:" << line << ": expected \"" << E1 << "\" NOT to be less than \"" << E2 << "\" when constants do not compare equal");
+      fail = true;
+    }
+    should_be_false = Sum::is_less_exact(E2, E1);
+    if (should_be_false)
+    {
+      Dout(dc::warning, "symbolic2_testsuite.cxx:" << line << ": expected \"" << E2 << "\" NOT to be less than \"" << E1 << "\" when constants do not compare equal");
+      fail = true;
+    }
+  }
+  if (constants_compare_equal == ConstantsCompareEqual || constants_compare_equal == ConstantsCompareEitherWay)
+  {
+    bool should_be_false = Sum::is_less(E1, E2);
+    if (should_be_false)
+    {
+      Dout(dc::warning, "symbolic2_testsuite.cxx:" << line << ": expected \"" << E1 << "\" NOT to be less than \"" << E2 << "\" when constants compare equal");
+      fail = true;
+    }
+    should_be_false = Sum::is_less(E2, E1);
+    if (should_be_false)
+    {
+      Dout(dc::warning, "symbolic2_testsuite.cxx:" << line << ": expected \"" << E2 << "\" NOT to be less than \"" << E1 << "\" when constants compare equal");
+      fail = true;
+    }
+  }
+  ASSERT(!fail);
+}
+
+#define compare_equal(E1, E2) test_compare_equal(E1, E2, __LINE__)
+#define compare_equal_ConstantsCompareEqual(E1, E2) test_compare_equal(E1, E2, __LINE__, ConstantsCompareEqual)
+#define compare_equal_ConstantsCompareNotEqual(E1, E2) test_compare_equal(E1, E2, __LINE__, ConstantsCompareNotEqual)
+
 void test_differentiate(Expression const& expression, Symbol const& symbol)
 {
   Dout(dc::notice, "∂/∂" << symbol << " (" << expression << ") = " << expression.differentiate(symbol));
@@ -74,7 +172,6 @@ int main()
   // Constant creation.
   auto constant = [](int e, int d = 1){ return Constant::realize(e, d); };
 
-#if 0
   TEST("42 / 1", constant(42, 1), "42");
   TEST("-42 / 1", constant(-42, 1), "-42");
   TEST("42 / -1", constant(42, -1), "-42");
@@ -590,9 +687,7 @@ int main()
   TESTS((a * b) / (a * c), "b * c^-1");
   TESTS((a * b) / ((b^two) * c), "a * b^-1 * c^-1");
   TESTS(one / ((a^two) * c), "a^-2 * c^-1");
-#endif
   TESTS((a * constant(1, 2) * b) / -((a^two) * c), "-1/2 * a^-1 * b * c^-1");
-#if 0
   TESTS((z^two) * z, "z^3");
   TESTS(x * z / y * (x^two) / (z^(-two)), "x^3 * y^-1 * z^3");
   TESTS(x * z / y * (x^two) / -(z^(-two)), "-(x^3 * y^-1 * z^3)");
@@ -636,6 +731,310 @@ int main()
   // Addition of three symbols.
   TESTS((a + b) + (c + d), "a + b + c + d");
 
+  auto& some_constant = Constant::realize(3);
+  auto& some_symbol = y;
+  auto& some_power = x^2;
+  auto& some_low_product = some_constant * some_symbol;
+  auto& some_product = some_symbol * z;
+  auto & some_high_product = some_power * some_product;
+
+  // Test Sum::is_less.
+  // Compare constants.
+  ASSERT(!Sum::is_less(constant(3, 1), constant(10, 3))); // All constants must be treated as equal.
+  ASSERT(!Sum::is_less(constant(10, 3), constant(3, 1))); // All constants must be treated as equal.
+  ASSERT(!Sum::is_less(some_constant, some_constant)); // A constant is not less than itself.
+  // Compare symbols.
+  ASSERT(Sum::is_less(constant(1000, 1), x)); // Any constant should always be considered less than a symbol.
+  ASSERT(!Sum::is_less(x, constant(-1000, 1))); // A symbol is never less than a constant.
+  ASSERT(Sum::is_less(x, y)); // Symbols should compare like their Id.
+  ASSERT(!Sum::is_less(y, x)); // Symbols should compare like their Id.
+  ASSERT(!Sum::is_less(y, y)); // A symbol is not less than itself.
+  // Compare powers.
+  ASSERT(Sum::is_less(some_constant, some_power)); // Any constant should always be considered less than a power.
+  ASSERT(!Sum::is_less(some_power, some_constant)); // Any power is never less than a constant.
+  ASSERT(Sum::is_less(some_symbol, some_power)); // Any symbol should always be considered less than a power.
+  ASSERT(!Sum::is_less(some_power, some_symbol)); // Any power is never less than a symbol.
+  ASSERT(Sum::is_less(x^3, x^constant(10, 3))); // Powers of equal symbol should be compared by their exponent.
+  ASSERT(!Sum::is_less(x^constant(10, 3), x^3)); // Powers of equal symbol should be compared by their exponent.
+  ASSERT(Sum::is_less(x^3, y^3)); // Powers should first be compared by base symbol.
+  ASSERT(!Sum::is_less(y^3, x^3)); // Powers should first be compared by base symbol.
+  ASSERT(!Sum::is_less(some_power, some_power)); // A power is not less than itself.
+  // Compare products.
+  ASSERT(Sum::is_less(some_constant, some_low_product)); // Constants are always less.
+  ASSERT(!Sum::is_less(some_low_product, some_constant)); // Constants are always less.
+  ASSERT(!Sum::is_less(some_symbol, some_low_product)); // some_low_product is a constant times some_symbol.
+  ASSERT(!Sum::is_less(some_low_product, some_symbol)); // some_low_product is a constant times some_symbol.
+  ASSERT(!Sum::is_less(some_power, some_low_product)); // some_low_product is a constant times some_symbol.
+  ASSERT(Sum::is_less(some_low_product, some_power)); // some_low_product is a constant times some_symbol.
+  ASSERT(Sum::is_less(some_low_product, some_high_product)); //
+  ASSERT(!Sum::is_less(some_high_product, some_low_product)); //
+
+  // Lets define four types that compare like K < L < M < N.
+  auto& k = some_constant;
+  auto& l = x;
+  auto& m = y^2;
+  auto& n = z^3;
+
+  // Any Product<X, Y> always must have X < Y; therefore we have the following possibilities:
+  auto& KL = k * l;
+  auto& KM = k * m;
+  auto& KN = k * n;
+  auto& LM = l * m;
+  auto& LN = l * n;
+  auto& MN = m * n;
+  // Test that we can't compile the other possibilities.
+#if WONT_COMPILE
+  Product<K, K> test1;  // error: static assertion [...]: The second factor of a Product can only be a Symbol, Power or another Product.
+  Product<L, K> test2;  // Idem
+  Product<M, K> test3;  // Idem
+  Product<L, L> test4;  // error: static assertion [...]: The first argument of a Product must be less than the second argument.
+  Product<M, L> test5;  // Idem
+  Product<M, M> test6;  // Idem
+#endif
+
+  compare_equal1(KL);
+  compare_less(KL, KM);
+  compare_less(KL, KN);
+  compare_less(KL, LM);
+  compare_less(KL, LN);
+  compare_less(KL, MN);
+
+  compare_equal1(KM);
+  compare_less(KM, KN);
+  compare_less(KM, LM);
+  compare_less(KM, LN);
+  compare_less(KM, MN);
+
+  compare_equal1(KN);
+  compare_less(KN, LM);
+  compare_less(KN, LN);
+  compare_less(KN, MN);
+
+  compare_equal1(LM);
+  compare_less(LM, LN);
+  compare_less(LM, MN);
+
+  compare_equal1(LN);
+  compare_less(LN, MN);
+
+  compare_equal1(MN);
+
+  TESTS((-a + two * b - three_halfs * c) * (x - two * y + three_halfs * c - (b^two)),
+      "-2 * b^3 - 9/4 * c^2 - 3/2 * a * c - a * x + 2 * a * y + a * b^2 + 3 * b * c + 2 * b * x - 4 * b * y - 3/2 * c * x + 3 * c * y + 3/2 * b^2 * c");
+  TESTS(x^(one + two), "x^3");
+
+  TESTS((-b + (((b^two) - constant(4, 1) * a * c)^constant(1, 2))) / (two * a), "-1/2 * a^-1 * b + 1/2 * a^-1 * (b^2 - 4 * a * c)^(1/2)");
+  TESTS((a + b + c + d) * (x + y + z), "a * x + a * y + a * z + b * x + b * y + b * z + c * x + c * y + c * z + d * x + d * y + d * z");
+  TESTS(((a + b)^constant(3)) * x, "x * (a + b)^3");
+
+  // Test Exponentiation.
+  TESTS((constant(3, 7)^two), "9/49");
+  TESTS((constant(3, 7)^constant(3)), "27/343");
+  TESTS((constant(3, 7)^constant(5)), "243/16807");
+  TESTS(x^two, "x^2");
+  TESTS((x^three_halfs)^two, "x^3");
+  TESTS(((x^constant(3, 1))^constant(1, 3)), "x");
+  TESTS((((a + b)^constant(3, 1))^constant(1, 3)), "a + b");
+  TESTS((constant(42) * x * y)^two, "1764 * x^2 * y^2");
+  TESTS((x * (y^three_halfs))^two, "x^2 * y^3");
+  TESTS((a + b)^two, "(a + b)^2");
+  TESTS(((a + b)^two)^three_halfs, "(a + b)^3");
+  TESTS(((a + two * b)^three_halfs) / ((x - (y^two))^two), "(a + 2 * b)^(3/2) * (x - y^2)^-2");
+
+  // Test Division.
+  TESTS(x / (y^constant(-1)), "x * y");
+  TESTS(x / ((a + b)^constant(-1)), "a * x + b * x");
+
+  auto& formula1 = (x + y)^three_halfs;
+  TESTS(formula1, "(x + y)^(3/2)");
+  auto& formula2 = constant(-1, 2) * formula1;
+  TESTS(formula2, "-1/2 * (x + y)^(3/2)");
+  TESTS(((x + y)^three_halfs) * (constant(7) * x - constant(1, 7) * y), "7 * x * (x + y)^(3/2) - 1/7 * y * (x + y)^(3/2)");
+
+  TESTS((-two * x) * (constant(5) * ((y - (x^two))^constant(4))), "-10 * x * (y - x^2)^4");
+
+  // Test Sin.
+  TESTS(constant(2) * sin(x), "2 * sin(x)");
+
+  // Testing is_less_Sum.
+  Constant const& constant_m1 = constant(37, 41); // 0.902439024...
+  Constant const& constant2 = constant(115, 127); // 0.905511811...
+
+  // Two constants compare equal.
+  compare_equal_ConstantsCompareEqual(constant_m1, constant2);
+  // Unless they don't.
+  compare_less_ConstantsCompareNotEqual(constant_m1, constant2);
+
+  Expression const& symbol0 = a;
+  Expression const& symbol1 = b;
+
+  // Two symbols compare by Id.
+  compare_less(symbol0, symbol1);
+
+  Expression const& power0 = symbol0 ^ constant_m1;
+  Expression const& product_c0 = constant_m1 * symbol0;
+  Expression const& sin0 = sin(symbol0);
+  Expression const& multiplication_cS0 = constant_m1 * sin0;
+  Expression const& cos0 = cos(symbol0);
+  Expression const& sum_c0 = constant_m1 + symbol0;
+  Expression const& sum_c1 = constant_m1 + symbol1;
+  Expression const& exponentiation = sum_c0 ^ constant_m1;
+
+  // A constant compares less than anything else.
+  compare_less(constant_m1, symbol0);
+  compare_less(constant_m1, power0);
+  compare_less(constant_m1, product_c0);
+  compare_less(constant_m1, exponentiation);
+  compare_less(constant_m1, multiplication_cS0);
+  compare_less(constant_m1, sin0);
+  compare_less(constant_m1, cos0);
+  compare_less(constant_m1, sum_c0);
+
+  Expression const& product_c1 = constant_m1 * symbol1;
+  Expression const& product_01 = symbol0 * symbol1;
+  Expression const& sin1 = sin(symbol1);
+  Expression const& multiplication_0E = symbol0 * exponentiation;
+
+  // A symbol compares less than anything else (except constants, etc - which is from now on considered trivial)
+  // except other symbols that have a smaller Id (including a Product/Multiplication of a constant with such symbol).
+  compare_equal(symbol0, symbol0);
+  compare_less(symbol0, symbol1);
+  compare_less(symbol0, power0);
+  compare_equal_ConstantsCompareEqual(symbol0, product_c0);
+  compare_less_ConstantsCompareNotEqual(symbol0, product_c0);
+  compare_less(symbol0, product_c1);
+  compare_less(symbol0, product_01);
+  compare_less(symbol0, exponentiation);
+  compare_less(symbol0, multiplication_cS0);
+  compare_less(symbol0, multiplication_0E);
+  compare_less(symbol0, sin0);
+  compare_less(symbol0, cos0);
+  compare_less(symbol0, sum_c0);
+
+  Expression const& power0b = symbol0 ^ constant2;
+  Expression const& power1 = symbol1 ^ constant_m1;
+  Expression const& product_d0 = Product::multiply(constant2, power0);
+  Expression const& product_d0b = Product::multiply(constant2, power0b);
+  Expression const& product_d1 = Product::multiply(constant2, power1);
+
+  // A power compares less than anything "larger than" a Power.
+  // It compares less than another Power if either the id of the base symbol is less, or
+  // the base is the same and the exponent is less.
+  compare_equal(power0, power0);
+  compare_less(power0, power0b);
+  compare_less(power0b, power1);
+  compare_equal_ConstantsCompareEqual(power0, product_d0);
+  compare_less_ConstantsCompareNotEqual(power0, product_d0);
+  compare_less(power0, product_d0b);
+  compare_less(power0b, product_d1);
+  compare_less(power0, product_01);
+  compare_less(power0, exponentiation);
+  compare_less(power0, multiplication_cS0);
+  compare_less(power0, multiplication_0E);
+  compare_less(power0, sin0);
+  compare_less(power0, cos0);
+  compare_less(power0, sum_c0);
+
+  // A product compares less than anything "larger than" a Product.
+  // It compares less than another Product if the first argument compares less than the first argument of the second Product,
+  // or when those are equal and the second argument compares less than the second argument of the second Product.
+  compare_equal(product_01, product_01);
+  compare_equal_ConstantsCompareEqual(Product::multiply(constant_m1, product_01), product_01);
+  compare_less_ConstantsCompareNotEqual(Product::multiply(constant_m1, product_01), product_01);
+  compare_less(Product::multiply(constant_m1, exponentiation), product_01);
+  compare_less(product_01, multiplication_0E);
+  compare_less_ConstantsCompareEqual(product_01, Product::multiply(constant_m1, multiplication_0E));
+  compare_less_ConstantsCompareNotEqual(Product::multiply(constant_m1, multiplication_0E), product_01);
+  compare_less(product_01, sin0);
+  compare_less_ConstantsCompareEqual(product_01, Product::multiply(constant_m1, sin0));
+  compare_less_ConstantsCompareNotEqual(Product::multiply(constant_m1, sin0), product_01);
+  compare_less(product_01, cos0);
+  compare_less_ConstantsCompareEqual(product_01, Product::multiply(constant_m1, cos0));
+  compare_less_ConstantsCompareNotEqual(Product::multiply(constant_m1, cos0), product_01);
+  compare_less(product_01, sum_c0);
+  compare_less(product_01, Product::multiply(constant_m1, sum_c0));
+
+  compare_equal_ConstantsCompareEqual(product_c0, symbol0);
+  compare_less_ConstantsCompareNotEqual(symbol0, product_c0);
+  compare_less_ConstantsCompareEqual(product_c0, symbol1);
+  compare_less_ConstantsCompareNotEqual(symbol1, product_c0);
+  compare_less_ConstantsCompareEqual(product_c0, power0);
+  compare_less_ConstantsCompareNotEqual(power0, product_c0);
+  compare_equal(product_c0, product_c0);
+  compare_less(product_c0, product_c1);
+  compare_less(product_c0, product_01);
+  compare_less_ConstantsCompareEqual(product_c0, exponentiation);
+  compare_less_ConstantsCompareNotEqual(exponentiation, product_c0);
+  compare_less(product_c0, multiplication_cS0);
+  compare_less(product_c0, multiplication_0E);
+  compare_less(product_c0, sin0);
+  compare_less(product_c0, cos0);
+  compare_less(product_c0, sum_c0);
+
+  compare_equal_ConstantsCompareEqual(Product::multiply(constant_m1, power0), power0);
+  compare_less_ConstantsCompareNotEqual(power0, Product::multiply(constant_m1, power0));
+  compare_less_ConstantsCompareEqual(Product::multiply(constant_m1, power0), power0b);
+  compare_less_ConstantsCompareNotEqual(power0b, Product::multiply(constant_m1, power0));
+  compare_less_ConstantsCompareEqual(Product::multiply(constant_m1, power0b), power1);
+  compare_less_ConstantsCompareNotEqual(power1, Product::multiply(constant_m1, power0b));
+  compare_equal_ConstantsCompareEqual(Product::multiply(constant_m1, power0), product_d0);
+  compare_less_ConstantsCompareNotEqual(Product::multiply(constant_m1, power0), product_d0);
+  compare_less(Product::multiply(constant_m1, power0), product_d0b);
+  compare_less(Product::multiply(constant_m1, power0b), product_d1);
+  compare_less(Product::multiply(constant_m1, power0), product_01);
+  compare_less_ConstantsCompareEqual(Product::multiply(constant_m1, power0), exponentiation);
+  compare_less_ConstantsCompareNotEqual(exponentiation, Product::multiply(constant_m1, power0));
+  compare_less(Product::multiply(constant_m1, power0), multiplication_cS0);
+  compare_less(Product::multiply(constant_m1, power0), multiplication_0E);
+  compare_less(Product::multiply(constant_m1, power0), sin0);
+  compare_less(Product::multiply(constant_m1, power0), cos0);
+  compare_less(Product::multiply(constant_m1, power0), sum_c0);
+
+  Expression const& multiplication_cS1 = Product::multiply(constant_m1, sin1);
+
+  //Expression const& exponentiation = Power::make_power(sum_c0, constant_m1);
+  Expression const& exponentiation0b = Power::make_power(sum_c0, constant2);
+  Expression const& exponentiation1 = Power::make_power(sum_c1, constant_m1);
+
+  // An Exponentiation compares less than anything "larger than" an Exponentiation.
+  // It compares less than another Exponentiation if either the base is less, or
+  // the base is the same and the exponent is less.
+  compare_equal(exponentiation, exponentiation);
+  compare_less(exponentiation, product_01);
+  compare_less(exponentiation, multiplication_0E);
+  compare_less(exponentiation, sin0);
+  compare_less(exponentiation, cos0);
+  compare_less(exponentiation, sum_c0);
+  compare_less(exponentiation, exponentiation0b);
+  compare_less(exponentiation0b, exponentiation1);
+
+  compare_equal_ConstantsCompareEqual(exponentiation, Product::multiply(constant_m1, exponentiation));
+  compare_less_ConstantsCompareEqual(exponentiation, Product::multiply(constant_m1, multiplication_0E));
+  compare_less_ConstantsCompareEqual(exponentiation, Product::multiply(constant_m1, sin0));
+  compare_less_ConstantsCompareEqual(exponentiation, Product::multiply(constant_m1, cos0));
+  compare_less_ConstantsCompareEqual(exponentiation, Product::multiply(constant_m1, sum_c0));
+  compare_less_ConstantsCompareEqual(exponentiation, Product::multiply(constant_m1, exponentiation0b));
+  compare_less_ConstantsCompareEqual(exponentiation0b, Product::multiply(constant_m1, exponentiation1));
+
+  // A Multiplication compares less than anything "larger than" a Multiplication.
+  // It compares less than another Multiplication if either the first argument is
+  // less, or the first argument is equal and the second argument is less.
+  compare_equal(multiplication_cS0, multiplication_cS0);
+  compare_equal(multiplication_0E, multiplication_0E);
+  compare_less(multiplication_0E, sin0);
+  compare_less(multiplication_0E, cos0);
+  compare_less(multiplication_0E, sum_c0);
+  compare_less(multiplication_cS0, multiplication_cS1);
+
+  // Symbol < Power < get_nonconstant_factor_t<Product> < Exponentiation < get_nonconstant_factor_t<Multiplication> < Sin < Cos < Sum
+  compare_equal(sin0, sin0);
+  compare_less(sin0, cos0);
+  compare_less(sin0, sum_c0);
+  compare_equal(cos0, cos0);
+  compare_less(cos0, sum_c0);
+
+  compare_equal(sum_c0, sum_c0);
+
   //==========================================================================
   // Old testsuite:
 
@@ -673,6 +1072,19 @@ int main()
   auto& x_div_y = x / y;
   Dout(dc::notice, "x / y = " << x_div_y);
 
-  Debug(Expression::dump_database());
-#endif
+  test_differentiate(sin(two * (x^2) * y + three * x + z), x);
+  test_differentiate((sin(x)^2) + (cos(x)^2), x);
+
+  TESTS(((x + y)^two) * (((x + y + a)^two) * ((x + y)^three)), "(a + x + y)^2 * (x + y)^5");
+  //TESTS(((constant(2) * a)^constant(1, 2)) * ((constant(4) * a)^constant(3, 4)), "4 * a^(5/4)");
+  TESTS(((constant(2) * a)^constant(2)) * ((constant(4) * a)^constant(3)), "256 * a^5");
+
+  Expression const& v0_div_q1_ = constant(2) * sin(y) / sin(y - x);
+  Expression const& v0x_ = v0_div_q1_ * (cos(x) * c + sin(x) * a);
+  Expression const& v0y_ = v0_div_q1_ * (cos(x) * d + sin(x) * b);
+  Expression const& v02_ = utils::square(v0x_) + utils::square(v0y_);
+
+  Dout(dc::notice, v02_);
+
+//  Debug(Expression::dump_database());
 }

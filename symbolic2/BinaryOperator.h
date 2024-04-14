@@ -121,7 +121,10 @@ namespace symbolic2 {
 template<BinaryOp OpT>
 OpT const& BinaryOperator<OpT>::realize(Expression const& arg1, Expression const& arg2)
 {
-  return static_cast<OpT const&>(get<OpT>(arg1, arg2));
+  DoutEntering(dc::symbolic|continued_cf, NAMESPACE_DEBUG::type_name_of<OpT>() << "::realize(" << arg1 << ", " << arg2 << ") --> ");
+  OpT const& result = static_cast<OpT const&>(get<OpT>(arg1, arg2));
+  Dout(dc::finish, result);
+  return result;
 }
 
 template<BinaryOp OpT>
