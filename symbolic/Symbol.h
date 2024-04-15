@@ -1,94 +1,79 @@
 #pragma once
 
-#include "Expression.h"
-#include "counter.h"
-#include "IdRange.h"
-#include "precedence.h"
-#ifdef SYMBOLIC_PRINTING
-#include "utils/has_print_on.h"
-#include <iostream>
-#endif
+#include "Constant.h"
 
 namespace symbolic {
-#ifdef SYMBOLIC_PRINTING
-using utils::has_print_on::operator<<;
-#endif
 
-template<int Id, typename T>
-inline consteval auto make_symbol();
-
-template<int Id, typename T>
-inline auto make_symbol(char const* name);
-
-class SymbolRegistry
+class Symbol : public Expression
 {
- protected:
-  static void register_symbol(int id, char const* name);
-  static char const* get_name(int id);
-  static void set_value(int id, double value);
+ private:
+  std::string const name_;
 
- public:
-  static double get_value(int id);
-};
-
-template<int Id>
-class Symbol : public ExpressionTag, public SymbolRegistry
-{
- public:
-  static constexpr precedence s_precedence = precedence::symbol;
-  static constexpr int s_id = Id;
-  static constexpr IdRange<Id, Id + 1> id_range{};
+  mutable double value_{};
+  mutable uint64_t cached_hash_ = 0;
 
  private:
-  // The constructor is private. Use make_symbol to create a new symbol.
+  template<typename T, typename... Args>
+  friend Expression const& Expression::get(Args&&... args);
+  Symbol(std::string const& name) : name_(name) { }
+  Symbol(std::string const& name, double value) : name_(name), value_(value) { }
 
-  template<int Id2, typename T2>
-  friend consteval auto make_symbol();
-
-  template<int Id2, typename T2>
-  friend auto make_symbol(char const* name);
-
-  Symbol(char const* name) { SymbolRegistry::register_symbol(s_id, name); }
-
-  // Or, use these:
-  consteval Symbol() = default;
- public:
-  static void register_name(char const* name) { SymbolRegistry::register_symbol(s_id, name); }
+  Precedence precedence() const override final { return Precedence::symbol; }
 
  public:
-  static char const* name() { return SymbolRegistry::get_name(s_id); }
+  static Symbol const& realize(std::string const& name)
+  {
+    DoutEntering(dc::symbolic, "Symbol::realize(\"" << name << "\")");
+    return static_cast<Symbol const&>(get<Symbol>(name));
+  }
+  static Symbol const& realize(std::string const& name, double value)
+  {
+    DoutEntering(dc::symbolic, "Symbol::realize(\"" << name << "\", " << value <<  ")");
+    return static_cast<Symbol const&>(get<Symbol>(name, value));
+  }
+
+  ExpressionType type() const override final { return symbolT; }
+
+  uint64_t hash() const override final
+  {
+    if (cached_hash_ == 0)
+    {
+      cached_hash_ = hash_v<Symbol>;
+      boost::hash_combine(cached_hash_, std::hash<std::string>{}(name_));
+    }
+
+    return cached_hash_;
+  }
+
+  bool equals(Expression const& other) const override final;
+
+  double evaluate() const override final
+  {
+    return value_;
+  }
+
+  Expression const& derivative(Symbol const& symbol) const override final
+  {
+    return &symbol == this ? Constant::s_cached_one : Constant::s_cached_zero;
+  }
+
+  std::string const& name() const { return name_; }
 
   Symbol const& operator=(double value) const
   {
-    SymbolRegistry::set_value(s_id, value);
+    value_ = value;
     return *this;
   }
 
-  static constexpr Symbol instance() { return {}; }
+  bool operator<(Symbol const& other) const { return name_ < other.name_; }
 
 #ifdef SYMBOLIC_PRINTING
-  static void print_on(std::ostream& os)
+ public:
+  void print_on(std::ostream& os) const override final
   {
-    os << name();
+    os << name_;
   }
 #endif
 };
-
-template<int Id = 0, typename T = decltype([]{})>
-auto make_symbol(char const* name)
-{
-  auto symbol = Symbol<metahack::unique_id<Id, T>()>(name);
-  return symbol;
-}
-
-template<int Id = 0, typename T = decltype([]{})>
-consteval auto make_symbol()
-{
-  auto symbol = Symbol<metahack::unique_id<Id, T>()>();
-  return symbol;
-}
-
-template<int Id1, int Id2>
-constexpr bool is_same_expression(Symbol<Id1> const& arg1, Symbol<Id2> const& arg2) { return arg1.id() == arg2.id(); }
 
 } // namespace symbolic

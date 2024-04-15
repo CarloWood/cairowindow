@@ -4,7 +4,7 @@ namespace config {
 
 // SYMBOLIC_PRINTING
 //
-// Allow printing symbolic objects (Constant, Symbol, Negation, Product, ...) to a std::ostream.
+// Allow printing symbolic objects (Constant, Symbol, Sum, Product, ...) to a std::ostream.
 
 #cmakedefine SYMBOLIC_PRINTING 1
 

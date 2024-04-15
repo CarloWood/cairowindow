@@ -10,16 +10,20 @@ double QuadraticEnergy::arc_length(double v0qa, double v1qa)
 {
   v0qa_ = v0qa;
   v1qa_ = v1qa;
-  return evaluate(arc_length_);
+  return arc_length_.evaluate();
 }
 
-#if 0
 double QuadraticEnergy::stretching_energy(double v0qa, double v1qa)
 {
   v0qa_ = v0qa;
   v1qa_ = v1qa;
-  return evaluate(stretching_energy_);
+  return stretching_energy_.evaluate();
 }
-#endif
+
+void QuadraticEnergy::print_derivative() const
+{
+  auto& d = stretching_energy_.derivative(v0qa_);
+  Dout(dc::notice, "derivative ∂stretching_energy_/∂v0qa = " << d << " [" << d.definition() << "] = " << d.evaluate());
+}
 
 } // namespace cairowindow::autodiff

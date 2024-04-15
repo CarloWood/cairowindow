@@ -1,56 +1,86 @@
 #pragma once
 
-#include "precedence.h"
-#include "is_symbol.h"
-#include "is_constant.h"
-#include "get_exponent.h"
+#include "BinaryOperator.h"
+#include <cmath>
 
 namespace symbolic {
 
-template<SymbolType Base, ConstantType Exponent>
-requires (!is_constant_zero_v<Exponent> && !is_constant_one_v<Exponent>)
-class Power : public ExpressionTag
+class Power : public BinaryOperator<Power>
 {
+ private:
+  Precedence precedence() const override final { return Precedence::power; }
+
+  // When it is known that exponent isn't zero or one.
+  static Expression const& make_power2(Expression const& base, Constant const& exponent);
+
  public:
-  using base_type = Base;
-  using exponent_type = Exponent;
+  template<typename T, typename... Args>
+  friend Expression const& Expression::get(Args&&... args);
+  Power(Expression const& arg1, Expression const& arg2);
 
-  // Used for is_less_Sum.
-  using arg1_type = Base;
-  using arg2_type = Exponent;
+  static Expression const& make_power(Expression const& base, Constant const& exponent);
 
-  static constexpr int s_id = Base::s_id;
+  ExpressionType type() const override final { return powerT; }
 
-  static constexpr precedence s_precedence = precedence::power;
-  static constexpr auto id_range = Base::id_range;
+  Expression const& get_base() const override final { return arg1_; }
+  Constant const& get_exponent() const override final { return static_cast<Constant const&>(arg2_); }
 
-  static constexpr Power instance() { return {}; }
+  double evaluate() const override final
+  {
+    return std::pow(arg1_.evaluate(), arg2_.evaluate());
+  }
+
+  Expression const& derivative(Symbol const& symbol) const override final;
 
 #ifdef SYMBOLIC_PRINTING
  public:
-  static void print_on(std::ostream& os)
-  {
-    bool need_parens = needs_parens(Base::s_precedence, s_precedence, before);
-    if (need_parens)
-      os << '(';
-    Base::print_on(os);
-    if (need_parens)
-      os << ')';
-    os << '^';
-    need_parens = needs_parens(Exponent::s_precedence, s_precedence, after);
-    if (need_parens)
-      os << '(';
-    Exponent::print_on(os);
-    if (need_parens)
-      os << ')';
-  }
+  void print_on(std::ostream& os) const override final;
 #endif
 };
 
-template<SymbolType Base, ConstantType Exponent>
-struct get_exponent<Power<Base, Exponent>>
+inline Expression const& operator^(Expression const& arg1, Expression const& arg2)
 {
-  using type = Exponent;
-};
+  Constant const* base = dynamic_cast<Constant const*>(&arg1);
+  Constant const* exponent = dynamic_cast<Constant const*>(&arg2);
+
+  // Can only raise to a constant power.
+  ASSERT(exponent);
+
+  if (!base)
+    return Power::make_power(arg1, *exponent);
+
+  // For example, when trying to calculate: (27/8)^(5/3)
+
+  int e1 = base->enumerator_;           // 27
+  int d1 = base->denominator_;          // 8
+  int e2 = exponent->enumerator_;       // 5
+  int d2 = exponent->denominator_;      // 3
+
+  if (e2 < 0)
+  {
+    std::swap(e1, d1);
+    e2 = -e2;
+  }
+
+  long e_nb = std::lround(std::pow(static_cast<double>(e1), 1.0 / d2));         // 27^(1/3) = 3
+  long d_nb = std::lround(std::pow(static_cast<double>(d1), 1.0 / d2));         // 8^(1/3) = 2
+
+  if (std::pow(e_nb, d2) != e1 ||       // 3^3 == 27
+      std::pow(d_nb, d2) != d1)         // 2^3 == 8
+    DoutFatal(dc::core, "Can't exponentiate " << arg1 << " to the power " << arg2);
+
+  return Constant::realize(std::pow(e_nb, e2), std::pow(d_nb, e2));     // (3^5) / (2^5) = 243/32
+}
+
+inline Expression const& operator^(Expression const& arg1, int exponent)
+{
+  return arg1 ^ Constant::realize(exponent);
+}
+
+inline symbolic::Expression const& square(symbolic::Expression const& expression)
+{
+  static symbolic::Constant const& cached_two = symbolic::Constant::realize(2);
+  return symbolic::Power::make_power(expression, cached_two);
+}
 
 } // namespace symbolic

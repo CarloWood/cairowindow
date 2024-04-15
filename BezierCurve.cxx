@@ -446,7 +446,6 @@ double BezierCurve::quadratic_arc_length() const
   double a03 = a02 * a0;
   return ((z * a0 + a03) * s - z * a0 * v0 + (v02 * a02 - z * z) * std::log((z + a02 + a0 * s) / (z + v0 * a0))) / (2.0 * a03);
 }
-// ∂
 
 double BezierCurve::quadratic_bending_energy() const
 {

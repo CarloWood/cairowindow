@@ -210,15 +210,20 @@ int main()
         BezierCurve qbc01(plot_P0, plot_P1);
         if (qbc01.quadratic_from(arc01_0, arc01_1))
         {
+          autodiff::QuadraticEnergy arc_length(qbc01);
+
           plot_bezier_curve01 = plot.create_bezier_curve(second_layer, curve_line_style({.line_color = color::black}), qbc01);
-          Dout(dc::notice, "Stretching energy 01 = " << qbc01.quadratic_stretching_energy());
+          Dout(dc::notice, "Stretching energy 01 (old) = " << qbc01.quadratic_stretching_energy());
+          Dout(dc::notice, "Stretching energy 01 (new) = " << arc_length.stretching_energy(arc01_0, arc01_1));
           Dout(dc::notice, "Bending energy    01 = " << qbc01.quadratic_bending_energy());
 
           total_energy = qbc01.quadratic_stretching_energy() + bending_weight * qbc01.quadratic_bending_energy();
+
+          Dout(dc::notice, "Arc length (old) = " << qbc01.quadratic_arc_length());
+          Dout(dc::notice, "Arc length (new) = " << arc_length.arc_length(arc01_0, arc01_1));
+
+          arc_length.print_derivative();
         }
-        autodiff::QuadraticEnergy arc_length(qbc01);
-        Dout(dc::notice, "Arc length (old) = " << qbc01.quadratic_arc_length());
-        Dout(dc::notice, "Arc length (new) = " << arc_length.arc_length(arc01_0, arc01_1));
       }
 
       Vector Q2 = plot_P2 - plot_P1;

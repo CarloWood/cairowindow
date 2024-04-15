@@ -1,166 +1,129 @@
 #pragma once
 
-#include "multiply_fwd.h"
-#include "precedence.h"
-#include "IdRange.h"
-#include <numeric>              // std::gcd
-#ifdef SYMBOLIC_PRINTING
-#include "utils/has_print_on.h"
-#include <iostream>
-#endif
+#include "Expression.h"
+#include "Hash.h"
+#include <numeric>
+#include <ratio>
 #include "debug.h"
 
 namespace symbolic {
-#ifdef SYMBOLIC_PRINTING
-using utils::has_print_on::operator<<;
-#endif
 
-// Forward declarations (needed for the friend declarations).
+class Symbol;
 
-template<int E, int D>
-consteval auto constant();
-
-template<int E, int D, int exponent>
-consteval auto operator^(Constant<E, D>, Constant<exponent, 1>);
-
-template<int E, int D>
-consteval auto operator-(Constant<E, D>);
-
-// A rational constant.
-//
-template<int Enumerator, int Denominator>
-class Constant : public ExpressionTag
+class Constant : public Expression
 {
-  static_assert(Denominator > 0, "The denominator should always be positive.");
-  static_assert(std::gcd(Enumerator, Denominator) == 1, "A Constant must be constructed in canonical form.");
-
  public:
-  static constexpr precedence s_precedence =
-    Denominator != 1 ? precedence::product : Enumerator < 0 ? precedence::negation : precedence::constant;
-  static constexpr int s_enumerator = Enumerator;
-  static constexpr int s_denominator = Denominator;
-  static constexpr int s_id = - 1;
-  static constexpr IdRange<-1, 0> id_range{};
+  static Constant const& s_cached_zero;
+  static Constant const& s_cached_one;
+  static Constant const& s_cached_minus_one;
+
+  int const enumerator_;
+  int const denominator_;
 
  private:
-  // Use this free function to create Constant objects.
-  template<int E, int D>
-  friend consteval auto constant();
+  mutable uint64_t cached_hash_ = 0;
 
-  // Negation.
-  template<int E, int D>
-  friend consteval auto operator-(Constant<E, D>);
+ private:
+  Constant(int e, int d, int g) : enumerator_(e / g), denominator_(d / g) { }
 
-  template<int E, int D, int exponent>
-  friend consteval auto operator^(Constant<E, D>, Constant<exponent, 1>);
+  static int canonical_gcd(int e, int d)
+  {
+    int gcd = std::gcd(std::abs(e), std::abs(d));
+    return d < 0 ? -gcd : gcd;
+  }
+
+  template<typename T, typename... Args>
+  friend Expression const& Expression::get(Args&&... args);
+  Constant(int n) : enumerator_(n), denominator_(1) { }
+  Constant(int e, int d) : Constant(e, d, canonical_gcd(e, d)) { }
+
+  template<std::intmax_t Num, std::intmax_t Denom>
+  Constant(std::ratio<Num, Denom>);
+
+  Precedence precedence() const override final { return denominator_ != 1 ? Precedence::ratio : enumerator_ < 0 ? Precedence::negation : Precedence::constant; }
+
+  Expression const& get_nonconstant_factor() const override final { return s_cached_one; }
 
  public:
-  static constexpr Constant instance() { return {}; }
+  static Constant const& realize(int n)
+  {
+    DoutEntering(dc::symbolic, "Constant::realize(" << n << ")");
+    return static_cast<Constant const&>(get<Constant>(n));
+  }
+  static Constant const& realize(int e, int d)
+  {
+    DoutEntering(dc::symbolic, "Constant::realize(" << e << ", " << d << ")");
+    return static_cast<Constant const&>(get<Constant>(e, d));
+  }
+
+  static bool is_zero(Expression const& arg) { return &arg == &s_cached_zero; }
+  static bool is_one(Expression const& arg) { return &arg == &s_cached_one; }
+  static bool is_minus_one(Expression const& arg) { return &arg == &s_cached_minus_one; }
+
+  bool is_negative() const { return enumerator_ < 0; }
+
+  ExpressionType type() const override final { return constantT; }
+
+  uint64_t hash() const override
+  {
+    if (cached_hash_ == 0)
+    {
+      cached_hash_ = hash_v<Constant>;
+      boost::hash_combine(cached_hash_, enumerator_);
+      boost::hash_combine(cached_hash_, denominator_);
+    }
+
+    return cached_hash_;
+  }
+
+  bool equals(Expression const& other) const override;
+
+  double evaluate() const override
+  {
+    return static_cast<double>(enumerator_) / denominator_;
+  }
+
+  Expression const& derivative(Symbol const&) const override
+  {
+    return s_cached_zero;
+  }
+
+  bool operator<(Constant const& other) const { return enumerator_ * other.denominator_ < other.enumerator_ * denominator_; }
+
+  friend Constant const& operator+(Constant const& arg1, Constant const& arg2)
+  {
+    return realize(arg1.enumerator_ * arg2.denominator_ + arg2.enumerator_ * arg1.denominator_, arg1.denominator_ * arg2.denominator_);
+  }
+
+  friend Constant const& operator-(Constant const& arg1, Constant const& arg2)
+  {
+    return realize(arg1.enumerator_ * arg2.denominator_ - arg2.enumerator_ * arg1.denominator_, arg1.denominator_ * arg2.denominator_);
+  }
+
+  friend Constant const& operator*(Constant const& arg1, Constant const& arg2)
+  {
+    return realize(arg1.enumerator_ * arg2.enumerator_, arg1.denominator_ * arg2.denominator_);
+  }
+
+  friend Constant const& operator/(Constant const& arg1, Constant const& arg2)
+  {
+    return realize(arg1.enumerator_ * arg2.denominator_, arg1.denominator_ * arg2.enumerator_);
+  }
 
 #ifdef SYMBOLIC_PRINTING
  public:
-  static void print_on(std::ostream& os)
+  void print_on(std::ostream& os) const override
   {
-    os << Enumerator;
-    if constexpr (Denominator > 1)
-      os << "/" << Denominator;
+    os << enumerator_;
+    if (denominator_ > 1)
+      os << "/" << denominator_;
   }
 #endif
 };
 
-} // namespace symbolic
-
-#include "is_constant.h"
-#include "canonical_constant.h"
-
-namespace symbolic {
-
-template<Expression E1, Expression E2>
-class add;
-
-template<int Enumerator1, int Denominator1, int Enumerator2, int Denominator2>
-struct add<Constant<Enumerator1, Denominator1>, Constant<Enumerator2, Denominator2>>
+template<std::intmax_t Num, std::intmax_t Denom>
+Constant::Constant(std::ratio<Num, Denom>) : Constant(Num, Denom, canonical_gcd(Num, Denom))
 {
-  using type = canonical_constant_t<Enumerator1 * Denominator2 + Enumerator2 * Denominator1, Denominator1 * Denominator2>;
-};
-
-template<int Enumerator1, int Denominator1, int Enumerator2, int Denominator2>
-struct multiply<Constant<Enumerator1, Denominator1>, Constant<Enumerator2, Denominator2>, not_a_Product>
-{
-  using type = canonical_constant_t<Enumerator1 * Enumerator2, Denominator1 * Denominator2>;
-};
-
-// Create a rational constant.
-//
-// Usage:
-//
-// constexpr auto my_constant = symbolic::constant<13, 37>();
-//
-// The returned type is canonicalized: the denominator is always > 0
-// and the GCD of enumerator and denominator will be 1.
-//
-template<int E, int D = 1>
-consteval auto constant()
-{
-  return canonical_constant_t<E, D>::instance();
-}
-
-// Negation.
-template<int E, int D>
-consteval auto operator-(Constant<E, D>)
-{
-  return Constant<-E, D>{};
-}
-
-// Addition.
-template<int E1, int D1, int E2, int D2>
-consteval auto operator+(Constant<E1, D1>, Constant<E2, D2>)
-{
-  return constant<E1 * D2 + E2 * D1, D1 * D2>();
-}
-
-// Subtraction.
-template<int E1, int D1, int E2, int D2>
-consteval auto operator-(Constant<E1, D1>, Constant<E2, D2>)
-{
-  return constant<E1 * D2 - E2 * D1, D1 * D2>();
-}
-
-// Multiplication.
-template<int E1, int D1, int E2, int D2>
-consteval auto operator*(Constant<E1, D1>, Constant<E2, D2>)
-{
-  return constant<E1 * E2, D1 * D2>();
-}
-
-// Division.
-template<int E1, int D1, int E2, int D2>
-requires (E2 != 0)
-consteval auto operator/(Constant<E1, D1>, Constant<E2, D2>)
-{
-  return constant<E1 * D2, D1 * E2>();
-}
-
-// Exponentiation with an integer.
-template<int E, int D, int exponent>
-consteval auto operator^(Constant<E, D>, Constant<exponent, 1>)
-{
-  if constexpr (exponent == 0)
-  {
-    static_assert(E != 0, "0^0 is undefined");
-    return Constant<1, 1>{};
-  }
-  else if constexpr (exponent == 1)
-    return Constant<E, D>{};
-  else if constexpr (exponent < 0)
-  {
-    static_assert(E != 0, "division by zero is undefined");
-    return Constant<D, E>{}^Constant<-exponent, 1>{};
-  }
-  else if constexpr ((exponent & 1) == 1)
-    return Constant<E, D>{} * (Constant<E, D>{}^Constant<exponent - 1, 1>{});
-  else
-    return constant<E * E, D * D>() ^ Constant<exponent / 2, 1>{};;
 }
 
 } // namespace symbolic

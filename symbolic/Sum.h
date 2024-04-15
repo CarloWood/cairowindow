@@ -1,104 +1,56 @@
 #pragma once
 
-#include "IdRange.h"
-#include "precedence.h"
-#include "add.h"
-#include "negate.h"
-#include "is_product.h"
-#include <algorithm>
+#include "Product.h"
+#include "debug.h"
 
 namespace symbolic {
 
-template<Expression E1, Expression E2>
-requires (!is_sum_v<E1> && !is_constant_zero_v<E1> && !is_constant_v<E2>)
-class Sum : public ExpressionTag
+class Sum : public BinaryOperator<Sum>
 {
- public:
-  using arg1_type = E1;
-  using arg2_type = E2;
+ private:
+  template<typename T, typename... Args>
+  friend Expression const& Expression::get(Args&&... args);
+  Sum(Expression const& arg1, Expression const& arg2) : BinaryOperator<Sum>(arg1, arg2)
+  {
+    // First argument is not allowed to be zero.
+    ASSERT(!Constant::is_zero(arg1));
+    // Every Sum must have a non-Sum as first argument.
+    ASSERT(!arg1.is_sum());
+    // arg1 must always be "less than" arg2.
+    ASSERT(Sum::is_less(arg1, arg2));
+    // arg2 is not allowed to be a Sum that has a constant as first argument.
+    ASSERT(!arg2.is_sum() || !arg2.arg1().is_constant());
+  }
 
-  static constexpr precedence s_precedence = precedence::sum;
-  static constexpr IdRange<std::min(E1::id_range.begin, E2::id_range.begin), std::max(E1::id_range.end, E2::id_range.end)> id_range{};
+  Precedence precedence() const override final { return Precedence::sum; }
 
  public:
-  static constexpr Sum instance() { return {}; }
+  static Expression const& add(Expression const& arg1, Expression const& arg2);
+  static Expression const& combine(Expression const& arg1, Expression const& arg2);
+
+  ExpressionType type() const override final { return sumT; }
+
+  double evaluate() const override final
+  {
+    return arg1_.evaluate() + arg2_.evaluate();
+  }
+
+  Expression const& derivative(Symbol const& symbol) const override final;
 
 #ifdef SYMBOLIC_PRINTING
-  static void print_on(std::ostream& os);
+ public:
+  void print_on(std::ostream& os) const override final;
 #endif
 };
 
-template<Expression E1, Expression E2, Expression E3, Expression E4>
-constexpr bool is_same_expression(Sum<E1, E2> const& arg1, Sum<E3, E4> const& arg2)
+inline Expression const& operator+(Expression const& arg1, Expression const& arg2)
 {
-  return std::is_same_v<E1, E3> && std::is_same_v<E2, E4>;
+  return Sum::add(arg1, arg2);
 }
 
-#ifdef SYMBOLIC_PRINTING
-template<typename T>
-struct has_negative_factor : std::false_type { };
-
-template<typename T>
-constexpr bool has_negative_factor_v = has_negative_factor<T>::value;
-
-template<int Enumerator, int Denominator>
-requires (Enumerator < 0)
-struct has_negative_factor<Constant<Enumerator, Denominator>> : std::true_type { };
-
-template<ConstantType E1, Expression E2>
-requires (is_constant_less_than_zero_v<E1>)
-struct has_negative_factor<Product<E1, E2>> : std::true_type { };
-
-template<Expression E1, Expression E2>
-requires (has_negative_factor_v<E1>)
-struct has_negative_factor<Multiplication<E1, E2>> : std::true_type { };
-
-//static
-template<Expression E1, Expression E2>
-requires (!is_sum_v<E1> && !is_constant_zero_v<E1> && !is_constant_v<E2>)
-void Sum<E1, E2>::print_on(std::ostream& os)
+inline Expression const& operator-(Expression const& arg1, Expression const& arg2)
 {
-  bool need_parens = needs_parens(E1::s_precedence, s_precedence, before);
-  if (need_parens)
-    os << '(';
-  E1::print_on(os);
-  if (need_parens)
-    os << ')';
-  if constexpr (has_negative_factor_v<E2>)
-  {
-    os << " - ";
-    using Term = negate_t<E2>;
-    need_parens = needs_parens(Term::s_precedence, precedence::difference, after);
-    if (need_parens)
-      os << '(';
-    Term::print_on(os);
-    if (need_parens)
-      os << ')';
-    return;
-  }
-  else if constexpr (is_sum_v<E2>)
-  {
-    if constexpr (has_negative_factor_v<typename E2::arg1_type>)
-    {
-      os << " - ";
-      using SumWithNegatedFirstTerm = add_t<negate_t<typename E2::arg1_type>, typename E2::arg2_type>;
-      need_parens = needs_parens(SumWithNegatedFirstTerm::s_precedence, s_precedence, after);
-      if (need_parens)
-        os << '(';
-      SumWithNegatedFirstTerm::print_on(os);
-      if (need_parens)
-        os << ')';
-      return;
-    }
-  }
-  os << " + ";
-  need_parens = needs_parens(E2::s_precedence, s_precedence, after);
-  if (need_parens)
-    os << '(';
-  E2::print_on(os);
-  if (need_parens)
-    os << ')';
+  return Sum::add(arg1, Product::negate(arg2));
 }
-#endif
 
 } // namespace symbolic
