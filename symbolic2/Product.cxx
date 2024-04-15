@@ -7,9 +7,9 @@
 
 namespace symbolic2 {
 
-Expression const& Product::differentiate(Symbol const& symbol) const
+Expression const& Product::derivative(Symbol const& symbol) const
 {
-  return Sum::add(multiply(arg1_.differentiate(symbol), arg2_), multiply(arg1_, arg2_.differentiate(symbol)));
+  return Sum::add(multiply(arg1_.derivative(symbol), arg2_), multiply(arg1_, arg2_.derivative(symbol)));
 }
 
 //static

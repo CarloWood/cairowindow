@@ -11,9 +11,9 @@ double Cos::evaluate() const
   return std::cos(arg_.evaluate());
 }
 
-Expression const& Cos::differentiate(Symbol const& symbol) const
+Expression const& Cos::derivative(Symbol const& symbol) const
 {
-  return Product::multiply(Product::negate(arg_.differentiate(symbol)), Sin::realize(arg_));
+  return Product::multiply(Product::negate(arg_.derivative(symbol)), Sin::realize(arg_));
 }
 
 } // namespace symbolic2

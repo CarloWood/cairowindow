@@ -83,7 +83,7 @@ class Constant : public Expression
     return static_cast<double>(enumerator_) / denominator_;
   }
 
-  Expression const& differentiate(Symbol const&) const override
+  Expression const& derivative(Symbol const&) const override
   {
     return s_cached_zero;
   }

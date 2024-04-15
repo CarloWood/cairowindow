@@ -66,7 +66,7 @@ class Expression
   virtual Constant const& get_exponent() const;
   virtual Precedence precedence() const = 0;
   virtual double evaluate() const = 0;
-  virtual Expression const& differentiate(Symbol const& symbol) const = 0;
+  virtual Expression const& derivative(Symbol const& symbol) const = 0;
 
   static void dump_database();
 

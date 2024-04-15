@@ -17,7 +17,7 @@ class Sin : public UnaryOperator<Sin>
   ExpressionType type() const override final { return sinT; }
 
   double evaluate() const override final;
-  Expression const& differentiate(Symbol const& symbol) const override final;
+  Expression const& derivative(Symbol const& symbol) const override final;
 
 #ifdef SYMBOLIC2_PRINTING
  public:

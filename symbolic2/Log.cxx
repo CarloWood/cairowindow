@@ -11,9 +11,9 @@ double Log::evaluate() const
   return std::log(arg_.evaluate());
 }
 
-Expression const& Log::differentiate(Symbol const& symbol) const
+Expression const& Log::derivative(Symbol const& symbol) const
 {
-  return Product::multiply(arg_.differentiate(symbol), Power::make_power(arg_, Constant::s_cached_minus_one));
+  return Product::multiply(arg_.derivative(symbol), Power::make_power(arg_, Constant::s_cached_minus_one));
 }
 
 } // namespace symbolic2

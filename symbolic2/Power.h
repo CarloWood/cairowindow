@@ -30,7 +30,7 @@ class Power : public BinaryOperator<Power>
     return std::pow(arg1_.evaluate(), arg2_.evaluate());
   }
 
-  Expression const& differentiate(Symbol const& symbol) const override final;
+  Expression const& derivative(Symbol const& symbol) const override final;
 
 #ifdef SYMBOLIC2_PRINTING
  public:

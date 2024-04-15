@@ -139,9 +139,9 @@ void test_compare_equal(Expression const& E1, Expression const& E2, int line, Wh
 #define compare_equal_ConstantsCompareEqual(E1, E2) test_compare_equal(E1, E2, __LINE__, ConstantsCompareEqual)
 #define compare_equal_ConstantsCompareNotEqual(E1, E2) test_compare_equal(E1, E2, __LINE__, ConstantsCompareNotEqual)
 
-void test_differentiate(Expression const& expression, Symbol const& symbol)
+void test_derivative(Expression const& expression, Symbol const& symbol)
 {
-  Dout(dc::notice, "∂/∂" << symbol << " (" << expression << ") = " << expression.differentiate(symbol));
+  Dout(dc::notice, "∂/∂" << symbol << " (" << expression << ") = " << expression.derivative(symbol));
 }
 
 int main()
@@ -1038,9 +1038,9 @@ int main()
   //==========================================================================
   // Old testsuite:
 
-  test_differentiate(two, x);
-  test_differentiate(x, x);
-  test_differentiate(y, x);
+  test_derivative(two, x);
+  test_derivative(x, x);
+  test_derivative(y, x);
 
   x = 13;
   y = 42;
@@ -1055,16 +1055,16 @@ int main()
 
   Expression const& p = x * y;
   Dout(dc::notice, p << " [evaluate] = " << p.evaluate());
-  test_differentiate(p, x);
-  test_differentiate(p, y);
+  test_derivative(p, x);
+  test_derivative(p, y);
 
   Expression const& s = x + y;
   Dout(dc::notice, s << " [evaluate] = " << s.evaluate());
-  test_differentiate(s, x);
-  test_differentiate(s, y);
+  test_derivative(s, x);
+  test_derivative(s, y);
 
   Dout(dc::notice, "(" << s << ") * (" << s << ") = " << (s * s));
-  test_differentiate(s * s, x);
+  test_derivative(s * s, x);
 
   Expression const& q = x^3;
   Dout(dc::notice, q << " [evaluate] = " << q.evaluate());
@@ -1072,8 +1072,8 @@ int main()
   auto& x_div_y = x / y;
   Dout(dc::notice, "x / y = " << x_div_y);
 
-  test_differentiate(sin(two * (x^2) * y + three * x + z), x);
-  test_differentiate((sin(x)^2) + (cos(x)^2), x);
+  test_derivative(sin(two * (x^2) * y + three * x + z), x);
+  test_derivative((sin(x)^2) + (cos(x)^2), x);
 
   TESTS(((x + y)^two) * (((x + y + a)^two) * ((x + y)^three)), "(a + x + y)^2 * (x + y)^5");
   //TESTS(((constant(2) * a)^constant(1, 2)) * ((constant(4) * a)^constant(3, 4)), "4 * a^(5/4)");

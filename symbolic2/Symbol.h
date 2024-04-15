@@ -28,7 +28,7 @@ class Symbol : public Expression
   }
   static Symbol const& realize(std::string const& name, double value)
   {
-    DoutEntering(dc::symbolic, "Symbol::realize(\"" << name << ", " << value <<  "\")");
+    DoutEntering(dc::symbolic, "Symbol::realize(\"" << name << "\", " << value <<  ")");
     return static_cast<Symbol const&>(get<Symbol>(name, value));
   }
 
@@ -52,7 +52,7 @@ class Symbol : public Expression
     return value_;
   }
 
-  Expression const& differentiate(Symbol const& symbol) const override final
+  Expression const& derivative(Symbol const& symbol) const override final
   {
     return &symbol == this ? Constant::s_cached_one : Constant::s_cached_zero;
   }

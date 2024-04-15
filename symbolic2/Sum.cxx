@@ -156,9 +156,9 @@ Expression const& Sum::add(Expression const& arg1, Expression const& arg2)
   }
 }
 
-Expression const& Sum::differentiate(Symbol const& symbol) const
+Expression const& Sum::derivative(Symbol const& symbol) const
 {
-  return add(arg1_.differentiate(symbol), arg2_.differentiate(symbol));
+  return add(arg1_.derivative(symbol), arg2_.derivative(symbol));
 }
 
 #ifdef SYMBOLIC2_PRINTING

@@ -17,7 +17,7 @@ class Atan : public UnaryOperator<Atan>
   ExpressionType type() const override final { return atanT; }
 
   double evaluate() const override final;
-  Expression const& differentiate(Symbol const& symbol) const override final;
+  Expression const& derivative(Symbol const& symbol) const override final;
 
 #ifdef SYMBOLIC2_PRINTING
  public:

@@ -81,9 +81,9 @@ Expression const& Power::make_power(Expression const& base, Constant const& expo
   return result;
 }
 
-Expression const& Power::differentiate(Symbol const& symbol) const
+Expression const& Power::derivative(Symbol const& symbol) const
 {
-  return Product::multiply(Product::multiply(get_exponent(), make_power(arg1_, get_exponent() + Constant::s_cached_minus_one)), arg1_.differentiate(symbol));
+  return Product::multiply(Product::multiply(get_exponent(), make_power(arg1_, get_exponent() + Constant::s_cached_minus_one)), arg1_.derivative(symbol));
 }
 
 #ifdef SYMBOLIC2_PRINTING
