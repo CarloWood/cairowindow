@@ -21,6 +21,7 @@ class Product : public BinaryOperator<Product>
     ASSERT(!arg2.is_product() || !arg2.arg1().is_constant());
   }
 
+ private:
   Precedence precedence() const override final
   {
     Constant const* constant_factor = dynamic_cast<Constant const*>(&arg1_);

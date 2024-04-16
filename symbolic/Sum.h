@@ -22,6 +22,7 @@ class Sum : public BinaryOperator<Sum>
     ASSERT(!arg2.is_sum() || !arg2.arg1().is_constant());
   }
 
+ private:
   Precedence precedence() const override final { return Precedence::sum; }
 
  public:

@@ -6,7 +6,7 @@
 namespace cairowindow::autodiff {
 using namespace symbolic;
 
-class QuadraticEnergy : public BezierCurve
+class QuadraticEnergy
 {
   Symbol const& Q1x_;
   Symbol const& Q1y_;
@@ -14,8 +14,8 @@ class QuadraticEnergy : public BezierCurve
   Symbol const& N1y_;
 
  public:
-  Symbol const& v0qa_;
-  Symbol const& v1qa_;
+  Expression const& v0qa_;
+  Expression const& v1qa_;
 
  private:
   Constant const& half = Constant::realize(1, 2);
@@ -62,25 +62,33 @@ class QuadraticEnergy : public BezierCurve
   Function const& bending_energy_ = Function::realize("bending_energy_", cs_ * (i1_ - i0_) / (two * e2_));
 
  public:
-  QuadraticEnergy(BezierCurve const orig, std::string name_prefix) : BezierCurve(orig),
+  QuadraticEnergy(std::string name_prefix, Expression const& v0qa, Expression const& v1qa) :
       Q1x_(Symbol::realize(name_prefix + "Q1x")),
       Q1y_(Symbol::realize(name_prefix + "Q1y")),
       N1x_(Symbol::realize(name_prefix + "N1x")),
       N1y_(Symbol::realize(name_prefix + "N1y")),
-      v0qa_(Symbol::realize(name_prefix + "v0qa")),
-      v1qa_(Symbol::realize(name_prefix + "v1qa"))
+      v0qa_(v0qa),
+      v1qa_(v1qa)
+  {
+  }
+
+  void init_from_curve(BezierCurve const& quadratic_curve)
   {
     // Q1 and N1 are constants (do not depend on v0qa or v1qa).
-    Q1x_ = m_.coefficient[2].x() + m_.coefficient[1].x();
-    Q1y_ = m_.coefficient[2].y() + m_.coefficient[1].y();
-    N1x_ = -(m_.coefficient[2].y() + m_.coefficient[1].y());
-    N1y_ = m_.coefficient[2].x() + m_.coefficient[1].x();
+    BezierCurveMatrix const& m = quadratic_curve.M();
+    Q1x_ = m.coefficient[2].x() + m.coefficient[1].x();
+    Q1y_ = m.coefficient[2].y() + m.coefficient[1].y();
+    N1x_ = -(m.coefficient[2].y() + m.coefficient[1].y());
+    N1y_ = m.coefficient[2].x() + m.coefficient[1].x();
   }
 
  public:
-  double arc_length(double v0qa, double v1qa);
-  double stretching_energy(double v0qa, double v1qa);
-  double bending_energy(double v0qa, double v1qa);
+  void init_angles(double v0qa, double v1qa);
+
+  // First call init_from_curve and init_angles.
+  double eval_arc_length();
+  double eval_stretching_energy();
+  double eval_bending_energy();
 
   Function const& arc_length() const { return arc_length_; }
   Function const& stretching_energy() const { return stretching_energy_; }

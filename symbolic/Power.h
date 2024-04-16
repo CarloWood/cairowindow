@@ -67,7 +67,13 @@ inline Expression const& operator^(Expression const& arg1, Expression const& arg
 
   if (std::pow(e_nb, d2) != e1 ||       // 3^3 == 27
       std::pow(d_nb, d2) != d1)         // 2^3 == 8
+  {
+#ifdef SYMBOLIC_PRINTING
     DoutFatal(dc::core, "Can't exponentiate " << arg1 << " to the power " << arg2);
+#else
+    DoutFatal(dc::core, "Resulting root is not a rational.");
+#endif
+  }
 
   return Constant::realize(std::pow(e_nb, e2), std::pow(d_nb, e2));     // (3^5) / (2^5) = 243/32
 }

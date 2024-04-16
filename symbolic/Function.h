@@ -5,6 +5,7 @@
 #include "Hash.h"
 #include "Precedence.h"
 #include <string>
+#include <optional>
 #ifdef SYMBOLIC_PRINTING
 #include "iomanip_fulldef.h"
 #endif
@@ -18,6 +19,8 @@ class Function : public Expression
   Expression const& definition_;
 
   mutable uint64_t cached_hash_ = 0;
+  mutable std::optional<double> evaluation_;
+  mutable Function const* derivative_cache_ = nullptr;
 
  private:
   template<typename T, typename... Args>
@@ -55,14 +58,26 @@ class Function : public Expression
     return equal;
   }
 
+  void reset_evaluation() const
+  {
+    evaluation_.reset();
+    if (derivative_cache_)
+      derivative_cache_->reset_evaluation();
+  }
+
   double evaluate() const override final
   {
-    return definition_.evaluate();
+    if (!evaluation_.has_value())
+      evaluation_ = definition_.evaluate();
+    return *evaluation_;
   }
 
   Function const& derivative(Symbol const& symbol) const override final
   {
-    return realize("∂" + name_ + "/∂" + symbol.name(), definition_.derivative(symbol));
+    if (!derivative_cache_)
+      derivative_cache_ = &realize("∂" + name_ + "/∂" + symbol.name(), definition_.derivative(symbol));
+
+    return *derivative_cache_;
   }
 
   Expression const& definition() const { return definition_; }

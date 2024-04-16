@@ -33,7 +33,11 @@ void test_same_expression(Expression const& expression, Expression const& expect
 {
   if (&expression != &expect)
   {
+#ifdef SYMBOLIC_PRINTING
     DoutFatal(dc::core, "symbolic_testsuite.cxx:" << line << ": expected \"" << expression << "\" and \"" << expect << "\" to be the same expression.");
+#else
+    DoutFatal(dc::core, "symbolic_testsuite.cxx:" << line << ": unexpected result string.");
+#endif
   }
 }
 

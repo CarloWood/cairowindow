@@ -152,12 +152,15 @@ int main()
       double arc01_0 = plot_arc01_0.end_angle() - plot_arc01_0.start_angle();
 
       // Draw the arc between P0P1 and the tangent in P₁.
-      auto plot_arc01_1 = plot.create_arc(second_layer, arc_style, plot_P1, plot_line_P0P1.direction(), D1, 1.0);
-      double arc01_1 = plot_arc01_1.end_angle() - plot_arc01_1.start_angle();
+      double P0P1_angle = plot_line_P0P1.direction().as_angle();
+      double D1_angle = D1.as_angle();
+      auto plot_arc01_1 = plot.create_arc(second_layer, arc_style, plot_P1, P0P1_angle, D1_angle, 1.0);
+      double arc01_1 = D1_angle - P0P1_angle;
 
       // Draw the arc between P1P2 and the tangent in P₁.
-      auto plot_arc12_1 = plot.create_arc(second_layer, arc_style({.line_color = color::red}), plot_P1, plot_line_P1P2.direction(), D1, 1.5);
-      double arc12_1 = plot_arc12_1.end_angle() - plot_arc12_1.start_angle();
+      double P1P2_angle = plot_line_P1P2.direction().as_angle();
+      auto plot_arc12_1 = plot.create_arc(second_layer, arc_style({.line_color = color::red}), plot_P1, P1P2_angle, D1_angle, 1.5);
+      double arc12_1 = D1_angle - P1P2_angle;
 
       // Draw the arc between P1P2 and the tangent in P₂.
       auto plot_arc12_2 = plot.create_arc(second_layer, arc_style({.line_color = color::red}), plot_P2, plot_line_P1P2.direction(), D2, 1.5);
@@ -181,11 +184,21 @@ int main()
       int const steps = steps_per_pi;
 
       double total_energy;
-      double bending_weight = 100.0;
+      double bending_weight = 10.0;
 
-      symbolic::Constant const& bending_weight_ = symbolic::Constant::realize(100);
+      symbolic::Constant const& bending_weight_ = symbolic::Constant::realize(10);
       symbolic::Expression const* energy01;
       symbolic::Expression const* energy12;
+
+      symbolic::Symbol const& arc01_arc12_1_diff = symbolic::Symbol::realize("arc01_arc12_1_diff");
+      arc01_arc12_1_diff = P1P2_angle - P0P1_angle;
+      symbolic::Symbol const& v0qa_01 = symbolic::Symbol::realize("01_v0qa");   // arc01_0
+      symbolic::Symbol const& v1qa_01 = symbolic::Symbol::realize("01_v1qa");   // arc01_1 = D1_angle - P0P1_angle
+      symbolic::Function const& v0qa_12 = symbolic::Function::realize("12_v0qa", v1qa_01 - arc01_arc12_1_diff);   // arc12_1 = D1_angle - P1P2_angle = arc01_1 - arc01_arc12_1_diff
+      symbolic::Symbol const& v1qa_12 = symbolic::Symbol::realize("12_v1qa");   // arc12_2
+
+      autodiff::QuadraticEnergy quadratic_energy01("01_", v0qa_01, v1qa_01);
+      autodiff::QuadraticEnergy quadratic_energy12("12_", v0qa_12, v1qa_12);
 
       plot::BezierCurve plot_bezier_curve01;
       if (generate_rejections)
@@ -215,7 +228,7 @@ int main()
         BezierCurve qbc01(plot_P0, plot_P1);
         if (qbc01.quadratic_from(arc01_0, arc01_1))
         {
-          autodiff::QuadraticEnergy quadratic_energy(qbc01, "01_");
+          quadratic_energy01.init_from_curve(qbc01);
 
           plot_bezier_curve01 = plot.create_bezier_curve(second_layer, curve_line_style({.line_color = color::black}), qbc01);
           total_energy = qbc01.quadratic_stretching_energy() + bending_weight * qbc01.quadratic_bending_energy();
@@ -226,7 +239,7 @@ int main()
           Dout(dc::notice, "Bending energy    01 (new) = " << quadratic_energy.bending_energy(arc01_0, arc01_1));
 #endif
 
-          energy01 = &(quadratic_energy.stretching_energy() + bending_weight_ * quadratic_energy.bending_energy());
+          energy01 = &(quadratic_energy01.stretching_energy() + bending_weight_ * quadratic_energy01.bending_energy());
 #if 0
           Dout(dc::notice, "Arc length (old) = " << qbc01.quadratic_quadratic_energy());
           Dout(dc::notice, "Arc length (new) = " << quadratic_energy.quadratic_energy(arc01_0, arc01_1));
@@ -270,12 +283,12 @@ int main()
         BezierCurve qbc12(plot_P1, plot_P2);
         if (qbc12.quadratic_from(arc12_1, arc12_2))
         {
-          autodiff::QuadraticEnergy quadratic_energy(qbc12, "12_");
+          quadratic_energy12.init_from_curve(qbc12);
 
           plot_bezier_curve12 = plot.create_bezier_curve(second_layer, curve_line_style, qbc12);
           total_energy += qbc12.quadratic_stretching_energy() + bending_weight * qbc12.quadratic_bending_energy();
 
-          energy12 = &(quadratic_energy.stretching_energy() + bending_weight_ * quadratic_energy.bending_energy());
+          energy12 = &(quadratic_energy12.stretching_energy() + bending_weight_ * quadratic_energy12.bending_energy());
         }
       }
 
@@ -286,17 +299,13 @@ int main()
         //Dout(dc::notice, "*energy12 = " << fulldef << *energy12);
         auto& total_energy_ = *energy01 + *energy12;
 
-        symbolic::Symbol const& v0qa_01 = symbolic::Symbol::realize("01_v0qa");
-        symbolic::Symbol const& v1qa_01 = symbolic::Symbol::realize("01_v1qa");
-        symbolic::Symbol const& v0qa_12 = symbolic::Symbol::realize("12_v0qa");
-        symbolic::Symbol const& v1qa_12 = symbolic::Symbol::realize("12_v1qa");
-        v0qa_01 = arc01_0;
-        v1qa_01 = arc01_1;
-        v0qa_12 = arc12_1;
-        v1qa_12 = arc12_2;
+        quadratic_energy01.init_angles(arc01_0, arc01_1);
+        quadratic_energy12.init_angles(arc12_1, arc12_2);
+        v0qa_12.reset_evaluation();
 
         Dout(dc::notice, "Total energy (new) = " << total_energy_.evaluate());
-        Dout(dc::notice, total_energy_.derivative(v1qa_01) << " = " << total_energy_.derivative(v1qa_01).evaluate());
+        symbolic::Expression const& derivative = total_energy_.derivative(v1qa_01);
+        Dout(dc::notice, derivative << " = " << derivative.evaluate());
       }
 
       // Draw V0.
