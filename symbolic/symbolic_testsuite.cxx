@@ -1094,4 +1094,7 @@ int main()
   test_derivative(fn, x);
   Function const& fnd = fn.derivative(x);
   Dout(dc::notice, fnd << " [" << fnd.definition() << "] = " << fnd.evaluate());
+
+  Expression const& te = (x + (y^2))^3;
+  Dout(dc::notice, te);
 }

@@ -16,7 +16,6 @@ class Symbol : public Expression
   template<typename T, typename... Args>
   friend Expression const& Expression::get(Args&&... args);
   Symbol(std::string const& name) : name_(name) { }
-  Symbol(std::string const& name, double value) : name_(name), value_(value) { }
 
   Precedence precedence() const override final { return Precedence::symbol; }
 
@@ -25,11 +24,6 @@ class Symbol : public Expression
   {
     DoutEntering(dc::symbolic, "Symbol::realize(\"" << name << "\")");
     return static_cast<Symbol const&>(get<Symbol>(name));
-  }
-  static Symbol const& realize(std::string const& name, double value)
-  {
-    DoutEntering(dc::symbolic, "Symbol::realize(\"" << name << "\", " << value <<  ")");
-    return static_cast<Symbol const&>(get<Symbol>(name, value));
   }
 
   ExpressionType type() const override final { return symbolT; }

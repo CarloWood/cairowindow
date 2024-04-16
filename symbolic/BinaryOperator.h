@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Symbol.h"
+#include "Function.h"
 #include "Constant.h"
 #include "Expression.h"
 #include "Hash.h"
@@ -86,6 +87,12 @@ bool BinaryOperator<OpT>::is_less_exact(Expression const& arg1, Expression const
       Symbol const& symbol1 = static_cast<Symbol const&>(arg1);
       Symbol const& symbol2 = static_cast<Symbol const&>(arg2);
       return symbol1 < symbol2;
+    }
+    else if (type == functionT)
+    {
+      Function const& function1 = static_cast<Function const&>(arg1);
+      Function const& function2 = static_cast<Function const&>(arg2);
+      return function1 < function2;
     }
     else if (is_binary_op(type))
     {

@@ -20,10 +20,11 @@ double QuadraticEnergy::stretching_energy(double v0qa, double v1qa)
   return stretching_energy_.evaluate();
 }
 
-void QuadraticEnergy::print_derivative() const
+double QuadraticEnergy::bending_energy(double v0qa, double v1qa)
 {
-  auto& d = stretching_energy_.derivative(v0qa_);
-  Dout(dc::notice, "derivative ∂stretching_energy_/∂v0qa = " << d << " [" << d.definition() << "] = " << d.evaluate());
+  v0qa_ = v0qa;
+  v1qa_ = v1qa;
+  return bending_energy_.evaluate();
 }
 
 } // namespace cairowindow::autodiff

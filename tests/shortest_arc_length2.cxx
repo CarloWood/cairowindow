@@ -1,4 +1,5 @@
 #include "sys.h"
+#include "cairowindow/symbolic/iomanip_fulldef.h"
 #include "cairowindow/Window.h"
 #include "cairowindow/Layer.h"
 #include "cairowindow/Plot.h"
@@ -182,6 +183,10 @@ int main()
       double total_energy;
       double bending_weight = 100.0;
 
+      symbolic::Constant const& bending_weight_ = symbolic::Constant::realize(100);
+      symbolic::Expression const* energy01;
+      symbolic::Expression const* energy12;
+
       plot::BezierCurve plot_bezier_curve01;
       if (generate_rejections)
       {
@@ -210,19 +215,22 @@ int main()
         BezierCurve qbc01(plot_P0, plot_P1);
         if (qbc01.quadratic_from(arc01_0, arc01_1))
         {
-          autodiff::QuadraticEnergy arc_length(qbc01);
+          autodiff::QuadraticEnergy quadratic_energy(qbc01, "01_");
 
           plot_bezier_curve01 = plot.create_bezier_curve(second_layer, curve_line_style({.line_color = color::black}), qbc01);
-          Dout(dc::notice, "Stretching energy 01 (old) = " << qbc01.quadratic_stretching_energy());
-          Dout(dc::notice, "Stretching energy 01 (new) = " << arc_length.stretching_energy(arc01_0, arc01_1));
-          Dout(dc::notice, "Bending energy    01 = " << qbc01.quadratic_bending_energy());
-
           total_energy = qbc01.quadratic_stretching_energy() + bending_weight * qbc01.quadratic_bending_energy();
+#if 0
+          Dout(dc::notice, "Stretching energy 01 (old) = " << qbc01.quadratic_stretching_energy());
+          Dout(dc::notice, "Stretching energy 01 (new) = " << quadratic_energy.stretching_energy(arc01_0, arc01_1));
+          Dout(dc::notice, "Bending energy    01 (old) = " << qbc01.quadratic_bending_energy());
+          Dout(dc::notice, "Bending energy    01 (new) = " << quadratic_energy.bending_energy(arc01_0, arc01_1));
+#endif
 
-          Dout(dc::notice, "Arc length (old) = " << qbc01.quadratic_arc_length());
-          Dout(dc::notice, "Arc length (new) = " << arc_length.arc_length(arc01_0, arc01_1));
-
-          arc_length.print_derivative();
+          energy01 = &(quadratic_energy.stretching_energy() + bending_weight_ * quadratic_energy.bending_energy());
+#if 0
+          Dout(dc::notice, "Arc length (old) = " << qbc01.quadratic_quadratic_energy());
+          Dout(dc::notice, "Arc length (new) = " << quadratic_energy.quadratic_energy(arc01_0, arc01_1));
+#endif
         }
       }
 
@@ -262,15 +270,34 @@ int main()
         BezierCurve qbc12(plot_P1, plot_P2);
         if (qbc12.quadratic_from(arc12_1, arc12_2))
         {
-          plot_bezier_curve12 = plot.create_bezier_curve(second_layer, curve_line_style, qbc12);
-          Dout(dc::notice, "Stretching energy 12 = " << qbc12.quadratic_stretching_energy());
-          Dout(dc::notice, "Bending energy    12 = " << qbc12.quadratic_bending_energy());
+          autodiff::QuadraticEnergy quadratic_energy(qbc12, "12_");
 
+          plot_bezier_curve12 = plot.create_bezier_curve(second_layer, curve_line_style, qbc12);
           total_energy += qbc12.quadratic_stretching_energy() + bending_weight * qbc12.quadratic_bending_energy();
+
+          energy12 = &(quadratic_energy.stretching_energy() + bending_weight_ * quadratic_energy.bending_energy());
         }
       }
 
-      Dout(dc::notice, "Total energy = " << total_energy);
+      if (!generate_rejections)
+      {
+        Dout(dc::notice, "Total energy (old) = " << total_energy);
+        //Dout(dc::notice, "*energy01 = " << fulldef << *energy01);
+        //Dout(dc::notice, "*energy12 = " << fulldef << *energy12);
+        auto& total_energy_ = *energy01 + *energy12;
+
+        symbolic::Symbol const& v0qa_01 = symbolic::Symbol::realize("01_v0qa");
+        symbolic::Symbol const& v1qa_01 = symbolic::Symbol::realize("01_v1qa");
+        symbolic::Symbol const& v0qa_12 = symbolic::Symbol::realize("12_v0qa");
+        symbolic::Symbol const& v1qa_12 = symbolic::Symbol::realize("12_v1qa");
+        v0qa_01 = arc01_0;
+        v1qa_01 = arc01_1;
+        v0qa_12 = arc12_1;
+        v1qa_12 = arc12_2;
+
+        Dout(dc::notice, "Total energy (new) = " << total_energy_.evaluate());
+        Dout(dc::notice, total_energy_.derivative(v1qa_01) << " = " << total_energy_.derivative(v1qa_01).evaluate());
+      }
 
       // Draw V0.
 //      auto plot_V0 = plot.create_connector(second_layer, connector_style, plot_P0, plot_P0 + 0.5 * qbc01.V0());

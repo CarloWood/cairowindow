@@ -5,6 +5,9 @@
 #include "Hash.h"
 #include "Precedence.h"
 #include <string>
+#ifdef SYMBOLIC_PRINTING
+#include "iomanip_fulldef.h"
+#endif
 
 namespace symbolic {
 
@@ -30,14 +33,13 @@ class Function : public Expression
     return static_cast<Function const&>(get<Function>(name, definition));
   }
 
-  ExpressionType type() const override final { return symbolT; }
+  ExpressionType type() const override final { return functionT; }
 
   uint64_t hash() const override final
   {
     if (cached_hash_ == 0)
     {
       cached_hash_ = hash_v<Function>;
-      boost::hash_combine(cached_hash_, std::hash<std::string>{}(name_));
       boost::hash_combine(cached_hash_, definition_.hash());
     }
 
@@ -65,11 +67,16 @@ class Function : public Expression
 
   Expression const& definition() const { return definition_; }
 
+  bool operator<(Function const& other) const { return hash() < other.hash(); }
+
 #ifdef SYMBOLIC_PRINTING
  public:
   void print_on(std::ostream& os) const override final
   {
-    os << name_;
+    if (IOManipFullDef::is_full_def(os))
+      os << '(' << definition_ << ')';
+    else
+      os << name_;
   }
 #endif
 };

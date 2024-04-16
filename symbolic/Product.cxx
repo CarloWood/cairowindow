@@ -102,13 +102,13 @@ Expression const& Product::multiply(Expression const& arg1, Expression const& ar
       Product const* product2 = dynamic_cast<Product const*>(&arg2);
       if (is_less(product1->arg1(), product2->arg1()))
       {
-        Expression const& result = make_product(product1->arg1(), multiply(product1->arg2(), arg2));
+        Expression const& result = multiply(product1->arg1(), multiply(product1->arg2(), arg2));
         Dout(dc::finish, result);
         return result;
       }
       else if (is_less(product2->arg1(), product1->arg1()))
       {
-        Expression const& result = make_product(product2->arg1(), multiply(arg1, product2->arg2()));
+        Expression const& result = multiply(product2->arg1(), multiply(arg1, product2->arg2()));
         Dout(dc::finish, result);
         return result;
       }
@@ -149,7 +149,7 @@ Expression const& Product::multiply(Expression const& arg1, Expression const& ar
     }
     else if (is_less(product2->arg1(), arg1))
     {
-      Expression const& result = make_product(product2->arg1(), multiply(arg1, product2->arg2()));
+      Expression const& result = multiply(product2->arg1(), multiply(arg1, product2->arg2()));
       Dout(dc::finish, result);
       return result;
     }

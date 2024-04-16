@@ -49,6 +49,7 @@ target_sources(symbolic_ObjLib
     "Cos.cxx"
     "Atan.cxx"
     "Log.cxx"
+    "iomanip_fulldef.cxx"
 
     ${HEADER_FILES}
 )
