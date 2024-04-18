@@ -99,6 +99,9 @@ int main()
         }
     );
 
+    auto slider_beta = plot.create_slider(second_layer, {978, 83, 7, 400}, 0.0, -4.0, 4.0);
+    auto slider_beta_label = plot.create_text(second_layer, slider_style, Pixel{978, 483}, "log₁₀(bending weight)");
+
     std::vector<plot::Point> rejections;
     while (true)
     {
@@ -183,10 +186,11 @@ int main()
       int const steps_per_pi = 250;
       int const steps = steps_per_pi;
 
-      double total_energy;
-      double bending_weight = 10.0;
+      double bending_weight = std::pow(10.0, slider_beta.value());
+      symbolic::Symbol const& bending_weight_ = symbolic::Symbol::realize("bending_weight");
+      bending_weight_ = bending_weight;
 
-      symbolic::Constant const& bending_weight_ = symbolic::Constant::realize(10);
+      double total_energy;
       symbolic::Expression const* energy01;
       symbolic::Expression const* energy12;
 
