@@ -101,8 +101,11 @@ int main()
       {
         // There is no parabola going through all four points.
         window.set_send_expose_events(true);
-        window.handle_input_events();
-        continue;
+        // Block till the next user interaction.
+        if (window.handle_input_events())
+          continue;
+        // The program was terminated by the user.
+        break;
       }
 
       Dout(dc::notice, "q = " << q);
