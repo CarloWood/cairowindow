@@ -46,6 +46,7 @@ int main()
 
     // Open the window and start drawing.
     std::thread event_loop([&](){
+      Debug(NAMESPACE_DEBUG::init_thread("event_loop"));
       // Open window, handle event loop. This must be constructed after the draw stuff, so that it is destructed first!
       // Upon destruction it blocks until the event loop thread finished (aka, the window was closed).
       EventLoop event_loop = window.run();

@@ -175,7 +175,7 @@ void Window::set_send_expose_events(bool send_expose_events)
 EventLoop Window::run()
 {
   // Select input events.
-  XSelectInput(display_, x11window_, ExposureMask | ButtonPressMask | ButtonReleaseMask | KeyPressMask);
+  XSelectInput(display_, x11window_, ExposureMask | ButtonPressMask | ButtonReleaseMask | KeyPressMask | KeyReleaseMask);
 
   // Show the window.
   XMapWindow(display_, x11window_);
@@ -243,9 +243,31 @@ void Window::event_loop()
         break;
       }
       case KeyPress:
+      case KeyRelease:
       {
-        running_ = false;       // Exit on any key press.
-        ++keypress_events;
+        XKeyEvent* key_event = (XKeyEvent*)&event;
+        bool pressed = event.type == KeyPress;
+
+        if (!pressed)
+        {
+          if (key_event->keycode == 107)
+          {
+            Message msg{InputEvent::key_release, key_event->x, key_event->y, key_event->keycode};
+            push_message(msg);
+          }
+        }
+        else
+        {
+          // Check if the PrtScn key was pressed.
+          if (key_event->keycode == 107)
+          {
+            Message msg{InputEvent::key_press, key_event->x, key_event->y, key_event->keycode};
+            push_message(msg);
+            break;
+          }
+          running_ = false;       // Exit on any key press.
+          ++keypress_events;
+        }
         break;
       }
       case ButtonPress:
@@ -309,6 +331,8 @@ void Window::event_loop()
       }
     }
   }
+  Message msg{InputEvent::terminate_program};
+  push_message(msg);
 }
 
 void Window::send_close_event()
