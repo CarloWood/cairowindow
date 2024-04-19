@@ -24,7 +24,11 @@ struct Message
   InputEvent event;
   int mouse_x;
   int mouse_y;
-  unsigned int button;          // Only valid when event is button_press or button_release.
+  union
+  {
+    unsigned int button;        // Only valid when event is button_press or button_release.
+    unsigned int keycode;       // Only valid when event is key_press or key_release.
+  } detail;
 };
 
 } // namespace cairowindow

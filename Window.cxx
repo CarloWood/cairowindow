@@ -405,21 +405,23 @@ void Window::handle_input_events()
     {
       case InputEvent::button_press:
       {
-        Dout(dc::cairowindow, "button: " << message->button);
+        Dout(dc::cairowindow, "button: " << message->detail.button);
         auto index = grab_draggable(message->mouse_x, message->mouse_y);
         if (!index.undefined())
         {
-          send_custom_event(custom_event_grab_mouse, message->button);
+          send_custom_event(custom_event_grab_mouse, message->detail.button);
           grab_index_ = index;
-          grab_button_ = message->button;
+          grab_button_ = message->detail.button;
         }
         break;
       }
       case InputEvent::button_release:
-        Dout(dc::cairowindow, "button: " << message->button);
-        if (!grab_index_.undefined() && message->button == grab_button_)
+      {
+        Dout(dc::cairowindow, "button: " << message->detail.button);
+        if (!grab_index_.undefined() && message->detail.button == grab_button_)
           grab_index_.set_to_undefined();
         break;
+      }
       case InputEvent::drag:
         if (!grab_index_.undefined())
         {
