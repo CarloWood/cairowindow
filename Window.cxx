@@ -417,7 +417,7 @@ bool Window::update_grabbed(ClickableIndex grabbed_point, double pixel_x, double
   return false;
 }
 
-void Window::handle_input_events()
+bool Window::handle_input_events()
 {
   bool block = true;
   while (have_message(block))
@@ -427,6 +427,20 @@ void Window::handle_input_events()
     Dout(dc::notice, "Received message " << message->event << " (" << message->mouse_x << ", " << message->mouse_y << ")");
     switch (message->event)
     {
+      case InputEvent::terminate_program:
+      {
+        return false;
+      }
+      case InputEvent::key_press:
+      {
+        Dout(dc::cairowindow, "key: " << message->detail.keycode);
+        break;
+      }
+      case InputEvent::key_release:
+      {
+        Dout(dc::cairowindow, "key: " << message->detail.keycode);
+        break;
+      }
       case InputEvent::button_press:
       {
         Dout(dc::cairowindow, "button: " << message->detail.button);
@@ -456,6 +470,7 @@ void Window::handle_input_events()
         break;
     }
   }
+  return true;
 }
 
 } // namespace cairowindow

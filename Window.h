@@ -176,8 +176,9 @@ class Window
   // Allow dragging of point with the mouse.
   void register_draggable(plot::Plot& plot, plot::Draggable* draggable, std::function<Point (Point const&)> restriction = {});
 
-  // Block until a point was dragged by the user.
-  void handle_input_events();
+  // Block until a point was dragged by the user, a key or button was pressed or released.
+  // Returns true when a redraw is required, false when the program should be terminated.
+  bool handle_input_events();
 
   // Called by Slider::set_value.
   bool update_grabbed(ClickableIndex grabbed_point, double pixel_x, double pixel_y);
