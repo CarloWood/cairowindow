@@ -137,8 +137,10 @@ int main()
       // Flush all expose events related to the drawing done above.
       window.set_send_expose_events(true);
 
-      // Block until the user moved a draggable object, then go to the top of loop for a redraw.
-      window.handle_input_events();
+      // Block until a redraw is necessary (for example because the user moved a draggable object,
+      // or wants to print the current drawing) then go to the top of loop for a redraw.
+      if (!window.handle_input_events())
+        break;          // Program must be terminated.
     }
 
     event_loop.join();
