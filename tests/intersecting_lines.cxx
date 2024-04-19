@@ -228,7 +228,7 @@ int main()
 //      double center_x = Ix_hp;
 //      double center_y = Iy_hp;
 //      half_range = 0.1;
-      Debug(dc::cairowindow.on());
+      Debug(if (!dc::cairowindow.is_on()) dc::cairowindow.on());
       plot.set_xrange({center_x - half_range, center_x + half_range});
       plot.set_yrange({center_y - half_range, center_y + half_range});
       Debug(dc::cairowindow.off());
