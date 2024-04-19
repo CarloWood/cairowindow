@@ -6,6 +6,9 @@ namespace cairowindow {
 
 enum class InputEvent
 {
+  terminate_program,
+  key_press,
+  key_release,
   button_press,
   button_release,
   drag

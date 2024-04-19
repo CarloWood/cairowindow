@@ -10,6 +10,9 @@ char const* to_string(InputEvent mouse_event)
 {
   switch (mouse_event)
   {
+    AI_CASE_RETURN(InputEvent::terminate_program);
+    AI_CASE_RETURN(InputEvent::key_press);
+    AI_CASE_RETURN(InputEvent::key_release);
     AI_CASE_RETURN(InputEvent::button_press);
     AI_CASE_RETURN(InputEvent::button_release);
     AI_CASE_RETURN(InputEvent::drag);
