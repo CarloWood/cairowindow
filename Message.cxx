@@ -6,18 +6,18 @@
 namespace cairowindow {
 
 #ifdef CWDEBUG
-char const* to_string(MouseEvent mouse_event)
+char const* to_string(InputEvent mouse_event)
 {
   switch (mouse_event)
   {
-    AI_CASE_RETURN(MouseEvent::button_press);
-    AI_CASE_RETURN(MouseEvent::button_release);
-    AI_CASE_RETURN(MouseEvent::drag);
+    AI_CASE_RETURN(InputEvent::button_press);
+    AI_CASE_RETURN(InputEvent::button_release);
+    AI_CASE_RETURN(InputEvent::drag);
   }
   AI_NEVER_REACHED
 }
 
-std::ostream& operator<<(std::ostream& os, MouseEvent mouse_event)
+std::ostream& operator<<(std::ostream& os, InputEvent mouse_event)
 {
   return os << to_string(mouse_event);
 }

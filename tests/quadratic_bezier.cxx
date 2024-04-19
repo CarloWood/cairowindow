@@ -308,7 +308,7 @@ int main()
       {
         // Can't draw the curve.
         window.set_send_expose_events(true);
-        window.handle_dragging();
+        window.handle_input_events();
         continue;
       }
 
@@ -381,7 +381,7 @@ int main()
       if (std::isnan(w))
       {
         window.set_send_expose_events(true);
-        window.handle_dragging();
+        window.handle_input_events();
         continue;
       }
 
@@ -440,7 +440,7 @@ int main()
       window.set_send_expose_events(true);
 
       // Block until the user moved a draggable object, then go to the top of loop for a redraw.
-      window.handle_dragging();
+      window.handle_input_events();
     }
 
     event_loop.join();

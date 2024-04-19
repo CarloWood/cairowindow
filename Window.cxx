@@ -259,13 +259,13 @@ void Window::event_loop()
           if (mouse_grabbed_by_ == event.xbutton.button)
             release_mouse();
           mouse_button_mask_ &= ~(1 << event.xbutton.button);
-          Message msg{MouseEvent::button_release, button_event->x, button_event->y, event.xbutton.button};
+          Message msg{InputEvent::button_release, button_event->x, button_event->y, event.xbutton.button};
           push_message(msg);
         }
         else
         {
           mouse_button_mask_ |= (1 << event.xbutton.button);
-          Message msg{MouseEvent::button_press, button_event->x, button_event->y, event.xbutton.button};
+          Message msg{InputEvent::button_press, button_event->x, button_event->y, event.xbutton.button};
           push_message(msg);
         }
 
@@ -290,7 +290,7 @@ void Window::event_loop()
         if (mouse_grabbed_by_ != -1)
         {
           // Pass the mouse movement event to the main thread.
-          Message msg{MouseEvent::drag, event.xmotion.x, event.xmotion.y};
+          Message msg{InputEvent::drag, event.xmotion.x, event.xmotion.y};
           push_message(msg);
         }
         break;
@@ -393,7 +393,7 @@ bool Window::update_grabbed(ClickableIndex grabbed_point, double pixel_x, double
   return false;
 }
 
-void Window::handle_dragging()
+void Window::handle_input_events()
 {
   bool block = true;
   while (have_message(block))
@@ -403,7 +403,7 @@ void Window::handle_dragging()
     Dout(dc::notice, "Received message " << message->event << " (" << message->mouse_x << ", " << message->mouse_y << ")");
     switch (message->event)
     {
-      case MouseEvent::button_press:
+      case InputEvent::button_press:
       {
         Dout(dc::cairowindow, "button: " << message->button);
         auto index = grab_draggable(message->mouse_x, message->mouse_y);
@@ -415,12 +415,12 @@ void Window::handle_dragging()
         }
         break;
       }
-      case MouseEvent::button_release:
+      case InputEvent::button_release:
         Dout(dc::cairowindow, "button: " << message->button);
         if (!grab_index_.undefined() && message->button == grab_button_)
           grab_index_.set_to_undefined();
         break;
-      case MouseEvent::drag:
+      case InputEvent::drag:
         if (!grab_index_.undefined())
         {
           // Update the object with grab_index_ and return true if a redraw is necessary.

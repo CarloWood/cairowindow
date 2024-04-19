@@ -4,7 +4,7 @@
 
 namespace cairowindow {
 
-enum class MouseEvent
+enum class InputEvent
 {
   button_press,
   button_release,
@@ -12,13 +12,13 @@ enum class MouseEvent
 };
 
 #ifdef CWDEBUG
-char const* to_string(MouseEvent mouse_event);
-std::ostream& operator<<(std::ostream& os, MouseEvent mouse_event);
+char const* to_string(InputEvent mouse_event);
+std::ostream& operator<<(std::ostream& os, InputEvent mouse_event);
 #endif
 
 struct Message
 {
-  MouseEvent event;
+  InputEvent event;
   int mouse_x;
   int mouse_y;
   unsigned int button;          // Only valid when event is button_press or button_release.

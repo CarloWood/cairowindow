@@ -238,7 +238,7 @@ g9 = -3d₄∕(5d₀) ⋆ g5 - 9d₃∕(12d₀) ⋆ g6  - 6d₂∕(7d₀) ⋆ g7
       window.set_send_expose_events(true);
 
       // Block until the user moved a draggable object, then go to the top of loop for a redraw.
-      window.handle_dragging();
+      window.handle_input_events();
     }
 
     event_loop.join();

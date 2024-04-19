@@ -86,7 +86,7 @@ int main()
       window.set_send_expose_events(true);
 
       // Block until the user moved a draggable object, then go to the top of loop for a redraw.
-      window.handle_dragging();
+      window.handle_input_events();
     }
 #else
     Point P0{20.0, 100};
@@ -118,7 +118,7 @@ int main()
       window.set_send_expose_events(true);
 
       // Block until the user moved a draggable object, then go to the top of loop for a redraw.
-      window.handle_dragging();
+      window.handle_input_events();
     }
 #endif
 
