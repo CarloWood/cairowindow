@@ -105,6 +105,9 @@ int main()
     std::vector<plot::Point> rejections;
     while (true)
     {
+      //FIXME: implement.
+      ASSERT(!plot.need_print());
+
       // Suppress immediate updating of the window for each created item, in order to avoid flickering.
       window.set_send_expose_events(false);
 

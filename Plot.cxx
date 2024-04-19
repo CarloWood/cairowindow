@@ -129,6 +129,9 @@ void Plot::add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio)
     ylabel_->rel_move_to(-max_width, 0);
     layer->draw(ylabel_);
   }
+
+  // Register this plot with the associated Window.
+  layer->window()->add_plot(this);
 }
 
 double Plot::convert_x(double x) const

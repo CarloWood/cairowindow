@@ -82,6 +82,12 @@ Window::~Window()
   XCloseDisplay(display_);
 }
 
+void Window::add_plot(plot::Plot* plot)
+{
+  DoutEntering(dc::notice, "Window::add_plot(" << (void*)plot << ") with geometry " << plot->geometry());
+  plot_geometries_.emplace_back(plot->geometry(), plot);
+}
+
 // Called by XEventLoop thread.
 void Window::grab_mouse(unsigned int button)
 {
@@ -417,6 +423,16 @@ bool Window::update_grabbed(ClickableIndex grabbed_point, double pixel_x, double
   return false;
 }
 
+plot::Plot* Window::find_plot(int mouse_x, int mouse_y)
+{
+  for (PlotAreaGeometries const& plot_area_geometries : plot_geometries_)
+  {
+    if (plot_area_geometries.geometry_.contains(mouse_x, mouse_y))
+      return plot_area_geometries.plot_;
+  }
+  return nullptr;
+}
+
 bool Window::handle_input_events()
 {
   bool block = true;
@@ -434,6 +450,13 @@ bool Window::handle_input_events()
       case InputEvent::key_press:
       {
         Dout(dc::cairowindow, "key: " << message->detail.keycode);
+        if (message->detail.keycode == 107)
+        {
+          plot::Plot* plot = find_plot(message->mouse_x, message->mouse_y);
+          if (plot)
+            plot->set_need_print();
+          return true;
+        }
         break;
       }
       case InputEvent::key_release:

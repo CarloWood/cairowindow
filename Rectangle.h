@@ -34,6 +34,11 @@ class Rectangle
 
   double area() const { ASSERT(is_defined()); return geometry_.width * geometry_.height; }
 
+  bool contains(int x, int y) const
+  {
+    return geometry_.x <= x && x < (geometry_.x + geometry_.width) && geometry_.y <= y && y < geometry_.y + geometry_.height;
+  }
+
 #ifdef CWDEBUG
   void print_on(std::ostream& os) const
   {

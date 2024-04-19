@@ -82,6 +82,14 @@ class Window
   ClickableIndex grab_index_;           // The index of the object (Point) that was grabbed.
   unsigned int grab_button_;            // The mouse button that did the grabbing (only valid when grab_index is not undefined).
 
+  // Printing.
+  struct PlotAreaGeometries
+  {
+    Rectangle geometry_;
+    plot::Plot* plot_;
+  };
+  std::vector<PlotAreaGeometries> plot_geometries_;
+
 #ifdef CAIROWINDOW_DEBUGWINDOW
   DebugWindow debug_window_;
 #endif
@@ -89,6 +97,9 @@ class Window
  public:
   Window(std::string title, int width, int height);
   ~Window();
+
+  void add_plot(plot::Plot* plot);
+  plot::Plot* find_plot(int x, int y);
 
   EventLoop run();
   static void event_loop_thread(Window* self);

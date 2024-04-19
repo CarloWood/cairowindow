@@ -184,6 +184,8 @@ class Plot
   utils::Vector<Draggable*, ClickableIndex> draggables_;
   utils::Vector<std::function<cairowindow::Point (cairowindow::Point const&)>, ClickableIndex> draggable_restrictions_;
 
+  bool need_print_{false};
+
  public:
   Plot(cairowindow::Rectangle const& geometry, draw::PlotAreaStyle plot_area_style, std::string title, draw::TitleStyle title_style) :
     plot_area_(axes_geometry(geometry, plot_area_style.axes_line_width), plot_area_style),
@@ -223,6 +225,9 @@ class Plot
   double convert_x(double x) const;
   double convert_y(double y) const;
   Pixel convert_to_pixel(cairowindow::Point const& point) const;
+
+  void set_need_print() { need_print_ = true; }
+  bool need_print() const { return need_print_; }
 
   //--------------------------------------------------------------------------
   // Point
@@ -488,6 +493,7 @@ class Plot
       draw::BezierCurveStyle const& line_style,
       std::vector<cairowindow::Point>&& points);
 
+  cairowindow::Rectangle const& geometry() const { return plot_area_.geometry(); }
   void add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio = false);
 
   // Called from Window::register_draggable.
