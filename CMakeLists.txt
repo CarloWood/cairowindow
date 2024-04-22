@@ -17,6 +17,20 @@ pkg_check_modules(X11 REQUIRED x11)
 
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 
+pkg_check_modules(PANGOCAIRO pangocairo)
+
+find_package_handle_standard_args(
+  PANGOCAIRO
+  DEFAULT_MSG
+  PANGOCAIRO_INCLUDE_DIRS
+  PANGOCAIRO_LIBRARIES
+)
+
+mark_as_advanced(
+  PANGOCAIRO_INCLUDE_DIRS
+  PANGOCAIRO_LIBRARIES
+)
+
 #==============================================================================
 # OPTIONS
 
@@ -73,6 +87,7 @@ target_sources(cairowindow_ObjLib
   PRIVATE
     "Color.cxx"
     "Direction.cxx"
+    "FontPangoContext.cxx"
     "Layer.cxx"
     "Line.cxx"
     "LinePiece.cxx"
@@ -119,6 +134,7 @@ target_include_directories(cairowindow_ObjLib
   PUBLIC
     "${CWDS_INTERFACE_INCLUDE_DIRECTORIES}" # For sys.h and debug.h.
     "${top_objdir}"                         # For cairowindow/config.h.
+    "${PANGOCAIRO_INCLUDE_DIRS}"
 )
 
 # Require support for C++20.
@@ -133,7 +149,8 @@ target_link_libraries(cairowindow_ObjLib
     AICxx::utils
     Eigen3::Eigen
   INTERFACE
-    ${CAIRO_LDFLAGS} ${X11_LDFLAGS}
+    ${PANGOCAIRO_LIBRARIES}
+    ${X11_LDFLAGS}
 )
 
 # Create an ALIAS target.

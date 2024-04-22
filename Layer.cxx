@@ -111,4 +111,12 @@ void Layer::remove(LayerRegion const* layer_region)
   cairo_restore(cr_);
 }
 
+void Layer::draw(std::shared_ptr<LayerRegion> const& layer_region)
+{
+  regions_.emplace_back(layer_region);
+  layer_region->draw(this);
+  if (print_cr_)
+    layer_region->draw_to(print_cr_, this);
+}
+
 } // namespace cairowindow

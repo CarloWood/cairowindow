@@ -30,3 +30,6 @@ target_link_libraries(shortest_arc_length AICxx::cairowindow AICxx::symbolic ${A
 
 add_executable(shortest_arc_length2 shortest_arc_length2.cxx)
 target_link_libraries(shortest_arc_length2 AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST})
+
+add_executable(pango_text pango_text.cxx)
+target_link_libraries(pango_text AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST})

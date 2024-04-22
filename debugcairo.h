@@ -19,7 +19,7 @@ std::ostream& operator<<(std::ostream& os, cairo_matrix_t const* matrix);
 void debug_cairo_arc(cairo_t* cr, double xc, double yc, double radius, double angle1, double angle2);
 void debug_cairo_clip(cairo_t* cr);
 void debug_cairo_close_path(cairo_t* cr);
-cairo_t* debug_cairo_create(cairo_surface_t* target COMMA_DEBUG_ONLY(std::string name));
+cairo_t* debug_cairo_create(cairo_surface_t* target COMMA_DEBUG_ONLY(std::string debug_name));
 void debug_cairo_destroy(cairo_t* cr);
 void debug_cairo_fill(cairo_t* cr);
 void debug_cairo_fill_extents(cairo_t* cr, double* x1, double* y1, double* x2, double* y2);
@@ -53,7 +53,9 @@ void debug_cairo_show_text(cairo_t* cr, char const* utf8);
 void debug_cairo_stroke(cairo_t* cr);
 void debug_cairo_stroke_extents(cairo_t* cr, double* x1, double* y1, double* x2, double* y2);
 cairo_surface_t* debug_cairo_surface_create_similar(cairo_surface_t* other, cairo_content_t content, int width, int height
-    COMMA_CWDEBUG_ONLY(std::string name));
+    COMMA_CWDEBUG_ONLY(std::string debug_name));
+cairo_surface_t* debug_cairo_svg_surface_create(char const* filename, double width_in_points, double height_in_points
+    COMMA_CWDEBUG_ONLY(std::string debug_name));
 void debug_cairo_surface_destroy(cairo_surface_t* surface);
 void debug_cairo_text_extents(cairo_t* cr, char const* utf8, cairo_text_extents_t* extents);
 void debug_cairo_translate(cairo_t* cr, double tx, double ty);
@@ -63,7 +65,7 @@ cairo_surface_t* debug_cairo_xlib_surface_create(
     /*Drawable*/unsigned long d,
     /*Visual*/void* visual,
     int width, int height
-    COMMA_CWDEBUG_ONLY(std::string name));
+    COMMA_CWDEBUG_ONLY(std::string debug_name));
 
 } // namespace debugcairo
 
@@ -177,6 +179,9 @@ cairo_surface_t* debug_cairo_xlib_surface_create(
 
 #define cairo_surface_create_similar(other, content, width, height) \
   debug_cairo_surface_create_similar(other, content, width, height)
+
+#define cairo_svg_surface_create(filename, with_in_points, height_in_points) \
+  debug_cairo_svg_surface_create(filename, with_in_points, height_in_points)
 
 #define cairo_surface_destroy(surface) \
   debug_cairo_surface_destroy(surface)

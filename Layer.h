@@ -30,6 +30,9 @@ class Layer : public AIRefCount
   DebugWindow debug_window_;
 #endif
 
+  // Printing
+  cairo_t* print_cr_ = nullptr;
+
  public:
   Layer(cairo_surface_t* x11_surface, Rectangle const& rectangle, cairo_content_t content, Color color, Window* window
       COMMA_DEBUG_ONLY(std::string debug_name));
@@ -37,11 +40,7 @@ class Layer : public AIRefCount
 
   Layer(Layer const& layer) = delete;
 
-  void draw(std::shared_ptr<LayerRegion> const& layer_region)
-  {
-    regions_.emplace_back(layer_region);
-    layer_region->draw(this);
-  }
+  void draw(std::shared_ptr<LayerRegion> const& layer_region);
 
   void draw(draw::MultiRegion* multi_region)
   {
@@ -69,6 +68,18 @@ class Layer : public AIRefCount
   double area() const { return region_areas_; }
   // Return the geometry of the layer.
   Rectangle const& geometry() const { return geometry_; }
+
+  void start_printing_to(cairo_t* print_cr)
+  {
+    ASSERT(!print_cr_);
+    print_cr_ = print_cr;
+  }
+
+  void stop_printing()
+  {
+    ASSERT(print_cr_);
+    print_cr_ = nullptr;
+  }
 
 #ifdef CWDEBUG
   friend std::ostream& operator<<(std::ostream& os, Layer const* layer_ptr)

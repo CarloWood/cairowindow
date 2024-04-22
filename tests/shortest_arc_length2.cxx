@@ -51,7 +51,10 @@ int main()
         "y", {});
     plot.set_xrange({-M_PI, M_PI});
     plot.set_yrange({-M_PI, M_PI});
+    plot.create_svg_surface("shortest_arc_length2.svg" COMMA_CWDEBUG_ONLY("plot"));
+    plot.set_need_print();
     plot.add_to(background_layer, true);
+    plot.reset_need_print();
 
     utils::ColorPool<32> color_pool;
     draw::PointStyle point_style({.color_index = color_pool.get_and_use_color(), .filled_shape = 1});
@@ -105,8 +108,8 @@ int main()
     std::vector<plot::Point> rejections;
     while (true)
     {
-      //FIXME: implement.
-      ASSERT(!plot.need_print());
+      if (plot.need_print())
+        Dout(dc::notice, "========= STARTING PRINT FRAME ===========");
 
       // Suppress immediate updating of the window for each created item, in order to avoid flickering.
       window.set_send_expose_events(false);
@@ -320,6 +323,9 @@ int main()
 
       // Flush all expose events related to the drawing done above.
       window.set_send_expose_events(true);
+
+      if (plot.need_print())
+        plot.reset_need_print();
 
       // Block until a redraw is necessary (for example because the user moved a draggable object,
       // or wants to print the current drawing) then go to the top of loop for a redraw.

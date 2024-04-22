@@ -24,6 +24,7 @@ class LayerRegion
   LayerRegion(std::function<StrokeExtents(cairo_t*)> user_draw) : layer_(nullptr), draw_(user_draw) { }
   ~LayerRegion();
 
+  StrokeExtents draw_to(cairo_t* cr, Layer* layer);
   void draw(Layer* layer);
 
   void set_draw_function(std::function<StrokeExtents(cairo_t*)> user_draw)

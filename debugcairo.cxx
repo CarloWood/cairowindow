@@ -3,6 +3,7 @@
 #include "threadsafe/AIReadWriteSpinLock.h"
 #include <cairo/cairo.h>
 #include <cairo/cairo-xlib.h>
+#include <cairo/cairo-svg.h>
 #include "debug.h"
 #include <string>
 #include <map>
@@ -298,6 +299,16 @@ cairo_surface_t* debug_cairo_surface_create_similar(cairo_surface_t* other, cair
 {
   Dout(dc::cairo, "cairo_surface_create_similar(" << other << ", " << content << ", " << width << ", " << height << ")");
   cairo_surface_t* surface = cairo_surface_create_similar(other, content, width, height);
+  cairo_surface_t_pointer_map_t::wat cairo_surface_t_pointer_map_w(cairo_surface_t_pointer_map);
+  cairo_surface_t_pointer_map_w->insert({surface, "surface:\"" + debug_name + '"'});
+  return surface;
+}
+
+cairo_surface_t* debug_cairo_svg_surface_create(char const* filename, double width_in_points, double height_in_points
+    COMMA_CWDEBUG_ONLY(std::string debug_name))
+{
+  Dout(dc::cairo, "cairo_svg_surface_create(\"" << filename << "\", " << width_in_points << ", " << height_in_points << ")");
+  cairo_surface_t* surface = cairo_svg_surface_create(filename, width_in_points, height_in_points);
   cairo_surface_t_pointer_map_t::wat cairo_surface_t_pointer_map_w(cairo_surface_t_pointer_map);
   cairo_surface_t_pointer_map_w->insert({surface, "surface:\"" + debug_name + '"'});
   return surface;

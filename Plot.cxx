@@ -3,11 +3,29 @@
 #include "Plot.h"
 #include "intersection_points.h"
 #include "utils/square.h"
+#include "utils/generate_unique_filename.h"
+#include <cairo/cairo-svg.h>
 #include <limits>
 #include <cmath>
 #include <iomanip>
+#ifdef CWDEBUG
+#include "cairowindow/debugcairo.h"
+#endif
 
 namespace cairowindow::plot {
+
+Plot::~Plot()
+{
+#ifdef CWDEBUG
+  using namespace debugcairo;
+#endif
+  if (svg_surface_)
+  {
+    cairo_surface_finish(svg_surface_);
+    cairo_destroy(svg_cr_);
+    cairo_surface_destroy(svg_surface_);
+  }
+}
 
 // Calculate the axes geometry from the full plot geometry.
 cairowindow::Rectangle Plot::axes_geometry(cairowindow::Rectangle const& geometry, double axes_line_width)
@@ -45,6 +63,30 @@ cairowindow::Rectangle Plot::axes_geometry(cairowindow::Rectangle const& geometr
   return { top_left_x, top_left_y, bottom_right_x - top_left_x, bottom_right_y - top_left_y };
 }
 
+void Plot::draw_layer_region_on(boost::intrusive_ptr<Layer> const& layer, std::shared_ptr<LayerRegion> const& layer_region)
+{
+  if (need_print_)
+  {
+    ASSERT(svg_cr_);
+    layer->start_printing_to(svg_cr_);
+  }
+  layer->draw(layer_region);
+  if (need_print_)
+    layer->stop_printing();
+}
+
+void Plot::draw_multi_region_on(boost::intrusive_ptr<Layer> const& layer, draw::MultiRegion* multi_region)
+{
+  if (need_print_)
+  {
+    ASSERT(svg_cr_);
+    layer->start_printing_to(svg_cr_);
+  }
+  layer->draw(multi_region);
+  if (need_print_)
+    layer->stop_printing();
+}
+
 void Plot::add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio)
 {
   if (keep_ratio)
@@ -73,13 +115,13 @@ void Plot::add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio)
   {
     title_->move_to(plot_area_.geometry().offset_x() + 0.5 * plot_area_.geometry().width(),
         plot_area_.geometry().offset_y() - 0.5 * plot_area_.geometry().offset_y() - title_->style().offset());
-    layer->draw(title_);
+    draw_layer_region_on(layer, title_);
   }
 
   // Set ranges on the plot area and draw it.
   for (int axis = x_axis; axis <= y_axis; ++axis)
     plot_area_.set_range(axis, range_[axis].min(), range_[axis].max());
-  layer->draw(&plot_area_);
+  draw_multi_region_on(layer, &plot_area_);
 
   // Draw axis labels.
   double max_height = 0;
@@ -103,7 +145,7 @@ void Plot::add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio)
       label_str << label;
       labels_[axis].emplace_back(std::make_shared<draw::Text>(label_str.str(),
             x, y, draw::LabelStyle({.position = (axis == x_axis) ? draw::centered_below : draw::centered_left_of})));
-      layer->draw(labels_[axis].back());
+      draw_layer_region_on(layer, labels_[axis].back());
       StrokeExtents label_extents = labels_[axis].back()->stroke_extents();
       if (axis == x_axis)
         max_height = std::max(max_height, label_extents.height());
@@ -121,17 +163,30 @@ void Plot::add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio)
   if (xlabel_)
   {
     xlabel_->rel_move_to(0, max_height);
-    layer->draw(xlabel_);
+    draw_layer_region_on(layer, xlabel_);
   }
 
   if (ylabel_)
   {
     ylabel_->rel_move_to(-max_width, 0);
-    layer->draw(ylabel_);
+    draw_layer_region_on(layer, ylabel_);
   }
 
-  // Register this plot with the associated Window.
+  // Register this plot and its geometry with the associated Window so that we can find which plot is under the mouse if needed.
   layer->window()->add_plot(this);
+}
+
+void Plot::create_svg_surface(std::string svg_filename COMMA_CWDEBUG_ONLY(std::string debug_name))
+{
+#ifdef CWDEBUG
+  using namespace debugcairo;
+#endif
+  std::string unique_filename = utils::generate_unique_filename(svg_filename);
+  svg_surface_ = cairo_svg_surface_create(unique_filename.c_str(), 1000.0, 1000.0 COMMA_CWDEBUG_ONLY(debug_name));
+  svg_cr_ = cairo_create(svg_surface_ COMMA_CWDEBUG_ONLY("Plot::svg_cr_:\"" + debug_name + "\""));
+  // Use a entirely white background.
+  cairo_set_source_rgb(svg_cr_, 1.0, 1.0, 1.0);
+  cairo_paint(svg_cr_);
 }
 
 double Plot::convert_x(double x) const
@@ -185,7 +240,7 @@ void Plot::add_point(boost::intrusive_ptr<Layer> const& layer,
   plot_point.draw_object_ = std::make_shared<draw::Point>(
       convert_x(x), convert_y(y),
       point_style);
-  layer->draw(plot_point.draw_object_);
+  draw_layer_region_on(layer, plot_point.draw_object_);
 }
 
 //--------------------------------------------------------------------------
@@ -235,7 +290,7 @@ void Plot::add_line(boost::intrusive_ptr<Layer> const& layer,
   plot_line_piece.draw_object_ = std::make_shared<draw::Line>(
       convert_x(x1), convert_y(y1), convert_x(x2), convert_y(y2),
       line_style);
-  layer->draw(plot_line_piece.draw_object_);
+  draw_layer_region_on(layer, plot_line_piece.draw_object_);
 }
 
 //--------------------------------------------------------------------------
@@ -253,8 +308,12 @@ void Plot::add_connector(boost::intrusive_ptr<Layer> const& layer,
   plot_connector.draw_object_ = std::make_shared<draw::Connector>(
       convert_x(from.x()), convert_y(from.y()), convert_x(to.x()), convert_y(to.y()),
       connector_style, arrow_head_shape_from, arrow_head_shape_to);
+  if (need_print_)
+    layer->start_printing_to(svg_cr_);
   layer->draw(plot_connector.draw_object_);
   plot_connector.draw_object_->draw_arrow_heads(layer);
+  if (need_print_)
+    layer->stop_printing();
 }
 
 //--------------------------------------------------------------------------
@@ -285,7 +344,7 @@ void Plot::add_line(boost::intrusive_ptr<Layer> const& layer,
   plot_line.draw_object_ = std::make_shared<draw::Line>(
       convert_x(x1), convert_y(y1), convert_x(x2), convert_y(y2),
       line_style);
-  layer->draw(plot_line.draw_object_);
+  draw_layer_region_on(layer, plot_line.draw_object_);
 }
 
 //--------------------------------------------------------------------------
@@ -302,7 +361,7 @@ void Plot::add_rectangle(boost::intrusive_ptr<Layer> const& layer,
   plot_rectangle.draw_object_ = std::make_shared<draw::Rectangle>(
       convert_x(offset_x), convert_y(offset_y), convert_x(offset_x + width), convert_y(offset_y + height),
       rectangle_style);
-  layer->draw(plot_rectangle.draw_object_);
+  draw_layer_region_on(layer, plot_rectangle.draw_object_);
 }
 
 //--------------------------------------------------------------------------
@@ -318,7 +377,7 @@ void Plot::add_circle(boost::intrusive_ptr<Layer> const& layer,
   plot_circle.draw_object_ = std::make_shared<draw::Circle>(
       cairowindow::Rectangle{convert_x(center.x()), convert_y(center.y()), convert_x(radius) - convert_x(0), convert_y(0) - convert_y(radius)},
       circle_style);
-  layer->draw(plot_circle.draw_object_);
+  draw_layer_region_on(layer, plot_circle.draw_object_);
 }
 
 //--------------------------------------------------------------------------
@@ -337,7 +396,7 @@ void Plot::add_arc(boost::intrusive_ptr<Layer> const& layer,
       convert_x(center.x()), convert_y(center.y()), -end_angle, -start_angle,
       std::max(convert_x(radius) - convert_x(0), convert_y(radius) - convert_y(0)),
       arc_style);
-  layer->draw(plot_arc.draw_object_);
+  draw_layer_region_on(layer, plot_arc.draw_object_);
 }
 
 //--------------------------------------------------------------------------
@@ -359,7 +418,7 @@ void Plot::add_bezier_curve(boost::intrusive_ptr<Layer> const& layer,
         convert_x(C1.x()), convert_y(C1.y()),
         convert_x(P1.x()), convert_y(P1.y()),
         bezier_curve_style);
-  layer->draw(plot_bezier_curve.draw_object_);
+  draw_layer_region_on(layer, plot_bezier_curve.draw_object_);
 }
 
 //--------------------------------------------------------------------------
@@ -389,7 +448,7 @@ void Plot::add_text(boost::intrusive_ptr<Layer> const& layer,
   std::string const& text = plot_text.text();
 
   plot_text.draw_object_ = std::make_shared<draw::Text>(text, position.x(), position.y(), text_style);
-  layer->draw(plot_text.draw_object_);
+  draw_layer_region_on(layer, plot_text.draw_object_);
 }
 
 //--------------------------------------------------------------------------

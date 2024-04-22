@@ -184,6 +184,9 @@ class Plot
   utils::Vector<Draggable*, ClickableIndex> draggables_;
   utils::Vector<std::function<cairowindow::Point (cairowindow::Point const&)>, ClickableIndex> draggable_restrictions_;
 
+  // Printing
+  cairo_surface_t* svg_surface_ = nullptr;
+  cairo_t* svg_cr_ = nullptr;
   bool need_print_{false};
 
  public:
@@ -205,6 +208,8 @@ class Plot
   Plot(cairowindow::Rectangle const& geometry, draw::PlotAreaStyle plot_area_style) :
     plot_area_(axes_geometry(geometry, plot_area_style.axes_line_width), plot_area_style) { }
 
+  ~Plot();
+
   void set_range(int axis, Range range)
   {
     DoutEntering(dc::cairowindow, "Plot::set_range(" << axis << ", " << range << ") [" << this << "]");
@@ -215,6 +220,8 @@ class Plot
 
   void set_xrange(Range x_range) { set_range(x_axis, x_range); }
   void set_yrange(Range y_range) { set_range(y_axis, y_range); }
+
+  void create_svg_surface(std::string svg_filename COMMA_CWDEBUG_ONLY(std::string debug_name));
 
   cairowindow::Point clamp_to_plot_area(cairowindow::Point const& point) const
   {
@@ -227,6 +234,7 @@ class Plot
   Pixel convert_to_pixel(cairowindow::Point const& point) const;
 
   void set_need_print() { need_print_ = true; }
+  void reset_need_print() { need_print_ = false; }
   bool need_print() const { return need_print_; }
 
   //--------------------------------------------------------------------------
@@ -315,6 +323,10 @@ class Plot
       return plot_connector;
     }
   }
+
+  // Calls layer->draw(layer_region), but also handles printing.
+  void draw_layer_region_on(boost::intrusive_ptr<Layer> const& layer, std::shared_ptr<LayerRegion> const& layer_region);
+  void draw_multi_region_on(boost::intrusive_ptr<Layer> const& layer, draw::MultiRegion* multi_region);
 
  public:
 
@@ -506,6 +518,8 @@ class Plot
     draggable_restrictions_.emplace_back(std::move(restriction));
   }
   cairowindow::Rectangle update_grabbed(utils::Badge<Window>, ClickableIndex grabbed_point, double pixel_x, double pixel_y);
+
+  cairo_t* svg_cr() const { return svg_cr_; }
 
  private:
   cairowindow::Rectangle axes_geometry(cairowindow::Rectangle const& geometry, double axes_line_width);
