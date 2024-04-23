@@ -42,12 +42,12 @@ cairowindow::Rectangle Diagram::calculate_geometry(cairowindow::Rectangle const&
 {
   DoutEntering(dc::notice, "Diagram::calculate_geometry(" << geometry << ", style)");
 
-  bool have_coordinates = style.coordinate_margin != 0.0;
+  bool have_coordinates = style.coordinate_margin() != 0.0;
 
-  double const left_margin = have_coordinates ? style.coordinate_margin : style.margin;
-  double const right_margin = style.margin;
-  double const top_margin = style.top_margin;
-  double const bottom_margin = style.margin;
+  double const left_margin = have_coordinates ? style.coordinate_margin() : style.margin();
+  double const right_margin = style.margin();
+  double const top_margin = style.top_margin();
+  double const bottom_margin = style.margin();
   double const max_horizontal_square_size = (geometry.width() - (left_margin + right_margin)) / 8.0;
   double const max_vertical_square_size = (geometry.height() - (top_margin + bottom_margin)) / 8.0;
 
@@ -79,7 +79,7 @@ void Diagram::add_to(boost::intrusive_ptr<Layer> const& layer)
   if (title_)
   {
     title_->move_to(chess_diagram_.geometry().offset_x() + 0.5 * chess_diagram_.geometry().width(),
-        chess_diagram_.geometry().offset_y() + 0.5 * chess_diagram_.style().top_margin - title_->style().offset());
+        chess_diagram_.geometry().offset_y() + 0.5 * chess_diagram_.style().top_margin() - title_->style().offset());
     draw_layer_region_on(layer, title_);
   }
 

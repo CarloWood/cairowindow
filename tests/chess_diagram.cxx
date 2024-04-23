@@ -36,7 +36,8 @@ int main()
     });
 
     // Create and draw a chess diagram.
-    chess::Diagram diagram(window.geometry(), { .coordinate_margin = 50.0, .top_margin = 100.0 }, "My First Chess Diagram", {});
+    // ChessDiagramStyleParamsDefault
+    chess::Diagram diagram(window.geometry(), {{.coordinate_margin = 50.0, .top_margin = 100.0}}, "My First Chess Diagram", {});
 
     diagram.create_svg_surface("chess_diagram.svg" COMMA_CWDEBUG_ONLY("diagram"));
     diagram.set_need_print();

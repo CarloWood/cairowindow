@@ -39,7 +39,7 @@ class Diagram : public Printable
   Diagram(Rectangle const& geometry, draw::ChessDiagramStyle chess_diagram_style, std::string title, draw::ChessTitleStyle title_style) :
     chess_diagram_(calculate_geometry(geometry, chess_diagram_style), chess_diagram_style),
     title_(std::make_shared<draw::Text>(title, chess_diagram_.geometry().offset_x() + 0.5 * chess_diagram_.geometry().width(),
-        chess_diagram_.geometry().offset_y() + 0.5 * chess_diagram_style.top_margin - title_style.offset(), title_style)) { }
+        chess_diagram_.geometry().offset_y() + 0.5 * chess_diagram_style.top_margin() - title_style.offset(), title_style)) { }
 
   Diagram(Rectangle const& geometry, draw::ChessDiagramStyle chess_diagram_style) :
     chess_diagram_(calculate_geometry(geometry, chess_diagram_style), chess_diagram_style) { }

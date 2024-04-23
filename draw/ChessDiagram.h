@@ -5,19 +5,38 @@
 
 namespace cairowindow::draw {
 
-struct ChessDiagramStyle
+#define cairowindow_ChessDiagram_FOREACH_MEMBER(X, ...) \
+  X(Color, frame_color, Color{}, __VA_ARGS__) \
+  X(double, coordinate_margin, -1.0, __VA_ARGS__) \
+  X(double, top_margin, -1.0, __VA_ARGS__) \
+  X(double, margin, -1.0, __VA_ARGS__) \
+  X(double, spacing1, -1.0, __VA_ARGS__) \
+  X(double, inner_frame_width, -1.0, __VA_ARGS__) \
+  X(double, spacing2, -1.0, __VA_ARGS__) \
+  X(double, outer_frame_width, -1.0, __VA_ARGS__) \
+  X(Color, shading_color, Color{}, __VA_ARGS__) \
+  X(double, shading_line_width, -1.0, __VA_ARGS__)
+
+#define cairowindow_ChessDiagram_FOREACH_STYLE_MEMBER(X, ...) \
+  cairowindow_ChessDiagram_FOREACH_MEMBER(X, __VA_ARGS__)
+
+// Define default values for ChessDiagramStyle.
+struct ChessDiagramStyleParamsDefault
 {
-  Color frame_color = color::black;
-  double coordinate_margin = 0.0;
-  double top_margin = 50.0;
-  double margin = 50.0;
-  double spacing1 = 0.0;
-  double inner_frame_width = 0.04;
-  double spacing2 = 0.05;
-  double outer_frame_width = 0.08;
-  Color shading_color = color::gray;
-  double shading_line_width = 2.0;
+  static constexpr Color frame_color = color::black;
+  static constexpr double coordinate_margin = 0.0;
+  static constexpr double top_margin = 50.0;
+  static constexpr double margin = 50.0;
+  static constexpr double spacing1 = 0.0;
+  static constexpr double inner_frame_width = 0.04;
+  static constexpr double spacing2 = 0.05;
+  static constexpr double outer_frame_width = 0.08;
+  static constexpr Color shading_color = color::gray;
+  static constexpr double shading_line_width = 2.0;
 };
+
+// Declare ChessDiagramStyle.
+DECLARE_STYLE(ChessDiagram, ChessDiagramStyleParamsDefault);
 
 class ChessDiagram : public MultiRegion
 {
@@ -28,7 +47,7 @@ class ChessDiagram : public MultiRegion
 
  public:
   ChessDiagram(cairowindow::Rectangle const& geometry, ChessDiagramStyle style) :
-    MultiRegion(style.frame_color, style.shading_line_width), style_(style), geometry_(geometry)
+    MultiRegion(style.frame_color(), style.shading_line_width()), style_(style), geometry_(geometry)
   {
     DoutEntering(dc::notice, "ChessDiagram::ChessDiagram(" << geometry << ", ...)");
   }
