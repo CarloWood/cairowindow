@@ -1,6 +1,7 @@
 #include "sys.h"
 #include "ChessDiagram.h"
 #include "Rectangle.h"
+#include "Text.h"
 #include "cairowindow/Layer.h"
 
 namespace cairowindow::draw {
@@ -42,7 +43,8 @@ namespace cairowindow::draw {
 //         ├─┼─┼─┤       ├─┼─┤     ├─┼─
 //         ├─┼─┼─┤       ├─┼─┤     ├─┼─
 //            ^            ^        ^
-// |<---------|-left-margin|------> |                                   ChessDiagramStyle::coordinate_margin (if coordinates must be drawn).
+// |       |<-|-frame_thickness---->|
+// |<---------|-left_margin|------> |                                   ChessDiagramStyle::coordinate_margin (if coordinates must be drawn).
 //            |            |        |                                   ChessDiagramStyle::margin (when there are no coordinates).
 //            |            |<-----> |   - inner_frame_distance
 //            |<-----------|------> |   - outer_frame_distance
@@ -114,8 +116,28 @@ void ChessDiagram::draw_regions_on(Layer* layer)
     y1 -= square_size;
   }
 
+  frame_thickness_ = (style_.spacing1() + style_.inner_frame_width() +
+    ((style_.outer_frame_width() == 0.0) ? 0.0 : style_.spacing2() + style_.outer_frame_width())) * square_size;
+
   if (style_.coordinate_margin() != 0.0)
   {
+    double x1 = bottom_left_x;
+    double y1 = bottom_left_y - 0.5 * square_size;
+    for (int yi = 0; yi < 8; ++yi)
+    {
+      regions_.emplace_back(std::make_shared<Text>(std::to_string(yi + 1), x1, y1,
+            TextStyle({.position = centered_left_of, .font_size = 22.0, .offset = frame_thickness_ + 10})));
+      y1 -= square_size;
+    }
+    x1 += 0.5 * square_size;
+    y1 = bottom_left_y;
+    for (char xi = 'a'; xi <= 'h'; ++xi)
+    {
+      std::string coordinate(1, xi);
+      regions_.emplace_back(std::make_shared<Text>(coordinate, x1, y1,
+            TextStyle({.position = centered_below, .font_size = 22.0, .offset = frame_thickness_ + 10})));
+      x1 += square_size;
+    }
   }
 
   for (auto const& region : regions_)

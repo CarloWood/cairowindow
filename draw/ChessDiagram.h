@@ -44,6 +44,7 @@ class ChessDiagram : public MultiRegion
   ChessDiagramStyle style_;
   cairowindow::Rectangle geometry_;             // The geometry passed to the constructor.
   std::vector<std::shared_ptr<LayerRegion>> regions_;
+  double frame_thickness_{};                    // Set by the call to Diagram::add_to.
 
  public:
   ChessDiagram(cairowindow::Rectangle const& geometry, ChessDiagramStyle style) :
@@ -54,6 +55,8 @@ class ChessDiagram : public MultiRegion
 
   ChessDiagramStyle const& style() const { return style_; }
   cairowindow::Rectangle const& geometry() const { return geometry_; }
+
+  double frame_thickness() const { ASSERT(frame_thickness_ > 0.0); return frame_thickness_; }
 
  private:
   void draw_regions_on(Layer* layer) override;

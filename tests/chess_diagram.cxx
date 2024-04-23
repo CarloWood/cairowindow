@@ -37,7 +37,7 @@ int main()
 
     // Create and draw a chess diagram.
     // ChessDiagramStyleParamsDefault
-    chess::Diagram diagram(window.geometry(), {{.coordinate_margin = 50.0, .top_margin = 100.0}}, "My First Chess Diagram", {});
+    chess::Diagram diagram(window.geometry(), {{.coordinate_margin = 50.0, .top_margin = 80.0}}, "My First Chess Diagram", {});
 
     diagram.create_svg_surface("chess_diagram.svg" COMMA_CWDEBUG_ONLY("diagram"));
     diagram.set_need_print();

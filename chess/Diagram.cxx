@@ -75,19 +75,18 @@ cairowindow::Rectangle Diagram::calculate_geometry(cairowindow::Rectangle const&
 
 void Diagram::add_to(boost::intrusive_ptr<Layer> const& layer)
 {
-  // Set a title.
+  // Draw coordinates, frame(s) and shading.
+  draw_multi_region_on(layer, &chess_diagram_);
+
+  // Draw the title if any.
   if (title_)
   {
     title_->move_to(chess_diagram_.geometry().offset_x() + 0.5 * chess_diagram_.geometry().width(),
-        chess_diagram_.geometry().offset_y() + 0.5 * chess_diagram_.style().top_margin() - title_->style().offset());
+        chess_diagram_.geometry().offset_y() +
+        0.5 * (chess_diagram_.style().top_margin() - chess_diagram_.frame_thickness()) -
+        title_->style().offset());
     draw_layer_region_on(layer, title_);
   }
-
-  // Set ranges on the plot area and draw it.
-  draw_multi_region_on(layer, &chess_diagram_);
-
-  // Draw coordinates.
-  //...
 
   // Register this diagram and its geometry with the associated Window so that we can find which printable is under the mouse if needed.
   layer->window()->add_printable(this);
