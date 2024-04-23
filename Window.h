@@ -41,6 +41,7 @@ class Draggable;
 using X11Window = ::Window;
 
 class Layer;
+class Printable;
 
 template<typename Type>
 concept LayerType = std::is_base_of_v<Layer, Type>;
@@ -83,12 +84,12 @@ class Window
   unsigned int grab_button_;            // The mouse button that did the grabbing (only valid when grab_index is not undefined).
 
   // Printing.
-  struct PlotAreaGeometries
+  struct PrintableGeometries
   {
     Rectangle geometry_;
-    plot::Plot* plot_;
+    Printable* printable_;
   };
-  std::vector<PlotAreaGeometries> plot_geometries_;
+  std::vector<PrintableGeometries> printable_geometries_;
 
 #ifdef CAIROWINDOW_DEBUGWINDOW
   DebugWindow debug_window_;
@@ -98,8 +99,8 @@ class Window
   Window(std::string title, int width, int height);
   ~Window();
 
-  void add_plot(plot::Plot* plot);
-  plot::Plot* find_plot(int x, int y);
+  void add_printable(Printable* printable);
+  Printable* find_printable(int x, int y);
 
   EventLoop run();
   static void event_loop_thread(Window* self);

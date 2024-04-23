@@ -28,7 +28,7 @@ int main()
     // Create a window.
     Window window("Shortest Arc Length Two Quadratic Beziers", 1200, 900);
 
-    // Create a new layer with a gray background.
+    // Create a new layer with a white background.
     auto background_layer = window.create_background_layer<Layer>(color::white COMMA_DEBUG_ONLY("background_layer"));
 
     auto reject_layer = window.create_layer<Layer>({} COMMA_DEBUG_ONLY("reject0_layer"));

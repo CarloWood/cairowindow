@@ -82,10 +82,10 @@ Window::~Window()
   XCloseDisplay(display_);
 }
 
-void Window::add_plot(plot::Plot* plot)
+void Window::add_printable(Printable* printable)
 {
-  DoutEntering(dc::notice, "Window::add_plot(" << (void*)plot << ") with geometry " << plot->geometry());
-  plot_geometries_.emplace_back(plot->geometry(), plot);
+  DoutEntering(dc::notice, "Window::add_printable(" << (void*)printable << ") with geometry " << printable->geometry());
+  printable_geometries_.emplace_back(printable->geometry(), printable);
 }
 
 // Called by XEventLoop thread.
@@ -423,12 +423,12 @@ bool Window::update_grabbed(ClickableIndex grabbed_point, double pixel_x, double
   return false;
 }
 
-plot::Plot* Window::find_plot(int mouse_x, int mouse_y)
+Printable* Window::find_printable(int mouse_x, int mouse_y)
 {
-  for (PlotAreaGeometries const& plot_area_geometries : plot_geometries_)
+  for (PrintableGeometries const& printable_geometries : printable_geometries_)
   {
-    if (plot_area_geometries.geometry_.contains(mouse_x, mouse_y))
-      return plot_area_geometries.plot_;
+    if (printable_geometries.geometry_.contains(mouse_x, mouse_y))
+      return printable_geometries.printable_;
   }
   return nullptr;
 }
@@ -452,9 +452,9 @@ bool Window::handle_input_events()
         Dout(dc::cairowindow, "key: " << message->detail.keycode);
         if (message->detail.keycode == 107)
         {
-          plot::Plot* plot = find_plot(message->mouse_x, message->mouse_y);
-          if (plot)
-            plot->set_need_print();
+          Printable* printable = find_printable(message->mouse_x, message->mouse_y);
+          if (printable)
+            printable->set_need_print();
           return true;
         }
         break;

@@ -11,11 +11,19 @@
 
 namespace cairowindow::draw {
 
+enum class LineCap
+{
+  undefined, butt, round, square
+};
+
+std::ostream& operator<<(std::ostream& os, LineCap line_cap);
+
 #define cairowindow_Line_FOREACH_MEMBER(X, ...) \
   X(Color, line_color, Color{}, __VA_ARGS__) \
   X(double, line_width, -1.0, __VA_ARGS__) \
   X(std::vector<double>, dashes, std::vector<double>{-1.0}, __VA_ARGS__) \
-  X(double, dashes_offset, 12345678.9, __VA_ARGS__)
+  X(double, dashes_offset, 12345678.9, __VA_ARGS__) \
+  X(LineCap, line_cap, LineCap::undefined, __VA_ARGS__)
 
 #define cairowindow_Line_FOREACH_STYLE_MEMBER(X, ...) \
   cairowindow_Line_FOREACH_MEMBER(X, __VA_ARGS__)
@@ -27,9 +35,10 @@ struct LineStyleParamsDefault
   static constexpr double line_width = 2.0;
   static constexpr std::vector<double> dashes = {};
   static constexpr double dashes_offset = 0.0;
+  static constexpr LineCap line_cap = LineCap::butt;
 };
 
-// Declare PointStyle.
+// Declare LineStyle.
 DECLARE_STYLE(Line, LineStyleParamsDefault);
 
 class Line : public LayerRegion
@@ -58,6 +67,10 @@ class Line : public LayerRegion
 #endif
     cairo_set_source_rgba(cr, style_.line_color().red(), style_.line_color().green(), style_.line_color().blue(), style_.line_color().alpha());
     cairo_set_line_width(cr, style_.line_width());
+    if (style_.line_cap() == LineCap::round)
+      cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
+    else if (style_.line_cap() == LineCap::square)
+      cairo_set_line_cap(cr, CAIRO_LINE_CAP_SQUARE);
     cairo_move_to(cr, x1_, y1_);
     cairo_line_to(cr, x2_, y2_);
     if (!style_.dashes().empty())

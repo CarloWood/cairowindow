@@ -3,29 +3,11 @@
 #include "Plot.h"
 #include "intersection_points.h"
 #include "utils/square.h"
-#include "utils/generate_unique_filename.h"
-#include <cairo/cairo-svg.h>
 #include <limits>
 #include <cmath>
 #include <iomanip>
-#ifdef CWDEBUG
-#include "cairowindow/debugcairo.h"
-#endif
 
 namespace cairowindow::plot {
-
-Plot::~Plot()
-{
-#ifdef CWDEBUG
-  using namespace debugcairo;
-#endif
-  if (svg_surface_)
-  {
-    cairo_surface_finish(svg_surface_);
-    cairo_destroy(svg_cr_);
-    cairo_surface_destroy(svg_surface_);
-  }
-}
 
 // Calculate the axes geometry from the full plot geometry.
 cairowindow::Rectangle Plot::axes_geometry(cairowindow::Rectangle const& geometry, double axes_line_width)
@@ -61,30 +43,6 @@ cairowindow::Rectangle Plot::axes_geometry(cairowindow::Rectangle const& geometr
   }
 
   return { top_left_x, top_left_y, bottom_right_x - top_left_x, bottom_right_y - top_left_y };
-}
-
-void Plot::draw_layer_region_on(boost::intrusive_ptr<Layer> const& layer, std::shared_ptr<LayerRegion> const& layer_region)
-{
-  if (need_print_)
-  {
-    ASSERT(svg_cr_);
-    layer->start_printing_to(svg_cr_);
-  }
-  layer->draw(layer_region);
-  if (need_print_)
-    layer->stop_printing();
-}
-
-void Plot::draw_multi_region_on(boost::intrusive_ptr<Layer> const& layer, draw::MultiRegion* multi_region)
-{
-  if (need_print_)
-  {
-    ASSERT(svg_cr_);
-    layer->start_printing_to(svg_cr_);
-  }
-  layer->draw(multi_region);
-  if (need_print_)
-    layer->stop_printing();
 }
 
 void Plot::add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio)
@@ -134,9 +92,9 @@ void Plot::add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio)
     double x = plot_area_.geometry().offset_x();
     double y = plot_area_.geometry().offset_y() + plot_area_.geometry().height();
     if (axis == x_axis)
-      y += draw::XLabelStyleDefaults::offset;
+      y += XLabelStyleDefaults::offset;
     else
-      x -= draw::XLabelStyleDefaults::offset;
+      x -= XLabelStyleDefaults::offset;
     for (int tick = 0; tick <= range_ticks_[axis]; ++tick)
     {
       std::ostringstream label_str;
@@ -172,21 +130,8 @@ void Plot::add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio)
     draw_layer_region_on(layer, ylabel_);
   }
 
-  // Register this plot and its geometry with the associated Window so that we can find which plot is under the mouse if needed.
-  layer->window()->add_plot(this);
-}
-
-void Plot::create_svg_surface(std::string svg_filename COMMA_CWDEBUG_ONLY(std::string debug_name))
-{
-#ifdef CWDEBUG
-  using namespace debugcairo;
-#endif
-  std::string unique_filename = utils::generate_unique_filename(svg_filename);
-  svg_surface_ = cairo_svg_surface_create(unique_filename.c_str(), 1000.0, 1000.0 COMMA_CWDEBUG_ONLY(debug_name));
-  svg_cr_ = cairo_create(svg_surface_ COMMA_CWDEBUG_ONLY("Plot::svg_cr_:\"" + debug_name + "\""));
-  // Use a entirely white background.
-  cairo_set_source_rgb(svg_cr_, 1.0, 1.0, 1.0);
-  cairo_paint(svg_cr_);
+  // Register this plot and its geometry with the associated Window so that we can find which printable is under the mouse if needed.
+  layer->window()->add_printable(this);
 }
 
 double Plot::convert_x(double x) const

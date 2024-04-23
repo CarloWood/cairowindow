@@ -16,7 +16,7 @@ if (OptionEnableSymbolicPrinting)
   set(SYMBOLIC_PRINTING 1)
 endif ()
 
-# Specify utils specific configure file.
+# Specify symbolic specific configure file.
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/config.h
                @ONLY)
@@ -68,7 +68,7 @@ target_compile_features(symbolic_ObjLib
 
 # Set link dependencies.
 target_link_libraries(symbolic_ObjLib
-  PUBLIC
+  PRIVATE
     AICxx::utils
 )
 

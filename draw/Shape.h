@@ -92,7 +92,6 @@ class Shape : public LayerRegion
     }
 
   cairowindow::Rectangle const& geometry() const { return geometry_; }
-//  ShapeStyle& style() { return style_; }
   ShapeStyle const& style() const { return style_; }
 
   double arrow_overshoot() const { return arrow_overshoot_; }

@@ -19,6 +19,7 @@ class MultiRegion
   double line_width_;
 
   MultiRegion(Color const& color, double line_width) : color_(color), line_width_(line_width) { }
+  virtual ~MultiRegion() = default;
 
  public:
   virtual void draw_regions_on(Layer* layer) = 0;

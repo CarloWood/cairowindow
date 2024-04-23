@@ -11,6 +11,7 @@
 #include "draw/BezierCurve.h"
 #include "draw/BezierFitter.h"
 #include "draw/Slider.h"
+#include "Printable.h"
 #include "Range.h"
 #include "Point.h"
 #include "Circle.h"
@@ -115,18 +116,15 @@ auto tuple_tail(std::tuple<Args...>&& tuple)
 
 } // namespace
 
-} // namespace plot
-namespace draw {
-
-struct TitleStyleDefaults : TextStyleParamsDefault
+struct TitleStyleDefaults : draw::TextStyleParamsDefault
 {
-  static constexpr TextPosition position = centered;
+  static constexpr draw::TextPosition position = draw::centered;
   static constexpr double font_size = 24.0;
 };
 
-struct LabelStyleDefaults : TextStyleParamsDefault
+struct LabelStyleDefaults : draw::TextStyleParamsDefault
 {
-  static constexpr TextPosition position = centered_below;
+  static constexpr draw::TextPosition position = draw::centered_below;
   static constexpr double font_size = 18.0;
 };
 
@@ -137,13 +135,16 @@ struct XLabelStyleDefaults : LabelStyleDefaults
 
 struct YLabelStyleDefaults : LabelStyleDefaults
 {
-  static constexpr TextPosition position = centered_above;
+  static constexpr draw::TextPosition position = draw::centered_above;
   static constexpr double rotation = -0.5 * M_PI;
   static constexpr double offset = XLabelStyleDefaults::offset;
 };
 
-#define cairowindow_Title_FOREACH_MEMBER cairowindow_TextBase_FOREACH_MEMBER
-#define cairowindow_Title_FOREACH_STYLE_MEMBER cairowindow_TextBase_FOREACH_MEMBER
+} // namespace plot
+namespace draw {
+
+#define cairowindow_PlotTitle_FOREACH_MEMBER cairowindow_TextBase_FOREACH_MEMBER
+#define cairowindow_PlotTitle_FOREACH_STYLE_MEMBER cairowindow_TextBase_FOREACH_MEMBER
 #define cairowindow_XLabel_FOREACH_MEMBER cairowindow_TextBase_FOREACH_MEMBER
 #define cairowindow_XLabel_FOREACH_STYLE_MEMBER cairowindow_TextBase_FOREACH_MEMBER
 #define cairowindow_YLabel_FOREACH_MEMBER cairowindow_TextBase_FOREACH_MEMBER
@@ -151,13 +152,13 @@ struct YLabelStyleDefaults : LabelStyleDefaults
 #define cairowindow_Label_FOREACH_MEMBER cairowindow_TextBase_FOREACH_MEMBER
 #define cairowindow_Label_FOREACH_STYLE_MEMBER cairowindow_TextBase_FOREACH_MEMBER
 
-DECLARE_STYLE_WITH_BASE(Title, TextBase, TitleStyleDefaults)
-DECLARE_STYLE_WITH_BASE(XLabel, TextBase, XLabelStyleDefaults)
-DECLARE_STYLE_WITH_BASE(YLabel, TextBase, YLabelStyleDefaults)
-DECLARE_STYLE_WITH_BASE(Label, TextBase, LabelStyleDefaults)
+DECLARE_STYLE_WITH_BASE(PlotTitle, TextBase, plot::TitleStyleDefaults)
+DECLARE_STYLE_WITH_BASE(XLabel, TextBase, plot::XLabelStyleDefaults)
+DECLARE_STYLE_WITH_BASE(YLabel, TextBase, plot::YLabelStyleDefaults)
+DECLARE_STYLE_WITH_BASE(Label, TextBase, plot::LabelStyleDefaults)
 
-#undef cairowindow_Title_FOREACH_MEMBER
-#undef cairowindow_Title_FOREACH_STYLE_MEMBER
+#undef cairowindow_PlotTitle_FOREACH_MEMBER
+#undef cairowindow_PlotTitle_FOREACH_STYLE_MEMBER
 #undef cairowindow_XLabel_FOREACH_MEMBER
 #undef cairowindow_XLabel_FOREACH_STYLE_MEMBER
 #undef cairowindow_YLabel_FOREACH_MEMBER
@@ -168,7 +169,7 @@ DECLARE_STYLE_WITH_BASE(Label, TextBase, LabelStyleDefaults)
 } // namespace draw
 namespace plot {
 
-class Plot
+class Plot : public Printable
 {
  private:
   static constexpr int number_of_axes = draw::PlotArea::number_of_axes;
@@ -184,31 +185,24 @@ class Plot
   utils::Vector<Draggable*, ClickableIndex> draggables_;
   utils::Vector<std::function<cairowindow::Point (cairowindow::Point const&)>, ClickableIndex> draggable_restrictions_;
 
-  // Printing
-  cairo_surface_t* svg_surface_ = nullptr;
-  cairo_t* svg_cr_ = nullptr;
-  bool need_print_{false};
-
  public:
-  Plot(cairowindow::Rectangle const& geometry, draw::PlotAreaStyle plot_area_style, std::string title, draw::TitleStyle title_style) :
+  Plot(cairowindow::Rectangle const& geometry, draw::PlotAreaStyle plot_area_style, std::string title, draw::PlotTitleStyle title_style) :
     plot_area_(axes_geometry(geometry, plot_area_style.axes_line_width), plot_area_style),
     title_(std::make_shared<draw::Text>(title, plot_area_.geometry().offset_x() + 0.5 * plot_area_.geometry().width(),
         plot_area_.geometry().offset_y() - 0.5 * plot_area_.geometry().offset_y() - title_style.offset(), title_style)) { }
 
-  Plot(cairowindow::Rectangle const& geometry, draw::PlotAreaStyle plot_area_style, std::string title, draw::TitleStyle title_style,
+  Plot(cairowindow::Rectangle const& geometry, draw::PlotAreaStyle plot_area_style, std::string title, draw::PlotTitleStyle title_style,
       std::string xlabel, draw::XLabelStyle xlabel_style, std::string ylabel, draw::YLabelStyle ylabel_style) :
     plot_area_(axes_geometry(geometry, plot_area_style.axes_line_width), plot_area_style),
     title_(std::make_shared<draw::Text>(title, plot_area_.geometry().offset_x() + 0.5 * plot_area_.geometry().width(),
         plot_area_.geometry().offset_y() - 0.5 * plot_area_.geometry().offset_y() - title_style.offset(), title_style)),
     xlabel_(std::make_shared<draw::Text>(xlabel, plot_area_.geometry().offset_x() + 0.5 * plot_area_.geometry().width(),
-        plot_area_.geometry().offset_y() + plot_area_.geometry().height() + draw::XLabelStyleDefaults::offset, xlabel_style)),
-    ylabel_(std::make_shared<draw::Text>(ylabel, plot_area_.geometry().offset_x() - draw::YLabelStyleDefaults::offset,
+        plot_area_.geometry().offset_y() + plot_area_.geometry().height() + XLabelStyleDefaults::offset, xlabel_style)),
+    ylabel_(std::make_shared<draw::Text>(ylabel, plot_area_.geometry().offset_x() - YLabelStyleDefaults::offset,
         plot_area_.geometry().offset_y() + 0.5 * plot_area_.geometry().height(), ylabel_style)) { }
 
   Plot(cairowindow::Rectangle const& geometry, draw::PlotAreaStyle plot_area_style) :
     plot_area_(axes_geometry(geometry, plot_area_style.axes_line_width), plot_area_style) { }
-
-  ~Plot();
 
   void set_range(int axis, Range range)
   {
@@ -221,8 +215,6 @@ class Plot
   void set_xrange(Range x_range) { set_range(x_axis, x_range); }
   void set_yrange(Range y_range) { set_range(y_axis, y_range); }
 
-  void create_svg_surface(std::string svg_filename COMMA_CWDEBUG_ONLY(std::string debug_name));
-
   cairowindow::Point clamp_to_plot_area(cairowindow::Point const& point) const
   {
     return {std::clamp(point.x(), range_[x_axis].min(), range_[x_axis].max()),
@@ -232,10 +224,6 @@ class Plot
   double convert_x(double x) const;
   double convert_y(double y) const;
   Pixel convert_to_pixel(cairowindow::Point const& point) const;
-
-  void set_need_print() { need_print_ = true; }
-  void reset_need_print() { need_print_ = false; }
-  bool need_print() const { return need_print_; }
 
   //--------------------------------------------------------------------------
   // Point
@@ -324,12 +312,7 @@ class Plot
     }
   }
 
-  // Calls layer->draw(layer_region), but also handles printing.
-  void draw_layer_region_on(boost::intrusive_ptr<Layer> const& layer, std::shared_ptr<LayerRegion> const& layer_region);
-  void draw_multi_region_on(boost::intrusive_ptr<Layer> const& layer, draw::MultiRegion* multi_region);
-
  public:
-
   // Create and draw a connector on layer, using args... and line_style.
   // Args can optionally start with zero, one or two ArrowHeadShape arguments.
   template<typename... Args>
@@ -505,7 +488,7 @@ class Plot
       draw::BezierCurveStyle const& line_style,
       std::vector<cairowindow::Point>&& points);
 
-  cairowindow::Rectangle const& geometry() const { return plot_area_.geometry(); }
+  cairowindow::Rectangle const& geometry() const override { return plot_area_.geometry(); }
   void add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio = false);
 
   // Called from Window::register_draggable.
@@ -518,8 +501,6 @@ class Plot
     draggable_restrictions_.emplace_back(std::move(restriction));
   }
   cairowindow::Rectangle update_grabbed(utils::Badge<Window>, ClickableIndex grabbed_point, double pixel_x, double pixel_y);
-
-  cairo_t* svg_cr() const { return svg_cr_; }
 
  private:
   cairowindow::Rectangle axes_geometry(cairowindow::Rectangle const& geometry, double axes_line_width);

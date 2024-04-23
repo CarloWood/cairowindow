@@ -85,29 +85,32 @@ file(GLOB HEADER_FILES "*.h" "draw/*.h")
 # The list of source files.
 target_sources(cairowindow_ObjLib
   PRIVATE
+    "BezierFitter.cxx"
+    "BezierCurve.cxx"
     "Color.cxx"
     "Direction.cxx"
+    "EventLoop.cxx"
     "FontPangoContext.cxx"
     "Layer.cxx"
+    "LayerRegion.cxx"
     "Line.cxx"
     "LinePiece.cxx"
     "Point.cxx"
     "Pixel.cxx"
-    "Window.cxx"
-    "EventLoop.cxx"
-    "LayerRegion.cxx"
     "Plot.cxx"
-    "BezierFitter.cxx"
-    "BezierCurve.cxx"
+    "Printable.cxx"
     "QuadraticEnergy.cxx"
-    "draw/PlotArea.cxx"
-    "draw/Grid.cxx"
-    "draw/Shape.cxx"
-    "draw/Curve.cxx"
+    "Window.cxx"
     "draw/ArrowHead.cxx"
-    "draw/Connector.cxx"
-    "draw/Slider.cxx"
     "draw/BezierFitter.cxx"
+    "draw/Connector.cxx"
+    "draw/Curve.cxx"
+    "draw/Grid.cxx"
+    "draw/Line.cxx"
+    "draw/PlotArea.cxx"
+    "draw/Shape.cxx"
+    "draw/Slider.cxx"
+    "draw/ChessDiagram.cxx"
 
     ${HEADER_FILES}
 )
@@ -146,6 +149,7 @@ target_compile_features(cairowindow_ObjLib
 target_link_libraries(cairowindow_ObjLib
   PUBLIC
     AICxx::symbolic
+    AICxx::chess
     AICxx::utils
     Eigen3::Eigen
   INTERFACE
@@ -157,6 +161,7 @@ target_link_libraries(cairowindow_ObjLib
 add_library(AICxx::cairowindow ALIAS cairowindow_ObjLib)
 
 add_subdirectory(symbolic)
+add_subdirectory(chess)
 
 if (OptionEnableCairoWindowTests)
 add_subdirectory(tests)

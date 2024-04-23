@@ -47,12 +47,11 @@
 // Used for debug purposes; print members of the ostream `os`.
 #define CAIROWINDOW_PRINT_ON(type, member, ...) os << #member ":" << member << "; ";
 #define CAIROWINDOW_PRINT_m_ON(type, member, ...) os << #member ":" << m_##member << "; ";
-
-using utils::has_print_on::operator<<;
 #endif
 
 // Macro used by DECLARE_STYLE and DECLARE_STYLE_WITH_BASE to declare the structs Class##StyleParams and Class##StyleParamsDelta.
 #define CAIROWINDOW_DECLARE_STYLE_PARAMS(Class, Defaults) \
+  using utils::has_print_on::operator<<; \
   struct Class##StyleParams { \
     cairowindow_##Class##_FOREACH_STYLE_MEMBER(CAIROWINDOW_DECLARE_STYLE_MEMBER, Defaults) \
     CWDEBUG_ONLY(void print_on(std::ostream& os) const { cairowindow_##Class##_FOREACH_STYLE_MEMBER(CAIROWINDOW_PRINT_ON) }) \
@@ -70,6 +69,7 @@ using utils::has_print_on::operator<<;
 // having the required default values.
 #define DECLARE_STYLE(Class, Defaults) \
   CAIROWINDOW_DECLARE_STYLE_PARAMS(Class, Defaults); \
+  using utils::has_print_on::operator<<; \
   class Class##Style { \
    protected: \
     cairowindow_##Class##_FOREACH_MEMBER(CAIROWINDOW_DECLARE_MEMBER) \
@@ -90,6 +90,7 @@ using utils::has_print_on::operator<<;
 // Base must already have been declared before using DECLARE_STYLE or DECLARE_STYLE_WITH_BASE.
 #define DECLARE_STYLE_WITH_BASE(Class, Base, Defaults) \
   CAIROWINDOW_DECLARE_STYLE_PARAMS(Class, Defaults); \
+  using utils::has_print_on::operator<<; \
   struct Class##StyleParamsPlus { \
     cairowindow_##Class##_FOREACH_MEMBER(CAIROWINDOW_DECLARE_STYLE_MEMBER, Defaults) \
   }; \
