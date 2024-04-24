@@ -104,7 +104,7 @@ void Diagram::add_piece(boost::intrusive_ptr<Layer> const& layer,
   // Calculate the geometry of the square that this piece is placed on.
   int const square_size = chess_diagram_.board_size() / 8;
   double const top_left_x = chess_diagram_.top_left_x() + col * square_size;
-  double const top_left_y = chess_diagram_.top_left_y() + row * square_size;
+  double const top_left_y = chess_diagram_.top_left_y() + (7 - row) * square_size;
 
   piece.draw_object_ = std::make_shared<draw::ChessPiece>(
       top_left_x, top_left_y, square_size,

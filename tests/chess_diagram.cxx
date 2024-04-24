@@ -52,7 +52,27 @@ int main()
       // Suppress immediate updating of the window for each created item, in order to avoid flickering.
       window.set_send_expose_events(false);
 
-      diagram.place_piece(second_layer, chess::black, chess::knight, 3, 4, {});
+      diagram.place_piece(second_layer, chess::black, chess::rook, 0, 7, {});
+      diagram.place_piece(second_layer, chess::black, chess::rook, 7, 7, {});
+      diagram.place_piece(second_layer, chess::black, chess::knight, 1, 7, {});
+      diagram.place_piece(second_layer, chess::black, chess::knight, 6, 7, {});
+      diagram.place_piece(second_layer, chess::black, chess::bishop, 2, 7, {});
+      diagram.place_piece(second_layer, chess::black, chess::bishop, 5, 7, {});
+      diagram.place_piece(second_layer, chess::black, chess::queen, 3, 7, {});
+      diagram.place_piece(second_layer, chess::black, chess::king, 4, 7, {});
+      for (int col = 0; col < 8; ++col)
+        diagram.place_piece(second_layer, chess::black, chess::pawn, col, 6, {});
+
+      diagram.place_piece(second_layer, chess::white, chess::rook, 0, 0, {});
+      diagram.place_piece(second_layer, chess::white, chess::rook, 7, 0, {});
+      diagram.place_piece(second_layer, chess::white, chess::knight, 1, 0, {});
+      diagram.place_piece(second_layer, chess::white, chess::knight, 6, 0, {});
+      diagram.place_piece(second_layer, chess::white, chess::bishop, 2, 0, {});
+      diagram.place_piece(second_layer, chess::white, chess::bishop, 5, 0, {});
+      diagram.place_piece(second_layer, chess::white, chess::queen, 3, 0, {});
+      diagram.place_piece(second_layer, chess::white, chess::king, 4, 0, {});
+      for (int col = 0; col < 8; ++col)
+        diagram.place_piece(second_layer, chess::white, chess::pawn, col, 1, {});
 
       // Flush all expose events related to the drawing done above.
       window.set_send_expose_events(true);

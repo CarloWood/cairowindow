@@ -6,7 +6,10 @@
 namespace cairowindow::draw {
 
 #define cairowindow_ChessPiece_FOREACH_MEMBER(X, ...) \
-  X(Color, line_color, Color{}, __VA_ARGS__)
+  X(Color, white_piece_line_color, Color{}, __VA_ARGS__) \
+  X(Color, white_piece_fill_color, Color{}, __VA_ARGS__) \
+  X(Color, black_piece_line_color, Color{}, __VA_ARGS__) \
+  X(Color, black_piece_fill_color, Color{}, __VA_ARGS__)
 
 #define cairowindow_ChessPiece_FOREACH_STYLE_MEMBER(X, ...) \
   cairowindow_ChessPiece_FOREACH_MEMBER(X, __VA_ARGS__)
@@ -14,7 +17,10 @@ namespace cairowindow::draw {
 // Define default values for ChessPieceStyle.
 struct ChessPieceStyleParamsDefault
 {
-  static constexpr Color line_color = color::black;
+  static constexpr Color white_piece_line_color = color::black;
+  static constexpr Color white_piece_fill_color = color::white;
+  static constexpr Color black_piece_line_color = color::white;
+  static constexpr Color black_piece_fill_color = color::black;
 };
 
 // Declare ChessPieceStyle.
@@ -36,6 +42,16 @@ class ChessPiece : public LayerRegion
 
  private:
   StrokeExtents do_draw(cairo_t* cr) override;
+
+  void set_fill_color(cairo_t* cr, chess::EColor color);
+  void set_line_color(cairo_t* cr, chess::EColor color);
+
+  void draw_pawn(cairo_t* cr, double x, double y, double scale, chess::EColor color);
+  void draw_king(cairo_t* cr, double x, double y, double scale, chess::EColor color);
+  void draw_queen(cairo_t* cr, double x, double y, double scale, chess::EColor color);
+  void draw_rook(cairo_t* cr, double x, double y, double scale, chess::EColor color);
+  void draw_bishop(cairo_t* cr, double x, double y, double scale, chess::EColor color);
+  void draw_knight(cairo_t* cr, double x, double y, double scale, chess::EColor color);
 };
 
 } // namespace cairowindow::draw
