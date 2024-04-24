@@ -1,9 +1,11 @@
 #pragma once
 
+#include "Piece.h"
 #include "cairowindow/Printable.h"
 #include "cairowindow/draw/ChessDiagram.h"
 #include "cairowindow/Rectangle.h"
 #include "cairowindow/draw/Text.h"
+#include "enums.h"
 #include <boost/intrusive_ptr.hpp>
 #include "debug.h"
 
@@ -17,6 +19,9 @@ struct TitleStyleDefaults : draw::TextStyleParamsDefault
 
 } // namespace cairowindow::chess
 namespace cairowindow::draw {
+
+class ChessPiece;
+class ChessPieceStyle;
 
 #define cairowindow_ChessTitle_FOREACH_MEMBER cairowindow_TextBase_FOREACH_MEMBER
 #define cairowindow_ChessTitle_FOREACH_STYLE_MEMBER cairowindow_TextBase_FOREACH_MEMBER
@@ -34,6 +39,7 @@ class Diagram : public Printable
  private:
   draw::ChessDiagram chess_diagram_;
   std::shared_ptr<draw::Text> title_;
+  std::vector<Piece> pieces_;
 
  public:
   Diagram(Rectangle const& geometry, draw::ChessDiagramStyle chess_diagram_style, std::string title, draw::ChessTitleStyle title_style) :
@@ -47,8 +53,12 @@ class Diagram : public Printable
   Rectangle const& geometry() const override { return chess_diagram_.geometry(); }
   void add_to(boost::intrusive_ptr<Layer> const& layer);
 
+  void place_piece(boost::intrusive_ptr<Layer> const& layer, EColor color, EPiece piece, int x, int y, draw::ChessPieceStyle const& style);
+
  private:
   Rectangle calculate_geometry(Rectangle const& geometry, draw::ChessDiagramStyle const& style);
+
+  void add_piece(boost::intrusive_ptr<Layer> const& layer, draw::ChessPieceStyle const& style, chess::Piece const& piece);
 };
 
 } // namespace cairowindow::chess

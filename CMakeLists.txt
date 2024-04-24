@@ -111,6 +111,7 @@ target_sources(cairowindow_ObjLib
     "draw/Shape.cxx"
     "draw/Slider.cxx"
     "draw/ChessDiagram.cxx"
+    "draw/ChessPiece.cxx"
 
     ${HEADER_FILES}
 )

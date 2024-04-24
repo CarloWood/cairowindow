@@ -23,6 +23,7 @@ enum TextPosition
   centered_left_of,
   centered_above,
   centered_below,
+  centered_below_no_bearing,
   centered
 };
 
@@ -159,6 +160,10 @@ class Text : public LayerRegion
         ty += style_.offset();
         tx -= extents.x_bearing + 0.5 * extents.width;
         ty -= extents.y_bearing;
+        break;
+      case centered_below_no_bearing:
+        ty += style_.offset();
+        tx -= extents.x_bearing + 0.5 * extents.width;
         break;
       case centered:
         tx -= extents.x_bearing + 0.5 * extents.width;

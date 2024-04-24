@@ -3,6 +3,9 @@
 #include "Rectangle.h"
 #include "Text.h"
 #include "cairowindow/Layer.h"
+#ifdef CWDEBUG
+#include "cairowindow/debugcairo.h"
+#endif
 
 namespace cairowindow::draw {
 
@@ -54,51 +57,38 @@ namespace cairowindow::draw {
 //        line         line         left-margin here is 50.5).
 //        (e.g 40)     (46.5)       This must be an integer.
 //
+
 void ChessDiagram::draw_regions_on(Layer* layer)
 {
-  constexpr int horizontal = 0;
-  constexpr int vertical = 1;
-
-  bool have_coordinates = style_.coordinate_margin() != 0.0;
-  double const left_margin = have_coordinates ? style_.coordinate_margin() : style_.margin();
-  double const right_margin = style_.margin();
-  double const top_margin = style_.top_margin();
-  double const bottom_margin = style_.margin();
-
-  int const bottom_left_x = std::round(geometry_.offset_x() + right_margin);
-  int const bottom_left_y = std::round(geometry_.offset_y() + geometry_.height() - bottom_margin);
-  int const board_size = std::round((geometry_.width() - left_margin - right_margin));
-  ASSERT(board_size % 8 == 0);
-  int const square_size = board_size >> 3;
-
-  int const top_right_x = bottom_left_x + board_size;
-  int const top_right_y = bottom_left_y - board_size;
+  int const square_size = board_size_ >> 3;
+  int const bottom_right_x = top_left_x_ + board_size_;
+  int const bottom_right_y = top_left_y_ + board_size_;
 
   for (int frame = 0; frame <= (style_.outer_frame_width() == 0.0 ? 0 : 1); ++frame)
   {
     double offset = (style_.spacing1() +
       ((frame == 0) ? 0.5 * style_.inner_frame_width() : style_.inner_frame_width() + style_.spacing2() + 0.5 * style_.outer_frame_width())) *
       square_size;
-    double x1 = bottom_left_x - 0.5 - offset;
-    double y1 = bottom_left_y + 0.5 + offset;
-    double x2 = top_right_x + 0.5 + offset;
-    double y2 = top_right_y - 0.5 - offset;
+    double x1 = top_left_x_ - 0.5 - offset;
+    double y1 = top_left_y_ - 0.5 - offset;
+    double x2 = bottom_right_x + 0.5 + offset;
+    double y2 = bottom_right_y + 0.5 + offset;
     double frame_width = ((frame == 0) ? style_.inner_frame_width() : style_.outer_frame_width()) * square_size;
     LineCap line_cap = (frame == 0) ? LineCap::square : LineCap::round;
-    regions_.emplace_back(std::make_shared<Line>(x1, y2 + 0.2, x1, y1 - 0.2,
+    regions_.emplace_back(std::make_shared<Line>(x1, y1 + 0.2, x1, y2 - 0.2,
           LineStyle{{.line_color = color_, .line_width = frame_width, .line_cap = line_cap}}));
-    regions_.emplace_back(std::make_shared<Line>(x2, y2 + 0.2, x2, y1 - 0.2,
+    regions_.emplace_back(std::make_shared<Line>(x2, y1 + 0.2, x2, y2 - 0.2,
           LineStyle{{.line_color = color_, .line_width = frame_width, .line_cap = line_cap}}));
-    regions_.emplace_back(std::make_shared<Line>(x1, y2, x2, y2,
-          LineStyle{{.line_color = color_, .line_width = frame_width}}));
     regions_.emplace_back(std::make_shared<Line>(x1, y1, x2, y1,
+          LineStyle{{.line_color = color_, .line_width = frame_width}}));
+    regions_.emplace_back(std::make_shared<Line>(x1, y2, x2, y2,
           LineStyle{{.line_color = color_, .line_width = frame_width}}));
   }
 
-  double y1 = bottom_left_y;
+  double y1 = bottom_right_y;
   for (int yi = 0; yi < 8; ++yi)
   {
-    double x1 = bottom_left_x + ((yi & 1) ? square_size : 0.0);
+    double x1 = top_left_x_ + ((yi & 1) ? square_size : 0.0);
     for (int xi = yi & 1; xi < 8; xi += 2)
     {
       double x2 = x1 + square_size;
@@ -121,21 +111,28 @@ void ChessDiagram::draw_regions_on(Layer* layer)
 
   if (style_.coordinate_margin() != 0.0)
   {
-    double x1 = bottom_left_x;
-    double y1 = bottom_left_y - 0.5 * square_size;
+#ifdef CWDEBUG
+    using namespace debugcairo;
+#endif
+    double x1 = top_left_x_;
+    double y1 = top_left_y_ + 0.5 * square_size;
     for (int yi = 0; yi < 8; ++yi)
     {
-      regions_.emplace_back(std::make_shared<Text>(std::to_string(yi + 1), x1, y1,
+      regions_.emplace_back(std::make_shared<Text>(std::to_string(8 - yi), x1, y1,
             TextStyle({.position = centered_left_of, .font_size = 22.0, .offset = frame_thickness_ + 10})));
-      y1 -= square_size;
+      y1 += square_size;
     }
     x1 += 0.5 * square_size;
-    y1 = bottom_left_y;
+    y1 = top_left_y_ + board_size_;
+    TextStyle a_h_style({.position = centered_below_no_bearing, .font_size = 22.0, .offset = frame_thickness_ + 10});
+    a_h_style.setup(layer->cr());
+    cairo_text_extents_t extents;
+    cairo_text_extents(layer->cr(), "abcdefgh", &extents);
+    double y_bearing = extents.y_bearing;
     for (char xi = 'a'; xi <= 'h'; ++xi)
     {
       std::string coordinate(1, xi);
-      regions_.emplace_back(std::make_shared<Text>(coordinate, x1, y1,
-            TextStyle({.position = centered_below, .font_size = 22.0, .offset = frame_thickness_ + 10})));
+      regions_.emplace_back(std::make_shared<Text>(coordinate, x1, y1, a_h_style({.offset = 10 + frame_thickness_ - y_bearing})));
       x1 += square_size;
     }
   }

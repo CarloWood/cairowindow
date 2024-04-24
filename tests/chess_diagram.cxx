@@ -2,6 +2,7 @@
 #include "cairowindow/Window.h"
 #include "cairowindow/Layer.h"
 #include "cairowindow/chess/Diagram.h"
+#include "cairowindow/draw/ChessPiece.h"
 #include "utils/AIAlert.h"
 #include "utils/debug_ostream_operators.h"
 #include <thread>
@@ -42,7 +43,6 @@ int main()
     diagram.create_svg_surface("chess_diagram.svg" COMMA_CWDEBUG_ONLY("diagram"));
     diagram.set_need_print();
     diagram.add_to(background_layer);
-    diagram.reset_need_print();
 
     while (true)
     {
@@ -52,7 +52,7 @@ int main()
       // Suppress immediate updating of the window for each created item, in order to avoid flickering.
       window.set_send_expose_events(false);
 
-      // ... stuff here ...
+      diagram.place_piece(second_layer, chess::black, chess::knight, 3, 4, {});
 
       // Flush all expose events related to the drawing done above.
       window.set_send_expose_events(true);

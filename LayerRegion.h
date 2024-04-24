@@ -14,7 +14,7 @@ class LayerRegion
  private:
   Layer* layer_;                                // The Layer that this is a region of. Drawing happens to the surface of this layer.
   StrokeExtents stroke_extents_;                // The region area (as returned by draw).
-  std::function<StrokeExtents(cairo_t*)> draw_; // A copy the argument of draw; used to redraw the region when necessary.
+  std::function<StrokeExtents(cairo_t*)> draw_; // A copy of the argument of set_draw_function; used to redraw the region when necessary.
 
  private:
   virtual StrokeExtents do_draw(cairo_t* cr) { Dout(dc::warning, "Calling unimplemented do_draw()"); return {}; }
