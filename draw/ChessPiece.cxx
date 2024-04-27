@@ -1433,6 +1433,9 @@ StrokeExtents ChessPiece::do_draw(cairo_t* cr)
     case king:
       draw_king(cr, x1_, y1_, square_size_, color_);
       break;
+    default:
+      ASSERT(false);
+      AI_NEVER_REACHED
   }
   return {x1_ + 1, y1_ + 1, x1_ + square_size_ - 1, y1_ + square_size_ - 1};
 }

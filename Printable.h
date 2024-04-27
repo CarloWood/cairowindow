@@ -25,7 +25,7 @@ class Printable
  public:
   virtual ~Printable();
 
-  void create_svg_surface(std::string svg_filename COMMA_CWDEBUG_ONLY(std::string debug_name));
+  void create_svg_surface(std::string svg_filename, bool overwrite COMMA_CWDEBUG_ONLY(std::string debug_name));
 
   cairo_t* svg_cr() const { return svg_cr_; }
 

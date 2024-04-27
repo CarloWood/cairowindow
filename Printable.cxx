@@ -22,14 +22,15 @@ Printable::~Printable()
   }
 }
 
-void Printable::create_svg_surface(std::string svg_filename COMMA_CWDEBUG_ONLY(std::string debug_name))
+void Printable::create_svg_surface(std::string svg_filename, bool overwrite COMMA_CWDEBUG_ONLY(std::string debug_name))
 {
 #ifdef CWDEBUG
   using namespace debugcairo;
 #endif
-  std::string unique_filename = utils::generate_unique_filename(svg_filename);
+  if (!overwrite)
+    svg_filename = utils::generate_unique_filename(svg_filename);
   Rectangle const& geometry = this->geometry();
-  svg_surface_ = cairo_svg_surface_create(unique_filename.c_str(), geometry.width(), geometry.height() COMMA_CWDEBUG_ONLY(debug_name));
+  svg_surface_ = cairo_svg_surface_create(svg_filename.c_str(), geometry.width(), geometry.height() COMMA_CWDEBUG_ONLY(debug_name));
   svg_cr_ = cairo_create(svg_surface_ COMMA_CWDEBUG_ONLY("Plot::svg_cr_:\"" + debug_name + "\""));
   // Define a clip path for the whole area.
   cairo_rectangle(svg_cr_, 0, 0, geometry.width(), geometry.height());

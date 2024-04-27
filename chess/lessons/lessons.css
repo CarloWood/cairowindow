@@ -1,0 +1,35 @@
+@page {
+    size: A4;
+    margin: 0;
+}
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #f0f0f0;  /* Color for area outside A4 page. */
+    margin-top: 0;              /* Reset top margin to 0. */
+}
+/* Make the page look exactly like a printed A4 page. */
+.print-container {
+    width: 210mm;               /* Width of A4 page. */
+    height: 297mm;              /* Height of A4 page. */
+    margin: 0 auto;
+    background-color: white;    /* Color for A4 page. */
+    position: relative;
+    border: 1px solid #ccc;     /* Outline of the A4 page. */
+}
+/* Position the date. */
+.date {
+    position: absolute;
+    top: 8mm;
+    right: 8mm;
+}
+/* Padding inside the A4 page. */
+.content {
+    padding: 20mm;
+    padding-top: 5mm;
+}
+/* Set the size of a chess diagram */
+object.diagram {
+  width: 200px;
+  height: 200px;
+}

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess lessons by Carlo Wood</title>
+    <link rel="stylesheet" type="text/css" href="lessons.css">
+</head>
+<body>
+    <div class="print-container">
+        <div class="content">
+            <div class="date">11 April 2024</div>
+            <h1>King Safety</h1>
+            <h2>Rook on the seventh row</h2>
+            <!--
+              $ chess_diagram --replace -o "lesson-2024-04-11.svg" "r1k3r1/1b3R2/p7/1p5p/6q1/2N5/PPP5/1K1Q4 w - - 0 1"
+            -->
+            <object class="diagram"
+              data="lesson-2024-04-11.svg">
+            </object>
+            <p>White has their rook on the seventh row.
+            This gives an excellent opportunity to threaten to give mate in two ways at once:
+            attack c7 with the white queen to threaten mate in one, and at the same time attack
+            b7 or d7 to threaten mate in two.</p>
+
+            <p>The queen can only attack these two squares (b7 and c7, or c7 and d7) by going to
+            the 6th row immediately next to two or three of these squares (i.e. by going to b6, c6 or d6).</p>
+
+            <p>While going to the 7-th row also attacks all three squares in
+            front of the black king, this is often easier to defend: the white queen could be far away
+            in this case giving black many opportunities to interrupt the line of attack. And defending
+            just two adjacent squares of the three opposite the black king (for example b7 and c7) is
+            enough to defend against the mate threat, which is easier than if the white queen is standing
+            already on exactly those squares that the black queen would like to go to!
+            </p>
+            
+            <p>In the above position, white wins by playing: 1. Qd6! threating mate in one on c7, and
+            mate in two by going to d7 and then b7 (if the black queen relinquishes the defense of d7).
+            For example: 1. ... Qc4 as well as 1. ... Qg3, both of which stop the mate in one, run into:
+            2. Qd7+ Kb8 3. Qxb7#. Also giving the spite check 1. ... Qg1+ doesn't help because white simply
+            plays 2. Nd1 with the same, renewed threat, after which black has to give up the queen to
+            stop mate in two. For example, the game could continue with (best computer line)
+            2. ... Qxd1+ 3. Qxd1 Bd5! (a poisoned bishop) 4. Re7 Rb8 5. c5 Rb7 6. Qxd5 Rg1+
+            7. Kc2 Rxe7 8. Qa8+! Kd7 9. Qa7 Kd6 10. Qxg1 with an easy win: white rounds up all black
+            pawns and then advances his pawns until black has to give up the rook.</p>
+        </div>
+    </div>
+</body>
+</html>

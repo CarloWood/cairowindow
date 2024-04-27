@@ -40,6 +40,7 @@ class Diagram : public Printable
   draw::ChessDiagram chess_diagram_;
   std::shared_ptr<draw::Text> title_;
   std::vector<Piece> pieces_;
+  EColor to_move_ = white;
 
  public:
   Diagram(Rectangle const& geometry, draw::ChessDiagramStyle chess_diagram_style, std::string title, draw::ChessTitleStyle title_style) :
@@ -54,6 +55,10 @@ class Diagram : public Printable
   void add_to(boost::intrusive_ptr<Layer> const& layer);
 
   void place_piece(boost::intrusive_ptr<Layer> const& layer, EColor color, EPiece piece, int x, int y, draw::ChessPieceStyle const& style);
+
+  // Clear the diagram (remove all pieces).
+  void clear();
+  bool load_FEN(boost::intrusive_ptr<Layer> const& layer, std::string const& FEN, draw::ChessPieceStyle const& style);
 
  private:
   Rectangle calculate_geometry(Rectangle const& geometry, draw::ChessDiagramStyle const& style);

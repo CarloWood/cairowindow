@@ -5,44 +5,76 @@
 #include "cairowindow/draw/ChessPiece.h"
 #include "utils/AIAlert.h"
 #include "utils/debug_ostream_operators.h"
+#include "utils/u8string_to_filename.h"
+#include <boost/filesystem/path.hpp>
 #include <thread>
 #include <iostream>
 #include "debug.h"
 
-int main()
+int main(int argc, char* argv[])
 {
   Debug(NAMESPACE_DEBUG::init());
   Dout(dc::notice, "Entering main()");
 
+  // Process command line arguments.
+  boost::filesystem::path output_file_name;
+  std::string title;
+  std::string FEN;
+  bool overwrite = false;
+  std::vector<std::string> args(argv + 1, argv + argc);
+  for (size_t i = 0; i < args.size(); ++i)
+  {
+    if (args[i] == "-o" && i + 1 < args.size())
+      output_file_name = args[++i];
+    else if (args[i] == "--title" && i + 1 < args.size())
+      title = args[++i];
+    else if (args[i] == "--replace")
+      overwrite = true;
+    else
+      FEN = args[i];
+  }
+
+  if (FEN.empty())
+  {
+    std::cerr << "Usage: " << argv[0] << " [-o SVGoutfile] [--replace] [--title \"Diagram header\"] <FEN-code>" << std::endl;
+    return 1;
+  }
+  else if (output_file_name.empty())
+  {
+    std::string str = FEN + ".svg";
+    std::u8string u8_string(str.begin(), str.end());
+    output_file_name = utils::u8string_to_filename(u8_string);
+  }
+
+  using namespace cairowindow;
+  using Window = cairowindow::Window;
+
+  // Create a window.
+  Window window("A chess diagram", 200, 200);
+
+  // Create a new layer with a white background.
+  auto board_layer = window.create_background_layer<Layer>(color::white COMMA_DEBUG_ONLY("board_layer"));
+
+  // Create another layer.
+  auto pieces_layer = window.create_layer<Layer>({} COMMA_DEBUG_ONLY("pieces_layer"));
+
+  // Open the window and start drawing.
+  std::thread event_loop([&](){
+    // Open window, handle event loop. This must be constructed after the draw stuff, so that it is destructed first!
+    // Upon destruction it blocks until the event loop thread finished (aka, the window was closed).
+    EventLoop event_loop = window.run();
+    event_loop.set_cleanly_terminated();
+  });
+
   try
   {
-    using namespace cairowindow;
-    using Window = cairowindow::Window;
-
-    // Create a window.
-    Window window("A chess diagram", 1200, 900);
-
-    // Create a new layer with a white background.
-    auto background_layer = window.create_background_layer<Layer>(color::white COMMA_DEBUG_ONLY("background_layer"));
-
-    // Create another layer.
-    auto second_layer = window.create_layer<Layer>({} COMMA_DEBUG_ONLY("second_layer"));
-
-    // Open the window and start drawing.
-    std::thread event_loop([&](){
-      // Open window, handle event loop. This must be constructed after the draw stuff, so that it is destructed first!
-      // Upon destruction it blocks until the event loop thread finished (aka, the window was closed).
-      EventLoop event_loop = window.run();
-      event_loop.set_cleanly_terminated();
-    });
-
     // Create and draw a chess diagram.
-    // ChessDiagramStyleParamsDefault
-    chess::Diagram diagram(window.geometry(), {{.coordinate_margin = 50.0, .top_margin = 80.0}}, "My First Chess Diagram", {});
+    chess::Diagram diagram(window.geometry(),
+        {{.coordinate_margin = 20.0, .top_margin = !title.empty() ? 40.0 : 10.0, .margin = 10.0}}, title, {});
 
-    diagram.create_svg_surface("chess_diagram.svg" COMMA_CWDEBUG_ONLY("diagram"));
+    diagram.create_svg_surface(output_file_name.string(), overwrite COMMA_CWDEBUG_ONLY("diagram"));
     diagram.set_need_print();
-    diagram.add_to(background_layer);
+    diagram.add_to(board_layer);
 
     while (true)
     {
@@ -52,27 +84,9 @@ int main()
       // Suppress immediate updating of the window for each created item, in order to avoid flickering.
       window.set_send_expose_events(false);
 
-      diagram.place_piece(second_layer, chess::black, chess::rook, 0, 7, {});
-      diagram.place_piece(second_layer, chess::black, chess::rook, 7, 7, {});
-      diagram.place_piece(second_layer, chess::black, chess::knight, 1, 7, {});
-      diagram.place_piece(second_layer, chess::black, chess::knight, 6, 7, {});
-      diagram.place_piece(second_layer, chess::black, chess::bishop, 2, 7, {});
-      diagram.place_piece(second_layer, chess::black, chess::bishop, 5, 7, {});
-      diagram.place_piece(second_layer, chess::black, chess::queen, 3, 7, {});
-      diagram.place_piece(second_layer, chess::black, chess::king, 4, 7, {});
-      for (int col = 0; col < 8; ++col)
-        diagram.place_piece(second_layer, chess::black, chess::pawn, col, 6, {});
-
-      diagram.place_piece(second_layer, chess::white, chess::rook, 0, 0, {});
-      diagram.place_piece(second_layer, chess::white, chess::rook, 7, 0, {});
-      diagram.place_piece(second_layer, chess::white, chess::knight, 1, 0, {});
-      diagram.place_piece(second_layer, chess::white, chess::knight, 6, 0, {});
-      diagram.place_piece(second_layer, chess::white, chess::bishop, 2, 0, {});
-      diagram.place_piece(second_layer, chess::white, chess::bishop, 5, 0, {});
-      diagram.place_piece(second_layer, chess::white, chess::queen, 3, 0, {});
-      diagram.place_piece(second_layer, chess::white, chess::king, 4, 0, {});
-      for (int col = 0; col < 8; ++col)
-        diagram.place_piece(second_layer, chess::white, chess::pawn, col, 1, {});
+      // Load a chess position.
+      if (!diagram.load_FEN(pieces_layer, FEN, {}))
+        THROW_ALERT("Invalid FEN code \"[FENCODE]\"", AIArgs("[FENCODE]", FEN));
 
       // Flush all expose events related to the drawing done above.
       window.set_send_expose_events(true);

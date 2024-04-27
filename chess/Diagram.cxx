@@ -2,6 +2,7 @@
 #include "cairowindow/Layer.h"
 #include "Diagram.h"
 #include "cairowindow/draw/ChessPiece.h"
+#include <cctype>
 
 namespace cairowindow::chess {
 
@@ -48,7 +49,7 @@ cairowindow::Rectangle Diagram::calculate_geometry(cairowindow::Rectangle const&
   double const left_margin = have_coordinates ? style.coordinate_margin() : style.margin();
   double const right_margin = style.margin();
   double const top_margin = style.top_margin();
-  double const bottom_margin = style.margin();
+  double const bottom_margin = have_coordinates ? style.coordinate_margin() : style.margin();
   double const max_horizontal_square_size = (geometry.width() - (left_margin + right_margin)) / 8.0;
   double const max_vertical_square_size = (geometry.height() - (top_margin + bottom_margin)) / 8.0;
 
@@ -117,6 +118,203 @@ void Diagram::place_piece(boost::intrusive_ptr<Layer> const& layer,
 {
   pieces_.emplace_back(color, piece, col, row);
   add_piece(layer, style, pieces_.back());
+}
+
+void Diagram::clear()
+{
+  pieces_.clear();
+}
+
+bool Diagram::load_FEN(boost::intrusive_ptr<Layer> const& layer, std::string const& FEN, draw::ChessPieceStyle const& style)
+{
+  DoutEntering(dc::notice, "Diagram::load_FEN(\"" << FEN << "\")");
+
+  // Clear the position.
+  clear();
+  std::string::const_iterator iter = FEN.begin();
+  char c;
+  // Eat preceding spaces.
+  while (*iter == ' ')
+    ++iter;
+  if (iter == FEN.end())
+    return false;
+  // Field 1: Piece placement.
+  EColor color;
+  int col = 0, row = 7;
+  while ((c = *iter++) != ' ')
+  {
+    color = white;
+    switch (c)
+    {
+      case '/':
+        if (col != 8 || row <= 0)
+	  return false;
+        col = 0;
+        --row;
+        break;
+      case '1':
+      case '2':
+      case '3':
+      case '4':
+      case '5':
+      case '6':
+      case '7':
+      case '8':
+        col += (int)(c - '0');
+	break;
+      case 'p':
+      case 'r':
+      case 'n':
+      case 'b':
+      case 'q':
+      case 'k':
+        color = black;
+        /* FALL-THROUGH */
+      case 'P':
+      case 'R':
+      case 'N':
+      case 'B':
+      case 'Q':
+      case 'K':
+      {
+        c = std::toupper(c);
+	EPiece type;
+	if (c == 'P')
+	  type = pawn;
+	else if (c == 'R')
+	  type = rook;
+	else if (c == 'N')
+	  type = knight;
+	else if (c == 'B')
+	  type = bishop;
+	else if (c == 'Q')
+	  type = queen;
+	else // if (c == 'K')
+	  type = king;
+	place_piece(layer, color, type, col, row, style);
+        ++col;
+        break;
+      }
+      default:
+        return false;
+    }
+    if (iter == FEN.end())
+      return false;
+  }
+  if (col != 8)
+    return false;
+  if (iter == FEN.end())
+    return false;
+  // Eat extra spaces.
+  while (*iter == ' ')
+    if (++iter == FEN.end())
+      return false;
+  // Field 2: Active color.
+  c = *iter++;
+  if (c != 'w' && c != 'b')
+    return false;
+  to_move_ = (c == 'w') ? white : black;
+  if (iter == FEN.end() || *iter != ' ')
+    return false;
+  // Eat space and possibly extra spaces.
+  while (*iter == ' ')
+    if (++iter == FEN.end())
+      return false;
+#if 0
+  // Field 3: Castling availability.
+  uint8_t white_castle_flags = white_rook_queen_side_moved | white_king_moved | white_rook_king_side_moved;
+  uint8_t black_castle_flags = black_rook_queen_side_moved | black_king_moved | black_rook_king_side_moved;
+#endif
+  while ((c = *iter++) != ' ')
+  {
+    if (c == '-')
+      break;
+    switch (c)
+    {
+      case 'K':
+//        white_castle_flags &= ~(white_king_moved | white_rook_king_side_moved);
+	break;
+      case 'Q':
+//        white_castle_flags &= ~(white_king_moved | white_rook_queen_side_moved);
+	break;
+      case 'k':
+//        black_castle_flags &= ~(black_king_moved | black_rook_king_side_moved);
+	break;
+      case 'q':
+//        black_castle_flags &= ~(black_king_moved | black_rook_queen_side_moved);
+	break;
+      default:
+        return false;
+    }
+    if (iter == FEN.end())
+      return false;
+  }
+//  castle_flags = white_castle_flags | black_castle_flags;
+  if (iter == FEN.end())
+    return false;
+  // Eat extra spaces.
+  while (*iter == ' ')
+    if (++iter == FEN.end())
+      return false;
+  // Field 4: En passant target square in algebraic notation.
+  if ((c = *iter++) != '-')
+  {
+    if (c < 'a' || c > 'h' || iter == FEN.end())
+      return false;
+    int col = c - 'a';
+    c = *iter++;
+    if (c < '1' || c > '8' || iter == FEN.end())
+      return false;
+    int row = c - '1';
+#if 0
+    Code other_pawn;
+    if (M_to_move == white)
+    {
+      other_pawn = white_pawn;
+      if (row != 5 || M_pieces[Index(col, row - 1)] != black_pawn || M_pieces[Index(col, row)] != nothing)
+        return false;
+    }
+    else
+    {
+      other_pawn = black_pawn;
+      if (row != 2 || M_pieces[Index(col, row + 1)] != white_pawn || M_pieces[Index(col, row)] != nothing)
+        return false;
+    }
+    set_en_passant(Index(col, row));
+#endif
+  }
+  if (iter == FEN.end() || *iter != ' ')
+    return false;
+  // Eat space and possibly extra spaces.
+  while (*iter == ' ')
+    if (++iter == FEN.end())
+      return false;
+  // Field 5: Halfmove clock: This is the number of halfmoves since the last pawn advance or capture.
+//  M_half_move_clock = 0;
+  while ((c = *iter++) != ' ')
+  {
+    if (!std::isdigit(c))
+      return false;
+//    M_half_move_clock = 10 * M_half_move_clock + c - '0';
+    if (iter == FEN.end())
+      return false;
+  }
+  // Eat extra spaces.
+  while (*iter == ' ')
+    if (++iter == FEN.end())
+      return false;
+  // Field 6: Fullmove number: The number of the full move.
+  int M_full_move_number = 0;
+  while (iter != FEN.end() && *iter != ' ')
+  {
+    if (!std::isdigit(*iter))
+      return false;
+    M_full_move_number = 10 * M_full_move_number + *iter++ - '0';
+  }
+  if (M_full_move_number == 0)
+    return false;
+  // Success.
+  return true;
 }
 
 } // namespace cairowindow::chess

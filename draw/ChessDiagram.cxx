@@ -85,6 +85,7 @@ void ChessDiagram::draw_regions_on(Layer* layer)
           LineStyle{{.line_color = color_, .line_width = frame_width}}));
   }
 
+  // Shading.
   double y1 = bottom_right_y;
   for (int yi = 0; yi < 8; ++yi)
   {
@@ -93,13 +94,12 @@ void ChessDiagram::draw_regions_on(Layer* layer)
     {
       double x2 = x1 + square_size;
       double y2 = y1 - square_size;
+      LineStyle shading_line_style({.line_color = style_.shading_color(), .line_width = 0.01 * square_size * line_width_});
       for (double sh = 0.0; sh < square_size; sh += square_size / 7.5)
       {
-        regions_.emplace_back(std::make_shared<Line>(x1 + sh, y1, x2, y2 + sh,
-              LineStyle{{.line_color = style_.shading_color(), .line_width = line_width_}}));
+        regions_.emplace_back(std::make_shared<Line>(x1 + sh, y1, x2, y2 + sh, shading_line_style));
         if (sh > 0.0)
-          regions_.emplace_back(std::make_shared<Line>(x1, y1 - sh, x2 - sh, y2,
-                LineStyle{{.line_color = style_.shading_color(), .line_width = line_width_}}));
+          regions_.emplace_back(std::make_shared<Line>(x1, y1 - sh, x2 - sh, y2, shading_line_style));
       }
       x1 += 2 * square_size;
     }
@@ -116,23 +116,24 @@ void ChessDiagram::draw_regions_on(Layer* layer)
 #endif
     double x1 = top_left_x_;
     double y1 = top_left_y_ + 0.5 * square_size;
+    double offset = frame_thickness_ + 0.15 * square_size;
+    TextStyle coordinates_style({.position = centered_left_of, .font_size = 0.5 * square_size, .offset = offset});
     for (int yi = 0; yi < 8; ++yi)
     {
-      regions_.emplace_back(std::make_shared<Text>(std::to_string(8 - yi), x1, y1,
-            TextStyle({.position = centered_left_of, .font_size = 22.0, .offset = frame_thickness_ + 10})));
+      regions_.emplace_back(std::make_shared<Text>(std::to_string(8 - yi), x1, y1, coordinates_style));
       y1 += square_size;
     }
     x1 += 0.5 * square_size;
     y1 = top_left_y_ + board_size_;
-    TextStyle a_h_style({.position = centered_below_no_bearing, .font_size = 22.0, .offset = frame_thickness_ + 10});
-    a_h_style.setup(layer->cr());
+    coordinates_style.setup(layer->cr());
     cairo_text_extents_t extents;
     cairo_text_extents(layer->cr(), "abcdefgh", &extents);
     double y_bearing = extents.y_bearing;
+    TextStyle a_h_style = coordinates_style({.position = centered_below_no_bearing, .offset = offset - y_bearing});
     for (char xi = 'a'; xi <= 'h'; ++xi)
     {
       std::string coordinate(1, xi);
-      regions_.emplace_back(std::make_shared<Text>(coordinate, x1, y1, a_h_style({.offset = 10 + frame_thickness_ - y_bearing})));
+      regions_.emplace_back(std::make_shared<Text>(coordinate, x1, y1, a_h_style));
       x1 += square_size;
     }
   }
