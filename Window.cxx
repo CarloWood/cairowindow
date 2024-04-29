@@ -195,6 +195,7 @@ EventLoop Window::run()
 void Window::event_loop_thread(Window* self)
 {
   Debug(NAMESPACE_DEBUG::init_thread("XEventLoop"));
+  Debug(libcw_do.off());
   self->event_loop();
 }
 
@@ -256,7 +257,7 @@ void Window::event_loop()
 
         if (!pressed)
         {
-          if (key_event->keycode == 107)
+          if (key_event->keycode == 107 || key_event->keycode == 65)
           {
             Message msg{InputEvent::key_release, key_event->x, key_event->y, key_event->keycode};
             push_message(msg);
@@ -265,13 +266,13 @@ void Window::event_loop()
         else
         {
           // Check if the PrtScn key was pressed.
-          if (key_event->keycode == 107)
+          if (key_event->keycode == 107 || key_event->keycode == 65)
           {
             Message msg{InputEvent::key_press, key_event->x, key_event->y, key_event->keycode};
             push_message(msg);
             break;
           }
-          running_ = false;       // Exit on any key press.
+          running_ = false;           // Exit on any other key press.
           ++keypress_events;
         }
         break;
@@ -440,7 +441,7 @@ bool Window::handle_input_events()
   {
     Message const* message = pop_message();
 
-    Dout(dc::notice, "Received message " << message->event << " (" << message->mouse_x << ", " << message->mouse_y << ")");
+    Dout(dc::cairowindow, "Received message " << message->event << " (" << message->mouse_x << ", " << message->mouse_y << ")");
     switch (message->event)
     {
       case InputEvent::terminate_program:
@@ -455,6 +456,10 @@ bool Window::handle_input_events()
           Printable* printable = find_printable(message->mouse_x, message->mouse_y);
           if (printable)
             printable->set_need_print();
+          return true;
+        }
+        else if (message->detail.keycode == 65)
+        {
           return true;
         }
         break;

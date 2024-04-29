@@ -36,3 +36,6 @@ target_link_libraries(chess_diagram AICxx::cairowindow AICxx::symbolic AICxx::ch
 
 add_executable(pango_text pango_text.cxx)
 target_link_libraries(pango_text AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST})
+
+add_executable(gradient_descent gradient_descent.cxx)
+target_link_libraries(gradient_descent AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST} Eigen3::Eigen)
