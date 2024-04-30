@@ -13,6 +13,7 @@ class Text
   std::string text_;
 
  public:
+  Text() = default;
   Text(Pixel position, std::string const& text) : position_(position), text_(text) { }
 
   Pixel position() const { return position_; }

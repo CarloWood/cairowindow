@@ -18,6 +18,7 @@ class Pixel
   double y_;
 
  public:
+  Pixel() = default;
   Pixel(int x, int y) : x_(x), y_(y) { }
   explicit Pixel(double x, double y) : x_(x), y_(y) { }
 
