@@ -206,7 +206,7 @@ class Function
 class Sample
 {
  private:
-  std::array<double, 4> w_;     // w, w², w³ and w⁴.
+  double w_;                    // w
   double Lw_;                   // L(w)
   double dLdw_;                 // L'(w)
   cairowindow::plot::Point P_;
@@ -215,10 +215,9 @@ class Sample
  public:
   Sample() = default;
   Sample(double w, double Lw, double dLdw, cairowindow::plot::Point const& point, cairowindow::plot::Text const& label) :
-    w_{{ w, w * w, w * w * w, w * w * w *w}}, Lw_(Lw), dLdw_(dLdw), P_(point), P_label_(label) { }
+    w_(w), Lw_(Lw), dLdw_(dLdw), P_(point), P_label_(label) { }
 
-  double w() const { return w_[0]; }
-  double pow_w(int exp) const { ASSERT(1 <= exp && exp <= 4); return w_[exp - 1]; }
+  double w() const { return w_; }
   double Lw() const { return Lw_; }
   double dLdw() const { return dLdw_; }
 
@@ -253,6 +252,7 @@ class History
 
   void add(Sample const& sample)
   {
+    prev_ = current_;
     current_ = (prev_ + 1) % size;
     samples_[current_] = sample;
     samples_[current_].set_label(plot_.create_text(
@@ -263,6 +263,7 @@ class History
 
   void add(double w, double Lw, double dLdw)
   {
+    prev_ = current_;
     current_ = (prev_ + 1) % size;
     cairowindow::Point P{w, Lw};
     Sample sample{w, Lw, dLdw,
@@ -290,7 +291,6 @@ class History
       }
     }
     Sample closest = samples_[closest_index];
-    advance_prev();
     add(closest);
   }
 
@@ -299,12 +299,6 @@ class History
   Sample const& current() const { ASSERT(current_ != -1); ASSERT(current_ < total_number_of_samples_); return samples_[current_]; }
   Sample const& prev() const { ASSERT(prev_ != -1); ASSERT(prev_ < total_number_of_samples_); return samples_[prev_]; }
   Sample const& prev_prev() const { ASSERT(prev_ != -1); ASSERT(prev_ < total_number_of_samples_); return samples_[before(prev_)]; }
-
-  void advance_prev()
-  {
-    ASSERT(current_ != -1);
-    prev_ = current_;
-  }
 
   int total_number_of_samples() const { return total_number_of_samples_; }
 };
@@ -320,7 +314,7 @@ int main()
   double const w_max = 90.0;
   int const steps = 100;
 
-  double const w_0 = 52.0;
+  double const w_0 = 30.0;
   double learning_rate = 2.0;     // In unit_of(w)^2 / unit_of(L).
 
   try
@@ -384,9 +378,10 @@ int main()
 
     // Initial value.
     w = w_0;
+    Dout(dc::notice, "Initial value: w = " << w);
     double w_delta = 0.0;
     double scale = w_max - w_min;
-    Dout(dc::notice, "Initial value: w = " << w);
+    Dout(dc::notice, "Initial value of scale is " << scale);
     int number_of_coef = 0;
     constexpr int down = 1;
     constexpr int up = -1;
@@ -395,24 +390,39 @@ int main()
     std::list<Sample>::iterator best_minimum = extremes.end();
     std::list<Sample>::iterator last_extreme = extremes.end();
 
+    plot::BezierFitter plot_approximation_curve;
+    plot::BezierFitter plot_derivative_curve;
+    plot::BezierFitter plot_quotient_curve;
+    plot::BezierFitter plot_parabolic_approximation_curve;
+
     while (true)
     {
+      // Take a new sample.
+      double Lw = L(w);
+      double dLdw = L.derivative(w);
+
+      // Add it to the history.
+      history.add(w, Lw, dLdw);
+
+      // Remember what the previous value of w was (that was added to the history) before we change it.
+      double prev_w = w;
+
+      // Block until a redraw is necessary (for example because the user moved a draggable object,
+      // or wants to print the current drawing) then go to the top of loop for a redraw.
+      if (!window.handle_input_events())
+        break;          // Program must be terminated.
+
+      // Erase all previous curves (if they exist).
+      plot_approximation_curve.draw_object_.reset();
+      plot_derivative_curve.draw_object_.reset();
+      plot_quotient_curve.draw_object_.reset();
+      plot_parabolic_approximation_curve.draw_object_.reset();
+
       // Suppress immediate updating of the window for each created item, in order to avoid flickering.
       window.set_send_expose_events(false);
 
-      double Lw = L(w);
-      double dLdw = L.derivative(w);
-      history.add(w, Lw, dLdw);
-      double prev_w = history.current().w();
-      ASSERT(prev_w == w);
-
       if (number_of_coef < 5)
       {
-        ASSERT(history.total_number_of_samples() > 0);
-        ASSERT(number_of_coef != 0 || history.total_number_of_samples() == 1);
-        ASSERT(number_of_coef != 2 || history.total_number_of_samples() == 2);
-        ASSERT(number_of_coef != 3 || history.total_number_of_samples() == 3);
-        ASSERT(number_of_coef != 5 || history.total_number_of_samples() >= 4);
         if (history.total_number_of_samples() == 1)
           number_of_coef = 2;
         else if (history.total_number_of_samples() == 2)
@@ -421,18 +431,15 @@ int main()
           number_of_coef = 5;
       }
 
-      Polynomial parabola_approximation(3 COMMA_CWDEBUG_ONLY("w"));
-
-      Polynomial approximation(number_of_coef COMMA_CWDEBUG_ONLY("w"));
+      Polynomial parabolic_approximation(3 COMMA_CWDEBUG_ONLY("w"));
       if (number_of_coef == 2)
       {
         // If we have just one point, then the approximation is a linear function:
         //
         // A(w) = coef[0] + L'(w) w
-        approximation[1] = dLdw;
-        parabola_approximation[1] = dLdw;
+        parabolic_approximation[1] = dLdw;
       }
-      else if (number_of_coef == 3)
+      else if (number_of_coef >= 3)
       {
         // If we have two points, the approximation is a parabola:
         //
@@ -456,74 +463,16 @@ int main()
 
         Sample const& prev = history.prev();
         double inverse_det = 0.5 / (w - prev.w());
-        approximation[1] = inverse_det * 2.0 * (w * prev.dLdw() - prev.w() * dLdw);
-        approximation[2] = inverse_det * (dLdw - prev.dLdw());
-        parabola_approximation[1] = approximation[1];
-        parabola_approximation[2] = approximation[2];
+        parabolic_approximation[1] = inverse_det * 2.0 * (w * prev.dLdw() - prev.w() * dLdw);
+        parabolic_approximation[2] = inverse_det * (dLdw - prev.dLdw());
       }
-      else
-      {
-        Sample const& current = history.current();
-        Sample const& prev = history.prev();
-        Sample const& prev_prev = history.prev_prev();
+      parabolic_approximation[0] = Lw - parabolic_approximation(w);
+      Dout(dc::notice, "parabolic_approximation = " << parabolic_approximation);
 
-        // If we have (at least) three points, the approximation is a fourth degree parabola:
-        //
-        //   A(w) = a + b w + c w² + d w³ + e w⁴
-        //
-        // for which we determined the value of the derivative at three points, L'(w₀), L'(w₁) and L'(w₂).
-        //
-        // The matrix form for the coefficients of the polynomial then becomes:
-        //
-        //   ⎡  1      2w₂      3w₂²     4w₂³ ⎤ ⎡b⎤   ⎡    L'(w₂)   ⎤
-        //   ⎢  1      2w₁      3w₁²     4w₁³ ⎥ ⎢c⎥   ⎢    L'(w₁)   ⎥
-        //   ⎢  1      2w₀      3w₀²     4w₀³ ⎥ ⎢d⎥ = ⎢    L'(w₀)   ⎥
-        //   ⎣w₂-w₁  w₂²-w₁²  w₂³-w₁³  w₂⁴-w₁⁴⎦ ⎣e⎦   ⎣L(w₂) - L(w₁)⎦
-        //
-        Eigen::Matrix4d M;
-        M <<          1.0,         2.0 *           w,                3.0 *   current.pow_w(2),         4.0 *   current.pow_w(3),
-                      1.0,         2.0 *      prev.w(),              3.0 *      prev.pow_w(2),         4.0 *      prev.pow_w(3),
-                      1.0,         2.0 * prev_prev.w(),              3.0 * prev_prev.pow_w(2),         4.0 * prev_prev.pow_w(3),
-             w - prev.w(), current.pow_w(2) - prev.pow_w(2), current.pow_w(3) - prev.pow_w(3), current.pow_w(4) - prev.pow_w(4);
-
-        Eigen::Vector4d D;
-        D << dLdw, prev.dLdw(), prev_prev.dLdw(), Lw - prev.Lw();
-
-        Eigen::Vector4d C = M.colPivHouseholderQr().solve(D);
-        approximation[1] = C[0];
-        approximation[2] = C[1];
-        approximation[3] = C[2];
-        approximation[4] = C[3];
-
-        double inverse_det = 0.5 / (w - prev.w());
-        parabola_approximation[1] = inverse_det * 2.0 * (w * prev.dLdw() - prev.w() * dLdw);
-        parabola_approximation[2] = inverse_det * (dLdw - prev.dLdw());
-      }
-      approximation[0] = Lw - approximation(w);
-      parabola_approximation[0] = Lw - parabola_approximation(w);
-      Dout(dc::notice, "approximation = " << approximation);
-      auto derivative = approximation.derivative();
-      Dout(dc::notice, "derivative = " << derivative);
-
-      BezierFitter approximation_fitter;
-      approximation_fitter.solve([&approximation](double w) -> Point { return {w, approximation(w)}; },
+      // Draw the parabolic approximation.
+      plot_parabolic_approximation_curve.solve([&parabolic_approximation](double w) -> Point { return {w, parabolic_approximation(w)}; },
           {w_min, w_max}, {w_min, L_min, w_max - w_min, L_max - L_min}, 1e-5 * (L_max - L_min));
-      auto plot_approximation_curve = plot.create_bezier_fitter(second_layer, curve_line_style({.line_color = color::teal}),
-          std::move(approximation_fitter));
-
-      BezierFitter derivative_fitter;
-      derivative_fitter.solve([&derivative](double w) -> Point { return {w, derivative(w)}; },
-          {w_min, w_max}, {w_min, L_min, w_max - w_min, L_max - L_min}, 1e-5 * (L_max - L_min));
-      auto plot_derivative_curve = plot.create_bezier_fitter(second_layer, curve_line_style({.line_color = color::magenta}),
-          std::move(derivative_fitter));
-
-      plot::BezierFitter plot_quotient_curve;
-
-      BezierFitter parabola_approximation_fitter;
-      parabola_approximation_fitter.solve([&parabola_approximation](double w) -> Point { return {w, parabola_approximation(w)}; },
-          {w_min, w_max}, {w_min, L_min, w_max - w_min, L_max - L_min}, 1e-5 * (L_max - L_min));
-      auto plot_parabola_approximation_curve = plot.create_bezier_fitter(second_layer, curve_line_style({.line_color = color::red}),
-          std::move(parabola_approximation_fitter));
+      plot.add_bezier_fitter(second_layer, curve_line_style({.line_color = color::red}), plot_parabolic_approximation_curve);
 
       // Flush all expose events related to the drawing done above.
       window.set_send_expose_events(true);
@@ -540,9 +489,9 @@ int main()
         // If beta is negative, then there is no minimum, only a maximum.
         direction = beta_inverse < 0.0 ? up : down;
         Dout(dc::notice, "direction is set to " << (direction == up ? "up" : "down"));
-        ASSERT((approximation[2] < 0.0) == (beta_inverse < 0.0));
         // Set w to the value where the derivative of this parabolic approximation is zero.
         w -= beta_inverse * dLdw;
+        Dout(dc::notice, "Set w to the extreme of parabola; w = " << w);
         keep_going = false;
         // This was the first time we got an idea of the scale at which
         // changes occur. Therefore, use it to set a reasonable learning rate!
@@ -552,7 +501,7 @@ int main()
       {
         Sample const& prev = history.prev();
         double beta_inverse = (w - prev.w()) / (dLdw - prev.dLdw());
-        // If beta is negative, then there is no minimum, only a maximum.
+        // If beta is negative, then there is no extreme in the direction that we're going.
         // In that case just keep going in the same direction as before, but accelerating
         // (increase the learning rate with a factor of two).
         if (direction * beta_inverse < 0.0)
@@ -562,15 +511,82 @@ int main()
           // Set w to the value where the derivative of this parabolic approximation is zero.
           double step = -beta_inverse * dLdw;
           w += step;
+          Dout(dc::notice, "Set w to the extreme of parabolic approximation; w = " << w);
           keep_going = false;
           // With the new extreme insight, adjust the learning rate to the new scale.
           learning_rate = 0.1 * std::abs(beta_inverse);
 
           double abs_step = std::abs(step);
+          Dout(dc::notice, "abs_step = " << abs_step << " (between " <<
+              (history.total_number_of_samples() - 1) << " and " << history.total_number_of_samples() << " (to be added))");
 
-          // Are we getting close to the extreme?
-          if (abs_step < 0.01 * (w_max - w_min))
+          // Did we reach the (local) extreme?
+          if (abs_step < 0.01 * scale)
           {
+            Sample const& current = history.current();
+
+            Lw = L(w);
+            dLdw = L.derivative(w);
+            double w2_1 = w;
+            double w2_2 = w2_1 * w2_1;
+            double w2_3 = w2_2 * w2_1;
+            double w2_4 = w2_2 * w2_2;
+
+            double w1_1 = current.w();
+            double w1_2 = w1_1 * w1_1;
+            double w1_3 = w1_2 * w1_1;
+            double w1_4 = w1_2 * w1_2;
+
+            double w0_1 = prev.w();
+            double w0_2 = w0_1 * w0_1;
+            double w0_3 = w0_2 * w0_1;
+            double w0_4 = w0_2 * w0_2;
+
+            Dout(dc::notice, "Fitting a fourth degree parabola using the samples at " << w0_1 << ", " << w1_1 << " and " << w2_1);
+
+            // If we have (at least) three points, the approximation is a fourth degree parabola:
+            //
+            //   A(w) = a + b w + c w² + d w³ + e w⁴
+            //
+            // for which we determined the value of the derivative at three points, L'(w₀), L'(w₁) and L'(w₂).
+            //
+            // The matrix form for the coefficients of the polynomial then becomes:
+            //
+            //   ⎡  1      2w₂      3w₂²     4w₂³ ⎤ ⎡b⎤   ⎡    L'(w₂)   ⎤
+            //   ⎢  1      2w₁      3w₁²     4w₁³ ⎥ ⎢c⎥   ⎢    L'(w₁)   ⎥
+            //   ⎢  1      2w₀      3w₀²     4w₀³ ⎥ ⎢d⎥ = ⎢    L'(w₀)   ⎥
+            //   ⎣w₂-w₁  w₂²-w₁²  w₂³-w₁³  w₂⁴-w₁⁴⎦ ⎣e⎦   ⎣L(w₂) - L(w₁)⎦
+            //
+            Eigen::Matrix4d M;
+            M <<        1.0,   2.0 *  w2_1,    3.0 * w2_2,    4.0 * w2_3,
+                        1.0,   2.0 *  w1_1,    3.0 * w1_2,    4.0 * w1_3,
+                        1.0,   2.0 *  w0_1,    3.0 * w0_2,    4.0 * w0_3,
+                w2_1 - w1_1,   w2_2 - w1_2,   w2_3 - w1_3,   w2_4 - w1_4;
+
+            Eigen::Vector4d D;
+            D << dLdw, current.dLdw(), prev.dLdw(), Lw - current.Lw();
+
+            Eigen::Vector4d C = M.colPivHouseholderQr().solve(D);
+
+            Polynomial approximation(number_of_coef COMMA_CWDEBUG_ONLY("w"));
+            approximation[1] = C[0];
+            approximation[2] = C[1];
+            approximation[3] = C[2];
+            approximation[4] = C[3];
+            approximation[0] = Lw - approximation(w);
+            Dout(dc::notice, "approximation = " << approximation);
+
+            plot_approximation_curve.solve([&approximation](double w) -> Point { return {w, approximation(w)}; },
+                {w_min, w_max}, {w_min, L_min, w_max - w_min, L_max - L_min}, 1e-5 * (L_max - L_min));
+            plot.add_bezier_fitter(second_layer, curve_line_style({.line_color = color::teal}), plot_approximation_curve);
+
+            auto derivative = approximation.derivative();
+            Dout(dc::notice, "derivative = " << derivative);
+
+            plot_derivative_curve.solve([&derivative](double w) -> Point { return {w, derivative(w)}; },
+                {w_min, w_max}, {w_min, L_min, w_max - w_min, L_max - L_min}, 1e-5 * (L_max - L_min));
+            plot.add_bezier_fitter(second_layer, curve_line_style({.line_color = color::magenta}), plot_derivative_curve);
+
             double remainder;
             auto quotient = derivative.long_division(w, remainder);
             Dout(dc::notice, "quotient = " << quotient << " with remainder " << remainder);
@@ -597,24 +613,26 @@ int main()
             // Did we reach the (local) extreme?
             if (number_of_zeroes == 2 && abs_step < 0.01 * scale)
             {
-              Dout(dc::notice, (direction == up ? "Maximum" : "Minimum") << " reached!");
+              Dout(dc::notice, (direction == up ? "Maximum" : "Minimum") << " reached: " << abs_step << " < 0.01 * " << scale);
 
-              // Reset scale.
-              scale = w_max - w_min;
-              Dout(dc::notice, "scale reset to " << scale);
+              // Store the found extreme in the history!
+              history.add(w, Lw, dLdw);
 
               // Change direction.
               direction = -direction;
               Dout(dc::notice, "direction is set to " << (direction == up ? "up" : "down") << "; w_delta = " << w_delta);
 
-              int best_zero = (number_of_zeroes == 2 &&
-                  (w_delta > 0.0 || (w_delta == 0.0 && approximation(zeroes[1]) < approximation(zeroes[0])))) ? 1 : 0;
+              int best_zero = (w_delta > 0.0 || (w_delta == 0.0 && approximation(zeroes[1]) < approximation(zeroes[0]))) ? 1 : 0;
               w = zeroes[best_zero];
+              Dout(dc::notice, "Set w to found extreme: w = " << w);
 
-              // Now that the decision on which direction (left/right) we explore is taken,
-              // store that decision (as the sign of w_delta);
               if (w_delta == 0.0)
               {
+                Dout(dc::notice, "Best zero was " << zeroes[best_zero] << " with A(" << zeroes[best_zero] << ") = " <<
+                    approximation(zeroes[best_zero]) << " (the other has value " << approximation(zeroes[1 - best_zero]) << ")");
+
+                // Now that the decision on which direction (left/right) we explore is taken,
+                // store that decision (as the sign of w_delta);
                 w_delta = w - history.current().w();
                 Dout(dc::notice, "w_delta --> " << w_delta);
               }
@@ -641,13 +659,13 @@ int main()
               }
 
               // Re-add old sample again to the history; add one closest to the target.
+              Dout(dc::notice, "Re-adding closest sample to history:");
               history.append_closest_to(w);
-              history.advance_prev();
-              // Add the target.
+              // Take a new sample at the target and add it to the history.
               Lw = L(w);
               dLdw = L.derivative(w);
               history.add(w, Lw, dLdw);
-              // Add one more, using the learning rate.
+              // Add one more sample, using the learning rate.
               keep_going = true;
             }
           }
@@ -661,19 +679,11 @@ int main()
           w -= learning_rate * dLdw;
         else
           w += learning_rate * dLdw;
+        Dout(dc::notice, "Advanced w with learning rate of " << learning_rate << " and derivative " << dLdw << " to " << w);
       }
 
-      Dout(dc::notice, history.total_number_of_samples() << ": " << prev_w << " --> " << w <<
+      Dout(dc::notice, prev_w << " --> " << history.total_number_of_samples() << ": " << w <<
           " (learning rate is now " << learning_rate << ")");
-      history.advance_prev();
-
-      // Block until a redraw is necessary (for example because the user moved a draggable object,
-      // or wants to print the current drawing) then go to the top of loop for a redraw.
-      if (!window.handle_input_events())
-        break;          // Program must be terminated.
-
-//      if (utils::almost_equal(history.prev().w(), w, 1e-6))
-//        break;
     }
 
     Dout(dc::notice, "Found global minimum " << best_minimum->Lw() << " at w = " << best_minimum->w());

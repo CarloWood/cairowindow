@@ -110,6 +110,9 @@ void BezierFitter::solve(std::function<Point(double)> const& func, IntersectRect
 
 void BezierFitter::solve(std::function<Point(double)>&& func, Range const& domain, Rectangle const& viewport, double tolerance)
 {
+  // Clear result data, in case this object is being re-used.
+  result_.clear();
+
   double t0 = domain.min();
   double t6 = domain.max();
 #ifdef CWDEBUG
