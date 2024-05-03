@@ -39,3 +39,6 @@ target_link_libraries(pango_text AICxx::cairowindow AICxx::symbolic ${AICXX_OBJE
 
 add_executable(gradient_descent gradient_descent.cxx)
 target_link_libraries(gradient_descent AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST} Eigen3::Eigen)
+
+add_executable(parabolic_scale parabolic_scale.cxx)
+target_link_libraries(parabolic_scale AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST} Eigen3::Eigen)

@@ -7,3 +7,4 @@
 #include "Cos.h"
 #include "Atan.h"
 #include "Log.h"
+#include "Exponential.h"

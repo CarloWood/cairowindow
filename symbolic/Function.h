@@ -14,6 +14,9 @@ namespace symbolic {
 
 class Function : public Expression
 {
+ public:
+  static constexpr ExpressionType expression_type = functionT;
+
  private:
   std::string const name_;
   Expression const& definition_;
@@ -36,7 +39,7 @@ class Function : public Expression
     return static_cast<Function const&>(get<Function>(name, definition));
   }
 
-  ExpressionType type() const override final { return functionT; }
+  ExpressionType type() const override final { return expression_type; }
 
   uint64_t hash() const override final
   {

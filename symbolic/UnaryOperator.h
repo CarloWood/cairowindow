@@ -2,19 +2,12 @@
 
 #include "Expression.h"
 #include "Hash.h"
+#include <boost/functional/hash.hpp>
 #include "debug.h"
 
 namespace symbolic {
 
-class Sin;
-class Cos;
-class Atan;
-class Log;
-
-template<typename T>
-concept UnaryOp = std::is_same_v<T, Sin> || std::is_same_v<T, Cos> || std::is_same_v<T, Atan> || std::is_same_v<T, Log>;
-
-template<UnaryOp OpT>
+template<typename OpT>
 class UnaryOperator : public Expression
 {
  protected:
@@ -50,18 +43,19 @@ class UnaryOperator : public Expression
 #include "Cos.h"
 #include "Atan.h"
 #include "Log.h"
+#include "Exponential.h"
 
 namespace symbolic {
 
 //static
-template<UnaryOp OpT>
+template<typename OpT>
 OpT const& UnaryOperator<OpT>::realize(Expression const& arg)
 {
   DoutEntering(dc::symbolic, NAMESPACE_DEBUG::type_name_of<OpT>() << "::realize(\"" << arg << "\")");
   return static_cast<OpT const&>(get<OpT>(arg));
 }
 
-template<UnaryOp OpT>
+template<typename OpT>
 bool UnaryOperator<OpT>::equals(Expression const& other) const
 {
   OpT const* other_ = dynamic_cast<OpT const*>(&other);

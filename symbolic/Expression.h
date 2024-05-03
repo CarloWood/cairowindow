@@ -20,26 +20,32 @@ namespace symbolic {
 using utils::has_print_on::operator<<;
 #endif
 
-static constexpr int binary_op = 4;     //   v
-static constexpr int unary_op = 8;      //  v
+static constexpr int binary_op = 8;     //   v
+static constexpr int unary_op = 16;     //  v
+static constexpr int binary_op_sum = binary_op | 32;
+                                        // v v
 
 // A helper enum to determine the type and/or global order of available expression classes.
 enum ExpressionType
-{
+{                                       // .---- binary_op_sum
+                                        // |.--- unary_op
+                                        // ||.-- binary_op
+                                        // vvv
   // Special cases:
-  constantT =  0,                       // 00000
-  symbolT = 1,                          // 00001
-  functionT = 2,                        // 00010
+  constantT = 0,                        // 000000
+  symbolT   = 1,                        // 000001
+  functionT = 2,                        // 000010
   // Binary operators:
-  powerT = binary_op,                   // 00100
-  productT = binary_op | 1,             // 00101
+  powerT   = binary_op,                 // 001000
+  productT = binary_op | 1,             // 001001
   // Unary operators:
-  sinT = unary_op,                      // 01000
-  cosT = unary_op | 1,                  // 01001
-  logT = unary_op | 2,                  // 01010
-  atanT = unary_op | 3,                 // 01011
+  expT  = unary_op,                     // 010000
+  sinT  = unary_op | 1,                 // 010001
+  cosT  = unary_op | 2,                 // 010010
+  logT  = unary_op | 3,                 // 010011
+  atanT = unary_op | 4,                 // 010100
   // Binary operators:
-  sumT = binary_op | 16,                // 10100
+  sumT = binary_op_sum,                 // 101000
 };
 
 class Constant;

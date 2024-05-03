@@ -45,6 +45,7 @@ target_sources(symbolic_ObjLib
     "Sum.cxx"
     "Product.cxx"
     "Power.cxx"
+    "Exponential.cxx"
     "Sin.cxx"
     "Cos.cxx"
     "Atan.cxx"

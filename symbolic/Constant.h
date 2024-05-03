@@ -2,6 +2,7 @@
 
 #include "Expression.h"
 #include "Hash.h"
+#include <boost/functional/hash.hpp>
 #include <numeric>
 #include <ratio>
 #include "debug.h"
