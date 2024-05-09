@@ -252,6 +252,13 @@ class Sample
     return dLdw_;
   }
 
+  void set_values(double w, double Lw, double dLdw)
+  {
+    w_ = w;
+    Lw_ = Lw;
+    dLdw_ = dLdw;
+  }
+
   void set_point(cairowindow::plot::Point const& P)
   {
     P_ = P;
@@ -272,78 +279,6 @@ class Sample
 #endif
 };
 
-class History
-{
- public:
-  static constexpr int size = 9;
-
- private:
-  Function const& L_;
-  std::array<Sample, size> samples_;
-  int prev_ = -1;
-  int total_number_of_samples_ = 0;     // The number of samples taken (not necessarily equal to the number that is (still) in the history).
-  int current_ = -1;
-
-  cairowindow::plot::Plot& plot_;
-  boost::intrusive_ptr<cairowindow::Layer> const& layer_;
-  cairowindow::draw::PointStyle const& point_style_;
-  cairowindow::draw::TextStyle const& label_style_;
-
- public:
-  History(Function const& L, cairowindow::plot::Plot& plot, boost::intrusive_ptr<cairowindow::Layer> const& layer,
-      cairowindow::draw::PointStyle const& point_style, cairowindow::draw::TextStyle const& label_style) :
-    L_(L), plot_(plot), layer_(layer), point_style_(point_style), label_style_(label_style) { }
-
-  void add(Sample& sample)
-  {
-    prev_ = current_;
-    current_ = (prev_ + 1) % size;
-    double w = sample.w();
-    double Lw = sample.Lw(L_);
-    double dLdw = sample.dLdw(L_);
-    sample.set_point(plot_.create_point(layer_, point_style_, {w, Lw}));
-    sample.set_label(plot_.create_text(layer_, label_style_({.position = cairowindow::draw::centered_right_of}), sample.P(),
-          std::to_string(total_number_of_samples_)));
-    Dout(dc::notice, "Appended to history: point " << total_number_of_samples_ << " at w = " << sample.w());
-    samples_[current_] = sample;
-    ++total_number_of_samples_;
-  }
-
-  void append_closest_to(double target)
-  {
-    ASSERT(total_number_of_samples_ >= 2);
-    // The closest sample (in terms of w).
-    int closest_index = 0;
-    double closest_distance_squared = utils::square(samples_[0].w() - target);
-    for (int i = 1; i < std::min(total_number_of_samples_, History::size); ++i)
-    {
-      double distance_squared = utils::square(samples_[i].w() - target);
-      if (distance_squared < closest_distance_squared)
-      {
-        closest_index = i;
-        closest_distance_squared = distance_squared;
-      }
-    }
-    prev_ = current_;
-    current_ = (prev_ + 1) % size;
-    if (current_ != closest_index)
-      samples_[current_] = samples_[closest_index];
-    samples_[current_].set_label(plot_.create_text(
-          layer_, label_style_({.position = cairowindow::draw::centered_right_of}), samples_[closest_index].P(),
-          std::to_string(total_number_of_samples_)));
-    Dout(dc::notice, "Created duplicate with label " << total_number_of_samples_ << " at w = " << samples_[current_].w());
-    ++total_number_of_samples_;
-  }
-
-  static int before(int i) { ASSERT(0 <= i); return (i + size - 1) % size; }
-
-  Sample const& current() const { ASSERT(current_ != -1); ASSERT(current_ < total_number_of_samples_); return samples_[current_]; }
-  Sample const& prev() const { ASSERT(prev_ != -1); ASSERT(prev_ < total_number_of_samples_); return samples_[prev_]; }
-  Sample const& prev_prev() const { ASSERT(prev_ != -1); ASSERT(prev_ < total_number_of_samples_); return samples_[before(prev_)]; }
-
-  int total_number_of_samples() const { return total_number_of_samples_; }
-};
-
 class Scale
 {
  public:
@@ -352,6 +287,7 @@ class Scale
 
  private:
   double scale_{};                      // An indication of what changes to w are significant.
+  bool has_sample_{};                   // True iff the below is value.
   double edge_sample_w_;                // The value of w that corresponds to this scale: edge_sample_w_ - scale_
                                         // should be more or less equal to the vertex of the parabola_.
   double edge_sample_Lw_;               // Cached value of L(edge_sample_w_). Should also be more or less equal
@@ -373,6 +309,8 @@ class Scale
  private:
   void draw_indicators()
   {
+    ASSERT(has_sample_);
+
     plot_indicator_ = cairowindow::plot::Connector{{parabola_.vertex_x(), scale_y}, {edge_sample_w_, scale_y},
         cairowindow::Connector::open_arrow, cairowindow::Connector::open_arrow};
     plot_.add_connector(layer_, s_indicator_style, plot_indicator_);
@@ -389,13 +327,15 @@ class Scale
   {
   }
 
+  void reset(double scale) { scale_ = scale; has_sample_ = false; }
   operator double() const { ASSERT(scale_ != 0.0); return std::abs(scale_); }
+  double or_zero() const { return scale_; }
 
   void initialize(Sample const& prev, Sample const& current, math::QuadraticPolynomial const& parabola)
   {
     DoutEntering(dc::notice, "Scale::initialize(" << prev << ", " << current << ", " << parabola << ")");
     // Only call initialize once.
-    ASSERT(scale_ == 0.0);
+    ASSERT(!has_sample_);
     double const v = parabola.vertex_x();
     Dout(dc::notice, "v = " << v);
     // Not sure it can happen that current is further away, but in case it does do this test.
@@ -408,6 +348,7 @@ class Scale
     edge_sample_w_ = edge_sample.w();
     edge_sample_Lw_ = edge_sample.Lw();
     parabola_ = parabola;
+    has_sample_ = true;
 
     draw_indicators();
   }
@@ -415,8 +356,14 @@ class Scale
   void update(Sample const& prev, Sample const& current, math::QuadraticPolynomial const& parabola)
   {
     DoutEntering(dc::notice, "Scale::update(" << prev << ", " << current << ", " << parabola << ")");
-    // Call initialize first.
-    ASSERT(scale_ != 0.0);
+
+    // Call initialize if there is nothing to update because the Scale was reset.
+    if (!has_sample_)
+    {
+      initialize(prev, current, parabola);
+      return;
+    }
+
     // Get the x coordinate (w value) of the vertex of the new parabola.
     double const v_x = parabola.vertex_x();
     // Pick the sample (from prev and current) that is horizontally the furthest away from the vertex.
@@ -506,6 +453,91 @@ class Scale
     os << scale_;
   }
 #endif
+};
+
+class History
+{
+ public:
+  static constexpr int size = 9;
+
+ private:
+  Function const& L_;
+  std::array<Sample, size> samples_;
+  int prev_ = -1;
+  int total_number_of_samples_ = 0;     // The number of samples taken (not necessarily equal to the number that is (still) in the history).
+  int current_ = -1;
+
+  cairowindow::plot::Plot& plot_;
+  boost::intrusive_ptr<cairowindow::Layer> const& layer_;
+  cairowindow::draw::PointStyle const& point_style_;
+  cairowindow::draw::TextStyle const& label_style_;
+
+ public:
+  History(Function const& L, cairowindow::plot::Plot& plot, boost::intrusive_ptr<cairowindow::Layer> const& layer,
+      cairowindow::draw::PointStyle const& point_style, cairowindow::draw::TextStyle const& label_style) :
+    L_(L), plot_(plot), layer_(layer), point_style_(point_style), label_style_(label_style) { }
+
+  void add(Sample& sample, Scale const& scale)
+  {
+    double w = sample.w();
+    double Lw = sample.Lw(L_);
+    double dLdw = sample.dLdw(L_);
+    // If the new sample is very close to the current one, don't add it, just replace the current sample.
+    bool almost_equal = (current_ != -1 && std::abs(samples_[current_].w() - w) < 0.001 * scale.or_zero());
+    if (almost_equal)
+    {
+      Dout(dc::notice, "Replacing history point " << (total_number_of_samples_ - 1) << " at w = " << samples_[current_].w() << " with " << w);
+      samples_[current_].set_values(w, Lw, dLdw);
+      samples_[current_].set_point(plot_.create_point(layer_, point_style_, {w, Lw}));
+    }
+    else
+    {
+      //FIXME: remove this
+      ASSERT(current_ == -1 || std::abs(samples_[current_].w() - w) > 0.00001);
+      prev_ = current_;
+      current_ = (prev_ + 1) % size;
+      sample.set_point(plot_.create_point(layer_, point_style_, {w, Lw}));
+      sample.set_label(plot_.create_text(layer_, label_style_({.position = cairowindow::draw::centered_right_of}), sample.P(),
+            std::to_string(total_number_of_samples_)));
+      Dout(dc::notice, "Appended to history: point " << total_number_of_samples_ << " at w = " << sample.w());
+      samples_[current_] = sample;
+      ++total_number_of_samples_;
+    }
+  }
+
+  void append_closest_to(double target)
+  {
+    ASSERT(total_number_of_samples_ >= 2);
+    // The closest sample (in terms of w).
+    int closest_index = 0;
+    double closest_distance_squared = utils::square(samples_[0].w() - target);
+    for (int i = 1; i < std::min(total_number_of_samples_, History::size); ++i)
+    {
+      double distance_squared = utils::square(samples_[i].w() - target);
+      if (distance_squared < closest_distance_squared)
+      {
+        closest_index = i;
+        closest_distance_squared = distance_squared;
+      }
+    }
+    prev_ = current_;
+    current_ = (prev_ + 1) % size;
+    if (current_ != closest_index)
+      samples_[current_] = samples_[closest_index];
+    samples_[current_].set_label(plot_.create_text(
+          layer_, label_style_({.position = cairowindow::draw::centered_right_of}), samples_[closest_index].P(),
+          std::to_string(total_number_of_samples_)));
+    Dout(dc::notice, "Created duplicate with label " << total_number_of_samples_ << " at w = " << samples_[current_].w());
+    ++total_number_of_samples_;
+  }
+
+  static int before(int i) { ASSERT(0 <= i); return (i + size - 1) % size; }
+
+  Sample const& current() const { ASSERT(current_ != -1); ASSERT(current_ < total_number_of_samples_); return samples_[current_]; }
+  Sample const& prev() const { ASSERT(prev_ != -1); ASSERT(prev_ < total_number_of_samples_); return samples_[prev_]; }
+  Sample const& prev_prev() const { ASSERT(prev_ != -1); ASSERT(prev_ < total_number_of_samples_); return samples_[before(prev_)]; }
+
+  int total_number_of_samples() const { return total_number_of_samples_; }
 };
 
 //static
@@ -605,7 +637,7 @@ int main()
     while (true)
     {
       // Add new sample to the history.
-      history.add(new_sample);
+      history.add(new_sample, scale);
       Sample const& current = history.current();        // Currently, the same as new_sample, but more clear that it
                                                         // was already added to the history. If new_sample is updated
                                                         // then current is not, of course.
@@ -842,9 +874,7 @@ int main()
             plot_quotient_curve.solve([&quotient](double w) -> Point { return {w, 10.0 * quotient(w)}; }, plot.viewport());
             plot.add_bezier_fitter(second_layer, curve_line_style({.line_color = color::blue}), plot_quotient_curve);
 
-// FIXME: reinitialize scale after this jump (also: do first back tracking?)
-//            if (number_of_zeroes == 2)
-//              scale.update(new_sample.w(), zeroes[1] - zeroes[0], new_sample.Lw());
+            scale.reset(number_of_zeroes < 2 ? scale : zeroes[1] - zeroes[0]);
 
             // Did we reach the (local) extreme?
             if (number_of_zeroes == 2 && abs_step < 0.01 * scale)
@@ -852,7 +882,7 @@ int main()
               Dout(dc::notice, (direction == up ? "Maximum" : "Minimum") << " reached: " << abs_step << " < 0.01 * " << scale);
 
               // Store the found extreme in the history!
-              history.add(new_sample);
+              history.add(new_sample, scale);
 
               // Change direction.
               direction = -direction;
@@ -898,7 +928,7 @@ int main()
               Dout(dc::notice, "Re-adding closest sample to history:");
               history.append_closest_to(new_sample.w());
               // Take a new sample at the target and add it to the history.
-              history.add(new_sample);
+              history.add(new_sample, scale);
               // Add one more sample, using the learning rate.
               keep_going = true;
             }
