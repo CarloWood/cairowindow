@@ -221,6 +221,14 @@ class Plot : public Printable
             std::clamp(point.y(), range_[y_axis].min(), range_[y_axis].max())};
   }
 
+  Range const& xrange() const { return range_[x_axis]; }
+  Range const& yrange() const { return range_[y_axis]; }
+
+  cairowindow::Rectangle viewport() const
+  {
+    return {range_[x_axis].min(), range_[y_axis].min(), range_[x_axis].size(), range_[y_axis].size()};
+  }
+
   double convert_x(double x) const;
   double convert_y(double y) const;
   Pixel convert_to_pixel(cairowindow::Point const& point) const;

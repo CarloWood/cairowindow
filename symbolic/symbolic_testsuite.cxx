@@ -1,11 +1,5 @@
 #include "sys.h"
-#include "Function.h"
-#include "Sin.h"
-#include "Power.h"
-#include "Product.h"
-#include "Sum.h"
-#include "Symbol.h"
-#include "Constant.h"
+#include "symbolic.h"
 #include "utils/square.h"
 #include "debug.h"
 

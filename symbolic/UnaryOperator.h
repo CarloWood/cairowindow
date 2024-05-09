@@ -39,12 +39,6 @@ class UnaryOperator : public Expression
 
 } // namespace symbolic
 
-#include "Sin.h"
-#include "Cos.h"
-#include "Atan.h"
-#include "Log.h"
-#include "Exponential.h"
-
 namespace symbolic {
 
 //static

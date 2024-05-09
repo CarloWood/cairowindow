@@ -113,6 +113,9 @@ void BezierFitter::solve(std::function<Point(double)>&& func, Range const& domai
   // Clear result data, in case this object is being re-used.
   result_.clear();
 
+  if (tolerance == -1.0)
+    tolerance = 1e-5 * viewport.height();
+
   double t0 = domain.min();
   double t6 = domain.max();
 #ifdef CWDEBUG

@@ -72,9 +72,29 @@ inline Expression const& operator*(Expression const& arg1, Expression const& arg
   return Product::multiply(arg1, arg2);
 }
 
+inline Expression const& operator*(int arg1, Expression const& arg2)
+{
+  return Product::multiply(Constant::realize(arg1), arg2);
+}
+
+inline Expression const& operator*(Expression const& arg1, int arg2)
+{
+  return Product::multiply(arg1, Constant::realize(arg2));
+}
+
 inline Expression const& operator/(Expression const& arg1, Expression const& arg2)
 {
   return Product::multiply(arg1, arg2^-1);
+}
+
+inline Expression const& operator/(int arg1, Expression const& arg2)
+{
+  return Product::multiply(Constant::realize(arg1), arg2^-1);
+}
+
+inline Expression const& operator/(Expression const& arg1, int arg2)
+{
+  return Product::multiply(arg1, Constant::realize(1, arg2));
 }
 
 inline Expression const& operator-(Expression const& arg)

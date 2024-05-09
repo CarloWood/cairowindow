@@ -59,10 +59,9 @@ int main()
       // Suppress immediate updating of the window for each created item, in order to avoid flickering.
       window.set_send_expose_events(false);
 
-      BezierFitter bezier_fitter;
-      bezier_fitter.solve([offset = slider_offset.value()](double t) -> Point {
+      BezierFitter bezier_fitter([offset = slider_offset.value()](double t) -> Point {
           return {100.0 + 80.0 * std::cos(t + offset), 100.0 + 80.0 * std::sin(2.0 * t + offset * 0.5)};
-      }, {0, 2.0 * M_PI}, {0.0, 0.0, 200.0, 200.0}, 0.001);
+      }, {0, 2.0 * M_PI}, plot.viewport());
 
       std::vector<BezierCurve> const& result = bezier_fitter.result();
       std::vector<plot::Point> points0(result.size());

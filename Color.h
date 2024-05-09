@@ -59,6 +59,7 @@ namespace color {
 
 constexpr Color undefined;
 constexpr Color red{1.0, 0.0, 0.0};
+constexpr Color light_red{1.0, 0.5, 0.5};
 constexpr Color green{0.0, 1.0, 0.0};
 constexpr Color lime = green;
 constexpr Color blue{0.0, 0.0, 1.0};

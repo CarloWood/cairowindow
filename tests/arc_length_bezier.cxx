@@ -114,8 +114,7 @@ int main()
       auto f = [c0, c1, c2, c3, c4](double t){
         return std::sqrt(c0 + t * (c1 + t * (c2 + t * (c3 + t * c4))));
       };
-      BezierFitter fitter;
-      fitter.solve([f](double t) -> Point{ return {t, f(t)}; }, {0.0, 1.0}, {0.0, 0.0, 1.0, 2.0}, 0.001);
+      BezierFitter fitter([f](double t) -> Point{ return {t, f(t)}; }, plot.viewport());
       auto plot_curve = plot.create_bezier_fitter(second_layer, curve_line_style, std::move(fitter));
 
       double d0 = c4 / 16    + c3 / 8     + c2 / 4 + c1 / 2 + c0;
@@ -126,8 +125,7 @@ int main()
       auto f2 = [d0, d1, d2, d3, d4](double u){
         return std::sqrt(d0 + u * (d1 + u * (d2 + u * (d3 + u * d4))));
       };
-      BezierFitter fitter2;
-      fitter2.solve([f2](double u) -> Point { return {u + 0.5, f2(u)}; }, {-0.5, 0.5}, {0.0, 0.0, 1.0, 2.0}, 0.001);
+      BezierFitter fitter2([f2](double u) -> Point { return {u + 0.5, f2(u)}; }, {-0.5, 0.5}, plot.viewport());
 //      auto plot_curve2 = plot.create_bezier_fitter(second_layer, curve_line_style({.line_color = color::orange}), std::move(fitter2));
 
       //   √(d₀ + d₁u + d₂u² + d₃u³ + d₄u⁴) = ∑ₙ hₙ uⁿ    (Taylor series)
@@ -219,8 +217,7 @@ g9 = -3d₄∕(5d₀) ⋆ g5 - 9d₃∕(12d₀) ⋆ g6  - 6d₂∕(7d₀) ⋆ g7
         }
         return sqrt_d0 * result;
       };
-      BezierFitter fitter3;
-      fitter3.solve([f,f3](double u) -> Point { return {u + 0.5, f3(u)/* - f(u + 0.5)*/}; }, {-0.5, 0.5}, {0.0, 0.0, 1.0, 2.0}, 0.001);
+      BezierFitter fitter3([f,f3](double u) -> Point { return {u + 0.5, f3(u)/* - f(u + 0.5)*/}; }, {-0.5, 0.5}, plot.viewport());
       auto plot_curve3 = plot.create_bezier_fitter(second_layer, curve_line_style({.line_color = color::orange}), std::move(fitter3));
 
       double len2 = plot_bezier.arc_length(1e-15);

@@ -24,8 +24,28 @@ class BezierFitter
   // func     : the parametric function that must be fitted: takes the parameter (t) and returns a Point.
   // domain   : the minimum and maximum values that will be passed to func_ (the domain of t).
   // viewport : Bézier segments that fall entirely outside of this viewport will be discarded.
-  // tolerance: the smallest deviation from the true function value allowed in the Bézier curve output.
-  void solve(std::function<Point(double)>&& func, Range const& domain, Rectangle const& viewport, double tolerance);
+  //            Normally you'd pass plot.viewport() here.
+  // tolerance: the smallest deviation from the true function value allowed in the Bézier curve output;
+  //            when -1.0 is passed the default 1e-5 * viewport.height() will be used.
+  void solve(std::function<Point(double)>&& func, Range const& domain, Rectangle const& viewport, double tolerance = -1.0);
+
+  // This signature can be used, for example, when `func` returns a Point that simply passes its argument back as the x-coordinate of the Point.
+  void solve(std::function<Point(double)>&& func, Rectangle const& viewport, double tolerance = -1.0)
+  {
+    solve(std::move(func), {viewport.offset_x(), viewport.offset_x() + viewport.width()}, viewport, tolerance);
+  }
+
+  // Convenience constructor that combine the construction with the call to solve.
+  BezierFitter(std::function<Point(double)>&& func, Range const& domain, Rectangle const& viewport, double tolerance = -1.0)
+  {
+    solve(std::move(func), domain, viewport, tolerance);
+  }
+
+  // Same
+  BezierFitter(std::function<Point(double)>&& func, Rectangle const& viewport, double tolerance = -1.0)
+  {
+    solve(std::move(func), viewport, tolerance);
+  }
 
   // Get a pointer to the result vector.
   std::vector<BezierCurve> const& result() const { return result_; }

@@ -49,9 +49,29 @@ inline Expression const& operator+(Expression const& arg1, Expression const& arg
   return Sum::add(arg1, arg2);
 }
 
+inline Expression const& operator+(int arg1, Expression const& arg2)
+{
+  return Sum::add(Constant::realize(arg1), arg2);
+}
+
+inline Expression const& operator+(Expression const& arg1, int arg2)
+{
+  return Sum::add(arg1, Constant::realize(arg2));
+}
+
 inline Expression const& operator-(Expression const& arg1, Expression const& arg2)
 {
   return Sum::add(arg1, Product::negate(arg2));
+}
+
+inline Expression const& operator-(int arg1, Expression const& arg2)
+{
+  return Sum::add(Constant::realize(arg1), Product::negate(arg2));
+}
+
+inline Expression const& operator-(Expression const& arg1, int arg2)
+{
+  return Sum::add(arg1, Constant::realize(-arg2));
 }
 
 } // namespace symbolic
