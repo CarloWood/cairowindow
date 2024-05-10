@@ -282,6 +282,7 @@ class Sample
 class Scale
 {
  public:
+  static constexpr double epsilon = 1e-30;
   static constexpr double scale_y = 20.0;
   static cairowindow::draw::ConnectorStyle const s_indicator_style;
 
@@ -298,22 +299,25 @@ class Scale
   cairowindow::plot::Plot& plot_;
   boost::intrusive_ptr<cairowindow::Layer> layer_;
   cairowindow::plot::Connector plot_indicator_;
+  cairowindow::plot::Text plot_scale_text_;
   cairowindow::plot::Line plot_vertical_line_through_w_;
   cairowindow::plot::Line plot_vertical_line_through_v_;
 
   // Temporary curves (used while developing this class).
   cairowindow::plot::BezierFitter plot_old_parabola_;
-  cairowindow::plot::BezierFitter plot_diff_;
-  cairowindow::plot::BezierFitter plot_diff_height_;
 
  private:
   void draw_indicators()
   {
     ASSERT(has_sample_);
 
-    plot_indicator_ = cairowindow::plot::Connector{{parabola_.vertex_x(), scale_y}, {edge_sample_w_, scale_y},
+    double x1 = parabola_.vertex_x();
+    double x2 = edge_sample_w_;
+    plot_indicator_ = cairowindow::plot::Connector{{x1, scale_y}, {x2, scale_y},
         cairowindow::Connector::open_arrow, cairowindow::Connector::open_arrow};
     plot_.add_connector(layer_, s_indicator_style, plot_indicator_);
+    plot_scale_text_ = plot_.create_text(layer_, {{.position = cairowindow::draw::centered_above, .offset = 2.0}},
+        cairowindow::Point{(x1 + x2) / 2, scale_y}, "scale");
 
     plot_vertical_line_through_v_ = cairowindow::plot::Line{{parabola_.vertex_x(), scale_y}, cairowindow::Direction::up};
     plot_.add_line(layer_, s_indicator_style({.dashes = {3.0, 3.0}}), plot_vertical_line_through_v_);
@@ -327,9 +331,35 @@ class Scale
   {
   }
 
+  Scale& operator=(Scale const& scale)
+  {
+    scale_ = scale.scale_;
+    has_sample_ = scale.has_sample_;
+    if (has_sample_)
+    {
+      edge_sample_w_ = scale.edge_sample_w_;
+      edge_sample_Lw_ = scale.edge_sample_Lw_;
+      parabola_ = scale.parabola_;
+    }
+
+    // Erase old drawings.
+    plot_indicator_.reset();
+    plot_scale_text_.reset();
+    plot_vertical_line_through_w_.reset();
+    plot_vertical_line_through_v_.reset();
+    plot_old_parabola_.reset();
+
+    return *this;
+  }
+
   void reset(double scale) { scale_ = scale; has_sample_ = false; }
   operator double() const { ASSERT(scale_ != 0.0); return std::abs(scale_); }
-  double or_zero() const { return scale_; }
+  double or_zero() const { /* Never return really zero */ return std::max(epsilon, scale_); }
+
+  static bool almost_zero(double w, double step)
+  {
+    return std::abs(step) < epsilon || std::abs(step) < 1e-6 * std::abs(w);
+  }
 
   void initialize(Sample const& prev, Sample const& current, math::QuadraticPolynomial const& parabola)
   {
@@ -455,6 +485,19 @@ class Scale
 #endif
 };
 
+class SampleMinimum : public Sample
+{
+ private:
+  Scale scale_;
+  double energy_;
+
+ public:
+  SampleMinimum(Sample const& minimum, Scale const& scale, double energy) : Sample(minimum), scale_(scale), energy_(energy) { }
+
+  Scale const& scale() const { return scale_; }
+  double energy() const { return energy_; }
+};
+
 class History
 {
  public:
@@ -492,8 +535,6 @@ class History
     }
     else
     {
-      //FIXME: remove this
-      ASSERT(current_ == -1 || std::abs(samples_[current_].w() - w) > 0.00001);
       prev_ = current_;
       current_ = (prev_ + 1) % size;
       sample.set_point(plot_.create_point(layer_, point_style_, {w, Lw}));
@@ -543,6 +584,108 @@ class History
 //static
 cairowindow::draw::ConnectorStyle const Scale::s_indicator_style{{.line_width = 1}};
 
+// A class describing the amount of "kinetic energy" (elsewhere in literature more often known as "momentum")
+// that we have, which determines the maximum overshoot uphill that we allow. Having a certain momentum or
+// kinetic energy helps in overcoming small bumbs and not get stuck in the first local minimum that we encounter.
+class KineticEnergy
+{
+  static constexpr double friction = 0.0513;    // (1 - friction)^2 = 0.9
+  static cairowindow::draw::ConnectorStyle const s_indicator_style;
+
+ private:
+  double max_Lw_;       // The maximum height that could be reached with the current amount of kinetic energy.
+  double Lw_;           // The current height. The kinetic energy is proportional to max_Lw_ - Lw_.
+
+  // Used to visualize the KineticEnergy:
+  cairowindow::plot::Plot& plot_;
+  boost::intrusive_ptr<cairowindow::Layer> layer_;
+  cairowindow::plot::Line plot_horizontal_line_;
+  cairowindow::plot::Text plot_energy_text_;
+
+ private:
+  void draw_indicators()
+  {
+    plot_horizontal_line_ = cairowindow::plot::Line{{0.0, max_Lw_}, cairowindow::Direction::right};
+    plot_.add_line(layer_, s_indicator_style, plot_horizontal_line_);
+
+    plot_energy_text_ = plot_.create_text(layer_, {{.position = cairowindow::draw::centered_above, .offset = 2.0}},
+        cairowindow::Point{0.5 * (plot_.xrange().min() + plot_.xrange().max()), max_Lw_}, "energy");
+  }
+
+  double max_Lw(double new_Lw) const
+  {
+    // Reduce the maximum height with a fraction of the (vertical) distance traveled.
+    return max_Lw_ - friction * std::abs(new_Lw - Lw_);
+  }
+
+ public:
+  KineticEnergy(cairowindow::plot::Plot& plot, boost::intrusive_ptr<cairowindow::Layer> const& layer, double Lw) :
+    plot_(plot), layer_(layer), max_Lw_(Lw), Lw_(Lw) { }
+
+  void set(double max_Lw, double Lw)
+  {
+    DoutEntering(dc::notice, "KineticEnergy::set(" << max_Lw << ", " << Lw << ")");
+
+    max_Lw_ = max_Lw;
+    Lw_ = Lw;
+
+    draw_indicators();
+    Dout(dc::notice, "max_Lw_ set to " << max_Lw_ << "; kinetic energy is now " << (max_Lw_ - Lw_));
+  }
+
+  double energy() const
+  {
+    return max_Lw_;             // This is the total energy.
+  }
+
+  // Returns true upon success. If false is returned the update is rejected and should not take place!
+  bool maybe_update(double new_Lw)
+  {
+    DoutEntering(dc::notice, "KineticEnergy::maybe_update(" << new_Lw << ")");
+
+    // Reduce the maximum height with a fraction of this distance.
+    double new_max_Lw = max_Lw(new_Lw);
+
+    // Check if this is a request to go higher than the maximum height.
+    if (new_Lw > new_max_Lw)
+    {
+      Dout(dc::notice, "Rejected because max_Lw_ = " << max_Lw_ << ", Lw_ = " << Lw_ << "; new_Lw = " << new_Lw << " > " <<
+          "max_Lw_ - friction * std::abs(new_Lw - Lw_) = " << new_max_Lw);
+      return false;
+    }
+
+    max_Lw_ = new_max_Lw;
+    Lw_ = new_Lw;
+
+    draw_indicators();
+    Dout(dc::notice, "max_Lw_ set to " << max_Lw_ << "; kinetic energy is now " << (max_Lw_ - Lw_));
+    return true;
+  }
+
+  void update(double new_Lw)
+  {
+    DoutEntering(dc::notice, "KineticEnergy::update(" << new_Lw << ")");
+
+    // Reduce total energy (the maximum height) as usual, but if we need
+    // more energy than we have, just reset the total energy to zero.
+    max_Lw_ = std::max(new_Lw, max_Lw(new_Lw));
+    Lw_ = new_Lw;
+
+    draw_indicators();
+    Dout(dc::notice, "max_Lw_ set to " << max_Lw_ << "; kinetic energy is now " << (max_Lw_ - Lw_));
+  }
+
+#if CWDEBUG
+  void print_on(std::ostream& os) const
+  {
+    os << "{max height:" << max_Lw_ << ", energy:" << (max_Lw_ - Lw_) << "}";
+  }
+#endif
+};
+
+//static
+cairowindow::draw::ConnectorStyle const KineticEnergy::s_indicator_style{{.line_width = 1}};
+
 int main()
 {
   Debug(NAMESPACE_DEBUG::init());
@@ -554,8 +697,8 @@ int main()
   double const w_max = 6.0;
   int const steps = 100;
 
-  double const w_0 = 5.0;
-  double learning_rate = 0.1;     // In unit_of(w)^2 / unit_of(L).
+  double const w_0 = -5.0;
+  double const learning_rate = 0.1;     // In unit_of(w)^2 / unit_of(L).
 
   try
   {
@@ -619,15 +762,17 @@ int main()
     Sample new_sample(w_0);
     Dout(dc::notice, "Initial value of new_sample; w = " << new_sample.w());
     double w_delta = 0.0;
+    double current_learning_rate = learning_rate;
     Scale scale(plot, second_layer);
     Dout(dc::notice, "Initial value of scale is " << scale);
-    int number_of_coef = 0;
+    KineticEnergy energy(plot, second_layer, L_max);
+    Dout(dc::notice, "Initial height is " << energy);
     constexpr int down = 1;
     constexpr int up = -1;
     int direction = down;
-    std::list<Sample> extremes;
-    std::list<Sample>::iterator best_minimum = extremes.end();
-    std::list<Sample>::iterator last_extreme = extremes.end();
+    std::list<SampleMinimum> extremes;
+    std::list<SampleMinimum>::iterator best_minimum = extremes.end();
+    std::list<SampleMinimum>::iterator last_extreme = extremes.end();
 
     plot::BezierFitter plot_approximation_curve;
     plot::BezierFitter plot_derivative_curve;
@@ -647,36 +792,61 @@ int main()
       if (!window.handle_input_events())
         break;          // Program must be terminated.
 
+      Dout(dc::notice, "------------------------------------");
+
       // Erase all previous curves (if they exist).
-      plot_approximation_curve.draw_object_.reset();
-      plot_derivative_curve.draw_object_.reset();
-      plot_quotient_curve.draw_object_.reset();
-      plot_parabolic_approximation_curve.draw_object_.reset();
+      plot_approximation_curve.reset();
+      plot_derivative_curve.reset();
+      plot_quotient_curve.reset();
+      plot_parabolic_approximation_curve.reset();
 
       // Suppress immediate updating of the window for each created item, in order to avoid flickering.
       window.set_send_expose_events(false);
 
-      if (number_of_coef < 5)
+      enum class StepKind
       {
-        if (history.total_number_of_samples() == 1)
-          number_of_coef = 2;
-        else if (history.total_number_of_samples() == 2)
-          number_of_coef = 3;
-        else
-          number_of_coef = 5;
-      }
+        keep_going,             // Just subtract current_learning_rate times derivative.
+        done,                   // new_sample was already updated.
+        abort                   // Stop going in the current direction.
+      };
+
+      // The default is that new_sample is set to the extreme of some polynomial.
+      StepKind step_kind = StepKind::done;
+
+      //===================================================================================================
+      // Create a parabolic approximation from the last two samples (or a line if we only have one sample).
+      // If we have only one sample, then new_sample and energy accordingly.
 
       math::QuadraticPolynomial parabolic_approximation;
-      if (number_of_coef == 2)
+
+      // Do we have only one sample?
+      if (history.total_number_of_samples() == 1)
       {
+        double const dLdw = current.dLdw(L);
+        double const w = current.w();
+
         // If we have just one point, then the approximation is a linear function:
         //
         // A(w) = coef[0] + L'(w) w
-        parabolic_approximation[1] = current.dLdw(L);
+        parabolic_approximation[1] = dLdw;
+
+        // Did we drop into a (local) minimum as a starting point?!
+        if (Scale::almost_zero(w, dLdw))
+        {
+          // In this case we can't do anything else than just make a step in some random direction.
+          new_sample -= learning_rate;
+        }
+        else
+        {
+          // Just gradient descent: move downhill.
+          new_sample -= learning_rate * dLdw;
+        }
+        // Force an update.
+        energy.update(new_sample.Lw(L));
       }
-      else if (number_of_coef >= 3)
+      else
       {
-        // If we have two points, the approximation is a parabola:
+        // If we have at least two points, the approximation is a parabola:
         //
         //   A(w) = approximation[0] + b w + c w²
         //
@@ -696,42 +866,24 @@ int main()
         // ⎣c⎦ = ---------- ⎣-1   1  ⎦⎣L'(w₁)⎦ = ----------- ⎣    L'(w₁) -     L'(w₀)⎦
         //        2w₁ - 2w₀                      2 (w₁ - w₀)
 
-        // c = a
-        // w₀ = r
-        // w₁ = p
-        // L(w₀) = f(r) = s
-        // L(w₁) = f(p) = q
-        // L'(w₀) = f'(r) = u
-        // L'(w₁) = f'(p) = t
-
         Sample const& prev = history.prev();
         double inverse_det = 0.5 / (current.w() - prev.w());
-        parabolic_approximation[1] = inverse_det * 2.0 * (current.w() * prev.dLdw() - prev.w() * current.dLdw());
         parabolic_approximation[2] = inverse_det * (current.dLdw() - prev.dLdw());
+        // See https://math.stackexchange.com/questions/4913175
+        parabolic_approximation[1] =
+          inverse_det * (2.0 * current.Lw(L) - 2.0 * prev.Lw(L) + (prev.dLdw() - current.dLdw()) * (current.w() + prev.w()));
       }
+      parabolic_approximation[0] = current.Lw(L) - parabolic_approximation(current.w());
 
-      if (number_of_coef >= 3)
-      {
-        Sample const& prev = history.prev();
-#if 1
-        double q = current.Lw(L);
-        double s = prev.Lw(L);
-        double u = prev.dLdw();
-        double t = current.dLdw();
-        double p = current.w();
-        double r = prev.w();
-        parabolic_approximation[2] = 0.5 * (current.dLdw() - prev.dLdw()) / (current.w() - prev.w());
-        parabolic_approximation[1] = 0.5 * (2.0 * q - 2.0 * s + (u - t) * (p + r)) / (current.w() - prev.w());
-#else
-        double y1 = parabolic_approximation(current.w());
-        double y2 = parabolic_approximation(prev.w());
-        parabolic_approximation[1] += ((current.Lw(L) - prev.Lw(L)) - (y1 - y2)) / (current.w() - prev.w());
+      // End of determining parabolic approximation.
+      //===================================================================================================
+
+#ifdef CWDEBUG
+      Dout(dc::notice|continued_cf, "parabolic_approximation = " << parabolic_approximation << " (based on " << current);
+      if (history.total_number_of_samples() > 1)
+        Dout(dc::continued, " and " << history.prev());
+      Dout(dc::finish, ")");
 #endif
-        parabolic_approximation[0] = current.Lw(L) - parabolic_approximation(current.w());
-        Dout(dc::notice, "parabolic_approximation = " << parabolic_approximation << " (based on " << current << " and " << prev <<  ")");
-      }
-      else
-        parabolic_approximation[0] = current.Lw(L) - parabolic_approximation(current.w());
 
       // Draw the parabolic approximation.
       plot_parabolic_approximation_curve.solve(
@@ -741,49 +893,61 @@ int main()
       // Flush all expose events related to the drawing done above.
       window.set_send_expose_events(true);
 
-      // If no extreme exists (or we don't know accurate enough where it is),
-      // then `keep_going` will stay true and w is simply adjusted "as usual"
-      // by subtracting `learning_rate * dL/dw`.
-      bool keep_going = true;
-      if (number_of_coef == 3)
+      //===================================================================================================
+      // If we have two or more samples, then update new_sample and energy.
+
+      if (history.total_number_of_samples() == 2)
       {
         Sample const& prev = history.prev();
+
         // β = (L'(w₁) - L'(w₀)) / (w₁ - w₀)    [see README.gradient_descent]
         double beta_inverse = (current.w() - prev.w()) / (current.dLdw() - prev.dLdw());
         // If beta is negative, then there is no minimum, only a maximum.
         direction = beta_inverse < 0.0 ? up : down;
         Dout(dc::notice, "direction is set to " << (direction == up ? "up" : "down"));
+
         // Set w to the value where the derivative of this parabolic approximation is zero.
-        double step = beta_inverse * current.dLdw();
-        new_sample -= step;
-        Dout(dc::notice, "Set new_sample to the extreme of parabola; w = " << new_sample.w());
+        Dout(dc::notice, "Setting new_sample to the extreme of parabolic approximation:");
+        new_sample -= beta_inverse * current.dLdw();
+        Dout(dc::notice, history.current().w() << " --> " << history.total_number_of_samples() << ": " << new_sample.w());
+
         // Initialize the scale with this parabola.
         scale.initialize(prev, current, parabolic_approximation);
-        keep_going = false;
-        // This was the first time we got an idea of the scale at which
-        // changes occur. Therefore, use it to set a reasonable learning rate!
-        learning_rate = 0.1 * std::abs(beta_inverse);
+        // Update the current kinetic energy. If this is an overshoot, just increase the energy to 0.
+        energy.update(new_sample.Lw(L));
+
+        // This was the first time we got an idea of the scale at which changes occur.
+        // Therefore, use it to set a reasonable learning rate!
+        current_learning_rate = 0.1 * std::abs(beta_inverse);
       }
-      else if (number_of_coef == 5)
+      else if (history.total_number_of_samples() > 2)
       {
         Sample const& prev = history.prev();
+
         double beta_inverse = (current.w() - prev.w()) / (current.dLdw() - prev.dLdw());
-        // If beta is negative, then there is no extreme in the direction that we're going.
-        // In that case just keep going in the same direction as before, but accelerating
-        // (increase the learning rate with a factor of two).
         if (direction * beta_inverse < 0.0)
-          learning_rate *= 2.0;
+        {
+          // There is no extreme in the direction that we're going.
+          // Just keep going in the same direction as before, but accelerating
+          // (increase the learning rate with a factor of 1.4).
+          current_learning_rate *= 1.4;
+          step_kind = StepKind::keep_going;
+        }
         else
         {
+          Dout(dc::notice, "Setting new_sample to the extreme of parabolic approximation:");
           // Set w to the value where the derivative of this parabolic approximation is zero.
           double step = beta_inverse * current.dLdw();
           new_sample -= step;
-          Dout(dc::notice, "Set new_sample to the extreme of parabolic approximation; w = " << new_sample.w());
+          Dout(dc::notice, history.current().w() << " --> " << history.total_number_of_samples() << ": " << new_sample.w());
+
           // Update scale with the new parabolic approximation.
           scale.update(prev, current, parabolic_approximation);
-          keep_going = false;
+          // Update the current kinetic energy. If this is an overshoot, just increase the energy to 0.
+          energy.update(new_sample.Lw(L));
+
           // With the new extreme insight, adjust the learning rate to the new scale.
-          learning_rate = 0.1 * std::abs(beta_inverse);
+          current_learning_rate = 0.1 * std::abs(beta_inverse);
 
           double abs_step = std::abs(step);
           Dout(dc::notice, "abs_step = " << abs_step << " (between " <<
@@ -841,7 +1005,7 @@ int main()
 
             Eigen::Vector4d C = M.colPivHouseholderQr().solve(D);
 
-            math::Polynomial approximation(number_of_coef COMMA_CWDEBUG_ONLY("w"));
+            math::Polynomial approximation(5 COMMA_CWDEBUG_ONLY("w"));
             approximation[1] = C[0];
             approximation[2] = C[1];
             approximation[3] = C[2];
@@ -877,7 +1041,7 @@ int main()
             scale.reset(number_of_zeroes < 2 ? scale : zeroes[1] - zeroes[0]);
 
             // Did we reach the (local) extreme?
-            if (number_of_zeroes == 2 && abs_step < 0.01 * scale)
+            if (abs_step < 0.01 * scale)
             {
               Dout(dc::notice, (direction == up ? "Maximum" : "Minimum") << " reached: " << abs_step << " < 0.01 * " << scale);
 
@@ -888,14 +1052,27 @@ int main()
               direction = -direction;
               Dout(dc::notice, "direction is set to " << (direction == up ? "up" : "down") << "; w_delta = " << w_delta);
 
-              int best_zero = (w_delta > 0.0 || (w_delta == 0.0 && approximation(zeroes[1]) < approximation(zeroes[0]))) ? 1 : 0;
-              new_sample = zeroes[best_zero];
-              Dout(dc::notice, "Set w to found extreme: w = " << new_sample.w());
+              if (number_of_zeroes > 0)
+              {
+                int best_zero =
+                  (number_of_zeroes == 2 && (w_delta > 0.0 || (w_delta == 0.0 && approximation(zeroes[1]) < approximation(zeroes[0])))) ? 1 : 0;
+                new_sample = zeroes[best_zero];
+                Dout(dc::notice, "Set w to found extreme: w = " << new_sample.w());
+                Dout(dc::notice(w_delta == 0.0 && number_of_zeroes == 2),
+                    "Best zero was " << zeroes[best_zero] << " with A(" << zeroes[best_zero] << ") = " <<
+                    approximation(zeroes[best_zero]) << " (the other has value " << approximation(zeroes[1 - best_zero]) << ")");
+                // Update the current kinetic energy. If this is an overshoot, just increase the energy to 0.
+                energy.update(new_sample.Lw(L));
+              }
 
               if (w_delta == 0.0)
               {
-                Dout(dc::notice, "Best zero was " << zeroes[best_zero] << " with A(" << zeroes[best_zero] << ") = " <<
-                    approximation(zeroes[best_zero]) << " (the other has value " << approximation(zeroes[1 - best_zero]) << ")");
+                if (number_of_zeroes == 0)
+                {
+                  // Keep going in the same direction.
+                  new_sample -= scale;
+                  energy.update(new_sample.Lw(L));
+                }
 
                 // Now that the decision on which direction (left/right) we explore is taken,
                 // store that decision (as the sign of w_delta);
@@ -904,11 +1081,11 @@ int main()
               }
 
               // Store this extreme.
-              std::list<Sample>::iterator new_extreme;
+              std::list<SampleMinimum>::iterator new_extreme;
               if (w_delta > 0.0)
-                new_extreme = extremes.insert(extremes.end(), history.current());
+                new_extreme = extremes.emplace(extremes.end(), history.current(), scale, energy.energy());
               else
-                new_extreme = extremes.insert(extremes.begin(), history.current());
+                new_extreme = extremes.emplace(extremes.begin(), history.current(), scale, energy.energy());
 
               if (direction == up)
               {
@@ -920,35 +1097,76 @@ int main()
                 if (new_extreme != best_minimum)
                 {
                   // The new minimum isn't better than what we found already. Stop going into this direction.
-                  break;
+                  step_kind = StepKind::abort;
                 }
               }
 
-              // Re-add old sample again to the history; add one closest to the target.
-              Dout(dc::notice, "Re-adding closest sample to history:");
-              history.append_closest_to(new_sample.w());
-              // Take a new sample at the target and add it to the history.
-              history.add(new_sample, scale);
-              // Add one more sample, using the learning rate.
-              keep_going = true;
+              if (step_kind == StepKind::done)
+              {
+                // Re-add old sample again to the history; add one closest to the target.
+                Dout(dc::notice, "Re-adding closest sample to history:");
+                history.append_closest_to(new_sample.w());
+                // Take a new sample at the target and add it to the history.
+                history.add(new_sample, scale);
+                // Add one more sample, using the learning rate.
+                step_kind = StepKind::keep_going;
+              }
             }
           }
         }
       }
 
-      if (keep_going)
+      if (step_kind == StepKind::keep_going)
       {
         // There is no new extreme insight yet; just keep going (up or) down hill.
-        double step = learning_rate * history.current().dLdw();
+        //FIXME: multiplying with the derivative makes little sense in the "keep_going" case!
+        double step = current_learning_rate * history.current().dLdw();
+        double w = new_sample.w();
         if (direction == down)
           new_sample -= step;
         else
           new_sample += step;
-        Dout(dc::notice, ((direction == (step > 0.0 ? up : down)) ? "Incremented" : "Decremented") <<
-            " new_sample with learning rate of " << learning_rate << " and slope " << history.current().dLdw() << " with " << std::abs(step));
+        bool success = energy.maybe_update(new_sample.Lw(L));
+        if (!success)
+        {
+          new_sample = w;
+          step_kind = StepKind::abort;
+        }
+        else
+          Dout(dc::notice, ((direction == (step > 0.0 ? up : down)) ? "Incremented" : "Decremented") <<
+              " new_sample with learning rate of " << current_learning_rate << " and slope " <<
+              history.current().dLdw() << " with " << std::abs(step));
       }
 
-      Dout(dc::notice, history.current().w() << " --> " << history.total_number_of_samples() << ": " << new_sample.w());
+      if (step_kind == StepKind::abort)
+      {
+        // Jump back to the best minimum and continue in the opposite direction.
+
+        // Has a minimum been found at all?
+        if (best_minimum == extremes.end())
+          break;
+
+        // Restore the current sample and scale to the values belonging to this minimum.
+        new_sample = *best_minimum;
+        scale = best_minimum->scale();
+
+        // Forget any acceleration that happened before.
+        current_learning_rate = learning_rate;
+
+        // Change direction.
+        int hdirection = w_delta < 0.0 ? 1 : -1;
+
+        // Do a step with a size equal to the scale in this minimum: we expect it to be a parabola up till that point.
+        new_sample += hdirection * std::abs(scale);
+
+        w_delta = new_sample.w() - history.current().w();
+        Dout(dc::notice, "w_delta --> " << w_delta);
+
+        energy.set(best_minimum->energy(), new_sample.Lw(L));
+      }
+
+      if (step_kind != StepKind::done)
+        Dout(dc::notice, history.current().w() << " --> " << history.total_number_of_samples() << ": " << new_sample.w());
     }
 
     if (best_minimum != extremes.end())

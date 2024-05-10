@@ -42,6 +42,11 @@ class Line : public cairowindow::Line
   using cairowindow::Line::Line;
   Line(cairowindow::Line const& line) : cairowindow::Line(line) { }
 
+  void reset()
+  {
+    draw_object_.reset();
+  }
+
  public:
   friend class Plot;
   mutable std::shared_ptr<draw::Line> draw_object_;

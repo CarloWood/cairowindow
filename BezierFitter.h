@@ -68,6 +68,11 @@ class BezierFitter : public cairowindow::BezierFitter
   using cairowindow::BezierFitter::BezierFitter;
   BezierFitter(cairowindow::BezierFitter&& bezier_fitter) : cairowindow::BezierFitter(std::move(bezier_fitter)) { }
 
+  void reset()
+  {
+    draw_object_.reset();
+  }
+
  public:
   friend class Plot;
   mutable std::shared_ptr<draw::BezierFitter> draw_object_;

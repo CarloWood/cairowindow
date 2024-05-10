@@ -50,6 +50,11 @@ class Connector : public cairowindow::Connector
   using cairowindow::Connector::Connector;
   Connector(cairowindow::Connector const& connector) : cairowindow::Connector(connector) { }
 
+  void reset()
+  {
+    draw_object_.reset();
+  }
+
  public:
   friend class Plot;
   mutable std::shared_ptr<draw::Connector> draw_object_;

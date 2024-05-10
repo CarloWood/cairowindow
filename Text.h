@@ -33,6 +33,11 @@ class Text : public cairowindow::Text
   using cairowindow::Text::Text;
   Text(cairowindow::Text const& text) : cairowindow::Text(text) { }
 
+  void reset()
+  {
+    draw_object_.reset();
+  }
+
  private:
   friend class Plot;
   mutable std::shared_ptr<draw::Text> draw_object_;
