@@ -58,21 +58,25 @@ void BezierFitter::solve(std::function<Point(double)> const& func, IntersectRect
   double const xspread = std::abs(coeffs[1].x()) + std::abs(coeffs[2].x()) + std::abs(coeffs[3].x()) + xresid; // For finding a bounding box.
   double const yspread = std::abs(coeffs[1].y()) + std::abs(coeffs[2].y()) + std::abs(coeffs[3].y()) + yresid;
 
-  // If the curve is entirely outside the viewport, don't bother rendering:
-  if ((coeffs[0].x() + xspread < viewport.x1()) || (coeffs[0].x() - xspread > viewport.x2()) ||
-      (coeffs[0].y() + yspread < viewport.y1()) || (coeffs[0].y() - yspread > viewport.y2()))
-    return;
-
-  // If the spread is very large in either dimension, we need
-  // to be more careful about detecting the edges of the viewport.
-  if (xspread > viewport.x2() - viewport.x1() || yspread > viewport.y2() - viewport.y1())
+  // Don't abort because a meager six points are outside the graph.
+  if (depth_ > 0)
   {
-    double const xmax = std::max({P0.x(), P1.x(), P2.x(), P3.x(), P4.x(), P5.x(), P6.x()});
-    double const xmin = std::min({P0.x(), P1.x(), P2.x(), P3.x(), P4.x(), P5.x(), P6.x()});
-    double const ymax = std::max({P0.y(), P1.y(), P2.y(), P3.y(), P4.y(), P5.y(), P6.y()});
-    double const ymin = std::min({P0.y(), P1.y(), P2.y(), P3.y(), P4.y(), P5.y(), P6.y()});
-    if (xmax < viewport.x1() || xmin > viewport.x2() || ymax < viewport.y1() || ymin > viewport.y2())
+    // If the curve is entirely outside the viewport, don't bother rendering:
+    if ((coeffs[0].x() + xspread < viewport.x1()) || (coeffs[0].x() - xspread > viewport.x2()) ||
+        (coeffs[0].y() + yspread < viewport.y1()) || (coeffs[0].y() - yspread > viewport.y2()))
       return;
+
+    // If the spread is very large in either dimension, we need
+    // to be more careful about detecting the edges of the viewport.
+    if (xspread > viewport.x2() - viewport.x1() || yspread > viewport.y2() - viewport.y1())
+    {
+      double const xmax = std::max({P0.x(), P1.x(), P2.x(), P3.x(), P4.x(), P5.x(), P6.x()});
+      double const xmin = std::min({P0.x(), P1.x(), P2.x(), P3.x(), P4.x(), P5.x(), P6.x()});
+      double const ymax = std::max({P0.y(), P1.y(), P2.y(), P3.y(), P4.y(), P5.y(), P6.y()});
+      double const ymin = std::min({P0.y(), P1.y(), P2.y(), P3.y(), P4.y(), P5.y(), P6.y()});
+      if (xmax < viewport.x1() || xmin > viewport.x2() || ymax < viewport.y1() || ymin > viewport.y2())
+        return;
+    }
   }
 
 //  Dout(dc::notice, "xresid = " << xresid << "; yresid = " << yresid);
@@ -92,20 +96,15 @@ void BezierFitter::solve(std::function<Point(double)> const& func, IntersectRect
     return;
   }
 
-#ifdef CWDEBUG
   ++depth_;
   if (depth_ > 100)
   {
-    if (depth_ == 101)
-      Dout(dc::warning, "Reached max. depth!");
+    Dout(dc::warning(depth_ == 101), "Reached max. depth!");
     return;
   }
-#endif
   solve(func, viewport, tolerance, t0, 0.5 * (t0 + t6), P0, P2, P3);
   solve(func, viewport, tolerance, 0.5 * (t0 + t6), t6, P3, P4, P6);
-#ifdef CWDEBUG
   --depth_;
-#endif
 }
 
 void BezierFitter::solve(std::function<Point(double)>&& func, Range const& domain, Rectangle const& viewport, double tolerance)
@@ -118,9 +117,7 @@ void BezierFitter::solve(std::function<Point(double)>&& func, Range const& domai
 
   double t0 = domain.min();
   double t6 = domain.max();
-#ifdef CWDEBUG
   depth_ = 0;
-#endif
   solve(func, viewport, tolerance, t0, t6, Vector{func(t0)}, Vector{func(0.5 * (t0 + t6))}, Vector{func(t6)});
 }
 

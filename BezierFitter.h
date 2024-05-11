@@ -14,9 +14,7 @@ class BezierFitter
 {
  private:
   std::vector<BezierCurve> result_;
-#ifdef CWDEBUG
   int depth_;
-#endif
 
  public:
   BezierFitter() = default;
