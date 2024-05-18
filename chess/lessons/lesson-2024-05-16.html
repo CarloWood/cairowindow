@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess lessons by Carlo Wood</title>
+    <link rel="stylesheet" type="text/css" href="lessons.css">
+</head>
+<body>
+    <div class="print-container">
+        <div class="content">
+            <div class="date">16 May 2024</div>
+            <h1>King Safety</h1>
+            <h2>Open g-file</h2>
+            <!--
+              $ chess_diagram --replace -o "lesson-2024-05-16.svg" "4rrk1/1pp2p1p/p4Q2/2q5/2BR4/8/P5PP/6K1 w - - 1 22"
+            -->
+            <object class="diagram"
+              data="lesson-2024-05-16.svg">
+            </object>
+            <p>White plays and wins. Black has an exposed king and an inactive rook.
+            White needs to keep black busy, or the tables could be turned due to blacks material advantage.</p>
+
+            <p>Once white starts giving check the game is probably easily won; but as long as white can only
+            keep the pressure on with threats other than a check, they must be careful not to get checks themselves,
+            or white might cause lose the initiative.</p>
+
+            <p>The <i>only</i> winning move therefore is 1. Kf1! This unpins the white rook and threatens Rg4+ with
+            a swift end in favour of white. Black can't give a check that makes sense, so they play 1. ... Qh5 to stop Rg4.
+            And again white only has a single winning move to win! Note there are few interesting variations
+            here: 1. ... h5?! leads to a mating net: 2. Qg6+! Kh8 3. Qh6+ Kg8 4. Bd3! and the threat Qh7# is
+            too strong. For example: 4. ... Re1+!? 5. Kxe1 Qc3+ 6. Ke2! (6. Kf2?? Qxd4+ and 6. Kf1 Qa1+
+            7. Ke2 Re8+ 8. Kf3 Qd1+ and white can't escape infinite check: 9. Kd3 Qe1+ 10. Kf3 Qd1 etc.
+            (10. Kh3?? Re3+ 11. g3? Rxg3!! hxg3 Qh1#) and 6. Kd1 Qa1+ with a similar results.) 6. ... Re8+ 7. Kf3 Qc6+
+            and black had to give a rook to avoid mate by trading queens, but still loses the end game.</p>
+
+            <p>Note that 2. h3?? loses the game to 2. ... Re6!!. while 2. ... Rd3?? loses to 2. ... Qe2+.
+            The only winning move is 2. Rd5 : this renews the threat (Rg5+) while stopping black from giving
+            checks. 2. ... Qg6 3. Rg5 Re6 4. Rxg6+ hxg6 5. Qg5 and white wins (5. Bxe6?? fxe6 oops).</p>
+        </div>
+    </div>
+</body>
+</html>
