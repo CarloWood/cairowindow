@@ -78,7 +78,7 @@ void Plot::add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio)
 
   // Set ranges on the plot area and draw it.
   for (int axis = x_axis; axis <= y_axis; ++axis)
-    plot_area_.set_range(axis, range_[axis].min(), range_[axis].max());
+    plot_area_.set_range(axis, range_[axis].min(), range_[axis].max(), range_ticks_[axis]);
   draw_multi_region_on(layer, &plot_area_);
 
   // Draw axis labels.

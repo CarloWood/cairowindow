@@ -56,18 +56,10 @@ int PlotArea::calculate_range_ticks(Range& range)
 
 void PlotArea::draw_regions_on(Layer* layer)
 {
-  std::array<int, number_of_axes> k;
-  for (int axis = 0; axis < 2; ++axis)
-  {
-    Range range{range_[axis][min_range], range_[axis][max_range]};
-    k[axis] = calculate_range_ticks(range);
-  }
-
   if (draw_grid_)
-  {
-    grid_.set_ticks(k);
     layer->draw(&grid_);
-  }
+
+  std::array<int, number_of_axes> const& k = grid_.ticks();
 
   auto x_axis_min = [this, k = k[x_axis]](cairo_t* cr) -> StrokeExtents
   {
@@ -112,10 +104,11 @@ void PlotArea::draw_regions_on(Layer* layer)
   layer->draw(axes_[y_axis][max_range]);
 }
 
-void PlotArea::set_range(int axis, double range_min, double range_max)
+void PlotArea::set_range(int axis, double range_min, double range_max, int ticks)
 {
   range_[axis][min_range] = range_min;
   range_[axis][max_range] = range_max;
+  grid_.set_ticks(axis, ticks);
 }
 
 } // namespace cairowindow::draw

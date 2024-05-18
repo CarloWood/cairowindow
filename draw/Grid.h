@@ -32,14 +32,19 @@ class Grid : public MultiRegion
   Grid(cairowindow::Rectangle const& geometry, GridStyle style) :
     MultiRegion(style.color, style.line_width), geometry_(geometry) { }
 
-  void set_ticks(std::array<int, number_of_axes> const& k)
+  void set_ticks(int axis, int ticks)
   {
-    ticks_ = k;
+    ticks_[axis] = ticks;
   }
 
   void set_geometry(cairowindow::Rectangle const& geometry)
   {
     geometry_ = geometry;
+  }
+
+  std::array<int, number_of_axes> const& ticks() const
+  {
+    return ticks_;
   }
 };
 

@@ -52,7 +52,7 @@ class PlotArea : public MultiRegion
     MultiRegion(style.axes_color, style.axes_line_width), geometry_(geometry), tick_length_(geometry.width() / 100.0),
     draw_grid_(!style.grid.color.is_transparent()), grid_(geometry, style.grid) { }
 
-  void set_range(int axis, double range_min, double range_max);
+  void set_range(int axis, double range_min, double range_max, int ticks);
   void set_geometry(cairowindow::Rectangle const& geometry)
   {
     geometry_ = geometry;

@@ -1,7 +1,10 @@
 #pragma once
 
 #include "QuadraticPolynomial.h"
-#include "utils/AIRefCount.h"
+#include "Sample.h"
+#include "utils/debug_ostream_operators.h"
+#include "utils/almost_equal.h"
+#include "utils/macros.h"
 #include <type_traits>
 #include <utility>
 #include "debug.h"
@@ -14,7 +17,17 @@ class Scale;
 template<typename T>
 concept ConceptScale = std::is_base_of_v<Scale, T>;
 
-class Scale : public AIRefCount
+enum class ScaleUpdate
+{
+  first_sample,                 // When there is only one sample.
+  initialized,                  // When there are two samples for the first time.
+  towards_vertex,               // When we already had two samples (and therefore an "old" parabolic approximation)
+                                // and the new sample is at the vertex of the new parabola.
+  away_from_vertex              // When we already has two samples (and therefore an "old" parabolic approximation)
+                                // and the new sample was moved away from the vertex.
+};
+
+class Scale
 {
  public:
   static constexpr double epsilon = 1e-30;
@@ -28,41 +41,22 @@ class Scale : public AIRefCount
                                         // to the value of the parabola_ at edge_sample_w_.
   math::QuadraticPolynomial parabola_;  // The last (previous) second degree polynomial fit (passed to initialize/update).
 
- protected:
-  // Use create<>.
+ public:
   Scale() = default;
-  Scale(Scale const& scale)  = delete;
 
  public:
   Scale& operator=(Scale const& scale) = delete;
-#if 0
-  // Call draw_indicators() after calling this!
-  Scale& operator=(Scale const& scale)
-  {
-    DoutEntering(dc::notice, "Scale::operator=(" << scale << ")");
 
-    scale_ = scale.scale_;
-    has_sample_ = scale.has_sample_;
-    if (has_sample_)
-    {
-      edge_sample_w_ = scale.edge_sample_w_;
-      edge_sample_Lw_ = scale.edge_sample_Lw_;
-      parabola_ = scale.parabola_;
-    }
-    return *this;
-  }
-#endif
+  // Accessors.
+  double value() const { return scale_; }
+  bool has_sample() const { return has_sample_; }
+  double edge_sample_w() const { return edge_sample_w_; }
+  double edge_sample_Lw() const { return edge_sample_Lw_; }
+  math::QuadraticPolynomial const& parabola() const { return parabola_; }
 
-  template<ConceptScale T, typename... Args>
-  static boost::intrusive_ptr<T> create(Args&&... args)
-  {
-    return new T(std::forward<Args>(args)...);
-  }
-
-  void reset(double scale)
+  void reset()
   {
     DoutEntering(dc::notice, "Scale::reset()");
-    scale_ = scale;
     has_sample_ = false;
   }
 
@@ -88,144 +82,162 @@ class Scale : public AIRefCount
     return std::abs(step) < epsilon || std::abs(step) < 1e-6 * std::abs(w);
   }
 
-  void initialize(Sample const& prev, Sample const& current, math::QuadraticPolynomial const& parabola)
+  ScaleUpdate update(std::array<Sample const*, 2> const& relevant_samples, int current_index,
+      math::QuadraticPolynomial const& new_parabola, bool saw_more_than_two_relevant_samples)
   {
-    DoutEntering(dc::notice, "Scale::initialize(" << prev << ", " << current << ", " << parabola << ")");
-    // Only call initialize once.
-    ASSERT(!has_sample_);
-    double const v_x = parabola.vertex_x();
-    Dout(dc::notice, "v_x = " << v_x);
-    // Not sure it can happen that current is further away, but in case it does do this test.
-    // We want to set the scale_ to the largest value that still makes sense: the distance from
-    // the sample (that participated in creating this parabolic fit, that is, prev and current)
-    // that is the furthest away from the vertex.
-    Sample const& edge_sample = (std::abs(prev.w() - v_x) > std::abs(current.w() - v_x)) ? prev : current;
-    scale_ = edge_sample.w() - v_x;
-    Dout(dc::notice, "scale was set to " << scale_);
-    edge_sample_w_ = edge_sample.w();
-    edge_sample_Lw_ = edge_sample.Lw();
-    parabola_ = parabola;
-    has_sample_ = true;
-  }
+    DoutEntering(dc::notice, "Scale::update(" << relevant_samples << ", " << current_index << ", " << new_parabola <<
+        ", " << std::boolalpha << saw_more_than_two_relevant_samples << ")");
 
-  bool update(Sample const& prev, Sample const& current, math::QuadraticPolynomial const& parabola)
-  {
-    DoutEntering(dc::notice, "Scale::update(" << prev << ", " << current << ", " << parabola << ")");
+    // Is this not true?
+    ASSERT(saw_more_than_two_relevant_samples || !has_sample_);
 
-    // Call initialize if there is nothing to update because the Scale was reset.
-    if (!has_sample_)
-    {
-      initialize(prev, current, parabola);
-      return false;
-    }
+    // Trying to find this bug.
+    ASSERT(relevant_samples[0] != relevant_samples[1]);
+
+    int const prev_sample_index = 1 - current_index;
 
     // Get the x coordinate (w value) of the vertex of the new parabola.
-    double const v_x = parabola.vertex_x();
-    // Pick the sample (from prev and current) that is horizontally the furthest away from the vertex.
-    Sample const& edge_sample = (std::abs(prev.w() - v_x) > std::abs(current.w() - v_x)) ? prev : current;
-    // Get the y-coordinate at the w value of the stored edge sample, according to the new parabola.
-    double const new_Lw_stored_edge_sample = parabola(edge_sample_w_);
-    // Get the vertical distance from the stored edge sample to the new parabola.
-    double const distance_stored_edge_sample_to_parabola = std::abs(new_Lw_stored_edge_sample - edge_sample_Lw_);
-    // Get the vertical distance from the stored edge sample to the vertex of the new parabola (equal to abs(parabola.height(edge_sample_w_))).
-    double const abs_stored_edge_sample_height = std::abs(new_Lw_stored_edge_sample - parabola.vertex_y());
-    // If the stored sample vertically deviates more than 10%, we need to adjust the stored sample values.
-    if (distance_stored_edge_sample_to_parabola > 0.1 * abs_stored_edge_sample_height)
+    double const new_v_x = new_parabola.vertex_x();
+    Dout(dc::notice, "new_v_x = " << new_v_x);
+
+    // Pick the sample that is horizontally the furthest away from the new vertex.
+    Sample const* edge_sample =
+      std::abs(relevant_samples[prev_sample_index]->w() - new_v_x) > std::abs(relevant_samples[current_index]->w() - new_v_x) ?
+        relevant_samples[prev_sample_index] : relevant_samples[current_index];
+
+    Dout(dc::notice, "The following relevant samples are passed:");
+    for (int i = 0; i < 2; ++i)
     {
-      Dout(dc::notice, "Discarded old sample at L(" << edge_sample_w_ << ") = " << edge_sample_Lw_ << " because " <<
-          distance_stored_edge_sample_to_parabola << " > 0.1 * " << abs_stored_edge_sample_height);
-
-      static constexpr int left = -1;
-      static constexpr int right = 1;
-      // On which side of the vertex is the old sample?
-      int hside = edge_sample_w_ < v_x ? left : right;
-
-      int count;
-      std::array<double, 4> toggles;
-      bool close = parabola.equal_intervals(parabola_, toggles, count);
-      double new_edge_w;
-
-      // Run over intervals from left-to-right when hside == left, and from right-to-left when hside == right.
-      //
-      //          0     1     2     3
-      //    -inf  |     |     |     |  +inf     <-- interval
-      //   begin <0    <1    <2    <3  end      <-- running from left-to-right
-      //     end  0>    1>    2>    3> begin    <-- running from right-to-left
-      //
-      //                   ^     ^        ^
-      //                   |     |        |
-      //                  v_x    |      edge_sample_w_
-      //                    edge_sample.w()
-      //
-      if (hside == left)
-      {
-        // Find the interval that edge_sample_w_ is in.
-        int i = 0;
-        while (i != count)
-        {
-          if (edge_sample_w_ < toggles[i])
-            break;
-          ++i;
-          close = !close;
-        }
-        // Use the old value, unless it is too far away from the new parabola. Don't go beyond the new edge sample.
-        new_edge_w = std::min(close ? edge_sample_w_ : toggles[i], edge_sample.w());
-      }
-      else
-      {
-        // Find the interval that edge_sample_w_ is in.
-        int i = count - 1;
-        while (i != -1)
-        {
-          if (edge_sample_w_ > toggles[i])
-            break;
-          --i;
-          close = !close;
-        }
-        // Use the old value, unless it is too far away from the new parabola. Don't go beyond the new edge sample.
-        new_edge_w = std::max(close ? edge_sample_w_ : toggles[i], edge_sample.w());
-      }
-
-      edge_sample_w_ = new_edge_w;
-      edge_sample_Lw_ = utils::almost_equal(new_edge_w, edge_sample.w(), 1e-3) ? edge_sample.Lw() : parabola(new_edge_w);
+      Dout(dc::notice|continued_cf, "  " << i << " : " << *relevant_samples[i]);
+      if (edge_sample == relevant_samples[i])
+        Dout(dc::continued, " (edge sample)");
+      Dout(dc::finish, "");
     }
-    scale_ = edge_sample_w_ - v_x;
-    Dout(dc::notice, "scale was set to " << scale_);
 
-    parabola_ = parabola;
-
-    return true;
-  }
-
-  bool update(Sample const& new_sample)
-  {
-    // If there is no parabola, then there is nothing to update.
+    // If scale is yet unknown, then simply initialize it.
     if (!has_sample_)
-      return false;
+    {
+      Dout(dc::notice, "Initializing (has_sample_ == false)");
 
-    // Get the x coordinate (w value) of the vertex of the parabola.
-    double const v_x = parabola_.vertex_x();
-    double new_scale = new_sample.w() - v_x;
+      scale_ = edge_sample->w() - new_v_x;
+      Dout(dc::notice, "scale was set to " << *edge_sample << " - " << new_v_x << " = " << scale_);
+      edge_sample_w_ = edge_sample->w();
+      edge_sample_Lw_ = edge_sample->Lw();
+      parabola_ = new_parabola;
+      has_sample_ = true;
+
+      return ScaleUpdate::initialized;
+    }
+
+    Dout(dc::notice, "The current scale = " << scale_);
+
+    // Get the x coordinate (w value) of the vertex of the old parabola.
+    double const old_v_x = parabola_.vertex_x();
+    Dout(dc::notice, "old_v_x = " << old_v_x);
+
+    // If the new sample is closer to the (old) vertex then we just jumped to it.
+    // Update the scale accordingly.
+    if (std::abs(relevant_samples[current_index]->w() - old_v_x) < std::abs(relevant_samples[prev_sample_index]->w() - old_v_x))
+    {
+      Dout(dc::notice, "The new w (" << *relevant_samples[current_index] << ") is closest to the old vertex (at " << old_v_x << ")");
+
+      // Get the y-coordinate at the w value of the stored edge sample, according to the new parabola.
+      double const new_Lw_stored_edge_sample = new_parabola(edge_sample_w_);
+      // Get the vertical distance from the stored edge sample to the new parabola.
+      double const distance_stored_edge_sample_to_parabola = std::abs(new_Lw_stored_edge_sample - edge_sample_Lw_);
+      // Get the vertical distance from the stored edge sample to the vertex of the new parabola
+      // (equal to abs(new_parabola.height(edge_sample_w_))).
+      double const abs_stored_edge_sample_height = std::abs(new_Lw_stored_edge_sample - new_parabola.vertex_y());
+      // If the stored sample vertically deviates more than 10%, we need to adjust the stored sample values.
+      if (distance_stored_edge_sample_to_parabola > 0.1 * abs_stored_edge_sample_height)
+      {
+        Dout(dc::notice, "Discarded old sample at L(" << edge_sample_w_ << ") = " << edge_sample_Lw_ << " because " <<
+            distance_stored_edge_sample_to_parabola << " > 0.1 * " << abs_stored_edge_sample_height);
+
+        static constexpr int left = -1;
+        static constexpr int right = 1;
+        // On which side of the vertex is the old sample?
+        int hside = edge_sample_w_ < new_v_x ? left : right;
+
+        int count;
+        std::array<double, 4> toggles;
+        bool close = new_parabola.equal_intervals(parabola_, toggles, count);
+        double new_edge_w;
+
+        // Run over intervals from left-to-right when hside == left, and from right-to-left when hside == right.
+        //
+        //          0     1     2     3
+        //    -inf  |     |     |     |  +inf     <-- interval
+        //   begin <0    <1    <2    <3  end      <-- running from left-to-right
+        //     end  0>    1>    2>    3> begin    <-- running from right-to-left
+        //
+        //                   ^     ^        ^
+        //                   |     |        |
+        //                  v_x    |      edge_sample_w_
+        //                    edge_sample.w()
+        //
+        if (hside == left)
+        {
+          // Find the interval that edge_sample_w_ is in.
+          int i = 0;
+          while (i != count)
+          {
+            if (edge_sample_w_ < toggles[i])
+              break;
+            ++i;
+            close = !close;
+          }
+          // Use the old value, unless it is too far away from the new parabola. Don't go beyond the new edge sample.
+          new_edge_w = std::min(close ? edge_sample_w_ : toggles[i], edge_sample->w());
+        }
+        else
+        {
+          // Find the interval that edge_sample_w_ is in.
+          int i = count - 1;
+          while (i != -1)
+          {
+            if (edge_sample_w_ > toggles[i])
+              break;
+            --i;
+            close = !close;
+          }
+          // Use the old value, unless it is too far away from the new parabola. Don't go beyond the new edge sample.
+          new_edge_w = std::max(close ? edge_sample_w_ : toggles[i], edge_sample->w());
+        }
+
+        edge_sample_w_ = new_edge_w;
+        edge_sample_Lw_ = utils::almost_equal(new_edge_w, edge_sample->w(), 1e-3) ? edge_sample->Lw() : new_parabola(new_edge_w);
+      }
+      scale_ = edge_sample_w_ - new_v_x;
+      Dout(dc::notice, "scale was set to " << edge_sample_w_ << " - " << new_v_x << " = " << scale_);
+
+      parabola_ = new_parabola;
+
+      return ScaleUpdate::towards_vertex;
+    }
+
+    Sample const* current = relevant_samples[current_index];
+    // Calculate the potential new scale relative to the vertex of the canonical parabola.
+    double new_scale = current->w() - old_v_x;
+    // If the scale could grow, see if the new sample is close enough to the parabola.
     if (std::abs(new_scale) > std::abs(scale_))
     {
       // Get the y-coordinate at the w value of the new sample, according to the parabola.
-      double const parabola_Lw_at_new_sample = parabola_(new_sample.w());
+      double const parabola_Lw_at_current = parabola_(current->w());
       // Get the vertical distance from the new sample to the new parabola.
-      double const distance_new_sample_to_parabola = std::abs(parabola_Lw_at_new_sample - new_sample.Lw());
+      double const distance_current_to_parabola = std::abs(parabola_Lw_at_current - current->Lw());
       // Get the vertical distance from the new sample to the vertex of the parabola.
-      double const abs_new_sample_height = std::abs(new_sample.Lw() - parabola_.vertex_y());
+      double const abs_current_height = std::abs(current->Lw() - parabola_.vertex_y());
       // If the new sample vertically deviates less than 10%, we can use the new sample as new edge sample and adjust the scale accordingly.
-      if (distance_new_sample_to_parabola < 0.1 * abs_new_sample_height)
+      if (distance_current_to_parabola < 0.1 * abs_current_height)
       {
         scale_ = new_scale;
-        edge_sample_w_ = new_sample.w();
-        edge_sample_Lw_ = new_sample.Lw();
-        Dout(dc::notice, "scale was set to " << scale_);
-        return true;
+        edge_sample_w_ = current->w();
+        edge_sample_Lw_ = current->Lw();
+        Dout(dc::notice, "scale was set to " << *current << " - " << old_v_x << " = " << scale_);
       }
     }
-
-    return false;
+    return ScaleUpdate::away_from_vertex;
   }
 
 #ifdef CWDEBUG

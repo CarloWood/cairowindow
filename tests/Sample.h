@@ -48,7 +48,7 @@ class Sample : protected Weight
   }
 
 #ifdef CWDEBUG
-  void print_on(std::ostream& os) const
+  virtual void print_on(std::ostream& os) const
   {
     os << "{w:" << w_ << ", Lw:" << Lw_ << ", dLdw:" << dLdw_ << "}";
   }
