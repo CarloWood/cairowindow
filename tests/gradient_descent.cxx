@@ -22,17 +22,6 @@
 #include "utils/print_using.h"
 #endif
 
-#if 0
-  Expression const& polynomial = a + b * w + c * (w^2) + d * (w^3) + e * (w^4) + f * (w^5);
-  Dout(dc::notice, "polynomial = " << polynomial);
-  a = -2.0;
-  b = 3.0;
-  c = -0.2;
-  d = 0.4;
-  e = -0.01;
-  f = 0.002;
-#endif
-
 using utils::has_print_on::operator<<;
 
 #if 1
@@ -193,41 +182,45 @@ class Function
 #endif
 
 // A Sample including plot objects: a point and a label.
-//FIXME: turn this into a sibling
-class Sample : public gradient_descent::Sample
+class PlotSample
 {
  private:
+  gradient_descent::Sample const* master_{};
+
   mutable cairowindow::plot::Point P_;
   mutable cairowindow::plot::Text P_label_;
 
  public:
-  // Create an uninitialized Sample, required for the History.
-  Sample() = default;
+  // Required for History.
+  PlotSample() = default;
 
-  // Constructor.
-  Sample(Weight w, double Lw, double dLdw,
-      cairowindow::plot::Point const& point, cairowindow::plot::Text const& label) :
-    gradient_descent::Sample(w, Lw, dLdw), P_(point), P_label_(label) { }
+  // Constructor used by LocalExtreme.
+  PlotSample(gradient_descent::Sample const* master, cairowindow::plot::Point const& point, cairowindow::plot::Text const& label) :
+    master_(master), P_(point), P_label_(label) { }
 
-  void set_point(cairowindow::plot::Point const& P) const
+  // Required for History.
+  void initialize(gradient_descent::Sample const* master, cairowindow::plot::Point const& point, cairowindow::plot::Text const& label)
   {
-    P_ = P;
-  }
-
-  void set_label(cairowindow::plot::Text const& text) const
-  {
-    P_label_ = text;
+    master_ = master;
+    P_ = point;
+    P_label_ = label;
   }
 
   cairowindow::Point const& P() const { return P_; }
   cairowindow::Text const& label() const { return P_label_; }
 
+  gradient_descent::Sample const* sample() const { return master_; }
+
+  double w() const { return master_->w(); }
+  double Lw() const { return master_->Lw(); }
+  double dLdw() const { return master_->dLdw(); }
+
 #ifdef CWDEBUG
   std::string debug_label() const { return P_label_.text(); }
 
-  void print_on(std::ostream& os) const override
+  void print_on(std::ostream& os) const
   {
-    os << debug_label() << " (at " << w_ << ")";
+    os << debug_label() << " (at w = " << master_->w() << ")";
   }
 #endif
 };
@@ -302,19 +295,34 @@ class PlotParabolaScale
   }
 };
 
-template<gradient_descent::ConceptSample T>
-class History : public gradient_descent::History<T>
+class PlotHistory : public gradient_descent::History
 {
  private:
   cairowindow::plot::Plot& plot_;
   boost::intrusive_ptr<cairowindow::Layer> const& layer_;
   cairowindow::draw::PointStyle const& point_style_;
   cairowindow::draw::TextStyle const& label_style_;
+  utils::Array<PlotSample, size, gradient_descent::HistoryIndex> plot_samples_;
 
  public:
-  History(cairowindow::plot::Plot& plot, boost::intrusive_ptr<cairowindow::Layer> const& layer,
+  PlotHistory(cairowindow::plot::Plot& plot, boost::intrusive_ptr<cairowindow::Layer> const& layer,
       cairowindow::draw::PointStyle const& point_style, cairowindow::draw::TextStyle const& label_style) :
     plot_(plot), layer_(layer), point_style_(point_style), label_style_(label_style) { }
+
+  PlotSample const& add(double w, double Lw, double dLdw, gradient_descent::Scale const& scale, bool& current_is_replacement)
+  {
+    gradient_descent::HistoryIndex index = gradient_descent::History::add(w, Lw, dLdw, scale, current_is_replacement);
+    plot_samples_[index].initialize(&current(),
+      plot_.create_point(layer_, point_style_, {w, Lw}),
+      plot_.create_text(layer_, label_style_({.position = cairowindow::draw::centered_below}),
+            cairowindow::Point{w, Lw}, std::to_string(total_number_of_samples() - 1)));
+    return plot_samples_[index];
+  }
+
+  cairowindow::plot::Plot& plot() const { return plot_; }
+  boost::intrusive_ptr<cairowindow::Layer> const& layer() const { return layer_; }
+  cairowindow::draw::PointStyle const& point_style() const { return point_style_; }
+  cairowindow::draw::TextStyle const& label_style() const { return label_style_; }
 };
 
 //static
@@ -421,12 +429,16 @@ class KineticEnergy
 
 struct PlotLocalExtreme : gradient_descent::LocalExtreme
 {
-  PlotParabolaScale plot_approximation_parabola_scale_;        // Sibling of gradient_descent::LocalExtreme::approximation_
+  PlotParabolaScale plot_approximation_parabola_scale_;         // Sibling of gradient_descent::LocalExtreme::approximation_
+  PlotSample plot_vertex_sample_;                               // Sibling of gradient_descent::LocalExtreme::vertex_sample_
 
-  PlotLocalExtreme(cairowindow::plot::Plot& plot, boost::intrusive_ptr<cairowindow::Layer> const& layer,
-      Sample const& minimum, gradient_descent::Approximation const& approximation, double energy) :
-    gradient_descent::LocalExtreme(minimum, approximation, energy),
-    plot_approximation_parabola_scale_(approximation_.parabola_scale(), plot, layer) { }
+  PlotLocalExtreme(PlotHistory const& history, gradient_descent::Approximation const& approximation, double energy) :
+    gradient_descent::LocalExtreme(history.current(), approximation, energy),
+    plot_approximation_parabola_scale_(approximation_.parabola_scale(), history.plot(), history.layer()),
+    plot_vertex_sample_(&vertex_sample_,
+        history.plot().create_point(history.layer(), history.point_style()({.color_index = 15}), {vertex_sample_.w(), vertex_sample_.Lw()}),
+        history.plot().create_text(history.layer(), history.label_style()({.position = cairowindow::draw::centered_below}),
+          cairowindow::Point{vertex_sample_.w(), vertex_sample_.Lw()}, std::to_string(history.total_number_of_samples() - 1))) { }
 };
 
 //static
@@ -451,7 +463,6 @@ int main()
     using namespace cairowindow;
     using namespace gradient_descent;
     using Window = cairowindow::Window;
-    using Sample = ::Sample;
 
     // Create a window.
     Window window("Gradient descent of " + L.as_string(), 600, 450);
@@ -504,7 +515,7 @@ int main()
     auto plot_curve = plot.create_bezier_fitter(second_layer, curve_line_style, std::move(L_fitter));
 
     // Remember the (most recent) history of samples.
-    ::History<Sample> history(plot, second_layer, point_style, label_style);
+    PlotHistory history(plot, second_layer, point_style, label_style);
 
     // Initial value.
     Weight w(w_0);
@@ -546,13 +557,9 @@ int main()
     {
       // Add new sample to the history.
       bool current_is_replacement;
-      Sample const& current = history.add(w, L(w), L.derivative(w), approximation_ptr->parabola_scale(), current_is_replacement);
+      PlotSample const& current = history.add(w, L(w), L.derivative(w), approximation_ptr->parabola_scale(), current_is_replacement);
       // If current_is_replacement is true then the previous `current` had a value so close to w that
       // it was replaced instead of adding a new sample to the history.
-
-      current.set_point(plot.create_point(second_layer, point_style, {current.w(), current.Lw()}));
-      current.set_label(plot.create_text(second_layer, label_style({.position = cairowindow::draw::centered_below}),
-            current.P(), std::to_string(history.total_number_of_samples() - 1)));
 
       if (step_kind == StepKind::check_energy)
       {
@@ -597,7 +604,7 @@ int main()
         Approximation& approximation(*approximation_ptr);
         PlotParabolaScale& plot_parabola_scale(*plot_approximation_parabola_scale_ptr);
 
-        ScaleUpdate result = approximation.add(&current, current_is_replacement);
+        ScaleUpdate result = approximation.add(current.sample(), current_is_replacement);
         math::QuadraticPolynomial old_parabola = plot_parabola_scale.get_parabola();
 
         switch (result)
@@ -687,7 +694,11 @@ int main()
             w = approximation.parabola().vertex_x();
             step -= w;
 #if 0
-            // Is this better?
+            // Use the actual derivative of L(w), instead of the derivative of the parabolic approximation
+            // which might be a little different when not both points lay on a piece of the curve that
+            // actually is a parabola.
+            //
+            // As a result, this new w might not be exactly equal to the vertex of the approximated parabola.
             double step = beta_inverse * current.dLdw();
             w -= step;
 #endif
@@ -709,7 +720,7 @@ int main()
 
                 // If the new sample is too close to the current one, then ignore current.
                 bool skip_sample = std::abs(w2_1 - current.w()) < 0.001 * approximation.parabola_scale();
-                Sample const& w1 = skip_sample ? prev : current;
+                Sample const& w1 = skip_sample ? prev : *current.sample();
                 Sample const& w0 = skip_sample ? history.prev_prev() : prev;
 
                 double w1_1 = w1.w();
@@ -805,11 +816,9 @@ int main()
                   // Store it as an extreme.
                   extremes_type::iterator new_extreme;
                   if (hdirection == right)
-                    new_extreme = extremes.emplace(extremes.end(), plot, second_layer,
-                        history.current(), approximation, energy.energy());
+                    new_extreme = extremes.emplace(extremes.end(), history, approximation, energy.energy());
                   else
-                    new_extreme = extremes.emplace(extremes.begin(), plot, second_layer,
-                        history.current(), approximation, energy.energy());
+                    new_extreme = extremes.emplace(extremes.begin(), history, approximation, energy.energy());
 
                   // Switch approximation_ptr to the parabolic approximation stored in this extreme:
                   // we need to keep updating it when new samples are added that match the same parabolic.
@@ -848,18 +857,12 @@ int main()
                          (hdirection == unknown_horizontal_direction &&
                           fourth_degree_approximation(zeroes[1]) < fourth_degree_approximation(zeroes[0])))) ? 1 : 0;
                     w = zeroes[best_zero];
-#if 0
-//FIXME: handle scale
-                    scale->reset(number_of_zeroes < 2 ? scale : zeroes[1] - zeroes[0]);
-                    scale->erase_indicators();
-#else
                     // Use the Approximation object on the stack again (as opposed to one from a LocalExtreme).
                     plot_approximation_parabola_scale_ptr->erase_indicators();
                     approximation_ptr = &current_approximation;
                     plot_approximation_parabola_scale_ptr = &current_plot_approximation_parabola_scale;
                     // Reset the parabolic approximation.
                     approximation_ptr->reset();
-#endif
                     history.reset();
                     Dout(dc::notice, "Set w to found extreme: w = " << w);
                     Dout(dc::notice(hdirection == unknown_horizontal_direction && number_of_zeroes == 2),

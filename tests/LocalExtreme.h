@@ -9,11 +9,11 @@ namespace gradient_descent {
 class LocalExtreme
 {
  protected:
-  Approximation approximation_;      // The (parabolic) polynomial approximation around this extreme.
-  Sample vertex_sample_;                                // Sample taken at the vertex of the approximation_;
-  double energy_;                                       // The maximum height (Lw) that can be reached from here.
-  int done_{0};                                         // Bit 1: exploration to the left of this extreme has been finished.
-                                                        // Bit 2: same, on the right.
+  Approximation approximation_;         // The (parabolic) polynomial approximation around this extreme.
+  Sample vertex_sample_;                // Sample taken at the vertex of the approximation_;
+  double energy_;                       // The maximum height (Lw) that can be reached from here.
+  int done_{0};                         // Bit 1: exploration to the left of this extreme has been finished.
+                                        // Bit 2: same, on the right.
  public:
   LocalExtreme(Sample const& vertex_sample, Approximation const& approximation, double energy) :
     vertex_sample_(vertex_sample), approximation_(approximation), energy_(energy)

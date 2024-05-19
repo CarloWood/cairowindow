@@ -48,14 +48,11 @@ class Sample : protected Weight
   }
 
 #ifdef CWDEBUG
-  virtual void print_on(std::ostream& os) const
+  void print_on(std::ostream& os) const
   {
     os << "{w:" << w_ << ", Lw:" << Lw_ << ", dLdw:" << dLdw_ << "}";
   }
 #endif
 };
-
-template<typename T>
-concept ConceptSample = std::is_base_of_v<Sample, T>;
 
 } // namespace gradient_descent
