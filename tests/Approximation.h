@@ -43,7 +43,7 @@ class Approximation
  public:
   // Called with the latest samples that are expected to match this parabola (or that
   // should construct the parabola when there are not already two relevant samples stored).
-  ScaleUpdate add(Sample const* current, bool current_is_replacement);
+  ScaleUpdate add(Sample const* current, bool update_scale_only, bool current_is_replacement);
 
 #ifdef CWDEBUG
   void set_is_part_of_extreme()

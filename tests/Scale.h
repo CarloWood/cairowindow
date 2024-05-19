@@ -91,9 +91,6 @@ class Scale
     // Is this not true?
     ASSERT(saw_more_than_two_relevant_samples || !has_sample_);
 
-    // Trying to find this bug.
-    ASSERT(relevant_samples[0] != relevant_samples[1]);
-
     int const prev_sample_index = 1 - current_index;
 
     // Get the x coordinate (w value) of the vertex of the new parabola.
@@ -231,10 +228,24 @@ class Scale
       // If the new sample vertically deviates less than 10%, we can use the new sample as new edge sample and adjust the scale accordingly.
       if (distance_current_to_parabola < 0.1 * abs_current_height)
       {
-        scale_ = new_scale;
-        edge_sample_w_ = current->w();
-        edge_sample_Lw_ = current->Lw();
-        Dout(dc::notice, "scale was set to " << *current << " - " << old_v_x << " = " << scale_);
+        // Get the derivative at the w value of the new sample, according to the parabola.
+        double const parabola_dLdw_at_current = parabola_.derivative(current->w());
+        // Get the real derivative at this w value.
+        double const dLdw_at_current = current->dLdw();
+        // The sin of the angle between the tangent lines at this point (with slopes corresponding to these derivatives)
+        // is given by: sin(delta_angle) = (s_1 - s_2) / sqrt((1 + (s_1)^2)(1 + (s_2)^2)).
+        // Calculate the square of the sinus of the angle between these lines.
+        double const s1s2 = parabola_dLdw_at_current * dLdw_at_current;
+        double const s12 = parabola_dLdw_at_current * parabola_dLdw_at_current;
+        double const s22 = dLdw_at_current * dLdw_at_current;
+        double const sin2 = (s12 - 2.0 * s1s2 + s22) / ((1.0 + s12) * (1.0 + s22));
+        if (sin2 < 0.03)
+        {
+          scale_ = new_scale;
+          edge_sample_w_ = current->w();
+          edge_sample_Lw_ = current->Lw();
+          Dout(dc::notice, "scale was set to " << *current << " - " << old_v_x << " = " << scale_);
+        }
       }
     }
     return ScaleUpdate::away_from_vertex;

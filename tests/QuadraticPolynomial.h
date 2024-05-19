@@ -26,6 +26,12 @@ class QuadraticPolynomial
     return coefficients_[0] + (coefficients_[1] + coefficients_[2] * w) * w;
   };
 
+  // Evaluate derivative.
+  double derivative(double w) const
+  {
+    return coefficients_[1] + 2.0 * coefficients_[2] * w;
+  }
+
   // Access coefficients.
   double operator[](int i) const { ASSERT(0 <= i && i < coefficients_.size()); return coefficients_[i]; }
   double& operator[](int i) { ASSERT(0 <= i && i < coefficients_.size()); return coefficients_[i]; }

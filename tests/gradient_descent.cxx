@@ -24,7 +24,7 @@
 
 using utils::has_print_on::operator<<;
 
-#if 1
+#if 0
 class Function
 {
  public:
@@ -604,7 +604,7 @@ int main()
         Approximation& approximation(*approximation_ptr);
         PlotParabolaScale& plot_parabola_scale(*plot_approximation_parabola_scale_ptr);
 
-        ScaleUpdate result = approximation.add(current.sample(), current_is_replacement);
+        ScaleUpdate result = approximation.add(current.sample(), approximation_ptr != &current_approximation, current_is_replacement);
         math::QuadraticPolynomial old_parabola = plot_parabola_scale.get_parabola();
 
         switch (result)
@@ -711,7 +711,7 @@ int main()
                   (history.total_number_of_samples() - 1) << " and " << history.total_number_of_samples() << " (to be added))");
 
               // Did we reach the (local) extreme?
-              if (abs_step < 0.01 * approximation.parabola_scale())
+              if (abs_step < (vdirection == up ? 0.05 : 0.01) * approximation.parabola_scale())
               {
                 double w2_1 = w;
                 double w2_2 = w2_1 * w2_1;
@@ -797,105 +797,101 @@ int main()
                 plot_quotient_curve.solve([&quotient](double w) -> Point { return {w, 10.0 * quotient(w)}; }, plot.viewport());
                 plot.add_bezier_fitter(second_layer, curve_line_style({.line_color = color::blue}), plot_quotient_curve);
 
-                // Isn't this always true?!
-                ASSERT(abs_step < (vdirection == up ? 0.05 : 0.01) * approximation.parabola_scale());
+                Dout(dc::notice, (vdirection == up ? "Maximum" : "Minimum") << " reached: " << abs_step <<
+                    " < 0.01 * " << approximation.parabola_scale());
 
-                // Did we reach the (local) extreme?
-                if (abs_step < (vdirection == up ? 0.05 : 0.01) * approximation.parabola_scale())
+                // Store the found extreme in the history.
+                //FIXME: can't this be done by top of loop?
+                history.add(w, L(w), L.derivative(w), approximation.parabola_scale(), current_is_replacement);
+
+                // Following adding the first extreme, we need to decide on a horizontal direction!
+                ASSERT(hdirection != unknown_horizontal_direction || extremes.empty());
+
+                // Store it as an extreme.
+                extremes_type::iterator new_extreme;
+                if (hdirection == right)
+                  new_extreme = extremes.emplace(extremes.end(), history, approximation, energy.energy());
+                else
+                  new_extreme = extremes.emplace(extremes.begin(), history, approximation, energy.energy());
+
+                // Switch approximation_ptr to the parabolic approximation stored in this extreme:
+                // we need to keep updating it when new samples are added that match the same parabolic.
+                plot_approximation_parabola_scale_ptr->erase_indicators();
+                approximation_ptr = &new_extreme->approximation();
+                plot_approximation_parabola_scale_ptr = &new_extreme->plot_approximation_parabola_scale_;
+
+                // Keep track of the best minimum so far; or abort if this minimum isn't better then one found before.
+                if (vdirection == down)
                 {
-                  Dout(dc::notice, (vdirection == up ? "Maximum" : "Minimum") << " reached: " << abs_step <<
-                      " < 0.01 * " << approximation.parabola_scale());
+                  if (best_minimum == extremes.end() || best_minimum->vertex_sample().Lw() > new_extreme->vertex_sample().Lw())
+                  {
+                    best_minimum = new_extreme;
+                    Dout(dc::notice, "best_minimum set to " << best_minimum->vertex_sample() <<
+                        " and parabolic approximation: " << approximation);
+                  }
+                  if (new_extreme != best_minimum)
+                  {
+                    // The new minimum isn't better than what we found already. Stop going into this direction.
+                    Dout(dc::notice, "The new minimum isn't better than what we found already. Stop going into the direction " << hdirection);
+                    step_kind = StepKind::abort;
+                  }
+                }
 
-                  // Store the found extreme in the history.
-                  //FIXME: can't this be done by top of loop?
-                  history.add(w, L(w), L.derivative(w), approximation.parabola_scale(), current_is_replacement);
+                ASSERT(extremes.size() != 1 ||
+                    (vdirection == down && best_minimum != extremes.end() && step_kind != StepKind::abort));
 
-                  // Following adding the first extreme, we need to decide on a horizontal direction!
-                  ASSERT(hdirection != unknown_horizontal_direction || extremes.empty());
+                // Change vdirection.
+                vdirection = -vdirection;
+                Dout(dc::notice, "vdirection is set to " << (vdirection == up ? "up" : "down") << " (hdirection = " << hdirection << ")");
 
-                  // Store it as an extreme.
-                  extremes_type::iterator new_extreme;
-                  if (hdirection == right)
-                    new_extreme = extremes.emplace(extremes.end(), history, approximation, energy.energy());
-                  else
-                    new_extreme = extremes.emplace(extremes.begin(), history, approximation, energy.energy());
-
-                  // Switch approximation_ptr to the parabolic approximation stored in this extreme:
-                  // we need to keep updating it when new samples are added that match the same parabolic.
+                if (number_of_zeroes > 0)
+                {
+                  int best_zero = (number_of_zeroes == 2 &&
+                      (hdirection == right ||
+                       (hdirection == unknown_horizontal_direction &&
+                        fourth_degree_approximation(zeroes[1]) < fourth_degree_approximation(zeroes[0])))) ? 1 : 0;
+                  w = zeroes[best_zero];
+                  // Use the Approximation object on the stack again (as opposed to one from a LocalExtreme).
                   plot_approximation_parabola_scale_ptr->erase_indicators();
-                  approximation_ptr = &new_extreme->approximation(hdirection);
-                  plot_approximation_parabola_scale_ptr = &new_extreme->plot_approximation_parabola_scale_;
+                  approximation_ptr = &current_approximation;
+                  plot_approximation_parabola_scale_ptr = &current_plot_approximation_parabola_scale;
+                  // Reset the parabolic approximation.
+                  approximation_ptr->reset();
+                  history.reset();
+                  Dout(dc::notice, "Set w to found extreme: w = " << w);
+                  Dout(dc::notice(hdirection == unknown_horizontal_direction && number_of_zeroes == 2),
+                      "Best zero was " << zeroes[best_zero] << " with A(" << zeroes[best_zero] << ") = " <<
+                      fourth_degree_approximation(zeroes[best_zero]) <<
+                      " (the other has value " << fourth_degree_approximation(zeroes[1 - best_zero]) << ")");
 
-                  // Keep track of the best minimum so far; or abort if this minimum isn't better then one found before.
-                  if (vdirection == down)
+                  // Update the current kinetic energy. If this is an overshoot, just increase the energy to 0.
+                }
+
+                if (hdirection == unknown_horizontal_direction)
+                {
+                  if (number_of_zeroes == 0)
                   {
-                    if (best_minimum == extremes.end() || best_minimum->vertex_sample().Lw() > new_extreme->vertex_sample().Lw())
-                    {
-                      best_minimum = new_extreme;
-                      Dout(dc::notice, "best_minimum set to " << best_minimum->vertex_sample() <<
-                          " and parabolic approximation: " << approximation);
-                    }
-                    if (new_extreme != best_minimum)
-                    {
-                      // The new minimum isn't better than what we found already. Stop going into this direction.
-                      Dout(dc::notice, "The new minimum isn't better than what we found already. Stop going into the direction " << hdirection);
-                      step_kind = StepKind::abort;
-                    }
+                    // The "scale" of the (current) parabolic approximation is set to 'edge sample' minus x-coordinate of the vertex (v_x),
+                    // where 'edge sample' is the sample that is "part of" the parabolic approximation that is the furthest away
+                    // from the vertex. "Part of" here means that it deviates vertically less than 10% of the vertical distance to
+                    // the vertex. In that sense we can consider that we "came from" the direction of that edge sample.
+                    // For example, if the edge sample had x-coordinate w = w_E and we came from the right (w_E > v_x) then
+                    // scale = w_E - v_x > 0. Subtracting a positive scale thus means we continue in the direction towards to the left.
+                    // If w_E is on the left of the vertex then scale is negative and subtracting is causes us to continue to the right.
+                    //
+                    // Keep going in the same vdirection.
+                    w -= approximation.parabola_scale();
+
+                    // Note that w was already set to the v_x before, but the test below still works
+                    // because |v_x - history.current().w()| was determined to be less than 1% of approximation.parabola_scale().
                   }
 
-                  ASSERT(extremes.size() != 1 ||
-                      (vdirection == down && best_minimum != extremes.end() && step_kind != StepKind::abort));
+                  // Now that the decision on which hdirection we explore is taken, store that decision.
+                  hdirection = w - history.current().w() < 0.0 ? left : right;
+                  Dout(dc::notice, "Initializing horizontal direction to " << hdirection);
 
-                  // Change vdirection.
-                  vdirection = -vdirection;
-                  Dout(dc::notice, "vdirection is set to " << (vdirection == up ? "up" : "down") << " (hdirection = " << hdirection << ")");
-
-                  if (number_of_zeroes > 0)
-                  {
-                    int best_zero = (number_of_zeroes == 2 &&
-                        (hdirection == right ||
-                         (hdirection == unknown_horizontal_direction &&
-                          fourth_degree_approximation(zeroes[1]) < fourth_degree_approximation(zeroes[0])))) ? 1 : 0;
-                    w = zeroes[best_zero];
-                    // Use the Approximation object on the stack again (as opposed to one from a LocalExtreme).
-                    plot_approximation_parabola_scale_ptr->erase_indicators();
-                    approximation_ptr = &current_approximation;
-                    plot_approximation_parabola_scale_ptr = &current_plot_approximation_parabola_scale;
-                    // Reset the parabolic approximation.
-                    approximation_ptr->reset();
-                    history.reset();
-                    Dout(dc::notice, "Set w to found extreme: w = " << w);
-                    Dout(dc::notice(hdirection == unknown_horizontal_direction && number_of_zeroes == 2),
-                        "Best zero was " << zeroes[best_zero] << " with A(" << zeroes[best_zero] << ") = " <<
-                        fourth_degree_approximation(zeroes[best_zero]) <<
-                        " (the other has value " << fourth_degree_approximation(zeroes[1 - best_zero]) << ")");
-
-                    // Update the current kinetic energy. If this is an overshoot, just increase the energy to 0.
-                  }
-
-                  if (hdirection == unknown_horizontal_direction)
-                  {
-                    if (number_of_zeroes == 0)
-                    {
-                      // The "scale" of the (current) parabolic approximation is set to 'edge sample' minus x-coordinate of the vertex (v_x),
-                      // where 'edge sample' is the sample that is "part of" the parabolic approximation that is the furthest away
-                      // from the vertex. "Part of" here means that it deviates vertically less than 10% of the vertical distance to
-                      // the vertex. In that sense we can consider that we "came from" the direction of that edge sample.
-                      // For example, if the edge sample had x-coordinate w = w_E and we came from the right (w_E > v_x) then
-                      // scale = w_E - v_x > 0. Subtracting a positive scale thus means we continue in the direction towards to the left.
-                      // If w_E is on the left of the vertex then scale is negative and subtracting is causes us to continue to the right.
-                      //
-                      // Keep going in the same vdirection.
-                      w -= approximation.parabola_scale();
-
-                      // Note that w was already set to the v_x before, but the test below still works
-                      // because |v_x - history.current().w()| was determined to be less than 1% of approximation.parabola_scale().
-                    }
-
-                    // Now that the decision on which hdirection we explore is taken, store that decision.
-                    hdirection = w - history.current().w() < 0.0 ? left : right;
-                    Dout(dc::notice, "Initializing horizontal direction to " << hdirection);
-                  }
+                  // Remember we in which direction we travelled from this extreme.
+                  new_extreme->done(hdirection);
                 }
               }
             }
@@ -906,6 +902,7 @@ int main()
       if (step_kind == StepKind::abort)
       {
         // Jump back to the best minimum and continue in the opposite hdirection.
+        Dout(dc::notice, "Aborting " << hdirection);
 
         // Has a minimum been found at all?
         if (best_minimum == extremes.end())
@@ -926,7 +923,8 @@ int main()
         Dout(dc::notice, "Restored w to best minimum at " << w);
 
         // Do a step with a size equal to the scale in this minimum: we expect it not to drastically change before that point.
-        w += static_cast<int>(hdirection) * std::abs(best_minimum->approximation(hdirection).parabola_scale());
+        w += static_cast<int>(hdirection) * std::abs(best_minimum->approximation().parabola_scale());
+        best_minimum->done(hdirection);
 
         // Restore the energy to what it was when this minimum was stored.
         energy.set(best_minimum->energy(), best_minimum->vertex_sample().Lw());
