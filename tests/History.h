@@ -74,17 +74,11 @@ class History
     ASSERT(current_.get_value() < total_number_of_samples_);
     return samples_[current_];
   }
-  Sample const& prev() const
+  Sample const& prev(int count) const
   {
-    ASSERT(!prev_.undefined());
-    ASSERT(prev_.get_value() < total_number_of_samples_);
-    return samples_[prev_];
-  }
-  Sample const& prev_prev() const
-  {
-    ASSERT(!prev_.undefined());
-    ASSERT(prev_.get_value() < total_number_of_samples_);
-    return samples_[before(prev_)];
+    ASSERT(total_number_of_samples_ > count);
+    HistoryIndex index{(current_.get_value() + size - count) % size};
+    return samples_[index];
   }
 
   int total_number_of_samples() const { return total_number_of_samples_; }

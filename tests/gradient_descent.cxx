@@ -24,7 +24,7 @@
 
 using utils::has_print_on::operator<<;
 
-#if 0
+#if 1
 class Function
 {
  public:
@@ -548,6 +548,7 @@ int main()
     {
       done,                     // w was already updated.
       check_energy,             // After adding the new sample, abort if the required energy is too large.
+      local_extreme,            // After adding the new sample, handle the fact that we found an extreme.
       abort                     // Stop going in the current vdirection.
     };
 
@@ -569,6 +570,182 @@ int main()
           Dout(dc::notice, "Too much energy used: need to abort this direction.");
           ASSERT(hdirection != unknown_horizontal_direction);
         }
+      }
+      else if (step_kind == StepKind::local_extreme)
+      {
+        Sample const& w2 = *current.sample();
+        // If the current sample is too close to the prev(1), then ignore prev(1).
+        bool skip_sample = std::abs(current.w() - history.prev(1).w()) < 0.001 * approximation_ptr->parabola_scale();
+        Sample const& w1 = history.prev(1 + (skip_sample ? 1 : 0));
+        Sample const& w0 = history.prev(2 + (skip_sample ? 1 : 0));
+
+        double w2_1 = w2.w();
+        double w2_2 = w2_1 * w2_1;
+        double w2_3 = w2_2 * w2_1;
+        double w2_4 = w2_2 * w2_2;
+
+        double w1_1 = w1.w();
+        double w1_2 = w1_1 * w1_1;
+        double w1_3 = w1_2 * w1_1;
+        double w1_4 = w1_2 * w1_2;
+
+        double w0_1 = w0.w();
+        double w0_2 = w0_1 * w0_1;
+        double w0_3 = w0_2 * w0_1;
+        double w0_4 = w0_2 * w0_2;
+
+        Dout(dc::notice, "Fitting a fourth degree polynomial using the samples at " << w0_1 << ", " << w1_1 << " and " << w2_1);
+
+        // If we have (at least) three points, the approximation is a fourth degree parabola:
+        //
+        //   A(w) = a + b w + c w² + d w³ + e w⁴
+        //
+        // for which we determined the value of the derivative at three points, L'(w₀), L'(w₁) and L'(w₂).
+        //
+        // The matrix form for the coefficients of the polynomial then becomes:
+        //
+        //   ⎡  1      2w₂      3w₂²     4w₂³ ⎤ ⎡b⎤   ⎡    L'(w₂)   ⎤
+        //   ⎢  1      2w₁      3w₁²     4w₁³ ⎥ ⎢c⎥   ⎢    L'(w₁)   ⎥
+        //   ⎢  1      2w₀      3w₀²     4w₀³ ⎥ ⎢d⎥ = ⎢    L'(w₀)   ⎥
+        //   ⎣w₂-w₁  w₂²-w₁²  w₂³-w₁³  w₂⁴-w₁⁴⎦ ⎣e⎦   ⎣L(w₂) - L(w₁)⎦
+        //
+        Eigen::Matrix4d M;
+        M <<        1.0,   2.0 *  w2_1,    3.0 * w2_2,    4.0 * w2_3,
+                    1.0,   2.0 *  w1_1,    3.0 * w1_2,    4.0 * w1_3,
+                    1.0,   2.0 *  w0_1,    3.0 * w0_2,    4.0 * w0_3,
+            w2_1 - w1_1,   w2_2 - w1_2,   w2_3 - w1_3,   w2_4 - w1_4;
+
+        Eigen::Vector4d D;
+        D <<         w2.dLdw(),
+                     w1.dLdw(),
+                     w0.dLdw(),
+             w2.Lw() - w1.Lw();
+
+        Eigen::Vector4d C = M.colPivHouseholderQr().solve(D);
+
+        math::Polynomial fourth_degree_approximation(5 COMMA_CWDEBUG_ONLY("w"));
+        fourth_degree_approximation[1] = C[0];
+        fourth_degree_approximation[2] = C[1];
+        fourth_degree_approximation[3] = C[2];
+        fourth_degree_approximation[4] = C[3];
+        fourth_degree_approximation[0] = w2.Lw() - fourth_degree_approximation(w);
+        Dout(dc::notice, "approximation = " << fourth_degree_approximation);
+
+        plot_fourth_degree_approximation_curve.solve(
+            [&fourth_degree_approximation](double w) -> Point { return {w, fourth_degree_approximation(w)}; }, plot.viewport());
+        plot.add_bezier_fitter(second_layer, curve_line_style({.line_color = color::teal}), plot_fourth_degree_approximation_curve);
+
+        auto derivative = fourth_degree_approximation.derivative();
+        Dout(dc::notice, "derivative = " << derivative);
+
+        plot_derivative_curve.solve([&derivative](double w) -> Point { return {w, derivative(w)}; }, plot.viewport());
+        plot.add_bezier_fitter(second_layer, curve_line_style({.line_color = color::magenta}), plot_derivative_curve);
+
+        double remainder;
+        auto quotient = derivative.long_division(w, remainder);
+        Dout(dc::notice, "quotient = " << quotient << " with remainder " << remainder);
+
+        std::array<double, 2> zeroes;
+        int number_of_zeroes = quotient.get_zeroes(zeroes);
+        if (number_of_zeroes > 1)
+          Dout(dc::notice, "with zeroes " << zeroes[0] << " and " << zeroes[1]);
+        else if (number_of_zeroes == 1)
+          Dout(dc::notice, "with one zero at " << zeroes[0]);
+        else
+          Dout(dc::notice, "with no zeroes!");
+
+        plot_quotient_curve.solve([&quotient](double w) -> Point { return {w, 10.0 * quotient(w)}; }, plot.viewport());
+        plot.add_bezier_fitter(second_layer, curve_line_style({.line_color = color::blue}), plot_quotient_curve);
+
+        // Following adding the first extreme, we need to decide on a horizontal direction!
+        ASSERT(hdirection != unknown_horizontal_direction || extremes.empty());
+
+        // Store it as an extreme.
+        extremes_type::iterator new_extreme;
+        new_extreme = extremes.emplace(hdirection == right ? extremes.end() : extremes.begin(), history, *approximation_ptr, energy.energy());
+
+        // Switch approximation_ptr to the parabolic approximation stored in this extreme:
+        // we need to keep updating it when new samples are added that match the same parabolic.
+        plot_approximation_parabola_scale_ptr->erase_indicators();
+        approximation_ptr = &new_extreme->approximation();
+        plot_approximation_parabola_scale_ptr = &new_extreme->plot_approximation_parabola_scale_;
+
+        // Keep track of the best minimum so far; or abort if this minimum isn't better then one found before.
+        if (vdirection == down)
+        {
+          if (best_minimum == extremes.end() || best_minimum->vertex_sample().Lw() > new_extreme->vertex_sample().Lw())
+          {
+            best_minimum = new_extreme;
+            Dout(dc::notice, "best_minimum set to " << best_minimum->vertex_sample() <<
+                " and parabolic approximation: " << best_minimum->approximation());
+          }
+          if (new_extreme != best_minimum)
+          {
+            // The new minimum isn't better than what we found already. Stop going into this direction.
+            Dout(dc::notice, "The new minimum isn't better than what we found already. Stop going into the direction " << hdirection);
+            step_kind = StepKind::abort;
+          }
+        }
+
+        ASSERT(extremes.size() != 1 ||
+            (vdirection == down && best_minimum != extremes.end() && step_kind != StepKind::abort));
+
+        // Change vdirection.
+        vdirection = -vdirection;
+        Dout(dc::notice, "vdirection is set to " << (vdirection == up ? "up" : "down") << " (hdirection = " << hdirection << ")");
+
+        if (number_of_zeroes > 0)
+        {
+          int best_zero = (number_of_zeroes == 2 &&
+              (hdirection == right ||
+               (hdirection == unknown_horizontal_direction &&
+                fourth_degree_approximation(zeroes[1]) < fourth_degree_approximation(zeroes[0])))) ? 1 : 0;
+          w = zeroes[best_zero];
+          Dout(dc::notice, history.current().w() << " --> " << history.total_number_of_samples() << ": " << w << " [best zero]");
+          // Use the Approximation object on the stack again (as opposed to one from a LocalExtreme).
+          plot_approximation_parabola_scale_ptr->erase_indicators();
+          approximation_ptr = &current_approximation;
+          plot_approximation_parabola_scale_ptr = &current_plot_approximation_parabola_scale;
+          // Reset the parabolic approximation.
+          approximation_ptr->reset();
+          history.reset();
+          Dout(dc::notice(hdirection == unknown_horizontal_direction && number_of_zeroes == 2),
+              "Best zero was " << zeroes[best_zero] << " with A(" << zeroes[best_zero] << ") = " <<
+              fourth_degree_approximation(zeroes[best_zero]) <<
+              " (the other has value " << fourth_degree_approximation(zeroes[1 - best_zero]) << ")");
+        }
+        else
+        {
+          // The "scale" of the (current) parabolic approximation is set to 'edge sample' minus x-coordinate of the vertex (v_x),
+          // where 'edge sample' is the sample that is "part of" the parabolic approximation that is the furthest away
+          // from the vertex. "Part of" here means that it deviates vertically less than 10% of the vertical distance to
+          // the vertex. In that sense we can consider that we "came from" the direction of that edge sample.
+          // For example, if the edge sample had x-coordinate w = w_E and we came from the right (w_E > v_x) then
+          // scale = w_E - v_x > 0. Subtracting a positive scale thus means we continue in the direction towards to the left.
+          // If w_E is on the left of the vertex then scale is negative and subtracting is causes us to continue to the right.
+          //
+          // Keep going in the same vdirection.
+          w -= new_extreme->approximation().parabola_scale();
+          Dout(dc::notice, history.current().w() << " --> " << history.total_number_of_samples() << ": " << w << " [past extreme (no zeroes)]");
+
+          // Note that w was already set to the v_x before, but the test below still works
+          // because |v_x - history.current().w()| was determined to be less than 1% of approximation.parabola_scale().
+        }
+
+        if (hdirection == unknown_horizontal_direction)
+        {
+
+          // Now that the decision on which hdirection we explore is taken, store that decision.
+          hdirection = w - history.current().w() < 0.0 ? left : right;
+          Dout(dc::notice, "Initializing horizontal direction to " << hdirection);
+
+          // Remember we in which direction we travelled from this extreme.
+          new_extreme->done(hdirection);
+        }
+
+        // The local extreme was handled.
+        step_kind = StepKind::done;
+        continue;
       }
       else
       {
@@ -633,11 +810,19 @@ int main()
           {
             // In this case we can't do anything else than just make a step in some random vdirection.
             w -= learning_rate;
+            Dout(dc::notice, history.current().w() << " --> " << history.total_number_of_samples() <<
+                ": " << w << " [one sample, derivative is zero]");
           }
           else
           {
             // Just gradient descent: move downhill.
-            w -= learning_rate * dLdw;
+            double step = learning_rate * dLdw;
+            if (vdirection == down)
+              w -= step;
+            else
+              w += step;
+            Dout(dc::notice, history.current().w() << " --> " << history.total_number_of_samples() <<
+                ": " << w << " [one sample, " << (vdirection == down ? "down" : "up") << "hill]");
           }
         }
 
@@ -663,7 +848,7 @@ int main()
         int relevant_samples = history.relevant_samples();
         if (relevant_samples > 1)
         {
-          Sample const& prev = history.prev();
+          Sample const& prev = history.prev(1);
           // β = (L'(w₁) - L'(w₀)) / (w₁ - w₀)    [see README.gradient_descent]
           double beta_inverse = (current.w() - prev.w()) / (current.dLdw() - prev.dLdw());
           if (hdirection == unknown_horizontal_direction)
@@ -681,6 +866,8 @@ int main()
               w -= step;
             else
               w += step;
+            Dout(dc::notice, history.current().w() << " --> " << history.total_number_of_samples() <<
+                ": " << w << " [continue same direction]");
             Dout(dc::notice, ((vdirection == (step > 0.0 ? up : down)) ? "Incremented" : "Decremented") <<
                 " w with scale (" << std::abs(step) << ")");
             // Abort if the result requires more energy than we have.
@@ -702,7 +889,8 @@ int main()
             double step = beta_inverse * current.dLdw();
             w -= step;
 #endif
-            Dout(dc::notice, history.current().w() << " --> " << history.total_number_of_samples() << ": " << w);
+            Dout(dc::notice, history.current().w() << " --> " << history.total_number_of_samples() <<
+                ": " << w << " [jump to vertex]");
 
             if (relevant_samples > 2)
             {
@@ -713,186 +901,9 @@ int main()
               // Did we reach the (local) extreme?
               if (abs_step < (vdirection == up ? 0.05 : 0.01) * approximation.parabola_scale())
               {
-                double w2_1 = w;
-                double w2_2 = w2_1 * w2_1;
-                double w2_3 = w2_2 * w2_1;
-                double w2_4 = w2_2 * w2_2;
-
-                // If the new sample is too close to the current one, then ignore current.
-                bool skip_sample = std::abs(w2_1 - current.w()) < 0.001 * approximation.parabola_scale();
-                Sample const& w1 = skip_sample ? prev : *current.sample();
-                Sample const& w0 = skip_sample ? history.prev_prev() : prev;
-
-                double w1_1 = w1.w();
-                double w1_2 = w1_1 * w1_1;
-                double w1_3 = w1_2 * w1_1;
-                double w1_4 = w1_2 * w1_2;
-
-                double w0_1 = w0.w();
-                double w0_2 = w0_1 * w0_1;
-                double w0_3 = w0_2 * w0_1;
-                double w0_4 = w0_2 * w0_2;
-
-                Dout(dc::notice, "Fitting a fourth degree polynomial using the samples at " << w0_1 << ", " << w1_1 << " and " << w2_1);
-
-                // If we have (at least) three points, the approximation is a fourth degree parabola:
-                //
-                //   A(w) = a + b w + c w² + d w³ + e w⁴
-                //
-                // for which we determined the value of the derivative at three points, L'(w₀), L'(w₁) and L'(w₂).
-                //
-                // The matrix form for the coefficients of the polynomial then becomes:
-                //
-                //   ⎡  1      2w₂      3w₂²     4w₂³ ⎤ ⎡b⎤   ⎡    L'(w₂)   ⎤
-                //   ⎢  1      2w₁      3w₁²     4w₁³ ⎥ ⎢c⎥   ⎢    L'(w₁)   ⎥
-                //   ⎢  1      2w₀      3w₀²     4w₀³ ⎥ ⎢d⎥ = ⎢    L'(w₀)   ⎥
-                //   ⎣w₂-w₁  w₂²-w₁²  w₂³-w₁³  w₂⁴-w₁⁴⎦ ⎣e⎦   ⎣L(w₂) - L(w₁)⎦
-                //
-                Eigen::Matrix4d M;
-                M <<        1.0,   2.0 *  w2_1,    3.0 * w2_2,    4.0 * w2_3,
-                            1.0,   2.0 *  w1_1,    3.0 * w1_2,    4.0 * w1_3,
-                            1.0,   2.0 *  w0_1,    3.0 * w0_2,    4.0 * w0_3,
-                    w2_1 - w1_1,   w2_2 - w1_2,   w2_3 - w1_3,   w2_4 - w1_4;
-
-                Eigen::Vector4d D;
-                //FIXME: do this after adding w to the history?
-                D <<                 /*new_sample.dLdw()*/ L.derivative(w),
-                                             w1.dLdw(),
-                                             w0.dLdw(),
-                             /*new_sample.Lw()*/L(w) - w1.Lw();
-
-                Eigen::Vector4d C = M.colPivHouseholderQr().solve(D);
-
-                math::Polynomial fourth_degree_approximation(5 COMMA_CWDEBUG_ONLY("w"));
-                fourth_degree_approximation[1] = C[0];
-                fourth_degree_approximation[2] = C[1];
-                fourth_degree_approximation[3] = C[2];
-                fourth_degree_approximation[4] = C[3];
-                fourth_degree_approximation[0] = /*new_sample.Lw()*/L(w) - fourth_degree_approximation(w);
-                Dout(dc::notice, "approximation = " << fourth_degree_approximation);
-
-                plot_fourth_degree_approximation_curve.solve(
-                    [&fourth_degree_approximation](double w) -> Point { return {w, fourth_degree_approximation(w)}; }, plot.viewport());
-                plot.add_bezier_fitter(second_layer, curve_line_style({.line_color = color::teal}), plot_fourth_degree_approximation_curve);
-
-                auto derivative = fourth_degree_approximation.derivative();
-                Dout(dc::notice, "derivative = " << derivative);
-
-                plot_derivative_curve.solve([&derivative](double w) -> Point { return {w, derivative(w)}; }, plot.viewport());
-                plot.add_bezier_fitter(second_layer, curve_line_style({.line_color = color::magenta}), plot_derivative_curve);
-
-                double remainder;
-                auto quotient = derivative.long_division(w, remainder);
-                Dout(dc::notice, "quotient = " << quotient << " with remainder " << remainder);
-
-                std::array<double, 2> zeroes;
-                int number_of_zeroes = quotient.get_zeroes(zeroes);
-                if (number_of_zeroes > 1)
-                  Dout(dc::notice, "with zeroes " << zeroes[0] << " and " << zeroes[1]);
-                else if (number_of_zeroes == 1)
-                  Dout(dc::notice, "with one zero at " << zeroes[0]);
-                else
-                  Dout(dc::notice, "with no zeroes!");
-
-                plot_quotient_curve.solve([&quotient](double w) -> Point { return {w, 10.0 * quotient(w)}; }, plot.viewport());
-                plot.add_bezier_fitter(second_layer, curve_line_style({.line_color = color::blue}), plot_quotient_curve);
-
                 Dout(dc::notice, (vdirection == up ? "Maximum" : "Minimum") << " reached: " << abs_step <<
                     " < 0.01 * " << approximation.parabola_scale());
-
-                // Store the found extreme in the history.
-                //FIXME: can't this be done by top of loop?
-                history.add(w, L(w), L.derivative(w), approximation.parabola_scale(), current_is_replacement);
-
-                // Following adding the first extreme, we need to decide on a horizontal direction!
-                ASSERT(hdirection != unknown_horizontal_direction || extremes.empty());
-
-                // Store it as an extreme.
-                extremes_type::iterator new_extreme;
-                if (hdirection == right)
-                  new_extreme = extremes.emplace(extremes.end(), history, approximation, energy.energy());
-                else
-                  new_extreme = extremes.emplace(extremes.begin(), history, approximation, energy.energy());
-
-                // Switch approximation_ptr to the parabolic approximation stored in this extreme:
-                // we need to keep updating it when new samples are added that match the same parabolic.
-                plot_approximation_parabola_scale_ptr->erase_indicators();
-                approximation_ptr = &new_extreme->approximation();
-                plot_approximation_parabola_scale_ptr = &new_extreme->plot_approximation_parabola_scale_;
-
-                // Keep track of the best minimum so far; or abort if this minimum isn't better then one found before.
-                if (vdirection == down)
-                {
-                  if (best_minimum == extremes.end() || best_minimum->vertex_sample().Lw() > new_extreme->vertex_sample().Lw())
-                  {
-                    best_minimum = new_extreme;
-                    Dout(dc::notice, "best_minimum set to " << best_minimum->vertex_sample() <<
-                        " and parabolic approximation: " << approximation);
-                  }
-                  if (new_extreme != best_minimum)
-                  {
-                    // The new minimum isn't better than what we found already. Stop going into this direction.
-                    Dout(dc::notice, "The new minimum isn't better than what we found already. Stop going into the direction " << hdirection);
-                    step_kind = StepKind::abort;
-                  }
-                }
-
-                ASSERT(extremes.size() != 1 ||
-                    (vdirection == down && best_minimum != extremes.end() && step_kind != StepKind::abort));
-
-                // Change vdirection.
-                vdirection = -vdirection;
-                Dout(dc::notice, "vdirection is set to " << (vdirection == up ? "up" : "down") << " (hdirection = " << hdirection << ")");
-
-                if (number_of_zeroes > 0)
-                {
-                  int best_zero = (number_of_zeroes == 2 &&
-                      (hdirection == right ||
-                       (hdirection == unknown_horizontal_direction &&
-                        fourth_degree_approximation(zeroes[1]) < fourth_degree_approximation(zeroes[0])))) ? 1 : 0;
-                  w = zeroes[best_zero];
-                  // Use the Approximation object on the stack again (as opposed to one from a LocalExtreme).
-                  plot_approximation_parabola_scale_ptr->erase_indicators();
-                  approximation_ptr = &current_approximation;
-                  plot_approximation_parabola_scale_ptr = &current_plot_approximation_parabola_scale;
-                  // Reset the parabolic approximation.
-                  approximation_ptr->reset();
-                  history.reset();
-                  Dout(dc::notice, "Set w to found extreme: w = " << w);
-                  Dout(dc::notice(hdirection == unknown_horizontal_direction && number_of_zeroes == 2),
-                      "Best zero was " << zeroes[best_zero] << " with A(" << zeroes[best_zero] << ") = " <<
-                      fourth_degree_approximation(zeroes[best_zero]) <<
-                      " (the other has value " << fourth_degree_approximation(zeroes[1 - best_zero]) << ")");
-
-                  // Update the current kinetic energy. If this is an overshoot, just increase the energy to 0.
-                }
-
-                if (hdirection == unknown_horizontal_direction)
-                {
-                  if (number_of_zeroes == 0)
-                  {
-                    // The "scale" of the (current) parabolic approximation is set to 'edge sample' minus x-coordinate of the vertex (v_x),
-                    // where 'edge sample' is the sample that is "part of" the parabolic approximation that is the furthest away
-                    // from the vertex. "Part of" here means that it deviates vertically less than 10% of the vertical distance to
-                    // the vertex. In that sense we can consider that we "came from" the direction of that edge sample.
-                    // For example, if the edge sample had x-coordinate w = w_E and we came from the right (w_E > v_x) then
-                    // scale = w_E - v_x > 0. Subtracting a positive scale thus means we continue in the direction towards to the left.
-                    // If w_E is on the left of the vertex then scale is negative and subtracting is causes us to continue to the right.
-                    //
-                    // Keep going in the same vdirection.
-                    w -= approximation.parabola_scale();
-
-                    // Note that w was already set to the v_x before, but the test below still works
-                    // because |v_x - history.current().w()| was determined to be less than 1% of approximation.parabola_scale().
-                  }
-
-                  // Now that the decision on which hdirection we explore is taken, store that decision.
-                  hdirection = w - history.current().w() < 0.0 ? left : right;
-                  Dout(dc::notice, "Initializing horizontal direction to " << hdirection);
-
-                  // Remember we in which direction we travelled from this extreme.
-                  new_extreme->done(hdirection);
-                }
+                step_kind = StepKind::local_extreme;
               }
             }
           }
@@ -924,6 +935,8 @@ int main()
 
         // Do a step with a size equal to the scale in this minimum: we expect it not to drastically change before that point.
         w += static_cast<int>(hdirection) * std::abs(best_minimum->approximation().parabola_scale());
+        Dout(dc::notice, history.current().w() << " --> " << history.total_number_of_samples() <<
+            ": " << w << " [best minimum, opposite direction]");
         best_minimum->done(hdirection);
 
         // Restore the energy to what it was when this minimum was stored.
@@ -936,9 +949,6 @@ int main()
         // Reset the parabolic approximation.
         approximation_ptr->reset();
       }
-
-      if (step_kind != StepKind::done)
-        Dout(dc::notice, history.current().w() << " --> " << history.total_number_of_samples() << ": " << w);
     }
 
     if (best_minimum != extremes.end())
