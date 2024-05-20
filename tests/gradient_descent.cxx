@@ -849,6 +849,10 @@ int main()
         if (relevant_samples > 1)
         {
           Sample const& prev = history.prev(1);
+
+          // The approximation and history should agree on the number of relevant samples.
+          ASSERT(approximation.number_of_relevant_samples() > 1);
+
           // β = (L'(w₁) - L'(w₀)) / (w₁ - w₀)    [see README.gradient_descent]
           double beta_inverse = (current.w() - prev.w()) / (current.dLdw() - prev.dLdw());
           if (hdirection == unknown_horizontal_direction)
@@ -948,6 +952,7 @@ int main()
         plot_approximation_parabola_scale_ptr = &current_plot_approximation_parabola_scale;
         // Reset the parabolic approximation.
         approximation_ptr->reset();
+        history.reset();
       }
     }
 

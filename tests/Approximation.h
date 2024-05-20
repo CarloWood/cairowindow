@@ -80,7 +80,10 @@ class Approximation
 
   void print_on(std::ostream& os) const
   {
-    os << "{parabola:" << parabola_ << " [v_x = " << parabola_.vertex_x() << "], parabola_scale:" << parabola_scale_ << "}";
+    os << "{parabola:" << parabola_;
+    if (number_of_relevant_samples_ > 1)
+      os << " [v_x = " << parabola_.vertex_x() << "]";
+    os << ", parabola_scale:" << parabola_scale_ << "}";
   }
 #endif
 };
