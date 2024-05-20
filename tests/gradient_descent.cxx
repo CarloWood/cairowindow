@@ -544,7 +544,7 @@ int main()
     plot::BezierFitter plot_quotient_curve;
     plot::BezierFitter plot_fourth_degree_approximation_curve;
 
-    enum class StepKind
+    enum class IterationState
     {
       done,                     // w was already updated.
       check_energy,             // After adding the new sample, abort if the required energy is too large.
@@ -552,26 +552,26 @@ int main()
       abort                     // Stop going in the current vdirection.
     };
 
-    StepKind step_kind = StepKind::done;
+    IterationState state = IterationState::done;
 
     while (true)
     {
-      // Add new sample to the history.
+      // Add new sample to the history (this sets current_is_replacement).
       bool current_is_replacement;
       PlotSample const& current = history.add(w, L(w), L.derivative(w), approximation_ptr->parabola_scale(), current_is_replacement);
-      // If current_is_replacement is true then the previous `current` had a value so close to w that
-      // it was replaced instead of adding a new sample to the history.
+      // Note: if current_is_replacement was set to true then the previous `current` had a value
+      // so close to w that it was replaced, instead of adding a new entry to the history.
 
-      if (step_kind == StepKind::check_energy)
+      if (state == IterationState::check_energy)
       {
         if (!energy.maybe_update(current.Lw()))
         {
-          step_kind = StepKind::abort;
+          state = IterationState::abort;
           Dout(dc::notice, "Too much energy used: need to abort this direction.");
           ASSERT(hdirection != unknown_horizontal_direction);
         }
       }
-      else if (step_kind == StepKind::local_extreme)
+      else if (state == IterationState::local_extreme)
       {
         Sample const& w2 = *current.sample();
         // If the current sample is too close to the prev(1), then ignore prev(1).
@@ -683,12 +683,12 @@ int main()
           {
             // The new minimum isn't better than what we found already. Stop going into this direction.
             Dout(dc::notice, "The new minimum isn't better than what we found already. Stop going into the direction " << hdirection);
-            step_kind = StepKind::abort;
+            state = IterationState::abort;
           }
         }
 
         ASSERT(extremes.size() != 1 ||
-            (vdirection == down && best_minimum != extremes.end() && step_kind != StepKind::abort));
+            (vdirection == down && best_minimum != extremes.end() && state != IterationState::abort));
 
         // Change vdirection.
         vdirection = -vdirection;
@@ -744,7 +744,7 @@ int main()
         }
 
         // The local extreme was handled.
-        step_kind = StepKind::done;
+        state = IterationState::done;
         continue;
       }
       else
@@ -753,7 +753,7 @@ int main()
         energy.update(current.Lw());
 
         // The default is that new_sample is set to the extreme of some polynomial.
-        step_kind = StepKind::done;
+        state = IterationState::done;
       }
 
       // Block until a redraw is necessary (for example because the user moved a draggable object,
@@ -772,7 +772,7 @@ int main()
       // Suppress immediate updating of the window for each created item, in order to avoid flickering.
       window.set_send_expose_events(false);
 
-      if (step_kind != StepKind::abort)
+      if (state != IterationState::abort)
       {
         //===================================================================================================
         // Create a parabolic approximation from the last two samples (or a line if we only have one sample).
@@ -875,7 +875,7 @@ int main()
             Dout(dc::notice, ((vdirection == (step > 0.0 ? up : down)) ? "Incremented" : "Decremented") <<
                 " w with scale (" << std::abs(step) << ")");
             // Abort if the result requires more energy than we have.
-            step_kind = StepKind::check_energy;
+            state = IterationState::check_energy;
           }
           else
           {
@@ -907,14 +907,14 @@ int main()
               {
                 Dout(dc::notice, (vdirection == up ? "Maximum" : "Minimum") << " reached: " << abs_step <<
                     " < 0.01 * " << approximation.parabola_scale());
-                step_kind = StepKind::local_extreme;
+                state = IterationState::local_extreme;
               }
             }
           }
         }
       }
 
-      if (step_kind == StepKind::abort)
+      if (state == IterationState::abort)
       {
         // Jump back to the best minimum and continue in the opposite hdirection.
         Dout(dc::notice, "Aborting " << hdirection);
