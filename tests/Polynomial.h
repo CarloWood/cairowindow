@@ -2,19 +2,21 @@
 
 #include "utils/almost_equal.h"
 #include "utils/square.h"
-#include "utils/has_print_on.h"
 #include <vector>
 #include <array>
 #include <ranges>
 #include <cmath>
 #include "debug.h"
 #ifdef CWDEBUG
+#include "utils/has_print_on.h"
 #include <string>
 #endif
 
 // This should become part of machine-learning in the end.
 namespace math {
+#ifdef CWDEBUG
 using utils::has_print_on::operator<<;
+#endif
 
 class Polynomial
 {

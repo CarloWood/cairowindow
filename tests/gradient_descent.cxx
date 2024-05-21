@@ -6,6 +6,7 @@
 #include "Approximation.h"
 #include "History.h"
 #include "LocalExtreme.h"
+#include "KineticEnergy.h"
 #include "cairowindow/Window.h"
 #include "cairowindow/Layer.h"
 #include "cairowindow/Plot.h"
@@ -328,18 +329,11 @@ class PlotHistory : public gradient_descent::History
 //static
 cairowindow::draw::ConnectorStyle const PlotParabolaScale::s_indicator_style{{.line_width = 1}};
 
-// A class describing the amount of "kinetic energy" (elsewhere in literature more often known as "momentum")
-// that we have, which determines the maximum overshoot uphill that we allow. Having a certain momentum or
-// kinetic energy helps in overcoming small bumbs and not get stuck in the first local minimum that we encounter.
-class KineticEnergy
+class PlotKineticEnergy : public gradient_descent::KineticEnergy
 {
-  static constexpr double friction = 0.0513;    // (1 - friction)^2 = 0.9
   static cairowindow::draw::ConnectorStyle const s_indicator_style;
 
  private:
-  double max_Lw_;       // The maximum height that could be reached with the current amount of kinetic energy.
-  double Lw_;           // The current height. The kinetic energy is proportional to max_Lw_ - Lw_.
-
   // Used to visualize the KineticEnergy:
   cairowindow::plot::Plot& plot_;
   boost::intrusive_ptr<cairowindow::Layer> layer_;
@@ -356,75 +350,29 @@ class KineticEnergy
         cairowindow::Point{0.5 * (plot_.xrange().min() + plot_.xrange().max()), max_Lw_}, "energy");
   }
 
-  double max_Lw(double new_Lw) const
-  {
-    // Reduce the maximum height with a fraction of the (vertical) distance traveled.
-    return max_Lw_ - friction * std::abs(new_Lw - Lw_);
-  }
-
  public:
-  KineticEnergy(cairowindow::plot::Plot& plot, boost::intrusive_ptr<cairowindow::Layer> const& layer, double Lw) :
-    plot_(plot), layer_(layer), max_Lw_(Lw), Lw_(Lw) { }
+  PlotKineticEnergy(cairowindow::plot::Plot& plot, boost::intrusive_ptr<cairowindow::Layer> const& layer, double Lw) :
+    gradient_descent::KineticEnergy(Lw), plot_(plot), layer_(layer) { }
 
   void set(double max_Lw, double Lw)
   {
-    DoutEntering(dc::notice, "KineticEnergy::set(" << max_Lw << ", " << Lw << ")");
-
-    max_Lw_ = max_Lw;
-    Lw_ = Lw;
-
+    gradient_descent::KineticEnergy::set(max_Lw, Lw);
     draw_indicators();
-    Dout(dc::notice, "max_Lw_ set to " << max_Lw_ << "; kinetic energy is now " << (max_Lw_ - Lw_));
   }
 
-  double energy() const
-  {
-    return max_Lw_;             // This is the total energy.
-  }
-
-  // Returns true upon success. If false is returned the update is rejected and should not take place!
   bool maybe_update(double new_Lw)
   {
-    DoutEntering(dc::notice, "KineticEnergy::maybe_update(" << new_Lw << ")");
-
-    // Reduce the maximum height with a fraction of this distance.
-    double new_max_Lw = max_Lw(new_Lw);
-
-    // Check if this is a request to go higher than the maximum height.
-    if (new_Lw > new_max_Lw)
-    {
-      Dout(dc::notice, "Rejected because max_Lw_ = " << max_Lw_ << ", Lw_ = " << Lw_ << "; new_Lw = " << new_Lw << " > " <<
-          "max_Lw_ - friction * std::abs(new_Lw - Lw_) = " << new_max_Lw);
+    if (!gradient_descent::KineticEnergy::maybe_update(new_Lw))
       return false;
-    }
-
-    max_Lw_ = new_max_Lw;
-    Lw_ = new_Lw;
-
     draw_indicators();
-    Dout(dc::notice, "max_Lw_ set to " << max_Lw_ << "; kinetic energy is now " << (max_Lw_ - Lw_));
     return true;
   }
 
   void update(double new_Lw)
   {
-    DoutEntering(dc::notice, "KineticEnergy::update(" << new_Lw << ")");
-
-    // Reduce total energy (the maximum height) as usual, but if we need
-    // more energy than we have, just reset the total energy to zero.
-    max_Lw_ = std::max(new_Lw, max_Lw(new_Lw));
-    Lw_ = new_Lw;
-
+    gradient_descent::KineticEnergy::update(new_Lw);
     draw_indicators();
-    Dout(dc::notice, "max_Lw_ set to " << max_Lw_ << "; kinetic energy is now " << (max_Lw_ - Lw_));
   }
-
-#if CWDEBUG
-  void print_on(std::ostream& os) const
-  {
-    os << "{max height:" << max_Lw_ << ", energy:" << (max_Lw_ - Lw_) << "}";
-  }
-#endif
 };
 
 struct PlotLocalExtreme : gradient_descent::LocalExtreme
@@ -442,7 +390,7 @@ struct PlotLocalExtreme : gradient_descent::LocalExtreme
 };
 
 //static
-cairowindow::draw::ConnectorStyle const KineticEnergy::s_indicator_style{{.line_width = 1}};
+cairowindow::draw::ConnectorStyle const PlotKineticEnergy::s_indicator_style{{.line_width = 1}};
 
 int main()
 {
@@ -526,7 +474,7 @@ int main()
     Approximation* approximation_ptr = &current_approximation;
     PlotParabolaScale* plot_approximation_parabola_scale_ptr = &current_plot_approximation_parabola_scale;
 
-    KineticEnergy energy(plot, second_layer, L_max);
+    PlotKineticEnergy energy(plot, second_layer, L_max);
     Dout(dc::notice, "Initial height is " << energy);
     constexpr int unknown = 0;
     constexpr int down = 1;

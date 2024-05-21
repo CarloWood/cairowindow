@@ -1,13 +1,17 @@
 #pragma once
 
 #include "utils/square.h"
-#include "utils/has_print_on.h"
 #include <array>
 #include <cmath>
 #include "debug.h"
+#ifdef CWDEBUG
+#include "utils/has_print_on.h"
+#endif
 
 namespace math {
+#ifdef CWDEBUG
 using utils::has_print_on::operator<<;
+#endif
 
 class QuadraticPolynomial
 {

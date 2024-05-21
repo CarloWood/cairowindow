@@ -6,7 +6,9 @@
 #include <array>
 
 namespace gradient_descent {
+#ifdef CWDEBUG
 using utils::has_print_on::operator<<;
+#endif
 
 enum HorizontalDirection
 {
