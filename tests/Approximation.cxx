@@ -7,8 +7,8 @@ std::string to_string(HorizontalDirection hdirection)
 {
   switch (hdirection)
   {
-    AI_CASE_RETURN(unknown_horizontal_direction);
     AI_CASE_RETURN(left);
+    AI_CASE_RETURN(undecided);
     AI_CASE_RETURN(right);
   }
   AI_NEVER_REACHED
@@ -34,7 +34,7 @@ ScaleUpdate Approximation::add(Sample const* current, bool update_scale_only, bo
   {
     // LocalExtreme should only store parabolas of which the vertex was already determined;
     // hence changing it (by adding a new sample) doesn't make sense.
-    ASSERT(!is_part_of_extreme_);
+    ASSERT(!is_extreme_);
 
     if (number_of_relevant_samples_ == 1)
     {

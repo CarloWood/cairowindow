@@ -11,7 +11,7 @@ using utils::has_print_on::operator<<;
 enum HorizontalDirection
 {
   left = -1,
-  unknown_horizontal_direction = 0,
+  undecided = 0,
   right = 1
 };
 
@@ -35,22 +35,17 @@ class Approximation
   std::array<Sample const*, 2> relevant_samples_;       // Pointers to up to two samples that take part in this approximation.
   math::QuadraticPolynomial parabola_;                  // A linear or parabolic approximation.
   Scale parabola_scale_;                                // A measure of over what interval the parabolic approximation was tested to be correct.
-
-#ifdef CWDEBUG
-  bool is_part_of_extreme_{false};                      // Set when this is a LocalExtreme::approximation_.
-#endif
+  bool is_extreme_{false};                              // Set when this is a LocalExtreme::approximation_.
 
  public:
   // Called with the latest samples that are expected to match this parabola (or that
   // should construct the parabola when there are not already two relevant samples stored).
   ScaleUpdate add(Sample const* current, bool update_scale_only, bool current_is_replacement);
 
-#ifdef CWDEBUG
-  void set_is_part_of_extreme()
+  void set_is_extreme()
   {
-    is_part_of_extreme_ = true;
+    is_extreme_ = true;
   }
-#endif
 
   void reset()
   {
@@ -63,6 +58,7 @@ class Approximation
   int number_of_relevant_samples() const { return number_of_relevant_samples_; }
   math::QuadraticPolynomial const& parabola() const { return parabola_; }
   Scale const& parabola_scale() const { return parabola_scale_; }
+  bool is_extreme() const { return is_extreme_; }
 
   int current_index() const
   {

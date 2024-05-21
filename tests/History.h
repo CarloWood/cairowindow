@@ -25,8 +25,10 @@ class History
  public:
   HistoryIndex add(double w, double Lw, double dLdw, Scale const& scale, bool& current_is_replacement)
   {
+    DoutEntering(dc::notice, "History::add(" << w << ", " << Lw << ", " << dLdw << ", " << scale << ", current_is_replacement)");
+
     // If the new sample is very close to the current one, don't add it, just replace the current sample.
-    bool almost_equal = (!current_.undefined() && std::abs(samples_[current_].w() - w) < 0.001 * scale.or_zero());
+    bool almost_equal = !current_.undefined() && scale.negligible(samples_[current_].w() - w);
     if (almost_equal)
     {
       Dout(dc::notice, "Replacing history point " << (total_number_of_samples_ - 1) << " at " << samples_[current_].w() << " --> " << w);

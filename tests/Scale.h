@@ -77,6 +77,24 @@ class Scale
   operator double() const { ASSERT(scale_ != 0.0); return std::abs(scale_); }
   double or_zero() const { /* Never return really zero */ return std::max(epsilon, scale_); }
 
+  // Return true if step is significantly smaller than the scale.
+  // This is used to determine whether to add a new sample to the history or to replace an existing entry.
+  bool negligible(double step) const
+  {
+    return std::abs(step) < 0.001 * or_zero();
+  }
+
+  // Return a value with the same sign as step that is just large enough
+  // for negligible to return false;
+  double make_significant(double step) const
+  {
+    double abs_step = 0.00101 * or_zero();
+    return step < 0.0 ? -abs_step : abs_step;
+  }
+
+  // Return true if step is basically zero.
+  // This is used to determine if the single sample that we have sits in an extreme,
+  // so that a normal gradient descent won't do anything.
   static bool almost_zero(double w, double step)
   {
     return std::abs(step) < epsilon || std::abs(step) < 1e-6 * std::abs(w);

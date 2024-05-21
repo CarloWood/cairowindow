@@ -18,7 +18,7 @@ class LocalExtreme
   LocalExtreme(Sample const& vertex_sample, Approximation const& approximation, double energy) :
     vertex_sample_(vertex_sample), approximation_(approximation), energy_(energy)
   {
-    approximation_.set_is_part_of_extreme();
+    approximation_.set_is_extreme();
   }
 
   Approximation& approximation()
@@ -37,7 +37,7 @@ class LocalExtreme
 
   void done(HorizontalDirection hdirection)
   {
-    ASSERT(hdirection != unknown_horizontal_direction);
+    ASSERT(hdirection != undecided);
     int done_flag = hdirection == left ? 1 : 2;
     // Don't call this function twice with the same value.
     ASSERT((done_ & done_flag) == 0);
