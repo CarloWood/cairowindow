@@ -7,6 +7,10 @@ body {
     padding: 0;
     background-color: #f0f0f0;  /* Color for area outside A4 page. */
     margin-top: 0;              /* Reset top margin to 0. */
+
+    font-family: "Georgia", "Times New Roman", Times, serif;
+    line-height: 1.4;
+    font-size: 16px;
 }
 /* Make the page look exactly like a printed A4 page. */
 .print-container {
@@ -32,4 +36,14 @@ body {
 object.diagram {
   width: 200px;
   height: 200px;
+}
+/* Use this for chess notation moves */
+span.chess-move {
+  white-space: nowrap;
+  font-style: italic;
+  margin-left: 5px;
+}
+span.chess-move2 {
+  white-space: nowrap;
+  font-style: italic;
 }

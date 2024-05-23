@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess lessons by Carlo Wood</title>
+    <link rel="stylesheet" type="text/css" href="lessons.css">
+</head>
+<body>
+    <div class="print-container">
+        <div class="content">
+            <div class="date">23 May 2024</div>
+            <h1>King Safety</h1>
+            <h2>Two pawns, the edge pawn advanced</h2>
+            <!--
+              $ chess_diagram --replace -o "lesson-2024-05-23.svg" "3r1r2/p5RQ/kp6/1q6/8/P7/1P4P1/K6R b - - 0 3"
+            -->
+            <object class="diagram"
+              data="lesson-2024-05-23.svg">
+            </object>
+            <p>Black plays and wins. Whites king looks safe, but the back rank is weak: white plays
+            <span class="chess-move">1. ... Rf1+!</span>
+            Eliminating the only defender of the back rank. After this we have a pattern,
+            involving a queen and a rook as attackers, and a king that is only "protected" by two pawns
+            where the edge pawn has been advanced one square.</p>
+            <p>What follows is:
+            <span class="chess-move">2. Ka2 Qc4+</span>
+            <span class="chess-move">3. Ka1</span>
+            (<span class="chess-move">3. Kb1?? Rd1#</span>,
+            or <span class="chess-move">3. b3 Rd2+</span>
+            <span class="chess-move">4. Ka1 Qd4+</span>
+            <span class="chess-move2">5. Kb1 Qb2#</span>)
+            <span class="chess-move">3. ... Rd1+</span>
+            <span class="chess-move">4. Qb1</span>
+            (forced) etc.</p>
+
+            <p>&nbsp;</p>
+            <h1>Puzzle</h1>
+            <!--
+              $ chess_diagram --replace -o "lesson-2024-05-23-extra.svg" "4r1k1/1R3pp1/p2B3p/2p1P3/2P5/6bP/P2q2P1/1Q5K w - - 0 1"
+            -->
+            <object class="diagram"
+              data="lesson-2024-05-23-extra.svg">
+            </object>
+            <p>White plays and wins material.</p>
+        </div>
+    </div>
+</body>
+</html>

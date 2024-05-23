@@ -1,4 +1,4 @@
-White plays and wins (queen + rook domination):
+White plays and wins (queen + rook domination) (lesson-2024-05-16):
 4rrk1/1pp2p1p/p4Q2/2q5/2BR4/8/P5PP/6K1 w - - 1 22
 
 Black plays and wins (recognize the danger)
@@ -6,5 +6,22 @@ Black plays and wins (recognize the danger)
 
 White plays and wins (how dangerous are two connected pawns on the 6th row?)
 8/3r4/p1pP4/2P5/PP2k1p1/3Rp3/2K3P1/8 w - - 2 38
+
+Black plays and wins (queen + rook against h3,g2) (lesson-2024-05-23)
+3r1r2/p5RQ/kp6/1q6/8/P7/1P4P1/K6R b - - 0 3
+Bonus:
+4r1k1/1R3pp1/p2B3p/2p1P3/2P5/6bP/P2q2P1/1Q5K w - - 0 1
+
+
+3r3r/1k2bpnp/2q1p1p1/1N2P3/8/5Q2/PPP3PP/1K1R3R w - - 4 23
+3r4/1k4n1/1pp5/8/8/P7/1P6/K4Q2 w - - 0 1
+6k1/3p2p1/7p/8/8/qPp5/P1P5/1K2R2Q w - - 0 1
+7k/3p2p1/7p/8/8/qPp5/P1P5/1K2R2Q w - - 0 1
+8/1p6/2k5/1p2p2p/3n3P/1N4P1/4KP2/8 w - - 0 30
+8/3kb1R1/P3p3/3p1bp1/1P6/N4r2/1KP5/8 b - - 2 38
+
+From screen shots:
+3rr1k1/ppqb1ppp/3bnn2/2p1p3/4P3/P1P3PP/1PQNNPB1/R1B2RK1 b - - 0 1
+5rk1/ppq2pnp/2p3p1/1n6/1PB5/P5Q1/1B4PP/3R3K w - - 0 1
 
 
