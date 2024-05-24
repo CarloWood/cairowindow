@@ -27,7 +27,7 @@
 
 using utils::has_print_on::operator<<;
 
-#if 0
+#if 1
 class Function
 {
  public:
@@ -403,6 +403,7 @@ class AcceleratedGradientDescent
   using Scale = gradient_descent::Scale;
 
   static constexpr cairowindow::draw::LineStyle curve_line_style_{{.line_width = 1.0}};
+  static cairowindow::draw::ConnectorStyle s_difference_expected_style;
 
  private:
   double learning_rate_;        // In unit_of(w)^2 / unit_of(L).
@@ -414,6 +415,7 @@ class AcceleratedGradientDescent
   Approximation* approximation_ptr_;
   PlotParabolaScale* plot_approximation_parabola_scale_ptr_;
   PlotKineticEnergy energy_;
+  double expected_Lw_;                  // Whenever w is changed, this is set to what Lw value the approximation is expecting there.
 
   // hdirection_ is set when we find a local minimum and decide to explore left or right of that.
   // The result is that we'll rather go away from the vertex of the current matching parabolic approximation
@@ -433,6 +435,7 @@ class AcceleratedGradientDescent
   cairowindow::plot::BezierFitter plot_derivative_curve_;
   cairowindow::plot::BezierFitter plot_quotient_curve_;
   cairowindow::plot::BezierFitter plot_fourth_degree_approximation_curve_;
+  cairowindow::plot::Connector plot_difference_expected_;
 
   enum class IterationState
   {
@@ -484,6 +487,10 @@ class AcceleratedGradientDescent
   }
 };
 
+//static
+cairowindow::draw::ConnectorStyle AcceleratedGradientDescent::s_difference_expected_style{{.line_color = cairowindow::color::blue,
+  .line_width = 1.0}};
+
 bool AcceleratedGradientDescent::operator()(Weight& w, double Lw, double dLdw)
 {
   DoutEntering(dc::notice, "AcceleratedGradientDescent::operator()(" << w << ", " << Lw << ", " << dLdw << ")");
@@ -507,6 +514,11 @@ bool AcceleratedGradientDescent::operator()(Weight& w, double Lw, double dLdw)
   plot_derivative_curve_.reset();
   plot_quotient_curve_.reset();
   plot_fourth_degree_approximation_curve_.reset();
+
+  // Plot the vertical difference from what we expected to what we got.
+  plot_difference_expected_ = cairowindow::plot::Connector{{w, expected_Lw_}, {w, Lw},
+      cairowindow::Connector::no_arrow, cairowindow::Connector::open_arrow};
+  plot_.add_connector(layer_, s_difference_expected_style, plot_difference_expected_);
 
   // Update kinetic energy. Returns false if too much energy was used.
   if (!update_energy())
@@ -716,12 +728,17 @@ bool AcceleratedGradientDescent::handle_local_extreme(Weight& w)
 
   if (number_of_zeroes > 0)
   {
+    std::array<double, 2> expected_Lw;
+    for (int zero = 0; zero <= number_of_zeroes; ++zero)
+      expected_Lw[zero] = fourth_degree_approximation(zeroes[zero]);
     int best_zero = (number_of_zeroes == 2 &&
         (hdirection_ == HorizontalDirection::right ||
          (hdirection_ == HorizontalDirection::undecided &&
-          fourth_degree_approximation(zeroes[1]) < fourth_degree_approximation(zeroes[0])))) ? 1 : 0;
+          expected_Lw[1] < expected_Lw[0]))) ? 1 : 0;
     w = zeroes[best_zero];
-    Dout(dc::notice, history_.current().w() << " --> " << history_.total_number_of_samples() << ": " << w << " [best zero]");
+    expected_Lw_ = expected_Lw[best_zero];
+    Dout(dc::notice, history_.current().w() << " --> " << history_.total_number_of_samples() << ": " <<
+        w << " [best zero] [expected_Lw: " << expected_Lw_ << "]");
     // Use the Approximation object on the stack again (as opposed to one from a LocalExtreme).
     plot_approximation_parabola_scale_ptr_->erase_indicators();
     approximation_ptr_ = &current_approximation_;
@@ -746,7 +763,9 @@ bool AcceleratedGradientDescent::handle_local_extreme(Weight& w)
     //
     // Keep going in the same direction.
     w -= new_extreme->approximation().parabola_scale();
-    Dout(dc::notice, history_.current().w() << " --> " << history_.total_number_of_samples() << ": " << w << " [past extreme (no zeroes)]");
+    expected_Lw_ = new_extreme->approximation().parabola()(w);
+    Dout(dc::notice, history_.current().w() << " --> " << history_.total_number_of_samples() << ": " <<
+        w << " [past extreme (no zeroes)] [expected_Lw: " << expected_Lw_ << "]");
 
     // Note that w was already set to the v_x before, but the test below still works
     // because |v_x - history_.current().w()| was determined to be less than 1% of approximation.parabola_scale().
@@ -755,6 +774,9 @@ bool AcceleratedGradientDescent::handle_local_extreme(Weight& w)
   {
     // Keep going in the same hdirection.
     w += static_cast<int>(hdirection_) * std::abs(new_extreme->approximation().parabola_scale());
+    expected_Lw_ = new_extreme->approximation().parabola()(w);
+    Dout(dc::notice, history_.current().w() << " --> " << history_.total_number_of_samples() << ": " <<
+        w << " [keep going (no zeroes)] [expected_Lw: " << expected_Lw_ << "]");
   }
 
   if (hdirection_ == HorizontalDirection::undecided)
@@ -858,8 +880,9 @@ void AcceleratedGradientDescent::handle_single_sample(Weight& w)
 #endif
   }
   w += step;
+  expected_Lw_ = approximation_ptr_->parabola()(w);
   Dout(dc::notice, std::setprecision(12) << history_.current().w() << " --> " << history_.total_number_of_samples() <<
-      ": " << w << " [" << algorithm_str << "]");
+      ": " << w << " [" << algorithm_str << "] [expected_Lw:" << expected_Lw_ << "]");
 
   state_ = IterationState::done;
 }
@@ -902,8 +925,9 @@ void AcceleratedGradientDescent::handle_parabolic_approximation(Weight& w)
     // Just keep going in the same direction as before.
     double step = static_cast<int>(hdirection_) * std::abs(approximation.parabola_scale());
     w += step;
+    expected_Lw_ = approximation.parabola()(w);
     Dout(dc::notice, history_.current().w() << " --> " << history_.total_number_of_samples() <<
-        ": " << w << " [continue same direction]");
+        ": " << w << " [continue same direction] [expected_Lw:" << expected_Lw_ << "]");
     Dout(dc::notice, (hdirection_ == HorizontalDirection::left ? "Incremented" : "Decremented") << " w with scale (" << std::abs(step) << ")");
     // Abort if the result requires more energy than we have.
     state_ = IterationState::check_energy;
@@ -914,6 +938,7 @@ void AcceleratedGradientDescent::handle_parabolic_approximation(Weight& w)
   Dout(dc::notice, "Setting new_sample to the extreme of parabolic approximation:");
   double step = w;
   w = approximation.parabola().vertex_x();
+  expected_Lw_ = approximation.parabola().vertex_y();
   step -= w;
 #if 0
   // Use the actual derivative of L(w), instead of the derivative of the parabolic approximation
@@ -925,8 +950,8 @@ void AcceleratedGradientDescent::handle_parabolic_approximation(Weight& w)
   double beta_inverse = (current.w() - prev.w()) / (current.dLdw() - prev.dLdw());
   double step = beta_inverse * current.dLdw();
   w -= step;
+  expected_Lw_ = approximation.parabola()(w);
 #endif
-  Dout(dc::notice, history_.current().w() << " --> " << history_.total_number_of_samples() << ": " << w << " [jump to vertex]");
   state_ = IterationState::done;
 
   double abs_step = std::abs(step);
@@ -945,10 +970,16 @@ void AcceleratedGradientDescent::handle_parabolic_approximation(Weight& w)
       // Instead of returning this extreme, do a little overshoot.
       double step = static_cast<int>(hdirection_) * Scale::epsilon;
       w += approximation.parabola_scale().make_significant(step);
+      expected_Lw_ = approximation.parabola()(w);
+      Dout(dc::notice, history_.current().w() << " --> " << history_.total_number_of_samples() << ": " <<
+          w << " [jump to vertex + small overshoot] [expected_Lw:" << expected_Lw_ << "]");
       return;
     }
     state_ = IterationState::local_extreme;
   }
+
+  Dout(dc::notice, history_.current().w() << " --> " << history_.total_number_of_samples() << ": " <<
+      w << " [jump to vertex] [expected_Lw:" << expected_Lw_ << "]");
 }
 
 bool AcceleratedGradientDescent::handle_abort_hdirection(Weight& w)
@@ -981,8 +1012,9 @@ bool AcceleratedGradientDescent::handle_abort_hdirection(Weight& w)
 
   // Do a step with a size equal to the scale in this minimum: we expect it not to drastically change before that point.
   w += static_cast<int>(hdirection_) * std::abs(best_minimum_->approximation().parabola_scale());
+  expected_Lw_ = best_minimum_->approximation().parabola()(w);
   Dout(dc::notice, history_.current().w() << " --> " << history_.total_number_of_samples() <<
-      ": " << w << " [best minimum, opposite direction]");
+      ": " << w << " [best minimum, opposite direction] [expected_Lw:" << expected_Lw_ << "]");
   best_minimum_->explored(hdirection_);
   vdirection_ = VerticalDirection::up;
   Dout(dc::notice, "vdirection_ is set to " << vdirection_ << " because we just jumped to a minimum.");
