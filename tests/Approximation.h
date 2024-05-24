@@ -10,25 +10,6 @@ namespace gradient_descent {
 using utils::has_print_on::operator<<;
 #endif
 
-enum HorizontalDirection
-{
-  left = -1,
-  undecided = 0,
-  right = 1
-};
-
-inline HorizontalDirection opposite(HorizontalDirection hdirection)
-{
-  return static_cast<HorizontalDirection>(-hdirection);
-}
-
-std::string to_string(HorizontalDirection hdirection);
-
-inline std::ostream& operator<<(std::ostream& os, HorizontalDirection hdirection)
-{
-  return os << to_string(hdirection);
-}
-
 class Approximation
 {
  private:
@@ -44,9 +25,17 @@ class Approximation
   // should construct the parabola when there are not already two relevant samples stored).
   ScaleUpdate add(Sample const* current, bool update_scale_only, bool current_is_replacement);
 
+  Sample const& current() const { ASSERT(number_of_relevant_samples_ > 0); return *relevant_samples_[current_index_]; }
+  Sample const& prev() const { ASSERT(number_of_relevant_samples_ > 1); return *relevant_samples_[1 - current_index_]; }
+
   void set_is_extreme()
   {
     is_extreme_ = true;
+  }
+
+  bool has_maximum() const
+  {
+    return parabola_[2] < 0.0;
   }
 
   void reset()

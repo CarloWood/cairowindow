@@ -74,7 +74,7 @@
    protected: \
     cairowindow_##Class##_FOREACH_MEMBER(CAIROWINDOW_DECLARE_MEMBER) \
    public: \
-    Class##Style(Class##StyleParams params) : \
+    constexpr Class##Style(Class##StyleParams params) : \
       REMOVE_TRAILING_COMMA(cairowindow_##Class##_FOREACH_MEMBER(CAIROWINDOW_INITIALIZER_LIST)) { } \
     Class##Style() : Class##Style(Class##StyleParams{cairowindow_##Class##_FOREACH_MEMBER(CAIROWINDOW_COPY_DEFAULTS, Defaults)}) { } \
     Class##Style operator()(Class##StyleParamsDelta delta) const { \

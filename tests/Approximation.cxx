@@ -3,24 +3,16 @@
 
 namespace gradient_descent {
 
-std::string to_string(HorizontalDirection hdirection)
-{
-  switch (hdirection)
-  {
-    AI_CASE_RETURN(left);
-    AI_CASE_RETURN(undecided);
-    AI_CASE_RETURN(right);
-  }
-  AI_NEVER_REACHED
-}
-
 ScaleUpdate Approximation::add(Sample const* current, bool update_scale_only, bool current_is_replacement)
 {
-  Dout(dc::notice, "Approximation::add(" << *current << ", " << std::boolalpha << update_scale_only << ", " << current_is_replacement << ")");
+  DoutEntering(dc::notice, "Approximation::add(" << *current << ", " << std::boolalpha << update_scale_only << ", " <<
+      current_is_replacement << ")");
 
   bool already_had_two_relevant_samples = number_of_relevant_samples_ == 2;
   if (current_is_replacement)
   {
+    // The sample that was replaced in the history should already be in this approximation.
+    ASSERT(number_of_relevant_samples_ > 0);
     relevant_samples_[current_index_] = current;
   }
   else

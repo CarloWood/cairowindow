@@ -2,6 +2,7 @@
 
 #include "Sample.h"
 #include "Approximation.h"
+#include "HorizontalDirection.h"
 #include "debug.h"
 
 namespace gradient_descent {
@@ -12,7 +13,7 @@ class LocalExtreme
   Approximation approximation_;         // The (parabolic) polynomial approximation around this extreme.
   Sample vertex_sample_;                // Sample taken at the vertex of the approximation_;
   double energy_;                       // The maximum height (Lw) that can be reached from here.
-  int done_{0};                         // Bit 1: exploration to the left of this extreme has been finished.
+  int explored_{0};                     // Bit 1: exploration to the left of this extreme has started.
                                         // Bit 2: same, on the right.
  public:
   LocalExtreme(Sample const& vertex_sample, Approximation const& approximation, double energy) :
@@ -35,16 +36,23 @@ class LocalExtreme
 
   double energy() const { return energy_; }
 
-  void done(HorizontalDirection hdirection)
+  void explored(HorizontalDirection hdirection)
   {
-    ASSERT(hdirection != undecided);
-    int done_flag = hdirection == left ? 1 : 2;
+    DoutEntering(dc::notice, "LocalExtreme::explored(" << hdirection << ") for extreme at " << vertex_sample_ << '.');
+    ASSERT(hdirection != HorizontalDirection::undecided);
+    int explore_flag = hdirection == HorizontalDirection::left ? 1 : 2;
     // Don't call this function twice with the same value.
-    ASSERT((done_ & done_flag) == 0);
-    done_ |= done_flag;
+    ASSERT((explored_ & explore_flag) == 0);
+    explored_ |= explore_flag;
+    Dout(dc::notice, "explored_ is now " << (explored_ == 1 ? "left" : (explored_ == 2 ? "right" : "left|right")));
   }
 
-  bool done() const { return done_ == 3; }
+  bool done() const
+  {
+    DoutEntering(dc::notice, "LocalExtreme::done() for extreme at " << vertex_sample_ << '.');
+    Dout(dc::notice, "explored_ is " << (explored_ == 1 ? "left" : (explored_ == 2 ? "right" : "left|right")));
+    return explored_ == 3;
+  }
 };
 
 } // namespace gradient_descent
