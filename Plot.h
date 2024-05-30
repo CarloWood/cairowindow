@@ -509,6 +509,7 @@ class Plot : public Printable
     draggable_restrictions_.emplace_back(std::move(restriction));
   }
   cairowindow::Rectangle update_grabbed(utils::Badge<Window>, ClickableIndex grabbed_point, double pixel_x, double pixel_y);
+  void apply_restrictions(utils::Badge<Window>, ClickableIndex clickable_index, cairowindow::Point& new_position);
 
  private:
   cairowindow::Rectangle axes_geometry(cairowindow::Rectangle const& geometry, double axes_line_width);

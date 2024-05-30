@@ -14,7 +14,7 @@
 #include "debug.h"
 
 #define USE_P_BETA 1
-#define USE_P_GAMMA 0
+#define USE_P_GAMMA 1
 
 int main()
 {

@@ -16,7 +16,7 @@ class Vector;
 
 class Point
 {
- private:
+ protected:
   double x_;
   double y_;
 
@@ -61,6 +61,14 @@ class Point : public cairowindow::Point, public Draggable
   // Implementation of Draggable.
   cairowindow::Rectangle const& geometry() const override;
   void moved(Plot* plot, cairowindow::Point const& new_position) override;
+  void set_position(cairowindow::Point const& new_position) override
+  {
+    x_ = new_position.x();
+    y_ = new_position.y();
+  }
+
+ public:
+  void move(Plot& plot, cairowindow::Point const& new_position);
 
 #ifdef CWDEBUG
  public:

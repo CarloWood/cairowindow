@@ -27,7 +27,7 @@
 
 using utils::has_print_on::operator<<;
 
-#if 1
+#if 0
 class Function
 {
  public:
@@ -441,6 +441,9 @@ class AcceleratedGradientDescent
   {
     done,                     // w was already updated.
     check_energy,             // After adding the new sample, abort if the required energy is too large.
+    vertex_jump,              // Only add the new sample to the history if we didn't overshoot another extreme dramatically.
+    gamma_based,              // Internal state used to signify that w was already updated and a call to handle_parabolic_approximation
+                              // is not longer desired.
     local_extreme,            // After adding the new sample, handle the fact that we found an extreme.
     abort_hdirection          // Stop going in the current hdirection_.
   };
@@ -496,6 +499,49 @@ bool AcceleratedGradientDescent::operator()(Weight& w, double Lw, double dLdw)
   DoutEntering(dc::notice, "AcceleratedGradientDescent::operator()(" << w << ", " << Lw << ", " << dLdw << ")");
 
   using namespace gradient_descent;
+
+  double gamma_based_w;
+  if (state_ == IterationState::vertex_jump)
+  {
+    Approximation& approximation(*approximation_ptr_);
+    // How else could we have made a parabolic approximation?
+    ASSERT(approximation.number_of_relevant_samples() > 0);
+    // Then state should have been IterationState::local_extreme.
+    ASSERT(!approximation.is_extreme());
+
+    // See https://math.stackexchange.com/questions/4923841/ plus answer.
+
+    double h = Lw - expected_Lw_;
+    double c = approximation.parabola()[2];
+    double w0 = approximation.current().w();
+    double w1 = w;
+
+    double gamma = 6.0 * h / (c * utils::square(w0 - w1));
+
+    Dout(dc::notice, "h = " << h << "; gamma = " << gamma);
+
+    // Did we substantially miss our target?
+    if (gamma > -1.0 && std::abs(gamma) > 0.1)
+    {
+      // Approximate a better w based on the minimum of a third degree polynomial fit, using the new sample.
+      gamma_based_w = w0 + 2.0 * (std::sqrt(1.0 + gamma) - 1.0) / gamma * (w1 - w0);
+      //expected_Lw_ = ; Not set... is currently ignored anyway.
+      if (gamma > 1.207)
+      {
+        // Too far off, don't even add w to the history.
+        Dout(dc::notice, w << " --> " << history_.total_number_of_samples() << ": " <<
+            gamma_based_w << " [gamma based] [expected_Lw: " << expected_Lw_ << "]");
+        w = gamma_based_w;
+        state_ = IterationState::done;
+        Dout(dc::notice, "Returning: " << w);
+        return true;
+      }
+      Debug(attach_gdb());
+      Dout(dc::notice, w << " --> " << (history_.total_number_of_samples() + 1) << ": " <<
+          gamma_based_w << " [gamma based] [expected_Lw: " << expected_Lw_ << "]");
+      state_ = IterationState::gamma_based;
+    }
+  }
 
   // If the new sample (w) is too close to the previous sample (Scale::negligible returns true)
   // then the new sample replaces the previous sample, current_is_replacement is set to true
@@ -554,7 +600,13 @@ bool AcceleratedGradientDescent::operator()(Weight& w, double Lw, double dLdw)
     Dout(dc::notice, "vdirection_ is set to " << vdirection_ << " because hdirection_ is still undecided.");
   }
 
-  handle_parabolic_approximation(w);
+  if (state_ == IterationState::gamma_based)
+  {
+    w = gamma_based_w;
+    state_ = IterationState::done;
+  }
+  else
+    handle_parabolic_approximation(w);
 
   Dout(dc::notice, "Returning: " << w);
   return true;
@@ -889,6 +941,8 @@ void AcceleratedGradientDescent::handle_single_sample(Weight& w)
 
 void AcceleratedGradientDescent::handle_parabolic_approximation(Weight& w)
 {
+  DoutEntering(dc::notice, "AcceleratedGradientDescent::handle_parabolic_approximation(" << w << ")");
+
   Approximation& approximation(*approximation_ptr_);
   // We have two relevant samples, and thus a parabolic approximation.
   //
@@ -952,7 +1006,7 @@ void AcceleratedGradientDescent::handle_parabolic_approximation(Weight& w)
   w -= step;
   expected_Lw_ = approximation.parabola()(w);
 #endif
-  state_ = IterationState::done;
+  state_ = IterationState::vertex_jump;
 
   double abs_step = std::abs(step);
   Dout(dc::notice, "abs_step = " << abs_step << " (between " <<
@@ -1056,7 +1110,7 @@ int main()
     using Window = cairowindow::Window;
 
     // Create a window.
-    Window window("Gradient descent of " + L.as_string(), 600, 450);
+    Window window("Gradient descent of " + L.as_string(), 2*600, 2*450);
 
     // Create a new layer with a white background.
     auto background_layer = window.create_background_layer<Layer>(color::white COMMA_DEBUG_ONLY("background_layer"));

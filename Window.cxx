@@ -424,6 +424,15 @@ bool Window::update_grabbed(ClickableIndex grabbed_point, double pixel_x, double
   return false;
 }
 
+void Window::move_draggable(plot::Draggable* draggable, ClickableIndex clickable_index, cairowindow::Point new_position)
+{
+  plot::Plot* plot = clickable_plots_[clickable_index];
+  draggable->set_position(new_position);        // Because we want to apply restrictions, if any, relative to the new position.
+  plot->apply_restrictions({}, clickable_index, new_position);
+  draggable->moved(plot, new_position);
+  clickable_rectangles_[clickable_index] = draggable->geometry();
+}
+
 Printable* Window::find_printable(int mouse_x, int mouse_y)
 {
   for (PrintableGeometries const& printable_geometries : printable_geometries_)

@@ -490,11 +490,23 @@ cairowindow::Rectangle Plot::update_grabbed(utils::Badge<Window>, ClickableIndex
   return draggable->geometry();
 }
 
+void Plot::apply_restrictions(utils::Badge<Window>, ClickableIndex clickable_index, cairowindow::Point& new_position)
+{
+  if (draggable_restrictions_[clickable_index])
+    new_position = draggable_restrictions_[clickable_index](new_position);
+}
+
 void Point::moved(Plot* plot, cairowindow::Point const& new_position)
 {
-  Point plot_point(new_position);
-  plot->add_point(draw_object_->layer(), draw_object_->point_style(), plot_point);
-  *this = plot_point;
+  static_cast<cairowindow::Point&>(*this) = new_position;
+  plot->add_point(draw_object_->layer(), draw_object_->point_style(), *this);
+}
+
+void Point::move(Plot& plot, cairowindow::Point const& new_position)
+{
+  Layer* layer = draw_object_->layer();
+  Window* window = layer->window();
+  window->move_draggable(this, index_, new_position);
 }
 
 void Slider::set_value(double value)

@@ -195,6 +195,9 @@ class Window
   // Called by Slider::set_value.
   bool update_grabbed(ClickableIndex grabbed_point, double pixel_x, double pixel_y);
 
+  // Called by Point::move.
+  void move_draggable(plot::Draggable* draggable, ClickableIndex clickable_index, Point new_position);
+
  private:
   void send_close_event();
   void grab_mouse(unsigned int button);
