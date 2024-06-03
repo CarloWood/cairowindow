@@ -3,6 +3,7 @@
 #include "Scale.h"
 #include "Sample.h"
 #include "utils/Array.h"
+#include <functional>
 #include "debug.h"
 
 namespace gradient_descent {
@@ -46,6 +47,26 @@ class History
 
     samples_[current_].set_values(w, Lw, dLdw);
     return current_;
+  }
+
+  // Return to, unless there are samples between from and to, in that case return the sample that is closest to from.
+  // Samples for which `ignore` returns true must be ignored (we never clamp on those).
+  double clamp(double from, double to, std::function<bool(Sample const&)> const& ignore, HistoryIndex& clamped_history_index)
+  {
+    clamped_history_index.set_to_undefined();
+    HistoryIndex const iend = std::min(HistoryIndex{total_number_of_samples_}, samples_.iend());
+    for (HistoryIndex index = samples_.ibegin(); index != iend; ++index)
+    {
+      if (ignore(samples_[index]))
+        continue;
+      double const sample_w = samples_[index].w();
+      if ((from < sample_w && sample_w < to) || (to < sample_w && sample_w < from))
+      {
+        to = sample_w;
+        clamped_history_index = index;
+      }
+    }
+    return to;
   }
 
   void reset()

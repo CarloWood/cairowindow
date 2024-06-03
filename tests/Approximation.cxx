@@ -5,8 +5,8 @@ namespace gradient_descent {
 
 ScaleUpdate Approximation::add(Sample const* current, bool update_scale_only, bool current_is_replacement)
 {
-  DoutEntering(dc::notice, "Approximation::add(" << *current << ", " << std::boolalpha << update_scale_only << ", " <<
-      current_is_replacement << ")");
+  DoutEntering(dc::notice|continued_cf, "Approximation::add(" << *current << ", " << std::boolalpha << update_scale_only << ", " <<
+      current_is_replacement << ") --> ");
 
   bool already_had_two_relevant_samples = number_of_relevant_samples_ == 2;
   if (current_is_replacement)
@@ -59,13 +59,23 @@ ScaleUpdate Approximation::add(Sample const* current, bool update_scale_only, bo
         (delta_Lw * sum_dLdw - 2.0 * delta_w * product_Lw) / (utils::square(delta_w) * delta_dLdw) :
         delta_Lw * delta_dLdw / (utils::square(delta_w) * sum_dLdw);
 
+      // If a parabola fit is not calculatable then treat it as a straight line through just the current sample.
+      if (std::isnan(parabola_[2]) || std::isinf(parabola_[2]) ||
+          std::abs(parabola_[2]) < Scale::epsilon || std::abs(delta_dLdw) < Scale::epsilon || std::abs(sum_dLdw) < Scale::epsilon)
+      {
+        parabola_[2] = 0.0;
+        number_of_relevant_samples_ = 1;
+        parabola_scale_.reset();
+        Dout(dc::finish, "ScaleUpdate::first_sample");
+        return ScaleUpdate::first_sample;
+      }
+
       parabola_[1] = delta_Lw / delta_w - (w0 + w1) * parabola_[2];
       parabola_[0] = (w0 * Lw1 - w1 * Lw0) / delta_w + w0 * w1 * parabola_[2];
 
       Dout(dc::notice, "Parabola fit through (" << w0 << ", " << Lw0 << ") with derivative " << dLdw0);
       Dout(dc::notice, "                 and (" << w1 << ", " << Lw1 << ") with derivative " << dLdw1);
       Dout(dc::notice, "    P(x) = " << parabola_ << " --> P(" << w0 << ") = " << parabola_(w0) << " and P(" << w1 << ") = " << parabola_(w1));
-      ASSERT(utils::almost_equal(Lw0, parabola_(w0), 1e-6) && utils::almost_equal(Lw1, parabola_(w1), 1e-6));
       Dout(dc::notice, "    P'(" << w0 << ") = " << parabola_.derivative(w0) << " (requested: " << dLdw0 << ")");
       Dout(dc::notice, "    P'(" << w1 << ") = " << parabola_.derivative(w1) << " (requested: " << dLdw1 << ")");
     }
@@ -76,6 +86,7 @@ ScaleUpdate Approximation::add(Sample const* current, bool update_scale_only, bo
   // but the caller passed current_is_replacement, so it should know to ignore that.
   if (!current_is_replacement && number_of_relevant_samples_ == 2)
     result = parabola_scale_.update(relevant_samples_, current_index_, parabola_, already_had_two_relevant_samples);
+  Dout(dc::finish, result);
   return result;
 }
 

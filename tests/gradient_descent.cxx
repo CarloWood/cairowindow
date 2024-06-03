@@ -25,10 +25,98 @@
 #include "utils/print_using.h"
 #endif
 
+#define USE_SLIDERS 0
+
 using utils::has_print_on::operator<<;
 
-#if 0
-class Function
+class FunctionBase
+{
+ protected:
+  symbolic::Symbol const& w_ = symbolic::Symbol::realize("w");
+  symbolic::Symbol const& a_ = symbolic::Symbol::realize("a");
+  symbolic::Symbol const& b_ = symbolic::Symbol::realize("b");
+  symbolic::Symbol const& c_ = symbolic::Symbol::realize("c");
+  symbolic::Symbol const& d_ = symbolic::Symbol::realize("d");
+  symbolic::Symbol const& e_ = symbolic::Symbol::realize("e");
+};
+
+#if 1
+class Function : FunctionBase
+{
+ public:
+  static constexpr double w_0 = -51.0;
+  static constexpr double w_min = -60.0; //-80.0;
+  static constexpr double w_max = -50.0; //20.0;
+
+ private:
+  using Expression = symbolic::Expression;
+  using Constant = symbolic::Constant;
+  using Symbol = symbolic::Symbol;
+  using Func = symbolic::Function;
+
+  static Constant const tp;
+  Symbol const& amplitude_ = symbolic::Symbol::realize("amplitude");
+  Symbol const& level_ = symbolic::Symbol::realize("level");
+  Symbol const& phase_ = symbolic::Symbol::realize("phase");
+
+ private:
+  Func const& sigmoid_ = Func::realize("sigmoid", exp(3 * (w_ + tp)) / (1 + exp(3 * (w_ + tp))));
+
+  Expression const& function_ = (1.0 - sigmoid_) * (a_ + b_ * w_ + c_ * (w_^2)) +
+    (sigmoid_ * (amplitude_ * exp((tp - w_) / 10) * sin(d_ * w_ + phase_) + level_));
+
+  Expression const& derivative_ = function_.derivative(w_);
+
+ public:
+  Function()
+  {
+    a_ = 14.6;
+    b_ = 3.15;
+    c_ = 0.451;
+    d_ = 0.5;
+    amplitude_ = 0.012027;
+    level_ = 1878.38;
+    phase_ = 1.91892;
+  }
+
+  std::string as_string() const
+  {
+    std::ostringstream oss;
+    function_.print_on(oss);
+    return oss.str();
+  }
+
+  double operator()(double w) const
+  {
+    w_ = w;
+    sigmoid_.reset_evaluation();
+    return function_.evaluate();
+  }
+
+  double derivative(double w) const
+  {
+    w_ = w;
+    sigmoid_.reset_evaluation();
+    return derivative_.evaluate();
+  }
+
+#if USE_SLIDERS
+ public:
+  void set_sliders(double amplitude, double level, double phase)
+  {
+    amplitude_ = amplitude;
+    level_ = level;
+    phase_ = phase;
+    sigmoid_.reset_evaluation();
+  }
+#endif
+};
+
+//static
+symbolic::Constant const Function::tp = symbolic::Constant::realize(55);
+
+#elif 0
+class Function : FunctionBase
 {
  public:
   static constexpr double w_0 = 12.0;
@@ -36,13 +124,6 @@ class Function
   static constexpr double w_max = 80.0;
 
  private:
-  symbolic::Symbol const& w_ = symbolic::Symbol::realize("w");
-  symbolic::Symbol const& a_ = symbolic::Symbol::realize("a");
-  symbolic::Symbol const& b_ = symbolic::Symbol::realize("b");
-  symbolic::Symbol const& c_ = symbolic::Symbol::realize("c");
-  symbolic::Symbol const& d_ = symbolic::Symbol::realize("d");
-  symbolic::Symbol const& e_ = symbolic::Symbol::realize("e");
-
   //symbolic::Expression const& function_ = a_ + b_ * w_ + c_ * (w_^2) + d_ * (w_^3) + e_ * (w_^4);
   symbolic::Expression const& function_ = symbolic::sin(a_ + b_ * w_) + d_ * ((w_ - c_)^2);
   symbolic::Expression const& derivative_ = function_.derivative(w_);
@@ -88,10 +169,6 @@ class Function
   }
 };
 #else
-constexpr double a2 = 14.6;
-constexpr double b2 = 3.15;
-constexpr double c2 = 0.451;
-
 class Function
 {
  public:
@@ -125,39 +202,9 @@ class Function
     a1_ = 15.0;
     b1_ = 3.1;
     c1_ = 0.2;
-    a2_ = a2;
-    b2_ = b2;
-    c2_ = c2;
-  }
-
-  void set_a1(double a1)
-  {
-    a1_ = a1;
-  }
-
-  void set_b1(double b1)
-  {
-    b1_ = b1;
-  }
-
-  void set_c1(double c1)
-  {
-    c1_ = c1;
-  }
-
-  void set_a2(double a2)
-  {
-    a2_ = a2;
-  }
-
-  void set_b2(double b2)
-  {
-    b2_ = b2;
-  }
-
-  void set_c2(double c2)
-  {
-    c2_ = c2;
+    a2_ = 14.6;
+    b2_ = 3.15;
+    c2_ = 0.451;
   }
 
   std::string as_string() const
@@ -288,6 +335,11 @@ class PlotParabolaScale
     return master_.parabola();
   }
 
+  gradient_descent::Scale const& scale() const
+  {
+    return master_;
+  }
+
   // Draws and caches a plot of the old parabola; which has to be passed as an argument.
   void draw_old_parabola(math::QuadraticPolynomial const& old_parabola)
   {
@@ -401,15 +453,18 @@ class AcceleratedGradientDescent
   using Weight = gradient_descent::Weight;
   using Sample = gradient_descent::Sample;
   using Scale = gradient_descent::Scale;
+  using HistoryIndex = gradient_descent::HistoryIndex;
 
   static constexpr cairowindow::draw::LineStyle curve_line_style_{{.line_width = 1.0}};
   static cairowindow::draw::ConnectorStyle s_difference_expected_style;
 
  private:
   double learning_rate_;        // In unit_of(w)^2 / unit_of(L).
+  double small_step_{};         // This will replace learning_rate_ as soon as we have an idea of the scale of changes.
 
   // Remember the (most recent) history of samples.
   PlotHistory history_;
+  HistoryIndex clamped_history_index_;
   Approximation current_approximation_;
   PlotParabolaScale current_plot_approximation_parabola_scale_;
   Approximation* approximation_ptr_;
@@ -442,6 +497,7 @@ class AcceleratedGradientDescent
     done,                     // w was already updated.
     check_energy,             // After adding the new sample, abort if the required energy is too large.
     vertex_jump,              // Only add the new sample to the history if we didn't overshoot another extreme dramatically.
+    clamped,                  // Attemped to jump to a vertex, but against hdirection, passed a previous sample. Use that last sample instead.
     gamma_based,              // Internal state used to signify that w was already updated and a call to handle_parabolic_approximation
                               // is not longer desired.
     local_extreme,            // After adding the new sample, handle the fact that we found an extreme.
@@ -471,6 +527,7 @@ class AcceleratedGradientDescent
 
   bool operator()(Weight& w, double Lw, double dLdw);
   bool update_energy();
+  void reset_history();
   bool handle_local_extreme(Weight& w);
   void update_approximation(bool current_is_replacement);
   void handle_single_sample(Weight& w);
@@ -536,7 +593,6 @@ bool AcceleratedGradientDescent::operator()(Weight& w, double Lw, double dLdw)
         Dout(dc::notice, "Returning: " << w);
         return true;
       }
-      Debug(attach_gdb());
       Dout(dc::notice, w << " --> " << (history_.total_number_of_samples() + 1) << ": " <<
           gamma_based_w << " [gamma based] [expected_Lw: " << expected_Lw_ << "]");
       state_ = IterationState::gamma_based;
@@ -606,7 +662,18 @@ bool AcceleratedGradientDescent::operator()(Weight& w, double Lw, double dLdw)
     state_ = IterationState::done;
   }
   else
+  {
     handle_parabolic_approximation(w);
+    if (state_ == IterationState::clamped)
+    {
+      Dout(dc::notice, "Clamped by sample " << history_[clamped_history_index_]);
+      // The vertex of the current approximation doesn't make sense, aka the approximation doesn't make sense.
+      // We need to find a reasonable jump point based on the current sample and the one given by clamped_history_index_.
+      //FIXME: make this 0.5
+      w = 0.52 * (w + history_[clamped_history_index_].w());
+      state_ = IterationState::done;
+    }
+  }
 
   Dout(dc::notice, "Returning: " << w);
   return true;
@@ -647,6 +714,19 @@ bool AcceleratedGradientDescent::update_energy()
   return true;
 }
 
+void AcceleratedGradientDescent::reset_history()
+{
+  DoutEntering(dc::notice, "AcceleratedGradientDescent::reset_history()");
+
+  // Use the Approximation object on the stack again (as opposed to one from a LocalExtreme).
+  plot_approximation_parabola_scale_ptr_->erase_indicators();
+  approximation_ptr_ = &current_approximation_;
+  plot_approximation_parabola_scale_ptr_ = &current_plot_approximation_parabola_scale_;
+  // Reset the parabolic approximation.
+  approximation_ptr_->reset();
+  history_.reset();
+}
+
 bool AcceleratedGradientDescent::handle_local_extreme(Weight& w)
 {
   // Following adding the first extreme, we should have decided on a horizontal direction.
@@ -666,6 +746,10 @@ bool AcceleratedGradientDescent::handle_local_extreme(Weight& w)
   // If we came from (say) the left, and already found a minimum there, then mark left as explored.
   if (best_minimum_ != extremes_.end())
     new_extreme->explored(opposite(hdirection_));
+
+  // Update small_step_ (parabola_scale() returns an absolute value).
+  small_step_ = approximation_ptr_->parabola_scale();
+  Dout(dc::notice, "small_step_ set to " << small_step_);
 
   // Keep track of the best minimum so far; or abort if this minimum isn't better then one found before.
   if (vdirection_ == VerticalDirection::down)
@@ -693,12 +777,49 @@ bool AcceleratedGradientDescent::handle_local_extreme(Weight& w)
   Dout(dc::notice, "vdirection_ is toggled to " << vdirection_ << ".");
 
   Sample const& w2 = history_.current();
-  // If the current sample is too close to the prev(1), then ignore prev(1).
-  bool skip_sample = std::abs(w2.w() - history_.prev(1).w()) < 0.001 * approximation_ptr_->parabola_scale();
-  Sample const& w1 = history_.prev(1 + (skip_sample ? 1 : 0));
-  Sample const& w0 = history_.prev(2 + (skip_sample ? 1 : 0));
-
   double w2_1 = w2.w();
+
+  // Find all samples that are within the scale range of the current approximation.
+  double const scale = approximation_ptr_->parabola_scale();
+  std::array<int, 5> usable_samples;
+  int number_of_usable_samples = 0;
+  for (int i = 1; i < history_.relevant_samples() && number_of_usable_samples < usable_samples.size(); ++i)
+  {
+    Sample const& sample = history_.prev(i);
+    double dist = std::abs(sample.w() - w2_1);
+    // If the current sample is too close or too far away from the vertex, then skip this sample.
+    if (dist < 0.001 * scale || dist > 1.1 * scale)
+      continue;
+
+    usable_samples[number_of_usable_samples++] = i;
+  }
+  Dout(dc::notice, "Number of samples within scale range: " << number_of_usable_samples);
+  // If not enough samples we need to get another one! (to be implemented)
+  ASSERT(number_of_usable_samples >= 2);
+  // Brute force find the two samples that, together with the current sample, have the largest spread.
+  int i0 = 0;
+  int i1 = 1;
+  double best_spread = 0.0;
+  if (number_of_usable_samples > 2)
+  {
+    for (int t0 = 0; t0 < number_of_usable_samples - 1; ++t0)
+      for (int t1 = t0 + 1; t1 < number_of_usable_samples; ++t1)
+      {
+        double w0 = history_.prev(usable_samples[t0]).w();
+        double w1 = history_.prev(usable_samples[t1]).w();
+        double spread = utils::square(w0 - w1) + utils::square(w0 - w2_1) + utils::square(w1 - w2_1);
+        if (spread > best_spread)
+        {
+          best_spread = spread;
+          i0 = t0;
+          i1 = t1;
+        }
+      }
+  }
+
+  Sample const& w1 = history_.prev(usable_samples[i0]);
+  Sample const& w0 = history_.prev(usable_samples[i1]);
+
   double w2_2 = w2_1 * w2_1;
   double w2_3 = w2_2 * w2_1;
   double w2_4 = w2_2 * w2_2;
@@ -768,6 +889,21 @@ bool AcceleratedGradientDescent::handle_local_extreme(Weight& w)
 
   std::array<double, 2> zeroes;
   int number_of_zeroes = quotient.get_zeroes(zeroes);
+
+  // It is possible that the zeroes are no usable because they are on the wrong side.
+  if (hdirection_ != HorizontalDirection::undecided)
+  {
+    auto wrong_side = [this, w](double zero) { return (hdirection_ == HorizontalDirection::left) != (zero < w); };
+    for (int zero = 0; zero < number_of_zeroes;)
+      if (wrong_side(zeroes[zero]))
+      {
+        if (--number_of_zeroes == 1 && zero == 0)
+          zeroes[0] = zeroes[1];
+      }
+      else
+        ++zero;
+  }
+
   if (number_of_zeroes > 1)
     Dout(dc::notice, "with zeroes " << zeroes[0] << " and " << zeroes[1]);
   else if (number_of_zeroes == 1)
@@ -781,7 +917,7 @@ bool AcceleratedGradientDescent::handle_local_extreme(Weight& w)
   if (number_of_zeroes > 0)
   {
     std::array<double, 2> expected_Lw;
-    for (int zero = 0; zero <= number_of_zeroes; ++zero)
+    for (int zero = 0; zero < number_of_zeroes; ++zero)
       expected_Lw[zero] = fourth_degree_approximation(zeroes[zero]);
     int best_zero = (number_of_zeroes == 2 &&
         (hdirection_ == HorizontalDirection::right ||
@@ -791,13 +927,7 @@ bool AcceleratedGradientDescent::handle_local_extreme(Weight& w)
     expected_Lw_ = expected_Lw[best_zero];
     Dout(dc::notice, history_.current().w() << " --> " << history_.total_number_of_samples() << ": " <<
         w << " [best zero] [expected_Lw: " << expected_Lw_ << "]");
-    // Use the Approximation object on the stack again (as opposed to one from a LocalExtreme).
-    plot_approximation_parabola_scale_ptr_->erase_indicators();
-    approximation_ptr_ = &current_approximation_;
-    plot_approximation_parabola_scale_ptr_ = &current_plot_approximation_parabola_scale_;
-    // Reset the parabolic approximation.
-    approximation_ptr_->reset();
-    history_.reset();
+    reset_history();
     Dout(dc::notice(hdirection_ == HorizontalDirection::undecided && number_of_zeroes == 2),
         "Best zero was " << zeroes[best_zero] << " with A(" << zeroes[best_zero] << ") = " <<
         fourth_degree_approximation(zeroes[best_zero]) <<
@@ -852,8 +982,7 @@ void AcceleratedGradientDescent::update_approximation(bool current_is_replacemen
   using namespace gradient_descent;
 
   math::QuadraticPolynomial old_parabola = plot_approximation_parabola_scale_ptr_->get_parabola();
-  Approximation& approximation(*approximation_ptr_);
-  ScaleUpdate result = approximation.add(&history_.current(), approximation_ptr_ != &current_approximation_, current_is_replacement);
+  ScaleUpdate result = approximation_ptr_->add(&history_.current(), approximation_ptr_ != &current_approximation_, current_is_replacement);
 
   switch (result)
   {
@@ -869,58 +998,76 @@ void AcceleratedGradientDescent::update_approximation(bool current_is_replacemen
     case ScaleUpdate::away_from_vertex:
       plot_approximation_parabola_scale_ptr_->draw_indicators();
       break;
+    case ScaleUpdate::disconnected:
+    {
+      reset_history();
+      result = approximation_ptr_->add(&history_.current(), false, false);
+      break;
+    }
   }
 
-  Dout(dc::notice, "approximation = " << approximation <<
-      " (" << utils::print_using(approximation, &Approximation::print_based_on) << ")");
+  Dout(dc::notice, "approximation = " << *approximation_ptr_ <<
+      " (" << utils::print_using(*approximation_ptr_, &Approximation::print_based_on) << ")");
 
   // Draw the parabolic approximation.
   plot_approximation_curve_.solve(
-      [&approximation](double w) -> cairowindow::Point { return {w, approximation.parabola()(w)}; }, plot_.viewport());
+      [this](double w) -> cairowindow::Point { return {w, approximation_ptr_->parabola()(w)}; }, plot_.viewport());
   plot_.add_bezier_fitter(layer_, curve_line_style_({.line_color = cairowindow::color::red}), plot_approximation_curve_);
 }
 
 void AcceleratedGradientDescent::handle_single_sample(Weight& w)
 {
-  double step = learning_rate_ * -history_.current().dLdw();
+  double step;
 #ifdef CWDEBUG
   char const* algorithm_str;
 #endif
 
-  // Did we drop into a (local) minimum as a starting point?!
-  if (Scale::almost_zero(w, step))
+  if (small_step_ == 0.0)       // Not defined yet?
   {
-    if (hdirection_ == HorizontalDirection::undecided)
+    step = learning_rate_ * -history_.current().dLdw();
+
+    // Did we drop into a (local) minimum as a starting point?!
+    if (Scale::almost_zero(w, step))
     {
-      // In this case we can't do anything else than just make a step in some random direction.
-      step = learning_rate_;
+      if (hdirection_ == HorizontalDirection::undecided)
+      {
+        // In this case we can't do anything else than just make a step in some random direction.
+        step = learning_rate_;
 #ifdef CWDEBUG
-      algorithm_str = "one sample, derivative is zero, hdirection is unknown";
+        algorithm_str = "one sample, derivative is zero, hdirection is unknown";
+#endif
+      }
+      else
+      {
+        step = static_cast<int>(hdirection_) * learning_rate_;
+#ifdef CWDEBUG
+        algorithm_str = "one sample, derivative is zero";
+#endif
+      }
+    }
+    else if (hdirection_ == HorizontalDirection::undecided)
+    {
+      // Just gradient descent: move downhill.
+#ifdef CWDEBUG
+      algorithm_str = "one sample, gradient descent";
 #endif
     }
     else
     {
-      step = static_cast<int>(hdirection_) * learning_rate_;
+      // Make a step in the same horizontal direction.
+      step = static_cast<int>(hdirection_) * std::abs(step);
 #ifdef CWDEBUG
-      algorithm_str = "one sample, derivative is zero";
+      algorithm_str = "one sample, same direction";
 #endif
     }
   }
-  else if (hdirection_ == HorizontalDirection::undecided)
-  {
-    // Just gradient descent: move downhill.
-#ifdef CWDEBUG
-    algorithm_str = "one sample, gradient descent";
-#endif
-  }
   else
   {
-    // Make a step in the same horizontal direction.
-    step = static_cast<int>(hdirection_) * std::abs(step);
-#ifdef CWDEBUG
-    algorithm_str = "one sample, same direction";
-#endif
+    // small_step_ should only be set once hdirection_ has been set.
+    ASSERT(hdirection_ != HorizontalDirection::undecided);
+    step = static_cast<int>(hdirection_) * small_step_;
   }
+
   // This step could still be too small.
   if (approximation_ptr_->parabola_scale().negligible(step))
   {
@@ -990,22 +1137,44 @@ void AcceleratedGradientDescent::handle_parabolic_approximation(Weight& w)
 
   // Set w to the value where the derivative of this parabolic approximation is zero.
   Dout(dc::notice, "Setting new_sample to the extreme of parabolic approximation:");
-  double step = w;
-  w = approximation.parabola().vertex_x();
+  bool looking_for_maximum = approximation.has_maximum();
+  auto ignore = [&current, looking_for_maximum](Sample const& sample) {
+    double w0 = current.w();
+    double Lw0 = current.Lw();
+    double dLdw0 = current.dLdw();
+    double w1 = sample.w();
+    double Lw1 = sample.Lw();
+    double dLdw1 = sample.dLdw();
+
+    // See clamp_check.cxx.
+    double dw = w0 - w1;
+    double dw3 = std::pow(dw, 3.0);
+    double d = (-2.0 * (Lw0 - Lw1) + dw * (dLdw0 + dLdw1)) / dw3;
+    double c = (dLdw0 - dLdw1) / (2.0 * dw) - 1.5 * (w0 + w1) * d;
+    double b = (w0 * dLdw1 - w1 * dLdw0) / dw + 3.0 * w0 * w1 * d;
+
+    double D = utils::square(c) - 3.0 * b * d;
+    if (D >= 0.0)
+    {
+      double zero = (-c + (looking_for_maximum ? -1.0 : 1.0) * std::sqrt(D)) / (3.0 * d);
+      if (std::min(w0, w1) < zero && zero < std::max(w0, w1))
+        return false;
+    }
+
+    // There is no minimum/maximum in between w0 and w1, therefore
+    // do not clamp on this sample: ignore it.
+    return true;
+  };
+  double new_w = history_.clamp(w, approximation.parabola().vertex_x(), ignore, clamped_history_index_);
+  if (!clamped_history_index_.undefined())
+  {
+    state_ = IterationState::clamped;
+    return;
+  }
+
+  double step = w - new_w;
+  w = new_w;
   expected_Lw_ = approximation.parabola().vertex_y();
-  step -= w;
-#if 0
-  // Use the actual derivative of L(w), instead of the derivative of the parabolic approximation
-  // which might be a little different when not both points lay on a piece of the curve that
-  // actually is a parabola.
-  //
-  // As a result, this new w might not be exactly equal to the vertex of the approximated parabola.
-  // β = (L'(w₁) - L'(w₀)) / (w₁ - w₀)    [see README.gradient_descent]
-  double beta_inverse = (current.w() - prev.w()) / (current.dLdw() - prev.dLdw());
-  double step = beta_inverse * current.dLdw();
-  w -= step;
-  expected_Lw_ = approximation.parabola()(w);
-#endif
   state_ = IterationState::vertex_jump;
 
   double abs_step = std::abs(step);
@@ -1076,13 +1245,10 @@ bool AcceleratedGradientDescent::handle_abort_hdirection(Weight& w)
   // Restore the energy to what it was when this minimum was stored.
   energy_.set(best_minimum_->energy(), best_minimum_->vertex_sample().Lw());
 
-  // Use the Approximation object on the stack again (as opposed to one from a LocalExtreme).
-  plot_approximation_parabola_scale_ptr_->erase_indicators();
-  approximation_ptr_ = &current_approximation_;
-  plot_approximation_parabola_scale_ptr_ = &current_plot_approximation_parabola_scale_;
-  // Reset the parabolic approximation.
-  approximation_ptr_->reset();
-  history_.reset();
+  // Restore small_step_ to what is was.
+  small_step_ = best_minimum_->plot_approximation_parabola_scale_.scale();
+
+  reset_history();
 
   // w was successfully updated.
   Dout(dc::notice, "Returning: " << w);
@@ -1138,13 +1304,13 @@ int main()
         L_max= std::max(L_max, val);
         w += delta_w;
       }
-//      L_min = -1.25;
+//      L_min = -100;
 //      L_max = 60.0;
     }
 
     // Create and draw plot area.
     plot::Plot plot(window.geometry(), { .grid = {.color = color::orange} },
-        "The function " + L.as_string(), {},
+        "(1−σ(3(w+55))) (14.6+3.15w+0.451w²) + σ(3(w+55))(0.012 exp((55-w)/10) sin(0.5w+1.92)+1878)", {},
         "w", {},
         "L", {});
     plot.set_xrange({w_min, w_max});
@@ -1156,10 +1322,23 @@ int main()
     draw::TextStyle label_style({.position = draw::centered_left_of, .font_size = 18.0, .offset = 10});
     draw::LineStyle derivative_line_style({.line_color = color::turquoise, .line_width = 1.0});
 
+#if !USE_SLIDERS
     BezierFitter L_fitter([&L](double w) -> Point { return {w, L(w)}; }, plot.viewport());
     auto plot_curve = plot.create_bezier_fitter(second_layer, curve_line_style, std::move(L_fitter));
+#endif
 
     AcceleratedGradientDescent agd(0.1, L_max, plot, second_layer, point_style, label_style);
+
+#if USE_SLIDERS
+    // amplitude = 0.012027, level = 1878.38, phase = 1.91892
+    draw::TextStyle slider_style({.position = draw::centered_below, .font_size = 18.0, .offset = 10});
+    auto slider_amplitude = plot.create_slider(second_layer, {978, 83, 7, 400}, 0.012027, 0.01, 0.04);
+    auto slider_amplitude_label = plot.create_text(second_layer, slider_style, Pixel{978, 483}, "amplitude");
+    auto slider_level = plot.create_slider(second_layer, {1028, 83, 7, 400}, 1878.38, 1500, 2500);
+    auto slider_level_label = plot.create_text(second_layer, slider_style, Pixel{1028, 483}, "level");
+    auto slider_phase = plot.create_slider(second_layer, {1078, 83, 7, 400}, 1.91892, 0.0, 2.0 * M_PI);
+    auto slider_phase_label = plot.create_text(second_layer, slider_style, Pixel{1078, 483}, "phase");
+#endif
 
     // Loop over iterations of w.
     for (Weight w(w_0);;)
@@ -1167,9 +1346,18 @@ int main()
       // Suppress immediate updating of the window for each created item, in order to avoid flickering.
       window.set_send_expose_events(false);
 
+#if USE_SLIDERS
+      L.set_sliders(slider_amplitude.value(), slider_level.value(), slider_phase.value());
+      Dout(dc::notice,
+          "amplitude = " << slider_amplitude.value() << ", level = " << slider_level.value() << ", phase = " << slider_phase.value());
+
+      BezierFitter L_fitter([&L](double w) -> Point { return {w, L(w)}; }, plot.viewport());
+      auto plot_curve = plot.create_bezier_fitter(second_layer, curve_line_style, std::move(L_fitter));
+#else
       // Replace w with a new point until the global minimum has been reached.
       if (!agd(w, L(w), L.derivative(w)))
         break;
+#endif
 
       // Flush all expose events related to the drawing done above.
       window.set_send_expose_events(true);
@@ -1181,8 +1369,10 @@ int main()
       Dout(dc::notice, "------------------------------------");
     }
 
+#if !USE_SLIDERS
     if (agd.success())
       Dout(dc::notice, "Found global minimum " << agd.minimum());
+#endif
 
     event_loop.join();
   }

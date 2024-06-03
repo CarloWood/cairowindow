@@ -25,9 +25,30 @@ enum class ScaleUpdate
   initialized,                  // When there are two samples for the first time.
   towards_vertex,               // When we already had two samples (and therefore an "old" parabolic approximation)
                                 // and the new sample is at the vertex of the new parabola.
-  away_from_vertex              // When we already has two samples (and therefore an "old" parabolic approximation)
+  away_from_vertex,             // When we already had two samples (and therefore an "old" parabolic approximation)
                                 // and the new sample was moved away from the vertex.
+  disconnected                  // Same as away_from_vertex but the scale wasn't increased.
 };
+
+#ifdef CWDEBUG
+inline std::string to_string(ScaleUpdate scale_update)
+{
+  switch (scale_update)
+  {
+    AI_CASE_RETURN(ScaleUpdate::first_sample);
+    AI_CASE_RETURN(ScaleUpdate::initialized);
+    AI_CASE_RETURN(ScaleUpdate::towards_vertex);
+    AI_CASE_RETURN(ScaleUpdate::away_from_vertex);
+    AI_CASE_RETURN(ScaleUpdate::disconnected);
+  }
+  AI_NEVER_REACHED
+}
+
+inline std::ostream& operator<<(std::ostream& os, ScaleUpdate scale_update)
+{
+  return os << to_string(scale_update);
+}
+#endif
 
 class Scale
 {
@@ -36,7 +57,7 @@ class Scale
 
  protected:
   double scale_{};                      // An indication of what changes to w are significant.
-  bool has_sample_{};                   // True iff the below is value.
+  bool has_sample_{};                   // True iff the below is valid.
   double edge_sample_w_;                // The value of w that corresponds to this scale: edge_sample_w_ - scale_
                                         // should be more or less equal to the vertex of the parabola_.
   double edge_sample_Lw_;               // Cached value of L(edge_sample_w_). Should also be more or less equal
@@ -245,27 +266,26 @@ class Scale
       double const distance_current_to_parabola = std::abs(parabola_Lw_at_current - current->Lw());
       // Get the vertical distance from the new sample to the vertex of the parabola.
       double const abs_current_height = std::abs(current->Lw() - parabola_.vertex_y());
-      // If the new sample vertically deviates less than 10%, we can use the new sample as new edge sample and adjust the scale accordingly.
-      if (distance_current_to_parabola < 0.1 * abs_current_height)
+      // If the new sample vertically deviates more than 10%, we can't use the new sample as new edge sample.
+      if (distance_current_to_parabola > 0.1 * abs_current_height)
+        return ScaleUpdate::disconnected;
+      // Get the derivative at the w value of the new sample, according to the parabola and adjust the scale accordingly.
+      double const parabola_dLdw_at_current = parabola_.derivative(current->w());
+      // Get the real derivative at this w value.
+      double const dLdw_at_current = current->dLdw();
+      // The sin of the angle between the tangent lines at this point (with slopes corresponding to these derivatives)
+      // is given by: sin(delta_angle) = (s_1 - s_2) / sqrt((1 + (s_1)^2)(1 + (s_2)^2)).
+      // Calculate the square of the sinus of the angle between these lines.
+      double const s1s2 = parabola_dLdw_at_current * dLdw_at_current;
+      double const s12 = parabola_dLdw_at_current * parabola_dLdw_at_current;
+      double const s22 = dLdw_at_current * dLdw_at_current;
+      double const sin2 = (s12 - 2.0 * s1s2 + s22) / ((1.0 + s12) * (1.0 + s22));
+      if (sin2 < 0.03)
       {
-        // Get the derivative at the w value of the new sample, according to the parabola.
-        double const parabola_dLdw_at_current = parabola_.derivative(current->w());
-        // Get the real derivative at this w value.
-        double const dLdw_at_current = current->dLdw();
-        // The sin of the angle between the tangent lines at this point (with slopes corresponding to these derivatives)
-        // is given by: sin(delta_angle) = (s_1 - s_2) / sqrt((1 + (s_1)^2)(1 + (s_2)^2)).
-        // Calculate the square of the sinus of the angle between these lines.
-        double const s1s2 = parabola_dLdw_at_current * dLdw_at_current;
-        double const s12 = parabola_dLdw_at_current * parabola_dLdw_at_current;
-        double const s22 = dLdw_at_current * dLdw_at_current;
-        double const sin2 = (s12 - 2.0 * s1s2 + s22) / ((1.0 + s12) * (1.0 + s22));
-        if (sin2 < 0.03)
-        {
-          scale_ = new_scale;
-          edge_sample_w_ = current->w();
-          edge_sample_Lw_ = current->Lw();
-          Dout(dc::notice, "scale was set to " << *current << " - " << old_v_x << " = " << scale_);
-        }
+        scale_ = new_scale;
+        edge_sample_w_ = current->w();
+        edge_sample_Lw_ = current->Lw();
+        Dout(dc::notice, "scale was set to " << *current << " - " << old_v_x << " = " << scale_);
       }
     }
     return ScaleUpdate::away_from_vertex;

@@ -46,6 +46,9 @@ target_link_libraries(parabolic_scale AICxx::cairowindow AICxx::symbolic ${AICXX
 add_executable(backtrack_check backtrack_check.cxx)
 target_link_libraries(backtrack_check AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST})
 
+add_executable(clamp_check clamp_check.cxx)
+target_link_libraries(clamp_check AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST})
+
 add_executable(parabolic_fit parabolic_fit.cxx)
 target_link_libraries(parabolic_fit AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST})
 
