@@ -608,7 +608,7 @@ bool AcceleratedGradientDescent::operator()(Weight& w, double Lw, double dLdw)
   history_.add(w, Lw, dLdw, approximation_ptr_->parabola_scale(), current_is_replacement);
 
   // This function should never return a value whose difference with the previous sample is negligible
-  // if there is only single relevant sample in the history.
+  // if there is only a single relevant sample in the history.
   ASSERT(!current_is_replacement || history_.relevant_samples() > 1);
 
   // Erase all previous curves (if they exist).

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess lessons by Carlo Wood</title>
+    <link rel="stylesheet" type="text/css" href="lessons.css">
+</head>
+<body>
+    <div class="print-container">
+        <div class="content">
+            <div class="date">6 June 2024</div>
+            <h1>King Safety</h1>
+            <h2>The fianchetto without bishop</h2>
+            <!--
+              $ chess_diagram --replace -o "lesson-2024-06-06.svg" "5rk1/ppq2pnp/2p3p1/1n6/1PB5/P5Q1/1B4PP/3R3K w - - 0 1"
+            -->
+            <object class="diagram"
+              data="lesson-2024-06-06.svg">
+            </object>
+            <p>White plays and wins. The mating net here is having the white queen on f6,
+            showing that a black knight on g7 is not a good defender: if the knight doesn't move we take
+            it with mate, and if it does then it can't defend h8, thus Qh8# mate follows.</p>
+            <p>Because the f-pawn is pinned, an important detail, black is unable to defend his king
+            under this threat; since f7-f6 is off the table (which would use the rook on f8 to
+            defend f6, block the long diagonal (a1-h8) and allow the queen to defend g7) now
+            white would win with the queen <i>anywhere</i> on that long diagonal! Nevertheless,
+            all but f6 is defended at the moment, so which is the correct move for white to attack it?
+            He can attack f6 with the queen in four different ways:
+            <span class="chess-move">1. Qf3</span>, <span class="chess-move">1. Qf2</span>,
+            <span class="chess-move2">1. Qh4</span> and <span class="chess-move">1. Qg5</span>.</p>
+
+            <p>Lets look at each move in turn. After <span class="chess-move">1. Qf3</span> black
+            can defend f6 with <span class="chess-move">1. ... Qe7</span>
+            (<span class="chess-move">1. ... Ne8</span> still loses to the brilliant move
+            <span class="chess-move">2. a4!!</span> and black has to give up a piece because
+            <span class="chess-move">2. ... Nd6</span> gives white a square on the long diagonal: 
+            <span class="chess-move">3. Qc3!</span> and mate in two follows.)
+            Here white can attempt to lure the black queen away with a rook sacrifice:
+            <span class="chess-move">2. Rd7!? Qxd7 3. Qf6</span> but unfortunately now black has
+            a check <span class="chess-move">3. ... Qd1+</span>
+            <span class="chess-move">4. Bf1 Qxf1!</span> (only move)
+            <span class="chess-move">5. Qxf1 Re8</span>
+            <span class="chess-move">6. Kg1 (6. Qf6?? Re1+)</span>
+            <span class="chess-move">6. ... Nf5</span>
+            <span class="chess-move2">7. g4 Nfd4</span> blocking the bishop
+            and white is only slightly better.</p>
+
+            <p>After <span class="chess-move">1. Qf2</span> black must play
+            <span class="chess-move">1. ... Nf5</span> right away
+            (<span class="chess-move">1. ... Qe7?</span> isn't good enough anymore as white now
+            has <span class="chess-move">2. Re1</span> to attack the queen. For example,
+            <span class="chess-move">2. ... Qd8 3. Ba1!!</span> (makes room on the long diagonal
+            for the queen) <span class="chess-move">3. ... Nf5</span>
+            (<span class="chess-move">3. ... Nd6</span>
+            <span class="chess-move">4. Qb2! Nde8</span>
+            <span class="chess-move">5. h3</span> (threatens Rxe8)
+            and black has to sacrifice the knight with <span class="chess-move">5. ... Nf6</span>.)
+            <span class="chess-move">4. g4 Nfd4</span>
+            <span class="chess-move">5. Re4</span> attacking the knight three times and black has
+            to give up the piece (for example if <span class="chess-move">5. ... Ne6??</span>
+            <span class="chess-move">6. Rxe6! Nc7</span> <span class="chess-move">7. Re1</span>).
+            <span class="chess-move">2. g4 Qe7!</span>
+            <span class="chess-move">3. Re1</span> (<span class="chess-move">3. gxf5?? Qe4+</span>
+            <span class="chess-move">4. Qg2 Qxc4</span> and black should be winning having two
+            extra pawns) <span class="chess-move">3. ... Qh4!=</span> because white is forced to
+            exchange queens or black is better (according to the engine).</p>
+        </div>
+    </div>
+</body>
+</html>

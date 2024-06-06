@@ -9,6 +9,11 @@ Black plays and wins (queen + rook against h3,g2) (lesson-2024-05-23)
 Bonus:
 4r1k1/1R3pp1/p2B3p/2p1P3/2P5/6bP/P2q2P1/1Q5K w - - 0 1
 
+White plays and wins (attack with Q and B on 'fianchetto'-ed knight).
+5rk1/ppq2pnp/2p3p1/1n6/1PB5/P5Q1/1B4PP/3R3K w - - 0 1
+Bonus:
+8/8/1p6/1K3Bpp/7k/4bP2/6P1/8 w - - 0 59
+
 -----------
 
 Black plays and wins (recognize the danger)
@@ -26,8 +31,6 @@ White plays and wins (how dangerous are two connected pawns on the 6th row?)
 8/3kb1R1/P3p3/3p1bp1/1P6/N4r2/1KP5/8 b - - 2 38
 
 From screen shots:
-3rr1k1/ppqb1ppp/3bnn2/2p1p3/4P3/P1P3PP/1PQNNPB1/R1B2RK1 b - - 0 1
-5rk1/ppq2pnp/2p3p1/1n6/1PB5/P5Q1/1B4PP/3R3K w - - 0 1
 
 White plays and wins (motive lesson-2024-04-11)
 r5k1/pp6/n1p2r1Q/3P4/8/2Pq4/P4P1K/R7 w - - 0 44
