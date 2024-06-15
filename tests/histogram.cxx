@@ -265,9 +265,9 @@ HorizontalDirection AcceleratedGradientDescent::lowest_side(Weight const& w)
   HorizontalDirection result = HorizontalDirection::undecided;
   if (histogram_.number_of_extremes() > 1)
   {
-    if (w == histogram_.number_of_extremes() - 1 || (0 < w && histogram_[extremes_[w - 1].w()] < histogram_[extremes_[w + 1].w()]))
+    if (w == histogram_.number_of_extremes() - 1 || (0 < w && histogram_[w - 1] < histogram_[w + 1]))
       result = HorizontalDirection::left;
-    else if (w == 0 || (w < histogram_.number_of_extremes() - 1 && histogram_[extremes_[w - 1].w()] > histogram_[extremes_[w + 1].w()]))
+    else if (w == 0 || (w < histogram_.number_of_extremes() - 1 && histogram_[w - 1] > histogram_[w + 1]))
       result = HorizontalDirection::right;
   }
   return result;
