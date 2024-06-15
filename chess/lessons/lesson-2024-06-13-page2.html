@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess lessons by Carlo Wood</title>
+    <link rel="stylesheet" type="text/css" href="lessons.css">
+</head>
+<body>
+    <div class="print-container">
+        <div class="content">
+            <div class="date">13 June 2024</div>
+            <h2>The fianchetto without bishop (continued)</h2>
+            <p>The main difference between the previous two moves and the remaining two moves
+            is that with the queen on f2 or f3, Nf5 would block the queen from going to f6
+            <i>and</i> black had Qe7 as defense. Neither are possible if white goes to the d8-h4
+            diagonal. For example, <span class="chess-move">1. Qh4 Nf5??</span>
+            <span class="chess-move">2. Qf6</span> and again black has to give up a knight to
+            stop the impending mate. E.g. <span class="chess-move">2. ... Nbd4</span>
+            <span class="chess-move">3. Rxd4!</span>. Obviously black can't take the rook
+            or whites bishop takes back with mate in two, but the rook is blocking the bishop,
+            which gives black one extra tempo to avoid immediate mate with
+            <span class="chess-move">3. ... Qe7</span>
+            <span class="chess-move2">4. Qxe7 Nxe7</span>
+            <span class="chess-move">5. Rd7</span> and white is a piece up.
+
+            <p>Nevertheless, also <span class="chess-move">1. Qh4</span> isn't the winning
+            move as black can now defend with <span class="chess-move">1. ... Nd6!</span> (only move)
+            <span class="chess-move">2. Qf6 Nde8</span> where one knight defends g7 while
+            the other blocks the white queen from going to h8! And since the white queen is attacked
+            as well, he doesn't have time to threaten to sacrifice the rook on e8:
+            <span class="chess-move">3. Qc3 h5!</span>
+            <span class="chess-move">4. Re1 Kh7</span> and the black rook is now defending h8.</p>
+
+            <p>This Nd6 resource does <i>not</i> work with the winning move:
+            <span class="chess-move">1. Qg5!</span> (i.e.
+            <span class="chess-move">1. ... Nd6</span>
+            <span class="chess-move">2. Bxg7!! Ne4</span> (<span class="chess-move">2. ... Kxg7</span>
+            <span class="chess-move">3. Qe5+</span> and white wins the knight)
+            <span class="chess-move">3. Qh6</span> (also <span class="chess-move">3. Qe3</span>
+            and <span class="chess-move">3. Qh4</span> win)
+            <span class="chess-move">3. ... Nf2+</span>
+            <span class="chess-move">4. Kg1 Ng4</span> (<span class="chess-move">4. ... Nxd1??</span>
+            <span class="chess-move">5. Bd4</span> and mate in 3)
+            <span class="chess-move">5. Qh4 Kxg7</span>
+            <span class="chess-move">6. Qxg4</span> and white is again a piece up).</p>
+
+            <p>Finally we have to look at <span class="chess-move">1. ... Ne8</span>.
+            As we saw before, this isn't a good defense because it only defends f6, while
+            having the white queen anywhere on the long diagonal wins. For example,
+            <span class="chess-move">2. a4</span> would again win the knight as
+            <span class="chess-move">2. Nd6? Qe5</span> is mate in two. But even better is
+            <span class="chess-move">2. h4!</span>. Since the knight left g7, h5 is now
+            deadly weakened. There is nothing black can do against the threat h4-h5-hxg7.
+            Note that none of blacks pieces can move: the knight on e8 has to defend f6,
+            the queen on c7 has to defend e5 and the knight on b5 can't go to d6 because
+            then it blocks the queen from defending e5 (this is also why Qb8 doesn't help).
+            For example what could follow is <span class="chess-move">2. ... a6?</span>
+            with the idea that now at least a4 can be met with Na7.
+            <span class="chess-move">3. h5 Na7</span> basically doing nothing, but what
+            is white going to do? <span class="chess-move">4. hxg5 Nc8</span>
+            <span class="chess-move">5. gxf7#</span>. Of course black has better, but everything
+            involves sacrificing at least knight.</p>
+
+            <p>By the way, after <span class="chess-move">1. Qg5 Ne8</span> white also
+            can play <span class="chess-move">2. Ba1!</span> and then move the queen to
+            b2: the only undefended square on the long diagonal. Try it out!</p>
+
+            <h2>Puzzle <font size="3pt">(white plays and draws)</font></h2>
+            <!--
+              $ chess_diagram --replace -o "lesson-2024-06-13-extra.svg" "8/8/1p6/1K3Bpp/7k/4bP2/6P1/8 w - - 0 59"
+            -->
+            <object class="diagram"
+              data="lesson-2024-06-13-extra.svg">
+            </object>
+        </div>
+    </div>
+</body>
+</html>
