@@ -1,3 +1,4 @@
+#include "sys.h"
 #include "HorizontalDirection.h"
 #include "VerticalDirection.h"
 #include <iostream>
@@ -7,6 +8,7 @@
 #include <limits>
 #include <iomanip>
 #include <cassert>
+#include "debug.h"
 
 using HorizontalDirection = gradient_descent::HorizontalDirection;
 using VerticalDirection = gradient_descent::VerticalDirection;
@@ -240,7 +242,7 @@ class AcceleratedGradientDescent
   int minimum() const
   {
     // Only call this function when success() returns true.
-    assert(success());
+    ASSERT(success());
     return best_minimum_->w();
   }
 };
@@ -387,13 +389,15 @@ int minimum(Histogram const& histogram)
   }
   std::cout << std::endl;
 
-  assert(agd.success());
+  ASSERT(agd.success());
 
   return agd.minimum();
 }
 
 int main()
 {
+  Debug(NAMESPACE_DEBUG::init());
+
   std::seed_seq seed{1, 2, 3, 4, 8};
   std::mt19937 generator(seed);
 
@@ -401,7 +405,7 @@ int main()
   for (int i = 0; i < number_of_test_runs; ++i)
   {
     Histogram histogram(generator);
-    std::cout << histogram << std::endl;
-    std::cout << "Result: " << minimum(histogram) << std::endl;
+    Dout(dc::notice, histogram);
+    Dout(dc::notice, "Result: " << minimum(histogram));
   }
 }

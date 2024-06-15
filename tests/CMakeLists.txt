@@ -52,3 +52,5 @@ target_link_libraries(clamp_check AICxx::cairowindow AICxx::symbolic ${AICXX_OBJ
 add_executable(parabolic_fit parabolic_fit.cxx)
 target_link_libraries(parabolic_fit AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST})
 
+add_executable(histogram histogram.cxx)
+target_link_libraries(histogram ${AICXX_OBJECTS_LIST})
