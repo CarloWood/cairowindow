@@ -13,7 +13,7 @@
 using HorizontalDirection = gradient_descent::HorizontalDirection;
 using VerticalDirection = gradient_descent::VerticalDirection;
 
-constexpr int number_of_test_runs = 2; //000;
+constexpr int number_of_test_runs = 10; //000;
 constexpr int min_number_of_extremes = 1;
 constexpr int max_number_of_extremes = 11;
 constexpr int max_step_size = 100;
@@ -234,6 +234,11 @@ class AcceleratedGradientDescent
   int jump(Weight const& w);
   bool do_step(Weight& w);
 
+  bool is_visited(int w) const
+  {
+    return extremes_[w].w() != -1;
+  }
+
   bool success() const
   {
     return best_minimum_ != extremes_.end();
@@ -245,6 +250,8 @@ class AcceleratedGradientDescent
     ASSERT(success());
     return best_minimum_->w();
   }
+
+  bool is_sane() const;
 };
 
 // lowest_side
@@ -300,7 +307,7 @@ int AcceleratedGradientDescent::jump(Weight const& w)
   int step = target_w - w;
   int visited = -1;
   for (int nw = neighbor; nw != target_w + direction; nw += direction)
-    if (extremes_[nw].w() != -1)
+    if (is_visited(nw))
     {
       visited = nw;
       break;
@@ -434,6 +441,55 @@ bool AcceleratedGradientDescent::operator()(Weight& w, int height)
   return true;        // w was successfully updated by handle_local_extreme.
 }
 
+bool AcceleratedGradientDescent::is_sane() const
+{
+  // Get the index of the minimum that was found.
+  int result = minimum();
+  Dout(dc::finish, result);
+
+  // The result must be a minimum.
+  if (!Histogram::is_minimum(result))
+  {
+    Dout(dc::warning, "The returned result is not a minimum!");
+    return false;
+  }
+
+  // If there exists a minimum on the left...
+  if (result - 2 >= 0)
+  {
+    // It must be visited.
+    if (!is_visited(result - 2))
+    {
+      Dout(dc::warning, "The minimum on the left wasn't visited!");
+      return false;
+    }
+    // And it must be higher than the found minimum.
+    if (!(histogram_[result - 2] > histogram_[result]))
+    {
+      Dout(dc::warning, "The minimum on the left is lower!");
+      return false;
+    }
+  }
+  // If there exists a minimum on the right...
+  if (result + 2 < histogram_.number_of_extremes())
+  {
+    // It must be visited.
+    if (!is_visited(result + 2))
+    {
+      Dout(dc::warning, "The minimum on the right wasn't visited!");
+      return false;
+    }
+    // And it must be higher than the found minimum.
+    if (!(histogram_[result + 2] > histogram_[result]))
+    {
+      Dout(dc::warning, "The minimum on the right is lower!");
+      return false;
+    }
+  }
+
+  return true;
+}
+
 int minimum(Histogram const& histogram)
 {
   // Create algorithm object.
@@ -454,6 +510,8 @@ int minimum(Histogram const& histogram)
   std::cout << std::endl;
 
   ASSERT(agd.success());
+  // Check that the result is sane.
+  ASSERT(agd.is_sane());
 
   return agd.minimum();
 }
@@ -469,7 +527,8 @@ int main()
   for (int i = 0; i < number_of_test_runs; ++i)
   {
     Histogram histogram(generator);
-    Dout(dc::notice, histogram);
-    Dout(dc::notice, "Result: " << minimum(histogram));
+    Dout(dc::notice(i == 5), histogram);
+    Dout(dc::notice|continued_cf, "Result of i = " << i << ": ");       // Finished in is_sane() called from minimum().
+    int min = minimum(histogram);
   }
 }
