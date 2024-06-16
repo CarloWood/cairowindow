@@ -13,7 +13,7 @@
 using HorizontalDirection = gradient_descent::HorizontalDirection;
 using VerticalDirection = gradient_descent::VerticalDirection;
 
-constexpr int number_of_test_runs = 10; //000;
+constexpr int number_of_test_runs = 1000000;
 constexpr int min_number_of_extremes = 1;
 constexpr int max_number_of_extremes = 11;
 constexpr int max_step_size = 100;
@@ -220,6 +220,10 @@ class AcceleratedGradientDescent
   extremes_type extremes_;
   extremes_type::iterator best_minimum_;
 
+  int last_step_ = 0;
+  int last_w_;
+  bool saw_minimum_ = false;
+
  public:
   AcceleratedGradientDescent(Histogram const& histogram) :
     histogram_(histogram),
@@ -250,6 +254,15 @@ class AcceleratedGradientDescent
     ASSERT(success());
     return best_minimum_->w();
   }
+
+  void reset()
+  {
+    hdirection_ = HorizontalDirection::undecided;
+    last_step_ = 0;
+    saw_minimum_ = false;
+  }
+
+  void mark_explored(int w, HorizontalDirection hdirection);
 
   bool is_sane() const;
 };
@@ -315,11 +328,29 @@ int AcceleratedGradientDescent::jump(Weight const& w)
   if (visited != -1)
   {
     if (visited == neighbor)
+    {
+      // The immediate neighbor in that direction was already visited.
+      // If the neighbor is a maximum that wasn't yet explored yet in this direction, then jump to it!
+      if (Histogram::is_minimum(w) && !extremes_[neighbor].is_explored(hdirection_))
+        return direction;
+
       return 0; // Abort this direction.
+    }
     while ((w + step - visited) * direction >= 0)
       step /= 2;
   }
   return step;
+}
+
+void AcceleratedGradientDescent::mark_explored(int w, HorizontalDirection hdirection)
+{
+  ASSERT(hdirection != HorizontalDirection::undecided);
+  std::cout << ":E(" << ((hdirection == HorizontalDirection::left) ? '-' : '+') << ')' << std::flush;
+  // Mark that the extreme at w is being explored in hdirection.
+  extremes_[w].explored(hdirection);
+
+  // Make sure we don't mark extremes that were not visited yet!
+  ASSERT(is_visited(w));
 }
 
 // do_step
@@ -354,12 +385,17 @@ bool AcceleratedGradientDescent::do_step(Weight& w)
     if (current.done())
       return false;
 
-    if (current.is_explored(HorizontalDirection::left))
-      hdirection_ = HorizontalDirection::right;
-    else if (current.is_explored(HorizontalDirection::right))
-      hdirection_ = HorizontalDirection::left;
-    else
-      hdirection_ = lowest_side(w);
+    if (hdirection_ == HorizontalDirection::undecided)
+    {
+      if (current.is_explored(HorizontalDirection::left))
+        hdirection_ = HorizontalDirection::right;
+      else if (current.is_explored(HorizontalDirection::right))
+        hdirection_ = HorizontalDirection::left;
+      else
+        hdirection_ = lowest_side(w);
+    }
+    else if (current.is_explored(hdirection_))
+      return false;
 
     // Happens if there is only a single extreme.
     if (hdirection_ == HorizontalDirection::undecided)
@@ -368,13 +404,16 @@ bool AcceleratedGradientDescent::do_step(Weight& w)
     // Return the step that should be made for a jump in hdirection_.
     step = jump(w);
 
-    if (std::abs(step) <= 1)
+    if (step == 0)
     {
-      // Mark that the current extreme is being explored in the hdirection_.
-      current.explored(hdirection_);
+      // It wasn't possible to go in that direction! This can happen when we reach the edge for example.
+      mark_explored(w, hdirection_);
     }
   }
   while (step == 0);
+
+  last_w_ = w;
+  last_step_ = step;
 
   w = w + step;
   return true;
@@ -402,9 +441,25 @@ bool AcceleratedGradientDescent::handle_local_extreme(Weight& w)
   extremes_[w] = LocalExtreme{w};
   extremes_type::iterator new_extreme = &extremes_[w];
 
+  // If this is an extreme that we found by exploring hdirection_ from a previous exterme,
+  // then mark that last extreme as being explored in the hdirection_.
+  if (std::abs(last_step_) == 1)
+  {
+    mark_explored(last_w_, hdirection_);
+
+    // If the current extreme is a maximum, then it can be marked as having been explored to the opposite direction (in that case the previous extreme is a minimum).
+    // Or if the current extreme is a minimum and we came from another minimum (with steps of size 1), then mark it as having been explored into the opposite direction.
+    if (saw_minimum_)
+    {
+      // Mark that the current extreme is being explored in the opposite hdirection_.
+      mark_explored(w, opposite(hdirection_));
+    }
+  }
+
   // Keep track of the best minimum so far; or abort if this minimum isn't better then one found before.
   if (Histogram::is_minimum(w))
   {
+    saw_minimum_ = true;
     if (best_minimum_ == extremes_.end() || histogram_[best_minimum_->w()] > histogram_[new_extreme->w()])
       best_minimum_ = new_extreme;
     if (new_extreme != best_minimum_)
@@ -422,12 +477,16 @@ bool AcceleratedGradientDescent::handle_local_extreme(Weight& w)
 // and check that we explored both sides of it already.
 bool AcceleratedGradientDescent::handle_abort_hdirection(Weight& w)
 {
+  std::cout << "(a)";
+  reset();
+
   // Has a minimum been found at all?
   if (best_minimum_ == extremes_.end())
     return false;
 
   // Restore the current sample and scale to the values belonging to this minimum.
   w = best_minimum_->w();
+  std::cout << " ==> " << w << std::flush;
 
   // Go to the next extreme.
   return do_step(w);
@@ -435,9 +494,22 @@ bool AcceleratedGradientDescent::handle_abort_hdirection(Weight& w)
 
 bool AcceleratedGradientDescent::operator()(Weight& w, int height)
 {
+  // If the step size is larger than one, than we should be able to detect
+  // that we skipped an extreme (with a third degree polynomial fit).
+  // In that case we want to half the step size *unless* the returned
+  // value is lower than the current best minimum.
+  if (std::abs(last_step_) > 1)
+  {
+    std::cout << "(r)";
+    last_step_ /= 2;
+    w = last_w_ + last_step_;
+    return true;
+  }
+
   // Every sample is a local extreme here.
   if (!handle_local_extreme(w))
     return handle_abort_hdirection(w);
+
   return true;        // w was successfully updated by handle_local_extreme.
 }
 
@@ -527,7 +599,7 @@ int main()
   for (int i = 0; i < number_of_test_runs; ++i)
   {
     Histogram histogram(generator);
-    Dout(dc::notice(i == 5), histogram);
+    Dout(dc::notice, histogram);
     Dout(dc::notice|continued_cf, "Result of i = " << i << ": ");       // Finished in is_sane() called from minimum().
     int min = minimum(histogram);
   }

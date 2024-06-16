@@ -44,6 +44,50 @@ class FunctionBase
 class Function : FunctionBase
 {
  public:
+  static constexpr double w_0 = 1.0;
+  static constexpr double w_min = -3.0;
+  static constexpr double w_max = 6.0;
+
+ private:
+  using Expression = symbolic::Expression;
+
+  Expression const& function_ = a_ + b_ * w_ + c_ * (w_^2) + d_ * (w_^3) + e_ * (w_^4);
+  Expression const& derivative_ = function_.derivative(w_);
+
+ public:
+  Function()
+  {
+    a_ = 25.0;
+    b_ = 25.0;
+    c_ = -10.0;
+    d_ = -10.0;
+    e_ = 2.0;
+  }
+
+ public:
+  std::string as_string() const
+  {
+    std::ostringstream oss;
+    function_.print_on(oss);
+    return oss.str();
+  }
+
+  double operator()(double w) const
+  {
+    w_ = w;
+    return function_.evaluate();
+  }
+
+  double derivative(double w) const
+  {
+    w_ = w;
+    return derivative_.evaluate();
+  }
+};
+#elif 0
+class Function : FunctionBase
+{
+ public:
   static constexpr double w_0 = -51.0;
   static constexpr double w_min = -60.0; //-80.0;
   static constexpr double w_max = -50.0; //20.0;
@@ -1066,6 +1110,9 @@ void AcceleratedGradientDescent::handle_single_sample(Weight& w)
     // small_step_ should only be set once hdirection_ has been set.
     ASSERT(hdirection_ != HorizontalDirection::undecided);
     step = static_cast<int>(hdirection_) * small_step_;
+#ifdef CWDEBUG
+    algorithm_str = "small step";
+#endif
   }
 
   // This step could still be too small.
