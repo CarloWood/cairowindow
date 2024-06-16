@@ -147,7 +147,9 @@ void Histogram::print_on(std::ostream& os) const
     os << std::setw(2) << std::setfill(' ') << left_jump_[e] << " <-- ";
     os << std::setw(2) << std::setfill(' ') << e << " --> ";
     os << std::setw(2) << std::setfill(' ') << right_jump_[e] << " : ";
-    for (int h = min_height_ - 1; h < extremes_[e]; ++h)
+    os << std::setw(4) << std::setfill(' ') << std::right << extremes_[e] << " ~";
+    // Only print one '~' per 10 height diff (so this output fits in discord).
+    for (int h = 0; h < (extremes_[e] - min_height_) / 10; ++h)
       os << '~';
     if ((e & 1) == 1)
       os << "+\n";
@@ -500,10 +502,20 @@ bool AcceleratedGradientDescent::operator()(Weight& w, int height)
   // value is lower than the current best minimum.
   if (std::abs(last_step_) > 1)
   {
-    std::cout << "(r)";
-    last_step_ /= 2;
-    w = last_w_ + last_step_;
-    return true;
+    // However, if the height here is less than that of the current best minimum then
+    // we accept the jump regardless.
+    if (best_minimum_ != extremes_.end() && height < histogram_[best_minimum_->w()])
+    {
+      reset();
+    }
+    else
+    {
+      // Reject and half the jump step.
+      std::cout << "(r)";
+      last_step_ /= 2;
+      w = last_w_ + last_step_;
+      return true;
+    }
   }
 
   // Every sample is a local extreme here.
