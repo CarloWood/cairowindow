@@ -212,7 +212,7 @@ class LocalExtreme
   }
 };
 
-class AcceleratedGradientDescent
+class Algorithm
 {
  private:
   Histogram const& histogram_;
@@ -227,7 +227,7 @@ class AcceleratedGradientDescent
   bool saw_minimum_ = false;
 
  public:
-  AcceleratedGradientDescent(Histogram const& histogram) :
+  Algorithm(Histogram const& histogram) :
     histogram_(histogram),
     hdirection_(HorizontalDirection::undecided),
     extremes_{{}},
@@ -282,7 +282,7 @@ class AcceleratedGradientDescent
 // In this test code we simply use the actual "extremes" left and right of the current one:
 // the values of the histogram left and right of the current index w.
 //
-HorizontalDirection AcceleratedGradientDescent::lowest_side(Weight const& w)
+HorizontalDirection Algorithm::lowest_side(Weight const& w)
 {
   HorizontalDirection result = HorizontalDirection::undecided;
   if (histogram_.number_of_extremes() > 1)
@@ -311,7 +311,7 @@ HorizontalDirection AcceleratedGradientDescent::lowest_side(Weight const& w)
 // visited extreme, instead we half the jumping distance until it falls within the allowed
 // range.
 //
-int AcceleratedGradientDescent::jump(Weight const& w)
+int Algorithm::jump(Weight const& w)
 {
   // Find nearest neighbor that was already visited.
   int const direction = static_cast<int>(hdirection_);
@@ -344,7 +344,7 @@ int AcceleratedGradientDescent::jump(Weight const& w)
   return step;
 }
 
-void AcceleratedGradientDescent::mark_explored(int w, HorizontalDirection hdirection)
+void Algorithm::mark_explored(int w, HorizontalDirection hdirection)
 {
   ASSERT(hdirection != HorizontalDirection::undecided);
   std::cout << ":E(" << ((hdirection == HorizontalDirection::left) ? '-' : '+') << ')' << std::flush;
@@ -376,7 +376,7 @@ void AcceleratedGradientDescent::mark_explored(int w, HorizontalDirection hdirec
 // direction again. And if it return 0 we can already never go into
 // that direction, so don't try again in the future.
 //
-bool AcceleratedGradientDescent::do_step(Weight& w)
+bool Algorithm::do_step(Weight& w)
 {
   int step;
   do
@@ -437,7 +437,7 @@ bool AcceleratedGradientDescent::do_step(Weight& w)
 // If you assume that we find all extremes exactly in order,
 // then this algorithm works. But it is possible that the best
 // minimum is jumped over (or is it?).
-bool AcceleratedGradientDescent::handle_local_extreme(Weight& w)
+bool Algorithm::handle_local_extreme(Weight& w)
 {
   // Store it as an extreme.
   extremes_[w] = LocalExtreme{w};
@@ -477,7 +477,7 @@ bool AcceleratedGradientDescent::handle_local_extreme(Weight& w)
 // Called when we can't go further in the current hdirection.
 // In this case we want to jump to the best minimum so far
 // and check that we explored both sides of it already.
-bool AcceleratedGradientDescent::handle_abort_hdirection(Weight& w)
+bool Algorithm::handle_abort_hdirection(Weight& w)
 {
   std::cout << "(a)";
   reset();
@@ -494,7 +494,7 @@ bool AcceleratedGradientDescent::handle_abort_hdirection(Weight& w)
   return do_step(w);
 }
 
-bool AcceleratedGradientDescent::operator()(Weight& w, int height)
+bool Algorithm::operator()(Weight& w, int height)
 {
   // If the step size is larger than one, than we should be able to detect
   // that we skipped an extreme (with a third degree polynomial fit).
@@ -525,7 +525,7 @@ bool AcceleratedGradientDescent::operator()(Weight& w, int height)
   return true;        // w was successfully updated by handle_local_extreme.
 }
 
-bool AcceleratedGradientDescent::is_sane() const
+bool Algorithm::is_sane() const
 {
   // Get the index of the minimum that was found.
   int result = minimum();
@@ -577,7 +577,7 @@ bool AcceleratedGradientDescent::is_sane() const
 int minimum(Histogram const& histogram)
 {
   // Create algorithm object.
-  AcceleratedGradientDescent agd(histogram);
+  Algorithm gda(histogram);
 
   // * start at starting_position_.
   Weight w{histogram.starting_position()};
@@ -587,17 +587,17 @@ int minimum(Histogram const& histogram)
   for (;;)
   {
     // Replace w with a new point until the global minimum has been reached.
-    if (!agd(w, histogram[w]))
+    if (!gda(w, histogram[w]))
       break;
     std::cout << " --> " << w << std::flush;
   }
   std::cout << std::endl;
 
-  ASSERT(agd.success());
+  ASSERT(gda.success());
   // Check that the result is sane.
-  ASSERT(agd.is_sane());
+  ASSERT(gda.is_sane());
 
-  return agd.minimum();
+  return gda.minimum();
 }
 
 int main()

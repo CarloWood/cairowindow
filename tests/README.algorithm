@@ -1,0 +1,76 @@
+Let L(w) be the function that we are trying to find the global minimum of.
+Let a 'sample' be a triplet {w, L(w), L'(w)}.
+
+The algorithm has a notion of a 'current' position (w).
+The current position is adjusted to a new position, after which a new sample is taken.
+
+In pseudo code:
+
+  Algorithm gda;
+
+  while (gda(w, L(w), dLdw(w)))
+    ;
+
+where the Algorithm::operator()(Weight& w, ...) changes w from the 'current' value
+upon entry to the new value every time it is called.
+
+The decision on where to go next is made by looking at
+approximations of L based on samples taken.
+
+The main idea of the algorithm is to find a local minimum, and explore
+that in a certain direction until a minimum is found that is less deep
+than the previous one. The algorithm terminates when it finds a minimum
+that has both left and right either no minimum, or minima that are less
+deep.
+
+In order to do this, the algorithm searches alternating for maxima and
+minima in a given horizontal direction; if a minimum is found that is
+less deep than the best minimum found so far, that direction is aborted,
+the current position is changed to the position of the best minimum
+found so far and then the other side is explored, if that wasn't already
+done.
+
+For efficiency and in order to be know when to terminate, extremes are
+marked as "being explored to the left/right"; the algorithm terminates
+when - after jumping back to the best minimum - that minimum is already
+marked as being explored both, to the left and to the right.
+
+An extreme is marked as explored in a given direction if:
+* We find the extreme immediately next to it in that direction.
+* The extreme is found immediately next to a series of adjecent extremes
+  among which at least one minimum. In practise that means: it is either
+  a maximum (then we must have came from a minimum), or it is a minimum
+  and we came from a maximum that was found after finding a minimum:
+  min -> max (current), or
+  min -> max -> min (current).
+* We tried to go into that direction, but aborted because too much energy
+  was used.
+
+If an extreme that is found is "immediately" next to the previous one
+or not depends on whether or not a "reset" found place in between.
+An algorithm is used to make a it very unlikely that we jump over an
+existing extreme (if that happens, then it is lost; we don't know it
+exists). Normally we alternating find minima and maxima that are
+all adjecent. However, if we find a sample that tells us that we
+(might have) jumped too far, but it is lower than the lowest point
+found so far, then a "reset" happens, and we continue at that point
+as if we just started (with the exception that samples alredy taken
+are remembered).
+
+The Algorithm is several modes it can be in:
+* Looking for an extreme with just one sample (Initial sample).
+* Looking for an extreme with two samples.
+* Looking for a minimum with just one sample (Just being reset).
+* Looking for a minimum left of two given samples.
+* Looking for a minimum between two given samples.
+* Looking for a minimum right of two given samples.
+* Looking for a maximum left of two given samples.
+* Looking for a maximum between two given samples.
+* Looking for a maximum right of two given samples.
+
+The Algorithm has a member hdirection_ that contains the
+direction that we want to go to after finding the next
+local extreme: this value is set at the moment an extreme
+is found, because then it is decided if want to go look
+for the next extreme left or right of that one.
+
