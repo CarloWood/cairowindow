@@ -14,6 +14,9 @@ In pseudo code:
 where the Algorithm::operator()(Weight& w, ...) changes w from the 'current' value
 upon entry to the new value every time it is called.
 
+When describing the algorithm below, and we say 'step' then this means
+the value that is added to the current w to get the new w.
+
 The decision on where to go next is made by looking at
 approximations of L based on samples taken.
 
@@ -58,15 +61,15 @@ as if we just started (with the exception that samples already taken
 are remembered).
 
 The Algorithm has several modes it can be in:
-* Looking for an extreme with just one sample (Initial sample).
-* Looking for an extreme with two samples.
-* Looking for a minimum with just one sample (Just being reset).
-* Looking for a minimum left of two given samples.
-* Looking for a minimum between two given samples.
-* Looking for a minimum right of two given samples.
-* Looking for a maximum left of two given samples.
-* Looking for a maximum between two given samples.
-* Looking for a maximum right of two given samples.
+A) Looking for an extreme with just one sample (Initial sample).
+B) Looking for an extreme with two samples.
+C) Looking for a minimum with just one sample (Just being reset).
+D) Looking for a minimum left of two given samples.
+E) Looking for a minimum between two given samples.
+F) Looking for a minimum right of two given samples.
+G) Looking for a maximum left of two given samples.
+H) Looking for a maximum between two given samples.
+I) Looking for a maximum right of two given samples.
 
 The Algorithm has a member hdirection_ that contains the
 direction that we want to go to after finding the next
@@ -76,4 +79,39 @@ for the next extreme left or right of that one. This direction
 is reset to "undecided" whenever a jump takes place: either
 one where we jumped over extremes (but to a lower point)
 or when we jumped back to the best minimum so far.
+
+Below we use the fact that if hdirection_ means 'left' then
+its value is -1, and if it means 'right' its value is 1.
+
+The Algorithm has a member small_step_ that is initialized
+with the value zero, meaning it is unknown. If possible it
+is set to the absolute value of the "scale" of the current
+parabolic approximation.                                        //FIXME: parabolic? or another approximation as well?
+As long as small_step_ is unknown, we fall back to a constant
+given by learning_rate_.
+
+The following sub-algorithms exist:
+A/C)
+ * small_step_ is known.
+     In this case step is set to hdirection_ * small_step_.
+ * small_step_ is unknown (zero), in this case learning_rate_ is used:
+   - derivative is zero (`almost_zero`).
+     > hdirection_ is undecided.
+         In this case step is set to learning_rate_.
+     > hdirection_ is known.
+         In this case step is set to hdirection_ * learning_rate_.
+   - derivative is not zero.
+     > hdirection_ is undecided.
+         In this case step is set to learning_rate_ * -dLdW (the normal gradient descent).
+     > hdirection_ is known.
+         In this case step is set to hdirection_ * abs(learning_rate_ * dLdW).
+
+  When having just one sample (A and C) the step is never so small that it will
+  be considered `negligible`; if that is the case then it is increased until it
+  no longer is `negligible`. Here `negligible` is the same algorithm that is used
+  to decide if a new `w` should replace the previous sample instead of being added
+  as a new sample. As a result, we only have a single sample once; the newly
+  returned w then will always be considered to be a new, second sample. Therefore
+  the Algorithm will always leave mode A and C after one step.
+
 

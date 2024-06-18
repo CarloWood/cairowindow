@@ -17,6 +17,7 @@ bool Algorithm::operator()(Weight& w, double Lw, double dLdw)
 
   using namespace gradient_descent;
 
+#if 0 // OLD CODE
   double gamma_based_w;
   if (state_ == IterationState::vertex_jump)
   {
@@ -58,6 +59,7 @@ bool Algorithm::operator()(Weight& w, double Lw, double dLdw)
       state_ = IterationState::gamma_based;
     }
   }
+#endif
 
   // If the new sample (w) is too close to the previous sample (Scale::negligible returns true)
   // then the new sample replaces the previous sample, current_is_replacement is set to true
@@ -116,6 +118,9 @@ bool Algorithm::operator()(Weight& w, double Lw, double dLdw)
     Dout(dc::notice, "vdirection_ is set to " << vdirection_ << " because hdirection_ is still undecided.");
   }
 
+  // Implement.
+  ASSERT(false);
+#if 0 // OLD CODE
   if (state_ == IterationState::gamma_based)
   {
     w = gamma_based_w;
@@ -134,6 +139,7 @@ bool Algorithm::operator()(Weight& w, double Lw, double dLdw)
       state_ = IterationState::done;
     }
   }
+#endif
 
   Dout(dc::notice, "Returning: " << w);
   return true;
@@ -486,7 +492,7 @@ void Algorithm::handle_single_sample(Weight& w)
   {
     step = learning_rate_ * -history_.current().dLdw();
 
-    // Did we drop into a (local) minimum as a starting point?!
+    // Did we drop on a (local) extreme as a starting point?!
     if (Scale::almost_zero(w, step))
     {
       if (hdirection_ == HorizontalDirection::undecided)
