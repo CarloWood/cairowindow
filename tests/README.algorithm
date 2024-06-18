@@ -37,9 +37,9 @@ marked as being explored both, to the left and to the right.
 
 An extreme is marked as explored in a given direction if:
 * We find the extreme immediately next to it in that direction.
-* The extreme is found immediately next to a series of adjecent extremes
+* The extreme is found immediately next to a series of adjacent extremes
   among which at least one minimum. In practise that means: it is either
-  a maximum (then we must have came from a minimum), or it is a minimum
+  a maximum (then we must have come from a minimum), or it is a minimum
   and we came from a maximum that was found after finding a minimum:
   min -> max (current), or
   min -> max -> min (current).
@@ -51,13 +51,13 @@ or not depends on whether or not a "reset" found place in between.
 An algorithm is used to make a it very unlikely that we jump over an
 existing extreme (if that happens, then it is lost; we don't know it
 exists). Normally we alternating find minima and maxima that are
-all adjecent. However, if we find a sample that tells us that we
+all adjacent. However, if we find a sample that tells us that we
 (might have) jumped too far, but it is lower than the lowest point
 found so far, then a "reset" happens, and we continue at that point
-as if we just started (with the exception that samples alredy taken
+as if we just started (with the exception that samples already taken
 are remembered).
 
-The Algorithm is several modes it can be in:
+The Algorithm has several modes it can be in:
 * Looking for an extreme with just one sample (Initial sample).
 * Looking for an extreme with two samples.
 * Looking for a minimum with just one sample (Just being reset).
@@ -72,5 +72,8 @@ The Algorithm has a member hdirection_ that contains the
 direction that we want to go to after finding the next
 local extreme: this value is set at the moment an extreme
 is found, because then it is decided if want to go look
-for the next extreme left or right of that one.
+for the next extreme left or right of that one. This direction
+is reset to "undecided" whenever a jump takes place: either
+one where we jumped over extremes (but to a lower point)
+or when we jumped back to the best minimum so far.
 
