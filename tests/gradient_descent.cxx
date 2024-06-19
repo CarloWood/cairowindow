@@ -285,6 +285,58 @@ cairowindow::draw::ConnectorStyle const PlotParabolaScale::s_indicator_style{{.l
 //static
 cairowindow::draw::ConnectorStyle const PlotKineticEnergy::s_indicator_style{{.line_width = 1}};
 
+#ifdef CWDEBUG
+class DifferenceEvent
+{
+ public:
+  static cairowindow::draw::ConnectorStyle s_difference_expected_style;
+
+ private:
+  cairowindow::plot::Plot& plot_;
+  boost::intrusive_ptr<cairowindow::Layer> const& layer_;
+  cairowindow::plot::Connector plot_difference_expected_;
+
+ public:
+  DifferenceEvent(cairowindow::plot::Plot& plot, boost::intrusive_ptr<cairowindow::Layer> const& layer) :
+    plot_(plot), layer_(layer) { }
+
+  void callback(gradient_descent::DifferenceEventType const& event)
+  {
+    // Plot the vertical difference from what we expected to what we got.
+    plot_difference_expected_ = cairowindow::plot::Connector{{event.w(), event.expected_Lw()}, {event.w(), event.Lw()},
+        cairowindow::Connector::no_arrow, cairowindow::Connector::open_arrow};
+    plot_.add_connector(layer_, s_difference_expected_style, plot_difference_expected_);
+  }
+};
+
+//static
+cairowindow::draw::ConnectorStyle DifferenceEvent::s_difference_expected_style{{.line_color = cairowindow::color::blue, .line_width = 1.0}};
+
+class FourthDegreeApproximationEvent
+{
+ public:
+  static constexpr cairowindow::draw::LineStyle curve_line_style_{{.line_width = 1.0}};
+
+ private:
+  cairowindow::plot::Plot& plot_;
+  boost::intrusive_ptr<cairowindow::Layer> const& layer_;
+  cairowindow::plot::BezierFitter plot_fourth_degree_approximation_curve_;
+
+ public:
+  FourthDegreeApproximationEvent(cairowindow::plot::Plot& plot, boost::intrusive_ptr<cairowindow::Layer> const& layer) :
+    plot_(plot), layer_(layer) { }
+
+  void callback(gradient_descent::FourthDegreeApproximationEventType const& event)
+  {
+    using namespace cairowindow;
+    math::Polynomial const& fourth_degree_approximation = event.fourth_degree_approximation();
+    plot_fourth_degree_approximation_curve_.solve(
+        [&fourth_degree_approximation](double w) -> Point { return {w, fourth_degree_approximation(w)}; }, plot_.viewport());
+    plot_.add_bezier_fitter(layer_, curve_line_style_({.line_color = color::teal}), plot_fourth_degree_approximation_curve_);
+  }
+};
+#endif
+
 int main()
 {
   Debug(NAMESPACE_DEBUG::init());
@@ -369,6 +421,15 @@ int main()
     auto slider_phase_label = plot.create_text(second_layer, slider_style, Pixel{1078, 483}, "phase");
 #endif
 
+#ifdef CWDEBUG
+    DifferenceEvent difference_event(plot, second_layer);
+    auto difference_event_handle = gda.difference_event_server().request(difference_event, &DifferenceEvent::callback);
+
+    FourthDegreeApproximationEvent fourth_degree_approximation_event(plot, second_layer);
+    auto fourth_degree_approximation_event_handle =
+      gda.fourth_degree_approximation_event_server().request(fourth_degree_approximation_event, &FourthDegreeApproximationEvent::callback);
+#endif
+
     // Loop over iterations of w.
     for (Weight w(w_0);;)
     {
@@ -402,6 +463,9 @@ int main()
     if (gda.success())
       Dout(dc::notice, "Found global minimum " << gda.minimum());
 #endif
+
+    difference_event_handle.cancel();
+    fourth_degree_approximation_event_handle.cancel();
 
     event_loop.join();
   }

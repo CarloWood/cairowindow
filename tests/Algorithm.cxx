@@ -1,15 +1,10 @@
 #include "sys.h"
 #include "Algorithm.h"
-#include "Polynomial.h"
-#include <Eigen/Dense>
 #ifdef CWDEBUG
 #include "utils/print_using.h"
 #endif
 
 namespace gradient_descent {
-
-//static
-cairowindow::draw::ConnectorStyle Algorithm::s_difference_expected_style{{.line_color = cairowindow::color::blue, .line_width = 1.0}};
 
 bool Algorithm::operator()(Weight& w, double Lw, double dLdw)
 {
@@ -17,7 +12,7 @@ bool Algorithm::operator()(Weight& w, double Lw, double dLdw)
 
   using namespace gradient_descent;
 
-#if 0 // OLD CODE
+#if 1 // OLD CODE
   double gamma_based_w;
   if (state_ == IterationState::vertex_jump)
   {
@@ -77,12 +72,11 @@ bool Algorithm::operator()(Weight& w, double Lw, double dLdw)
   plot_approximation_curve_.reset();
   plot_derivative_curve_.reset();
   plot_quotient_curve_.reset();
-  plot_fourth_degree_approximation_curve_.reset();
+//  plot_fourth_degree_approximation_curve_.reset();
 
-  // Plot the vertical difference from what we expected to what we got.
-  plot_difference_expected_ = cairowindow::plot::Connector{{w, expected_Lw_}, {w, Lw},
-      cairowindow::Connector::no_arrow, cairowindow::Connector::open_arrow};
-  plot_.add_connector(layer_, s_difference_expected_style, plot_difference_expected_);
+#ifdef CWDEBUG
+  difference_event_server_.trigger(DifferenceEventType{w, expected_Lw_, Lw});
+#endif
 
   // Update kinetic energy. Returns false if too much energy was used.
   if (!update_energy())
@@ -118,9 +112,7 @@ bool Algorithm::operator()(Weight& w, double Lw, double dLdw)
     Dout(dc::notice, "vdirection_ is set to " << vdirection_ << " because hdirection_ is still undecided.");
   }
 
-  // Implement.
-  ASSERT(false);
-#if 0 // OLD CODE
+#if 1 // OLD CODE
   if (state_ == IterationState::gamma_based)
   {
     w = gamma_based_w;
@@ -139,6 +131,9 @@ bool Algorithm::operator()(Weight& w, double Lw, double dLdw)
       state_ = IterationState::done;
     }
   }
+#else
+  // Implement.
+  ASSERT(false);
 #endif
 
   Dout(dc::notice, "Returning: " << w);
@@ -335,13 +330,14 @@ bool Algorithm::handle_local_extreme(Weight& w)
   fourth_degree_approximation[3] = C[2];
   fourth_degree_approximation[4] = C[3];
   fourth_degree_approximation[0] = w2.Lw() - fourth_degree_approximation(w2_1);
+
   Dout(dc::notice, "approximation = " << fourth_degree_approximation);
 
-  using namespace cairowindow;
+#ifdef CWDEBUG
+  fourth_degree_approximation_event_server_.trigger(FourthDegreeApproximationEventType{fourth_degree_approximation});
+#endif
 
-  plot_fourth_degree_approximation_curve_.solve(
-      [&fourth_degree_approximation](double w) -> Point { return {w, fourth_degree_approximation(w)}; }, plot_.viewport());
-  plot_.add_bezier_fitter(layer_, curve_line_style_({.line_color = color::teal}), plot_fourth_degree_approximation_curve_);
+  using namespace cairowindow;
 
   auto derivative = fourth_degree_approximation.derivative();
   Dout(dc::notice, "derivative = " << derivative);
@@ -724,5 +720,17 @@ bool Algorithm::handle_abort_hdirection(Weight& w)
   state_ = IterationState::done;
   return true;
 }
+
+#ifdef CWDEBUG
+void DifferenceEventData::print_on(std::ostream& os) const
+{
+  os << "DifferenceEventData:{w:" << w_ << ", expected_Lw:" << expected_Lw_ << ", Lw:" << Lw_ << "}";
+}
+
+void FourthDegreeApproximationEventData::print_on(std::ostream& os) const
+{
+  os << "FourthDegreeApproximationEventData:{" << fourth_degree_approximation_ << "}";
+}
+#endif
 
 } // namespace gradient_descent

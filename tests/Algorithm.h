@@ -5,23 +5,83 @@
 #include "VerticalDirection.h"
 #include "Weight.h"
 #include "Sample.h"
+#include "Polynomial.h"
 #include "PlotHistory.h"
 #include "PlotParabolaScale.h"
 #include "PlotKineticEnergy.h"
 #include "PlotLocalExtreme.h"
 #include "cairowindow/draw/Line.h"
 #include "cairowindow/draw/Connector.h"
+#include <Eigen/Dense>
+#ifdef CWDEBUG
+#include "events/Events.h"
+#include "utils/has_print_on.h"
+#endif
 
 namespace gradient_descent {
+
+#ifdef CWDEBUG
+using utils::has_print_on::operator<<;
+
+// Event types.
+
+class DifferenceEventData
+{
+ protected:
+  double w_;
+  double expected_Lw_;
+  double Lw_;
+
+ public:
+  DifferenceEventData(double w, double expected_Lw, double Lw) : w_(w), expected_Lw_(expected_Lw), Lw_(Lw) { }
+
+  double w() const { return w_; }
+  double expected_Lw() const { return expected_Lw_; }
+  double Lw() const { return Lw_; }
+
+  void print_on(std::ostream& os) const;
+};
+
+struct DifferenceEventType : public DifferenceEventData
+{
+  using DifferenceEventData::DifferenceEventData;
+  static constexpr bool one_shot = false;
+};
+
+class FourthDegreeApproximationEventData
+{
+ private:
+  math::Polynomial const& fourth_degree_approximation_;
+
+ public:
+  FourthDegreeApproximationEventData(math::Polynomial const& fourth_degree_approximation) :
+    fourth_degree_approximation_(fourth_degree_approximation) { }
+
+  math::Polynomial const& fourth_degree_approximation() const { return fourth_degree_approximation_; }
+
+  void print_on(std::ostream& os) const;
+};
+
+struct FourthDegreeApproximationEventType : public FourthDegreeApproximationEventData
+{
+  using FourthDegreeApproximationEventData::FourthDegreeApproximationEventData;
+  static constexpr bool one_shot = false;
+};
+
+#endif // CWDEBUG
 
 class Algorithm
 {
   static constexpr cairowindow::draw::LineStyle curve_line_style_{{.line_width = 1.0}};
-  static cairowindow::draw::ConnectorStyle s_difference_expected_style;
 
  private:
   double learning_rate_;        // In unit_of(w)^2 / unit_of(L).
   double small_step_{};         // This will replace learning_rate_ as soon as we have an idea of the scale of changes.
+
+#ifdef CWDEBUG
+  events::Server<DifferenceEventType> difference_event_server_;
+  events::Server<FourthDegreeApproximationEventType> fourth_degree_approximation_event_server_;
+#endif
 
   // Remember the (most recent) history of samples.
   PlotHistory history_;
@@ -50,8 +110,6 @@ class Algorithm
   cairowindow::plot::BezierFitter plot_approximation_curve_;
   cairowindow::plot::BezierFitter plot_derivative_curve_;
   cairowindow::plot::BezierFitter plot_quotient_curve_;
-  cairowindow::plot::BezierFitter plot_fourth_degree_approximation_curve_;
-  cairowindow::plot::Connector plot_difference_expected_;
 
   enum class IterationState
   {
@@ -106,6 +164,19 @@ class Algorithm
     ASSERT(success());
     return best_minimum_->vertex_sample();
   }
+
+#ifdef CWDEBUG
+  // Accessors for the event servers.
+  events::Server<DifferenceEventType>& difference_event_server()
+  {
+    return difference_event_server_;
+  }
+
+  events::Server<FourthDegreeApproximationEventType>& fourth_degree_approximation_event_server()
+  {
+    return fourth_degree_approximation_event_server_;
+  }
+#endif
 };
 
 } // namespace gradient_descent
