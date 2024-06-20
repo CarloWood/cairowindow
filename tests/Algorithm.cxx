@@ -1,5 +1,6 @@
 #include "sys.h"
 #include "Algorithm.h"
+#include <Eigen/Dense>
 #ifdef CWDEBUG
 #include "utils/print_using.h"
 #endif
@@ -68,14 +69,10 @@ bool Algorithm::operator()(Weight& w, double Lw, double dLdw)
   // if there is only a single relevant sample in the history.
   ASSERT(!current_is_replacement || history_.relevant_samples() > 1);
 
-  // Erase all previous curves (if they exist).
-  plot_approximation_curve_.reset();
-  plot_derivative_curve_.reset();
-  plot_quotient_curve_.reset();
-//  plot_fourth_degree_approximation_curve_.reset();
-
 #ifdef CWDEBUG
-  difference_event_server_.trigger(DifferenceEventType{w, expected_Lw_, Lw});
+  // Erase all previous curves (if they exist).
+  event_server_.trigger(AlgorithmEventType{reset_event});
+  event_server_.trigger(AlgorithmEventType{difference_event, w, expected_Lw_, Lw});
 #endif
 
   // Update kinetic energy. Returns false if too much energy was used.
@@ -334,7 +331,7 @@ bool Algorithm::handle_local_extreme(Weight& w)
   Dout(dc::notice, "approximation = " << fourth_degree_approximation);
 
 #ifdef CWDEBUG
-  fourth_degree_approximation_event_server_.trigger(FourthDegreeApproximationEventType{fourth_degree_approximation});
+  event_server_.trigger(AlgorithmEventType{fourth_degree_approximation_event, fourth_degree_approximation});
 #endif
 
   using namespace cairowindow;
@@ -342,12 +339,17 @@ bool Algorithm::handle_local_extreme(Weight& w)
   auto derivative = fourth_degree_approximation.derivative();
   Dout(dc::notice, "derivative = " << derivative);
 
-  plot_derivative_curve_.solve([&derivative](double w) -> Point { return {w, derivative(w)}; }, plot_.viewport());
-  plot_.add_bezier_fitter(layer_, curve_line_style_({.line_color = color::magenta}), plot_derivative_curve_);
+#ifdef CWDEBUG
+  event_server_.trigger(AlgorithmEventType{derivative_event, derivative});
+#endif
 
   double remainder;
   auto quotient = derivative.long_division(w2_1, remainder);
   Dout(dc::notice, "quotient = " << quotient << " with remainder " << remainder);
+
+#ifdef CWDEBUG
+  event_server_.trigger(AlgorithmEventType{quotient_event, quotient});
+#endif
 
   std::array<double, 2> zeroes;
   int number_of_zeroes = quotient.get_zeroes(zeroes);
@@ -372,9 +374,6 @@ bool Algorithm::handle_local_extreme(Weight& w)
     Dout(dc::notice, "with one zero at " << zeroes[0]);
   else
     Dout(dc::notice, "with no zeroes!");
-
-  plot_quotient_curve_.solve([&quotient](double w) -> Point { return {w, 10.0 * quotient(w)}; }, plot_.viewport());
-  plot_.add_bezier_fitter(layer_, curve_line_style_({.line_color = color::blue}), plot_quotient_curve_);
 
   if (number_of_zeroes > 0)
   {
@@ -471,10 +470,9 @@ void Algorithm::update_approximation(bool current_is_replacement)
   Dout(dc::notice, "approximation = " << *approximation_ptr_ <<
       " (" << utils::print_using(*approximation_ptr_, &Approximation::print_based_on) << ")");
 
-  // Draw the parabolic approximation.
-  plot_approximation_curve_.solve(
-      [this](double w) -> cairowindow::Point { return {w, approximation_ptr_->parabola()(w)}; }, plot_.viewport());
-  plot_.add_bezier_fitter(layer_, curve_line_style_({.line_color = cairowindow::color::red}), plot_approximation_curve_);
+#ifdef CWDEBUG
+  event_server_.trigger(AlgorithmEventType{quadratic_polynomial_event, approximation_ptr_->parabola()});
+#endif
 }
 
 void Algorithm::handle_single_sample(Weight& w)
@@ -727,9 +725,35 @@ void DifferenceEventData::print_on(std::ostream& os) const
   os << "DifferenceEventData:{w:" << w_ << ", expected_Lw:" << expected_Lw_ << ", Lw:" << Lw_ << "}";
 }
 
-void FourthDegreeApproximationEventData::print_on(std::ostream& os) const
+void PolynomialEventData::print_on(std::ostream& os) const
 {
-  os << "FourthDegreeApproximationEventData:{" << fourth_degree_approximation_ << "}";
+  os << "PolynomialEventData:{" << polynomial_ << "}";
+}
+
+void QuadraticPolynomialEventData::print_on(std::ostream& os) const
+{
+  os << "QuadraticPolynomialEventData:{" << quadratic_polynomial_ << "}";
+}
+
+void AlgorithmEventData::print_on(std::ostream& os) const
+{
+  if (std::holds_alternative<ResetEventData>(event_data_))
+    std::get<ResetEventData>(event_data_).print_on(os);
+  else if (std::holds_alternative<DifferenceEventData>(event_data_))
+    std::get<DifferenceEventData>(event_data_).print_on(os);
+  else if (std::holds_alternative<FourthDegreeApproximationEventData>(event_data_))
+    std::get<FourthDegreeApproximationEventData>(event_data_).print_on(os);
+  else if (std::holds_alternative<DerivativeEventData>(event_data_))
+    std::get<DerivativeEventData>(event_data_).print_on(os);
+  else if (std::holds_alternative<QuotientEventData>(event_data_))
+    std::get<QuotientEventData>(event_data_).print_on(os);
+  else if (std::holds_alternative<QuadraticPolynomialEventData>(event_data_))
+    std::get<QuadraticPolynomialEventData>(event_data_).print_on(os);
+  else if (std::holds_alternative<KineticEnergyEventData>(event_data_))
+    std::get<KineticEnergyEventData>(event_data_).print_on(os);
+  else
+    // Missing implementation.
+    ASSERT(false);
 }
 #endif
 

@@ -13,7 +13,6 @@
 #include "PlotSample.h"
 #include "PlotHistory.h"
 #include "PlotLocalExtreme.h"
-#include "PlotKineticEnergy.h"
 #include "PlotParabolaScale.h"
 #include "cairowindow/Window.h"
 #include "cairowindow/Layer.h"
@@ -282,59 +281,99 @@ class Function
 //static
 cairowindow::draw::ConnectorStyle const PlotParabolaScale::s_indicator_style{{.line_width = 1}};
 
-//static
-cairowindow::draw::ConnectorStyle const PlotKineticEnergy::s_indicator_style{{.line_width = 1}};
-
 #ifdef CWDEBUG
-class DifferenceEvent
-{
- public:
-  static cairowindow::draw::ConnectorStyle s_difference_expected_style;
-
- private:
-  cairowindow::plot::Plot& plot_;
-  boost::intrusive_ptr<cairowindow::Layer> const& layer_;
-  cairowindow::plot::Connector plot_difference_expected_;
-
- public:
-  DifferenceEvent(cairowindow::plot::Plot& plot, boost::intrusive_ptr<cairowindow::Layer> const& layer) :
-    plot_(plot), layer_(layer) { }
-
-  void callback(gradient_descent::DifferenceEventType const& event)
-  {
-    // Plot the vertical difference from what we expected to what we got.
-    plot_difference_expected_ = cairowindow::plot::Connector{{event.w(), event.expected_Lw()}, {event.w(), event.Lw()},
-        cairowindow::Connector::no_arrow, cairowindow::Connector::open_arrow};
-    plot_.add_connector(layer_, s_difference_expected_style, plot_difference_expected_);
-  }
-};
-
-//static
-cairowindow::draw::ConnectorStyle DifferenceEvent::s_difference_expected_style{{.line_color = cairowindow::color::blue, .line_width = 1.0}};
-
-class FourthDegreeApproximationEvent
+class AlgorithmEvent
 {
  public:
   static constexpr cairowindow::draw::LineStyle curve_line_style_{{.line_width = 1.0}};
+  static cairowindow::draw::ConnectorStyle const s_difference_expected_style;
+  static cairowindow::draw::ConnectorStyle const s_indicator_style;
 
  private:
   cairowindow::plot::Plot& plot_;
   boost::intrusive_ptr<cairowindow::Layer> const& layer_;
+  cairowindow::plot::BezierFitter plot_approximation_curve_;
   cairowindow::plot::BezierFitter plot_fourth_degree_approximation_curve_;
+  cairowindow::plot::BezierFitter plot_quotient_curve_;
+  cairowindow::plot::BezierFitter plot_derivative_curve_;
+  cairowindow::plot::Connector plot_difference_expected_;
+  cairowindow::plot::Line plot_horizontal_line_;
+  cairowindow::plot::Text plot_energy_text_;
 
  public:
-  FourthDegreeApproximationEvent(cairowindow::plot::Plot& plot, boost::intrusive_ptr<cairowindow::Layer> const& layer) :
+  AlgorithmEvent(cairowindow::plot::Plot& plot, boost::intrusive_ptr<cairowindow::Layer> const& layer) :
     plot_(plot), layer_(layer) { }
 
-  void callback(gradient_descent::FourthDegreeApproximationEventType const& event)
+  void callback(gradient_descent::AlgorithmEventType const& event)
   {
     using namespace cairowindow;
-    math::Polynomial const& fourth_degree_approximation = event.fourth_degree_approximation();
-    plot_fourth_degree_approximation_curve_.solve(
-        [&fourth_degree_approximation](double w) -> Point { return {w, fourth_degree_approximation(w)}; }, plot_.viewport());
-    plot_.add_bezier_fitter(layer_, curve_line_style_({.line_color = color::teal}), plot_fourth_degree_approximation_curve_);
+
+    if (event.is_a<gradient_descent::ResetEventData>())
+    {
+      plot_approximation_curve_.reset();
+      plot_derivative_curve_.reset();
+      plot_quotient_curve_.reset();
+      plot_fourth_degree_approximation_curve_.reset();
+    }
+    else if (event.is_a<gradient_descent::DifferenceEventData>())
+    {
+      auto const& data = event.get<gradient_descent::DifferenceEventData>();
+
+      // Plot the vertical difference from what we expected to what we got.
+      plot_difference_expected_ = cairowindow::plot::Connector{{data.w(), data.expected_Lw()}, {data.w(), data.Lw()},
+          cairowindow::Connector::no_arrow, cairowindow::Connector::open_arrow};
+      plot_.add_connector(layer_, s_difference_expected_style, plot_difference_expected_);
+    }
+    else if (event.is_a<gradient_descent::FourthDegreeApproximationEventData>())
+    {
+      auto const& data = event.get<gradient_descent::FourthDegreeApproximationEventData>();
+
+      math::Polynomial const& fourth_degree_approximation = data.polynomial();
+      plot_fourth_degree_approximation_curve_.solve(
+          [&fourth_degree_approximation](double w) -> Point { return {w, fourth_degree_approximation(w)}; }, plot_.viewport());
+      plot_.add_bezier_fitter(layer_, curve_line_style_({.line_color = color::teal}), plot_fourth_degree_approximation_curve_);
+    }
+    else if (event.is_a<gradient_descent::DerivativeEventData>())
+    {
+      auto const& data = event.get<gradient_descent::DerivativeEventData>();
+
+      math::Polynomial const& derivative = data.polynomial();
+      plot_derivative_curve_.solve([&derivative](double w) -> Point { return {w, derivative(w)}; }, plot_.viewport());
+      plot_.add_bezier_fitter(layer_, curve_line_style_({.line_color = color::magenta}), plot_derivative_curve_);
+    }
+    else if (event.is_a<gradient_descent::QuotientEventData>())
+    {
+      auto const& data = event.get<gradient_descent::QuotientEventData>();
+
+      math::Polynomial const& quotient = data.polynomial();
+      plot_quotient_curve_.solve([&quotient](double w) -> Point { return {w, 10.0 * quotient(w)}; }, plot_.viewport());
+      plot_.add_bezier_fitter(layer_, curve_line_style_({.line_color = color::blue}), plot_quotient_curve_);
+    }
+    else if (event.is_a<gradient_descent::QuadraticPolynomialEventData>())
+    {
+      auto const& data = event.get<gradient_descent::QuadraticPolynomialEventData>();
+
+      math::QuadraticPolynomial const& approximation = data.quadratic_polynomial();
+      plot_approximation_curve_.solve([&approximation](double w) -> Point { return {w, approximation(w)}; }, plot_.viewport());
+      plot_.add_bezier_fitter(layer_, curve_line_style_({.line_color = color::red}), plot_approximation_curve_);
+    }
+    else if (event.is_a<gradient_descent::KineticEnergyEventData>())
+    {
+      auto const& data = event.get<gradient_descent::KineticEnergyEventData>();
+
+      plot_horizontal_line_ = plot::Line{{0.0, data.max_Lw()}, Direction::right};
+      plot_.add_line(layer_, s_indicator_style, plot_horizontal_line_);
+
+      plot_energy_text_ = plot_.create_text(layer_, {{.position = draw::centered_above, .offset = 2.0}},
+          Point{0.5 * (plot_.xrange().min() + plot_.xrange().max()), data.max_Lw()}, "energy");
+    }
   }
 };
+
+//static
+cairowindow::draw::ConnectorStyle const AlgorithmEvent::s_difference_expected_style{{.line_color = cairowindow::color::blue, .line_width = 1.0}};
+cairowindow::draw::ConnectorStyle const AlgorithmEvent::s_indicator_style{{.line_width = 1}};
+
 #endif
 
 int main()
@@ -422,12 +461,8 @@ int main()
 #endif
 
 #ifdef CWDEBUG
-    DifferenceEvent difference_event(plot, second_layer);
-    auto difference_event_handle = gda.difference_event_server().request(difference_event, &DifferenceEvent::callback);
-
-    FourthDegreeApproximationEvent fourth_degree_approximation_event(plot, second_layer);
-    auto fourth_degree_approximation_event_handle =
-      gda.fourth_degree_approximation_event_server().request(fourth_degree_approximation_event, &FourthDegreeApproximationEvent::callback);
+    AlgorithmEvent algorithm_event(plot, second_layer);
+    auto algorithm_event_handle = gda.event_server().request(algorithm_event, &AlgorithmEvent::callback);
 #endif
 
     // Loop over iterations of w.
@@ -464,8 +499,7 @@ int main()
       Dout(dc::notice, "Found global minimum " << gda.minimum());
 #endif
 
-    difference_event_handle.cancel();
-    fourth_degree_approximation_event_handle.cancel();
+    algorithm_event_handle.cancel();
 
     event_loop.join();
   }

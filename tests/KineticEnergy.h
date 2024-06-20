@@ -3,6 +3,7 @@
 #include <cmath>
 #include "debug.h"
 #ifdef CWDEBUG
+#include "AlgorithmEventType.h"
 #include "utils/has_print_on.h"
 #endif
 
@@ -22,6 +23,10 @@ class KineticEnergy
   double max_Lw_;       // The maximum height that could be reached with the current amount of kinetic energy.
   double Lw_;           // The current height. The kinetic energy is proportional to max_Lw_ - Lw_.
 
+#ifdef CWDEBUG
+  events::Server<AlgorithmEventType>& event_server_;
+#endif
+
  private:
   double max_Lw(double new_Lw) const
   {
@@ -30,7 +35,8 @@ class KineticEnergy
   }
 
  public:
-  KineticEnergy(double Lw) : max_Lw_(Lw), Lw_(Lw) { }
+  KineticEnergy(double Lw COMMA_CWDEBUG_ONLY(events::Server<AlgorithmEventType>& event_server)) :
+    max_Lw_(Lw), Lw_(Lw), event_server_(event_server) { }
 
   void set(double max_Lw, double Lw)
   {
@@ -39,6 +45,10 @@ class KineticEnergy
     max_Lw_ = max_Lw;
     Lw_ = Lw;
     Dout(dc::notice, "max_Lw_ set to " << max_Lw_ << "; kinetic energy is now " << (max_Lw_ - Lw_));
+
+#ifdef CWDEBUG
+    event_server_.trigger(AlgorithmEventType{kinetic_energy_event, max_Lw_});
+#endif
   }
 
   double energy() const
@@ -66,6 +76,9 @@ class KineticEnergy
     Lw_ = new_Lw;
     Dout(dc::notice, "max_Lw_ set to " << max_Lw_ << "; kinetic energy is now " << (max_Lw_ - Lw_));
 
+#ifdef CWDEBUG
+    event_server_.trigger(AlgorithmEventType{kinetic_energy_event, max_Lw_});
+#endif
     return true;
   }
 
@@ -78,6 +91,10 @@ class KineticEnergy
     max_Lw_ = std::max(new_Lw, max_Lw(new_Lw));
     Lw_ = new_Lw;
     Dout(dc::notice, "max_Lw_ set to " << max_Lw_ << "; kinetic energy is now " << (max_Lw_ - Lw_));
+
+#ifdef CWDEBUG
+    event_server_.trigger(AlgorithmEventType{kinetic_energy_event, max_Lw_});
+#endif
   }
 
 #if CWDEBUG

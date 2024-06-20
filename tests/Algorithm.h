@@ -8,79 +8,19 @@
 #include "Polynomial.h"
 #include "PlotHistory.h"
 #include "PlotParabolaScale.h"
-#include "PlotKineticEnergy.h"
 #include "PlotLocalExtreme.h"
-#include "cairowindow/draw/Line.h"
-#include "cairowindow/draw/Connector.h"
-#include <Eigen/Dense>
-#ifdef CWDEBUG
-#include "events/Events.h"
-#include "utils/has_print_on.h"
-#endif
+#include "KineticEnergy.h"
 
 namespace gradient_descent {
 
-#ifdef CWDEBUG
-using utils::has_print_on::operator<<;
-
-// Event types.
-
-class DifferenceEventData
-{
- protected:
-  double w_;
-  double expected_Lw_;
-  double Lw_;
-
- public:
-  DifferenceEventData(double w, double expected_Lw, double Lw) : w_(w), expected_Lw_(expected_Lw), Lw_(Lw) { }
-
-  double w() const { return w_; }
-  double expected_Lw() const { return expected_Lw_; }
-  double Lw() const { return Lw_; }
-
-  void print_on(std::ostream& os) const;
-};
-
-struct DifferenceEventType : public DifferenceEventData
-{
-  using DifferenceEventData::DifferenceEventData;
-  static constexpr bool one_shot = false;
-};
-
-class FourthDegreeApproximationEventData
-{
- private:
-  math::Polynomial const& fourth_degree_approximation_;
-
- public:
-  FourthDegreeApproximationEventData(math::Polynomial const& fourth_degree_approximation) :
-    fourth_degree_approximation_(fourth_degree_approximation) { }
-
-  math::Polynomial const& fourth_degree_approximation() const { return fourth_degree_approximation_; }
-
-  void print_on(std::ostream& os) const;
-};
-
-struct FourthDegreeApproximationEventType : public FourthDegreeApproximationEventData
-{
-  using FourthDegreeApproximationEventData::FourthDegreeApproximationEventData;
-  static constexpr bool one_shot = false;
-};
-
-#endif // CWDEBUG
-
 class Algorithm
 {
-  static constexpr cairowindow::draw::LineStyle curve_line_style_{{.line_width = 1.0}};
-
  private:
   double learning_rate_;        // In unit_of(w)^2 / unit_of(L).
   double small_step_{};         // This will replace learning_rate_ as soon as we have an idea of the scale of changes.
 
 #ifdef CWDEBUG
-  events::Server<DifferenceEventType> difference_event_server_;
-  events::Server<FourthDegreeApproximationEventType> fourth_degree_approximation_event_server_;
+  events::Server<AlgorithmEventType> event_server_;
 #endif
 
   // Remember the (most recent) history of samples.
@@ -90,7 +30,7 @@ class Algorithm
   PlotParabolaScale current_plot_approximation_parabola_scale_;
   Approximation* approximation_ptr_;
   PlotParabolaScale* plot_approximation_parabola_scale_ptr_;
-  PlotKineticEnergy energy_;
+  KineticEnergy energy_;
   double expected_Lw_;                  // Whenever w is changed, this is set to what Lw value the approximation is expecting there.
 
   // hdirection_ is set when we find a local minimum and decide to explore left or right of that.
@@ -104,12 +44,6 @@ class Algorithm
   extremes_type extremes_;
   extremes_type::iterator best_minimum_;
   extremes_type::iterator last_extreme_;
-
-  cairowindow::plot::Plot& plot_;
-  boost::intrusive_ptr<cairowindow::Layer> const& layer_;
-  cairowindow::plot::BezierFitter plot_approximation_curve_;
-  cairowindow::plot::BezierFitter plot_derivative_curve_;
-  cairowindow::plot::BezierFitter plot_quotient_curve_;
 
   enum class IterationState
   {
@@ -134,13 +68,11 @@ class Algorithm
     current_plot_approximation_parabola_scale_(current_approximation_.parabola_scale(), plot, layer),
     approximation_ptr_(&current_approximation_),
     plot_approximation_parabola_scale_ptr_(&current_plot_approximation_parabola_scale_),
-    energy_(plot, layer, L_max),
+    energy_(L_max COMMA_CWDEBUG_ONLY(event_server_)),
     best_minimum_(extremes_.end()),
     last_extreme_(extremes_.end()),
     hdirection_(HorizontalDirection::undecided),
-    vdirection_(VerticalDirection::down),
-    plot_(plot),
-    layer_(layer)
+    vdirection_(VerticalDirection::down)
   {
   }
 
@@ -167,14 +99,9 @@ class Algorithm
 
 #ifdef CWDEBUG
   // Accessors for the event servers.
-  events::Server<DifferenceEventType>& difference_event_server()
+  events::Server<AlgorithmEventType>& event_server()
   {
-    return difference_event_server_;
-  }
-
-  events::Server<FourthDegreeApproximationEventType>& fourth_degree_approximation_event_server()
-  {
-    return fourth_degree_approximation_event_server_;
+    return event_server_;
   }
 #endif
 };
