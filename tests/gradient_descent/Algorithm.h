@@ -5,10 +5,10 @@
 #include "VerticalDirection.h"
 #include "Weight.h"
 #include "Sample.h"
-#include "Polynomial.h"
 #include "History.h"
 #include "LocalExtreme.h"
 #include "KineticEnergy.h"
+#include "../Polynomial.h"
 
 namespace gradient_descent {
 

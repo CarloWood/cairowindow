@@ -3,6 +3,7 @@
 #include "Weight.h"
 #ifdef CWDEBUG
 #include "utils/has_print_on.h"
+#include <iostream>
 #endif
 
 namespace gradient_descent {

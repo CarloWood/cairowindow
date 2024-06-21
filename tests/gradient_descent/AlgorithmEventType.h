@@ -3,6 +3,7 @@
 #ifdef CWDEBUG
 #include "HistoryIndex.h"
 #include "Scale.h"
+#include "../Polynomial.h"
 #include "events/Events.h"
 #include "utils/has_print_on.h"
 

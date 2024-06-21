@@ -1,7 +1,7 @@
 #pragma once
 
-#include "QuadraticPolynomial.h"
 #include "Sample.h"
+#include "../QuadraticPolynomial.h"
 #include "utils/debug_ostream_operators.h"
 #include "utils/almost_equal.h"
 #include "utils/macros.h"

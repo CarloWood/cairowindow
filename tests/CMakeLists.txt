@@ -37,7 +37,8 @@ target_link_libraries(chess_diagram AICxx::cairowindow AICxx::symbolic AICxx::ch
 add_executable(pango_text pango_text.cxx)
 target_link_libraries(pango_text AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST})
 
-add_executable(gradient_descent gradient_descent.cxx Approximation.cxx HorizontalDirection.cxx VerticalDirection.cxx Algorithm.cxx)
+add_executable(gradient_descent gradient_descent.cxx gradient_descent/Approximation.cxx gradient_descent/HorizontalDirection.cxx
+  gradient_descent/VerticalDirection.cxx gradient_descent/Algorithm.cxx)
 target_link_libraries(gradient_descent AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST} Eigen3::Eigen)
 
 add_executable(parabolic_scale parabolic_scale.cxx)

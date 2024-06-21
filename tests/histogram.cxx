@@ -1,6 +1,6 @@
 #include "sys.h"
-#include "HorizontalDirection.h"
-#include "VerticalDirection.h"
+#include "gradient_descent/HorizontalDirection.h"
+#include "gradient_descent/VerticalDirection.h"
 #include <iostream>
 #include <random>
 #include <array>

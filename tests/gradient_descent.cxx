@@ -1,18 +1,17 @@
 #include "sys.h"
 #include "Polynomial.h"
 #include "QuadraticPolynomial.h"
-#include "Sample.h"
-#include "Scale.h"
-#include "Approximation.h"
-#include "History.h"
-#include "LocalExtreme.h"
-#include "KineticEnergy.h"
-#include "HorizontalDirection.h"
-#include "VerticalDirection.h"
-#include "Algorithm.h"
-#include "PlotSample.h"
-#include "History.h"
-#include "LocalExtreme.h"
+#include "gradient_descent/Sample.h"
+#include "gradient_descent/Scale.h"
+#include "gradient_descent/Approximation.h"
+#include "gradient_descent/History.h"
+#include "gradient_descent/LocalExtreme.h"
+#include "gradient_descent/KineticEnergy.h"
+#include "gradient_descent/HorizontalDirection.h"
+#include "gradient_descent/VerticalDirection.h"
+#include "gradient_descent/Algorithm.h"
+#include "gradient_descent/History.h"
+#include "gradient_descent/LocalExtreme.h"
 #include "cairowindow/Window.h"
 #include "cairowindow/Layer.h"
 #include "cairowindow/Plot.h"
@@ -278,6 +277,48 @@ class Function
 #endif
 
 #ifdef CWDEBUG
+// A Sample including plot objects: a point and a label.
+class PlotSample
+{
+ private:
+  gradient_descent::Sample const* master_{};
+
+  mutable cairowindow::plot::Point P_;
+  mutable cairowindow::plot::Text P_label_;
+
+ public:
+  // Required for History.
+  PlotSample() = default;
+
+  // Constructor used by LocalExtreme.
+  PlotSample(gradient_descent::Sample const* master, cairowindow::plot::Point const& point, cairowindow::plot::Text const& label) :
+    master_(master), P_(point), P_label_(label) { }
+
+  // Required for History.
+  void initialize(gradient_descent::Sample const* master, cairowindow::plot::Point const& point, cairowindow::plot::Text const& label)
+  {
+    master_ = master;
+    P_ = point;
+    P_label_ = label;
+  }
+
+  cairowindow::Point const& P() const { return P_; }
+  cairowindow::Text const& label() const { return P_label_; }
+
+  gradient_descent::Sample const* sample() const { return master_; }
+
+  double w() const { return master_->w(); }
+  double Lw() const { return master_->Lw(); }
+  double dLdw() const { return master_->dLdw(); }
+
+  std::string debug_label() const { return P_label_.text(); }
+
+  void print_on(std::ostream& os) const
+  {
+    os << debug_label() << " (at w = " << master_->w() << ")";
+  }
+};
+
 class AlgorithmEvent
 {
  public:

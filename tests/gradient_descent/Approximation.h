@@ -1,8 +1,8 @@
 #pragma once
 
-#include "QuadraticPolynomial.h"
 #include "Scale.h"
 #include "Sample.h"
+#include "../QuadraticPolynomial.h"
 #include <array>
 
 namespace gradient_descent {
