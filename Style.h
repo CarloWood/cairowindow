@@ -76,7 +76,7 @@
    public: \
     constexpr Class##Style(Class##StyleParams params) : \
       REMOVE_TRAILING_COMMA(cairowindow_##Class##_FOREACH_MEMBER(CAIROWINDOW_INITIALIZER_LIST)) { } \
-    Class##Style() : Class##Style(Class##StyleParams{cairowindow_##Class##_FOREACH_MEMBER(CAIROWINDOW_COPY_DEFAULTS, Defaults)}) { } \
+    constexpr Class##Style() : Class##Style(Class##StyleParams{cairowindow_##Class##_FOREACH_MEMBER(CAIROWINDOW_COPY_DEFAULTS, Defaults)}) { } \
     Class##Style operator()(Class##StyleParamsDelta delta) const { \
       Class##Style style(*this); \
       cairowindow_##Class##_FOREACH_STYLE_MEMBER(CAIROWINDOW_UPDATE_STYLE_FROM_DELTA) \

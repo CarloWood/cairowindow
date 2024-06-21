@@ -1,5 +1,6 @@
 #pragma once
 
+#include "cairowindow/symbolic/config.h"
 #include "Function.h"
 #include "Power.h"
 #include "Sum.h"

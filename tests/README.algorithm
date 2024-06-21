@@ -92,8 +92,6 @@ given by learning_rate_.
 
 The following sub-algorithms exist:
 A/C)
- * small_step_ is known.
-     In this case step is set to hdirection_ * small_step_.
  * small_step_ is unknown (zero), in this case learning_rate_ is used:
    - derivative is zero (`almost_zero`).
      > hdirection_ is undecided.
@@ -105,6 +103,8 @@ A/C)
          In this case step is set to learning_rate_ * -dLdW (the normal gradient descent).
      > hdirection_ is known.
          In this case step is set to hdirection_ * abs(learning_rate_ * dLdW).
+ * small_step_ is known.
+     In this case step is set to hdirection_ * small_step_.
 
   When having just one sample (A and C) the step is never so small that it will
   be considered `negligible`; if that is the case then it is increased until it

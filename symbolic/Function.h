@@ -8,6 +8,7 @@
 #include <optional>
 #ifdef SYMBOLIC_PRINTING
 #include "iomanip_fulldef.h"
+#include <sstream>
 #endif
 
 namespace symbolic {
@@ -89,6 +90,13 @@ class Function : public Expression
 
 #ifdef SYMBOLIC_PRINTING
  public:
+  std::string to_string() const
+  {
+    std::ostringstream oss;
+    print_on(oss << fulldef);
+    return oss.str();
+  }
+
   void print_on(std::ostream& os) const override final
   {
     if (IOManipFullDef::is_full_def(os))

@@ -1,6 +1,7 @@
 #include "sys.h"
 #include "Algorithm.h"
 #include <Eigen/Dense>
+#include <numeric>
 #ifdef CWDEBUG
 #include "utils/print_using.h"
 #endif
@@ -47,7 +48,7 @@ bool Algorithm::operator()(Weight& w, double Lw, double dLdw)
             gamma_based_w << " [gamma based] [expected_Lw: " << expected_Lw_ << "]");
         w = gamma_based_w;
         state_ = IterationState::done;
-        Dout(dc::notice, "Returning: " << w);
+        Dout(dc::notice, "Returning: " << std::setprecision(std::numeric_limits<double>::max_digits10) << w);
         return true;
       }
       Dout(dc::notice, w << " --> " << (history_.total_number_of_samples() + 1) << ": " <<
@@ -87,7 +88,7 @@ bool Algorithm::operator()(Weight& w, double Lw, double dLdw)
     // Returns false if this exreme is a minimum but isn't better than the previously found best minimum.
     if (!handle_local_extreme(w))
       return handle_abort_hdirection(w);
-    Dout(dc::notice, "Returning: " << w);
+    Dout(dc::notice, "Returning: " << std::setprecision(std::numeric_limits<double>::max_digits10) << w);
     return true;        // w was successfully updated by handle_local_extreme.
   }
 
@@ -98,7 +99,7 @@ bool Algorithm::operator()(Weight& w, double Lw, double dLdw)
   if (approximation.number_of_relevant_samples() == 1)
   {
     handle_single_sample(w);
-    Dout(dc::notice, "Returning: " << w);
+    Dout(dc::notice, "Returning: " << std::setprecision(std::numeric_limits<double>::max_digits10) << w);
     return true;
   }
 
@@ -127,13 +128,22 @@ bool Algorithm::operator()(Weight& w, double Lw, double dLdw)
       w = 0.52 * (w + history_[clamped_history_index_].w());
       state_ = IterationState::done;
     }
+    else if (state_ == IterationState::local_extreme)
+    {
+      // Do not return a value that would replace the current sample.
+      if (approximation_ptr_->parabola_scale().negligible(w - history_.current().w()))
+      {
+        if (!handle_local_extreme(w))
+          return handle_abort_hdirection(w);
+      }
+    }
   }
 #else
   // Implement.
   ASSERT(false);
 #endif
 
-  Dout(dc::notice, "Returning: " << w);
+  Dout(dc::notice, "Returning: " << std::setprecision(std::numeric_limits<double>::max_digits10) << w);
   return true;
 }
 
@@ -427,7 +437,7 @@ bool Algorithm::handle_local_extreme(Weight& w)
 
     // Now that the decision on which hdirection_ we explore is taken, store that decision.
     hdirection_ = w - history_.current().w() < 0.0 ? HorizontalDirection::left : HorizontalDirection::right;
-    Dout(dc::notice, "Initializing horizontal direction to " << hdirection_);
+    Dout(dc::notice, "Initialized hdirection_ to " << hdirection_ << ".");
   }
 
   // Remember in which direction we travelled from this extreme.
@@ -707,7 +717,7 @@ bool Algorithm::handle_abort_hdirection(Weight& w)
   reset_history();
 
   // w was successfully updated.
-  Dout(dc::notice, "Returning: " << w);
+  Dout(dc::notice, "Returning: " << std::setprecision(std::numeric_limits<double>::max_digits10) << w);
   state_ = IterationState::done;
   return true;
 }
