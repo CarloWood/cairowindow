@@ -11,8 +11,8 @@
 #include "VerticalDirection.h"
 #include "Algorithm.h"
 #include "PlotSample.h"
-#include "PlotHistory.h"
-#include "PlotLocalExtreme.h"
+#include "History.h"
+#include "LocalExtreme.h"
 #include "cairowindow/Window.h"
 #include "cairowindow/Layer.h"
 #include "cairowindow/Plot.h"
@@ -281,6 +281,8 @@ class Function
 class AlgorithmEvent
 {
  public:
+  static constexpr cairowindow::draw::PointStyle point_style_{{.color_index = 31, .filled_shape = 1}};
+  static cairowindow::draw::TextStyle const s_label_style;
   static constexpr cairowindow::draw::LineStyle curve_line_style_{{.line_width = 1.0}};
   static cairowindow::draw::ConnectorStyle const s_difference_expected_style;
   static cairowindow::draw::ConnectorStyle const s_indicator_style;
@@ -300,6 +302,7 @@ class AlgorithmEvent
   cairowindow::plot::Line plot_vertical_line_through_w_;
   cairowindow::plot::Line plot_vertical_line_through_v_;
   cairowindow::plot::BezierFitter plot_old_parabola_;
+  utils::Array<PlotSample, gradient_descent::History::size, gradient_descent::HistoryIndex> plot_samples_;
 
  public:
   AlgorithmEvent(cairowindow::plot::Plot& plot, boost::intrusive_ptr<cairowindow::Layer> const& layer) :
@@ -408,11 +411,24 @@ class AlgorithmEvent
       plot_vertical_line_through_v_.reset();
       plot_old_parabola_.reset();
     }
+    else if (event.is_a<gradient_descent::HistoryAddEventData>())
+    {
+      auto const& data = event.get<gradient_descent::HistoryAddEventData>();
+
+      plot_samples_[data.index()].initialize(&data.current(),
+        plot_.create_point(layer_, point_style_, {data.current().w(), data.current().Lw()}),
+        plot_.create_text(layer_, s_label_style({.position = cairowindow::draw::centered_below}),
+              cairowindow::Point{data.current().w(), data.current().Lw()}, data.label()));
+    }
   }
 };
 
 //static
+cairowindow::draw::TextStyle const AlgorithmEvent::s_label_style{{ .position = cairowindow::draw::centered_left_of, .font_size = 18.0,
+  .offset = 10}};
+//static
 cairowindow::draw::ConnectorStyle const AlgorithmEvent::s_difference_expected_style{{.line_color = cairowindow::color::blue, .line_width = 1.0}};
+//static
 cairowindow::draw::ConnectorStyle const AlgorithmEvent::s_indicator_style{{.line_width = 1}};
 
 #endif
@@ -478,9 +494,7 @@ int main()
     plot.set_yrange({L_min, L_max});
     plot.add_to(background_layer, false);
 
-    draw::PointStyle point_style({.color_index = 31, .filled_shape = 1});
     draw::LineStyle curve_line_style({.line_width = 1.0});
-    draw::TextStyle label_style({.position = draw::centered_left_of, .font_size = 18.0, .offset = 10});
     draw::LineStyle derivative_line_style({.line_color = color::turquoise, .line_width = 1.0});
 
 #if !USE_SLIDERS
@@ -488,7 +502,7 @@ int main()
     auto plot_curve = plot.create_bezier_fitter(second_layer, curve_line_style, std::move(L_fitter));
 #endif
 
-    gradient_descent::Algorithm gda(0.1, L_max, plot, second_layer, point_style, label_style);
+    gradient_descent::Algorithm gda(0.1, L_max);
 
 #if USE_SLIDERS
     // amplitude = 0.012027, level = 1878.38, phase = 1.91892

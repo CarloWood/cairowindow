@@ -1,6 +1,7 @@
 #pragma once
 
 #ifdef CWDEBUG
+#include "HistoryIndex.h"
 #include "Scale.h"
 #include "events/Events.h"
 #include "utils/has_print_on.h"
@@ -21,7 +22,8 @@ enum event_type
   quadratic_polynomial_event,
   kinetic_energy_event,
   scale_draw_event,
-  scale_erase_event
+  scale_erase_event,
+  history_add_event
 };
 
 class ResetEventData
@@ -144,11 +146,32 @@ class ScaleEraseEventData
   }
 };
 
+class HistoryAddEventData
+{
+ protected:
+  HistoryIndex index_;
+  Sample const& current_;
+  std::string label_;
+
+ public:
+  HistoryAddEventData(HistoryIndex index, Sample const& current, std::string const& label) :
+    index_(index), current_(current), label_(label) { }
+
+  HistoryIndex index() const { return index_; }
+  Sample const& current() const { return current_; }
+  std::string const& label() const { return label_; }
+
+  void print_on(std::ostream& os) const
+  {
+    os << "HistoryAddEventData:{" << index_ << ", " << current_ << ", \"" << label_ << "\"}";
+  }
+};
+
 class AlgorithmEventData
 {
  private:
   std::variant<ResetEventData, DifferenceEventData, FourthDegreeApproximationEventData, QuotientEventData, DerivativeEventData,
-    QuadraticPolynomialEventData, KineticEnergyEventData, ScaleDrawEventData, ScaleEraseEventData> event_data_;
+    QuadraticPolynomialEventData, KineticEnergyEventData, ScaleDrawEventData, ScaleEraseEventData, HistoryAddEventData> event_data_;
 
  public:
   AlgorithmEventData() = default;
@@ -193,6 +216,11 @@ class AlgorithmEventData
   AlgorithmEventData(event_type, ScaleUpdate result, double x1, double x2, math::QuadraticPolynomial const& old_parabola)
   {
     event_data_.emplace<ScaleDrawEventData>(result, x1, x2, old_parabola);
+  }
+
+  AlgorithmEventData(event_type, HistoryIndex index, Sample const& current, std::string const& label)
+  {
+    event_data_.emplace<HistoryAddEventData>(index, current, label);
   }
 
   template<typename T>

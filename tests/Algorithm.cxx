@@ -336,8 +336,6 @@ bool Algorithm::handle_local_extreme(Weight& w)
   event_server_.trigger(AlgorithmEventType{fourth_degree_approximation_event, fourth_degree_approximation});
 #endif
 
-  using namespace cairowindow;
-
   auto derivative = fourth_degree_approximation.derivative();
   Dout(dc::notice, "derivative = " << derivative);
 
@@ -750,6 +748,8 @@ void AlgorithmEventData::print_on(std::ostream& os) const
     std::get<ScaleDrawEventData>(event_data_).print_on(os);
   else if (std::holds_alternative<ScaleEraseEventData>(event_data_))
     std::get<ScaleEraseEventData>(event_data_).print_on(os);
+  else if (std::holds_alternative<HistoryAddEventData>(event_data_))
+    std::get<HistoryAddEventData>(event_data_).print_on(os);
   else
     // Missing implementation.
     ASSERT(false);

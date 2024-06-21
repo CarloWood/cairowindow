@@ -2,14 +2,13 @@
 
 #include "Scale.h"
 #include "Sample.h"
+#include "AlgorithmEventType.h"
+#include "HistoryIndex.h"
 #include "utils/Array.h"
 #include <functional>
 #include "debug.h"
 
 namespace gradient_descent {
-
-struct HistoryIndexCategory;
-using HistoryIndex = utils::ArrayIndex<HistoryIndexCategory>;
 
 class History
 {
@@ -23,7 +22,15 @@ class History
   int old_samples_ = 0;                 // Samples elsewhere that should not be used for fitting a polynomial.
   int total_number_of_samples_ = 0;     // The number of samples taken (not necessarily equal to the number that is (still) in the history).
 
+#ifdef CWDEBUG
+  events::Server<AlgorithmEventType>& event_server_;
+#endif
+
  public:
+#ifdef CWDEBUG
+  History(events::Server<AlgorithmEventType>& event_server) : event_server_(event_server) { }
+#endif
+
   HistoryIndex add(double w, double Lw, double dLdw, Scale const& scale, bool& current_is_replacement)
   {
     DoutEntering(dc::notice, "History::add(" << w << ", " << Lw << ", " << dLdw << ", " << scale << ", current_is_replacement)");
@@ -46,6 +53,11 @@ class History
     }
 
     samples_[current_].set_values(w, Lw, dLdw);
+
+#ifdef CWDEBUG
+    event_server_.trigger(AlgorithmEventType{history_add_event, current_, samples_[current_], std::to_string(total_number_of_samples_ - 1)});
+#endif
+
     return current_;
   }
 

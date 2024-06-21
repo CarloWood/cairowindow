@@ -6,7 +6,7 @@
 #include "Weight.h"
 #include "Sample.h"
 #include "Polynomial.h"
-#include "PlotHistory.h"
+#include "History.h"
 #include "LocalExtreme.h"
 #include "KineticEnergy.h"
 
@@ -23,7 +23,7 @@ class Algorithm
 #endif
 
   // Remember the (most recent) history of samples.
-  PlotHistory history_;
+  History history_;
   HistoryIndex clamped_history_index_;
   Approximation current_approximation_;
   Approximation* approximation_ptr_;
@@ -57,11 +57,11 @@ class Algorithm
   IterationState state_{IterationState::done};
 
  public:
-  Algorithm(double learning_rate, double L_max,
-      cairowindow::plot::Plot& plot, boost::intrusive_ptr<cairowindow::Layer> const& layer,
-      cairowindow::draw::PointStyle const& point_style, cairowindow::draw::TextStyle const& label_style) :
+  Algorithm(double learning_rate, double L_max) :
+#ifdef CWDEBUG
+    history_(event_server_),
+#endif
     learning_rate_(learning_rate),
-    history_(plot, layer, point_style, label_style),
     approximation_ptr_(&current_approximation_),
     energy_(L_max COMMA_CWDEBUG_ONLY(event_server_)),
     best_minimum_(extremes_.end()),
