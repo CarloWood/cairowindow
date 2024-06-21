@@ -194,7 +194,7 @@ bool Algorithm::handle_local_extreme(Weight& w)
   // Store it as an extreme.
   extremes_type::iterator new_extreme =
     extremes_.emplace(hdirection_ == HorizontalDirection::right ? extremes_.end() : extremes_.begin(),
-        history_, *approximation_ptr_, energy_.energy());
+        history_.current(), *approximation_ptr_, energy_.energy());
 
 #ifdef CWDEBUG
   event_server_.trigger(AlgorithmEventType{scale_erase_event});

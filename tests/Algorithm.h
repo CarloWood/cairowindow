@@ -7,7 +7,7 @@
 #include "Sample.h"
 #include "Polynomial.h"
 #include "PlotHistory.h"
-#include "PlotLocalExtreme.h"
+#include "LocalExtreme.h"
 #include "KineticEnergy.h"
 
 namespace gradient_descent {
@@ -37,7 +37,7 @@ class Algorithm
   VerticalDirection vdirection_;
 
   // Using a std::list: pointers to elements may never be invalidated.
-  using extremes_type = std::list<PlotLocalExtreme>;
+  using extremes_type = std::list<LocalExtreme>;
   extremes_type extremes_;
   extremes_type::iterator best_minimum_;
   extremes_type::iterator last_extreme_;
