@@ -7,7 +7,6 @@
 #include "Sample.h"
 #include "Polynomial.h"
 #include "PlotHistory.h"
-#include "PlotParabolaScale.h"
 #include "PlotLocalExtreme.h"
 #include "KineticEnergy.h"
 
@@ -27,9 +26,7 @@ class Algorithm
   PlotHistory history_;
   HistoryIndex clamped_history_index_;
   Approximation current_approximation_;
-  PlotParabolaScale current_plot_approximation_parabola_scale_;
   Approximation* approximation_ptr_;
-  PlotParabolaScale* plot_approximation_parabola_scale_ptr_;
   KineticEnergy energy_;
   double expected_Lw_;                  // Whenever w is changed, this is set to what Lw value the approximation is expecting there.
 
@@ -65,9 +62,7 @@ class Algorithm
       cairowindow::draw::PointStyle const& point_style, cairowindow::draw::TextStyle const& label_style) :
     learning_rate_(learning_rate),
     history_(plot, layer, point_style, label_style),
-    current_plot_approximation_parabola_scale_(current_approximation_.parabola_scale(), plot, layer),
     approximation_ptr_(&current_approximation_),
-    plot_approximation_parabola_scale_ptr_(&current_plot_approximation_parabola_scale_),
     energy_(L_max COMMA_CWDEBUG_ONLY(event_server_)),
     best_minimum_(extremes_.end()),
     last_extreme_(extremes_.end()),

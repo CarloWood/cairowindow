@@ -1,6 +1,7 @@
 #pragma once
 
 #ifdef CWDEBUG
+#include "Scale.h"
 #include "events/Events.h"
 #include "utils/has_print_on.h"
 
@@ -18,7 +19,9 @@ enum event_type
   derivative_event,
   quotient_event,
   quadratic_polynomial_event,
-  kinetic_energy_event
+  kinetic_energy_event,
+  scale_draw_event,
+  scale_erase_event
 };
 
 class ResetEventData
@@ -109,18 +112,55 @@ class KineticEnergyEventData
   }
 };
 
+class ScaleDrawEventData
+{
+ protected:
+  ScaleUpdate result_;
+  double x1_;
+  double x2_;
+  math::QuadraticPolynomial const& old_parabola_;
+
+ public:
+  ScaleDrawEventData(ScaleUpdate result, double x1, double x2, math::QuadraticPolynomial const& old_parabola) :
+    result_(result), x1_(x1), x2_(x2), old_parabola_(old_parabola) { }
+
+  ScaleUpdate result() const { return result_; }
+  double x1() const { return x1_; }
+  double x2() const { return x2_; }
+  math::QuadraticPolynomial const& old_parabola() const { return old_parabola_; }
+
+  void print_on(std::ostream& os) const
+  {
+    os << "ScaleDrawEventData:{" << result_ << ", " << x1_ << ", " << x2_ << ", " << old_parabola_ << "}";
+  }
+};
+
+class ScaleEraseEventData
+{
+ public:
+  void print_on(std::ostream& os) const
+  {
+    os << "ScaleEraseEventData:{}";
+  }
+};
+
 class AlgorithmEventData
 {
  private:
   std::variant<ResetEventData, DifferenceEventData, FourthDegreeApproximationEventData, QuotientEventData, DerivativeEventData,
-    QuadraticPolynomialEventData, KineticEnergyEventData> event_data_;
+    QuadraticPolynomialEventData, KineticEnergyEventData, ScaleDrawEventData, ScaleEraseEventData> event_data_;
 
  public:
   AlgorithmEventData() = default;
 
-  AlgorithmEventData(event_type)
+  AlgorithmEventData(event_type type)
   {
-    event_data_.emplace<ResetEventData>();
+    if (type == reset_event)
+      event_data_.emplace<ResetEventData>();
+    else if (type == scale_erase_event)
+      event_data_.emplace<ScaleEraseEventData>();
+    else
+      ASSERT(false);
   }
 
   AlgorithmEventData(event_type, double w, double expected_Lw, double Lw)
@@ -148,6 +188,11 @@ class AlgorithmEventData
   AlgorithmEventData(event_type, double max_Lw)
   {
     event_data_.emplace<KineticEnergyEventData>(max_Lw);
+  }
+
+  AlgorithmEventData(event_type, ScaleUpdate result, double x1, double x2, math::QuadraticPolynomial const& old_parabola)
+  {
+    event_data_.emplace<ScaleDrawEventData>(result, x1, x2, old_parabola);
   }
 
   template<typename T>

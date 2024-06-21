@@ -176,10 +176,11 @@ void Algorithm::reset_history()
 {
   DoutEntering(dc::notice, "Algorithm::reset_history()");
 
+#ifdef CWDEBUG
+  event_server_.trigger(AlgorithmEventType{scale_erase_event});
+#endif
   // Use the Approximation object on the stack again (as opposed to one from a LocalExtreme).
-  plot_approximation_parabola_scale_ptr_->erase_indicators();
   approximation_ptr_ = &current_approximation_;
-  plot_approximation_parabola_scale_ptr_ = &current_plot_approximation_parabola_scale_;
   // Reset the parabolic approximation.
   approximation_ptr_->reset();
   history_.reset();
@@ -195,11 +196,12 @@ bool Algorithm::handle_local_extreme(Weight& w)
     extremes_.emplace(hdirection_ == HorizontalDirection::right ? extremes_.end() : extremes_.begin(),
         history_, *approximation_ptr_, energy_.energy());
 
+#ifdef CWDEBUG
+  event_server_.trigger(AlgorithmEventType{scale_erase_event});
+#endif
   // Switch approximation_ptr to the parabolic approximation stored in this extreme:
   // we need to keep updating it when new samples are added that match the same parabolic.
-  plot_approximation_parabola_scale_ptr_->erase_indicators();
   approximation_ptr_ = &new_extreme->approximation();
-  plot_approximation_parabola_scale_ptr_ = &new_extreme->plot_approximation_parabola_scale_;
 
   // If we came from (say) the left, and already found a minimum there, then mark left as explored.
   if (best_minimum_ != extremes_.end())
@@ -442,30 +444,23 @@ void Algorithm::update_approximation(bool current_is_replacement)
 {
   using namespace gradient_descent;
 
-  math::QuadraticPolynomial old_parabola = plot_approximation_parabola_scale_ptr_->get_parabola();
+  math::QuadraticPolynomial old_parabola = approximation_ptr_->parabola();
   ScaleUpdate result = approximation_ptr_->add(&history_.current(), approximation_ptr_ != &current_approximation_, current_is_replacement);
 
-  switch (result)
+  if (result == ScaleUpdate::disconnected)
   {
-    case ScaleUpdate::first_sample:
-      break;
-    case ScaleUpdate::initialized:
-      plot_approximation_parabola_scale_ptr_->draw_indicators();
-      break;
-    case ScaleUpdate::towards_vertex:
-      plot_approximation_parabola_scale_ptr_->draw_indicators();
-      plot_approximation_parabola_scale_ptr_->draw_old_parabola(old_parabola);
-      break;
-    case ScaleUpdate::away_from_vertex:
-      plot_approximation_parabola_scale_ptr_->draw_indicators();
-      break;
-    case ScaleUpdate::disconnected:
-    {
-      reset_history();
-      result = approximation_ptr_->add(&history_.current(), false, false);
-      break;
-    }
+    reset_history();
+    result = approximation_ptr_->add(&history_.current(), false, false);
   }
+#ifdef CWDEBUG
+  else
+  {
+    event_server_.trigger(AlgorithmEventType{scale_draw_event, result,
+        approximation_ptr_->parabola_scale().parabola().vertex_x(),
+        approximation_ptr_->parabola_scale().edge_sample_w(),
+        old_parabola});
+  }
+#endif
 
   Dout(dc::notice, "approximation = " << *approximation_ptr_ <<
       " (" << utils::print_using(*approximation_ptr_, &Approximation::print_based_on) << ")");
@@ -709,7 +704,7 @@ bool Algorithm::handle_abort_hdirection(Weight& w)
   energy_.set(best_minimum_->energy(), best_minimum_->vertex_sample().Lw());
 
   // Restore small_step_ to what is was.
-  small_step_ = best_minimum_->plot_approximation_parabola_scale_.scale();
+  small_step_ = best_minimum_->approximation().parabola_scale();
 
   reset_history();
 
@@ -751,6 +746,10 @@ void AlgorithmEventData::print_on(std::ostream& os) const
     std::get<QuadraticPolynomialEventData>(event_data_).print_on(os);
   else if (std::holds_alternative<KineticEnergyEventData>(event_data_))
     std::get<KineticEnergyEventData>(event_data_).print_on(os);
+  else if (std::holds_alternative<ScaleDrawEventData>(event_data_))
+    std::get<ScaleDrawEventData>(event_data_).print_on(os);
+  else if (std::holds_alternative<ScaleEraseEventData>(event_data_))
+    std::get<ScaleEraseEventData>(event_data_).print_on(os);
   else
     // Missing implementation.
     ASSERT(false);
