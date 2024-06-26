@@ -20,6 +20,7 @@ class Algorithm
 
 #ifdef CWDEBUG
   events::Server<AlgorithmEventType> event_server_;
+  char const* algorithm_str_;
 #endif
 
   // Remember the (most recent) history of samples.
@@ -80,6 +81,10 @@ class Algorithm
   void handle_parabolic_approximation(Weight& w);
   bool handle_abort_hdirection(Weight& w);
 
+#ifdef CWDEBUG
+  void set_algorithm_str(double new_w, char const* algorithm_str);
+#endif
+
   bool success() const
   {
     return best_minimum_ != extremes_.end();
@@ -97,6 +102,20 @@ class Algorithm
   events::Server<AlgorithmEventType>& event_server()
   {
     return event_server_;
+  }
+
+  // Accessors for testsuite.
+  double debug_small_step() const { return small_step_; }
+  HorizontalDirection debug_hdirection() const { return hdirection_; }
+  VerticalDirection debug_vdirection() const { return vdirection_; }
+  std::string algorithm_str() const { return algorithm_str_; }
+
+  // Manipulators for the testsuite.
+  void debug_set_hdirection_vdirection_small_step(HorizontalDirection hdirection, VerticalDirection vdirection, double small_step)
+  {
+    hdirection_ = hdirection;
+    vdirection_ = vdirection;
+    small_step_ = small_step;
   }
 #endif
 };

@@ -196,8 +196,19 @@ void Algorithm::reset_history()
   history_.reset();
 }
 
+#ifdef CWDEBUG
+void Algorithm::set_algorithm_str(double new_w, char const* algorithm_str)
+{
+  algorithm_str_ = algorithm_str;
+  Dout(dc::notice, std::setprecision(12) << history_.current().w() << " --> " << history_.total_number_of_samples() << ": " <<
+      new_w << " [" << algorithm_str_ << "] [expected_Lw: " << expected_Lw_ << "]");
+}
+#endif
+
 bool Algorithm::handle_local_extreme(Weight& w)
 {
+  DoutEntering(dc::notice, "Algorithm::handle_local_extreme(" << w << ")");
+
   // Following adding the first extreme, we should have decided on a horizontal direction.
   ASSERT(hdirection_ != HorizontalDirection::undecided || extremes_.empty());
 
@@ -396,8 +407,7 @@ bool Algorithm::handle_local_extreme(Weight& w)
           expected_Lw[1] < expected_Lw[0]))) ? 1 : 0;
     w = zeroes[best_zero];
     expected_Lw_ = expected_Lw[best_zero];
-    Dout(dc::notice, history_.current().w() << " --> " << history_.total_number_of_samples() << ": " <<
-        w << " [best zero] [expected_Lw: " << expected_Lw_ << "]");
+    Debug(set_algorithm_str(w, "best zero"));
     reset_history();
     Dout(dc::notice(hdirection_ == HorizontalDirection::undecided && number_of_zeroes == 2),
         "Best zero was " << zeroes[best_zero] << " with A(" << zeroes[best_zero] << ") = " <<
@@ -417,8 +427,7 @@ bool Algorithm::handle_local_extreme(Weight& w)
     // Keep going in the same direction.
     w -= new_extreme->approximation().parabola_scale();
     expected_Lw_ = new_extreme->approximation().parabola()(w);
-    Dout(dc::notice, history_.current().w() << " --> " << history_.total_number_of_samples() << ": " <<
-        w << " [past extreme (no zeroes)] [expected_Lw: " << expected_Lw_ << "]");
+    Debug(set_algorithm_str(w, "past extreme (no zeroes)"));
 
     // Note that w was already set to the v_x before, but the test below still works
     // because |v_x - history_.current().w()| was determined to be less than 1% of approximation.parabola_scale().
@@ -428,8 +437,7 @@ bool Algorithm::handle_local_extreme(Weight& w)
     // Keep going in the same hdirection.
     w += static_cast<int>(hdirection_) * std::abs(new_extreme->approximation().parabola_scale());
     expected_Lw_ = new_extreme->approximation().parabola()(w);
-    Dout(dc::notice, history_.current().w() << " --> " << history_.total_number_of_samples() << ": " <<
-        w << " [keep going (no zeroes)] [expected_Lw: " << expected_Lw_ << "]");
+    Debug(set_algorithm_str(w, "keep going (no zeroes)"));
   }
 
   if (hdirection_ == HorizontalDirection::undecided)
@@ -450,6 +458,8 @@ bool Algorithm::handle_local_extreme(Weight& w)
 
 void Algorithm::update_approximation(bool current_is_replacement)
 {
+  DoutEntering(dc::notice, "Algorithm::update_approximation(" << std::boolalpha << current_is_replacement << ")");
+
   using namespace gradient_descent;
 
   math::QuadraticPolynomial old_parabola = approximation_ptr_->parabola();
@@ -480,6 +490,8 @@ void Algorithm::update_approximation(bool current_is_replacement)
 
 void Algorithm::handle_single_sample(Weight& w)
 {
+  DoutEntering(dc::notice, "Algorithm::handle_single_sample(" << w << ")");
+
   double step;
 #ifdef CWDEBUG
   char const* algorithm_str;
@@ -546,9 +558,7 @@ void Algorithm::handle_single_sample(Weight& w)
   }
   w += step;
   expected_Lw_ = approximation_ptr_->parabola()(w);
-  Dout(dc::notice, std::setprecision(12) << history_.current().w() << " --> " << history_.total_number_of_samples() <<
-      ": " << w << " [" << algorithm_str << "] [expected_Lw:" << expected_Lw_ << "]");
-
+  Debug(set_algorithm_str(w, algorithm_str));
   state_ = IterationState::done;
 }
 
@@ -593,8 +603,7 @@ void Algorithm::handle_parabolic_approximation(Weight& w)
     double step = static_cast<int>(hdirection_) * std::abs(approximation.parabola_scale());
     w += step;
     expected_Lw_ = approximation.parabola()(w);
-    Dout(dc::notice, history_.current().w() << " --> " << history_.total_number_of_samples() <<
-        ": " << w << " [continue same direction] [expected_Lw:" << expected_Lw_ << "]");
+    Debug(set_algorithm_str(w, "continue same direction"));
     Dout(dc::notice, (hdirection_ == HorizontalDirection::left ? "Incremented" : "Decremented") << " w with scale (" << std::abs(step) << ")");
     // Abort if the result requires more energy than we have.
     state_ = IterationState::check_energy;
@@ -660,19 +669,19 @@ void Algorithm::handle_parabolic_approximation(Weight& w)
       double step = static_cast<int>(hdirection_) * Scale::epsilon;
       w += approximation.parabola_scale().make_significant(step);
       expected_Lw_ = approximation.parabola()(w);
-      Dout(dc::notice, history_.current().w() << " --> " << history_.total_number_of_samples() << ": " <<
-          w << " [jump to vertex + small overshoot] [expected_Lw:" << expected_Lw_ << "]");
+      Debug(set_algorithm_str(w, "jump to vertex + small overshoot"));
       return;
     }
     state_ = IterationState::local_extreme;
   }
 
-  Dout(dc::notice, history_.current().w() << " --> " << history_.total_number_of_samples() << ": " <<
-      w << " [jump to vertex] [expected_Lw:" << expected_Lw_ << "]");
+  Debug(set_algorithm_str(w, "jump to vertex"));
 }
 
 bool Algorithm::handle_abort_hdirection(Weight& w)
 {
+  DoutEntering(dc::notice, "Algorithm::handle_abort_hdirection(" << w << ")");
+
   using namespace gradient_descent;
 
   // Has a minimum been found at all?
@@ -702,8 +711,7 @@ bool Algorithm::handle_abort_hdirection(Weight& w)
   // Do a step with a size equal to the scale in this minimum: we expect it not to drastically change before that point.
   w += static_cast<int>(hdirection_) * std::abs(best_minimum_->approximation().parabola_scale());
   expected_Lw_ = best_minimum_->approximation().parabola()(w);
-  Dout(dc::notice, history_.current().w() << " --> " << history_.total_number_of_samples() <<
-      ": " << w << " [best minimum, opposite direction] [expected_Lw:" << expected_Lw_ << "]");
+  Debug(set_algorithm_str(w, "best minimum, opposite direction"));
   best_minimum_->explored(hdirection_);
   vdirection_ = VerticalDirection::up;
   Dout(dc::notice, "vdirection_ is set to " << vdirection_ << " because we just jumped to a minimum.");

@@ -72,7 +72,7 @@ H) Looking for a maximum between two given samples.
 I) Looking for a maximum right of two given samples.
 
 The Algorithm has a member hdirection_ that contains the
-direction that we want to go to after finding the next
+direction that we want to go in after finding the next
 local extreme: this value is set at the moment an extreme
 is found, because then it is decided if want to go look
 for the next extreme left or right of that one. This direction
@@ -96,13 +96,13 @@ A/C)
    - derivative is zero (`almost_zero`).
      > hdirection_ is undecided.
          In this case step is set to learning_rate_.
-     > hdirection_ is known.
-         In this case step is set to hdirection_ * learning_rate_.
+     > hdirection_ is known.                                                    } - never happens: small_step_ is set once hdirection_ is known.
+         In this case step is set to hdirection_ * learning_rate_.              }
    - derivative is not zero.
      > hdirection_ is undecided.
          In this case step is set to learning_rate_ * -dLdW (the normal gradient descent).
-     > hdirection_ is known.
-         In this case step is set to hdirection_ * abs(learning_rate_ * dLdW).
+     > hdirection_ is known.                                                    } - idem
+         In this case step is set to hdirection_ * abs(learning_rate_ * dLdW).  }
  * small_step_ is known.
      In this case step is set to hdirection_ * small_step_.
 
