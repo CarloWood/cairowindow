@@ -12,6 +12,7 @@ std::string to_string(HorizontalDirection hdirection)
     case HorizontalDirection::left: return "left";
     case HorizontalDirection::undecided: return "undecided";
     case HorizontalDirection::right: return "right";
+    case HorizontalDirection::inbetween: return "inbetween";
   }
   AI_NEVER_REACHED
 }

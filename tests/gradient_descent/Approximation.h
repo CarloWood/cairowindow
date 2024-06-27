@@ -2,7 +2,10 @@
 
 #include "Scale.h"
 #include "Sample.h"
+#include "HorizontalDirection.h"
+#include "VerticalDirection.h"
 #include "../QuadraticPolynomial.h"
+#include "../CubicPolynomial.h"
 #include <array>
 
 namespace gradient_descent {
@@ -15,15 +18,20 @@ class Approximation
  private:
   int number_of_relevant_samples_{0};                   // The number of valid samples in relevant_samples_, used for this approximation.
   int current_index_{1};                                // The index of the last sample that was added (iff number_of_relevant_samples_ > 0).
-  std::array<Sample const*, 2> relevant_samples_;       // Pointers to up to two samples that take part in this approximation.
+  std::array<Sample const*, 2> relevant_samples_;       // Pointers to up to two samples that take part in this approximation. If
+                                                        // number_of_relevant_samples_ is two then one with the smallest w is stored at index 0.
   math::QuadraticPolynomial parabola_;                  // A linear or parabolic approximation.
   Scale parabola_scale_;                                // A measure of over what interval the parabolic approximation was tested to be correct.
   bool is_extreme_{false};                              // Set when this is a LocalExtreme::approximation_.
+  math::CubicPolynomial cubic_;                         // A cubic approximation, only valid if number_of_relevant_samples_ == 2.
 
  public:
   // Called with the latest samples that are expected to match this parabola (or that
   // should construct the parabola when there are not already two relevant samples stored).
-  ScaleUpdate add(Sample const* current, bool update_scale_only, bool current_is_replacement);
+  ScaleUpdate add(Sample const* current, bool current_is_replacement);
+  ScaleUpdate update_scale(Sample const& current);
+
+  Weight find_extreme(HorizontalDirection& hdirection, VerticalDirection& extreme);
 
   Sample const& current() const { ASSERT(number_of_relevant_samples_ > 0); return *relevant_samples_[current_index_]; }
   Sample const& prev() const { ASSERT(number_of_relevant_samples_ > 1); return *relevant_samples_[1 - current_index_]; }
@@ -50,6 +58,7 @@ class Approximation
   math::QuadraticPolynomial const& parabola() const { return parabola_; }
   Scale const& parabola_scale() const { return parabola_scale_; }
   bool is_extreme() const { return is_extreme_; }
+  math::CubicPolynomial const& cubic() const { return cubic_; }
 
   int current_index() const
   {
@@ -70,7 +79,10 @@ class Approximation
     os << "{parabola:" << parabola_;
     if (number_of_relevant_samples_ > 1)
       os << " [v_x = " << parabola_.vertex_x() << "]";
-    os << ", parabola_scale:" << parabola_scale_ << "}";
+    os << ", parabola_scale:" << parabola_scale_;
+    if (number_of_relevant_samples_ > 1)
+      os << ", cubic:" << cubic_;
+    os << "}";
   }
 #endif
 };

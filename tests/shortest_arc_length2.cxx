@@ -52,7 +52,7 @@ int main()
     plot.set_xrange({-M_PI, M_PI});
     plot.set_yrange({-M_PI, M_PI});
     plot.create_svg_surface("shortest_arc_length2.svg", true COMMA_CWDEBUG_ONLY("plot"));
-    plot.set_need_print();
+//    plot.set_need_print();
     plot.add_to(background_layer, true);
     plot.reset_need_print();
 

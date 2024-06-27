@@ -170,14 +170,20 @@ int main()
 
       double D = utils::square(c) - 3.0 * b * d;
 
-      plot::Line plot_zero_line;
+      plot::Line plot_minimum_line;
+      plot::Line plot_maximum_line;
       if (D >= 0.0)
       {
         // Find the minimum (the maximum would be `- std::sqrt`).
-        double zero = (-c + std::sqrt(D)) / (3.0 * d);
-        // Draw a vertical line where the zero is.
-        plot_zero_line = Line{Point{zero, 0.0}, Direction::up};
-        plot.add_line(second_layer, line_style, plot_zero_line);
+        double minimum = (-c + std::sqrt(D)) / (3.0 * d);
+        // Draw a vertical line where the minimum is.
+        plot_minimum_line = Line{Point{minimum, 0.0}, Direction::up};
+        plot.add_line(second_layer, line_style, plot_minimum_line);
+
+        double maximum = (-c - std::sqrt(D)) / (3.0 * d);
+        // Draw a vertical line where the maximum is.
+        plot_maximum_line = Line{Point{maximum, 0.0}, Direction::up};
+        plot.add_line(second_layer, line_style, plot_maximum_line);
       }
 
       // Flush all expose events related to the drawing done above.

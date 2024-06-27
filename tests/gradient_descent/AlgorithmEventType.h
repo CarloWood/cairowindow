@@ -4,6 +4,8 @@
 #include "HistoryIndex.h"
 #include "Scale.h"
 #include "../Polynomial.h"
+#include "../QuadraticPolynomial.h"
+#include "../CubicPolynomial.h"
 #include "events/Events.h"
 #include "utils/has_print_on.h"
 
@@ -21,6 +23,7 @@ enum event_type
   derivative_event,
   quotient_event,
   quadratic_polynomial_event,
+  cubic_polynomial_event,
   kinetic_energy_event,
   scale_draw_event,
   scale_erase_event,
@@ -99,6 +102,19 @@ class QuadraticPolynomialEventData
   void print_on(std::ostream& os) const;
 };
 
+class CubicPolynomialEventData
+{
+ private:
+  math::CubicPolynomial const& cubic_polynomial_;
+
+ public:
+  CubicPolynomialEventData(math::CubicPolynomial const& cubic_polynomial) : cubic_polynomial_(cubic_polynomial) { }
+
+  math::CubicPolynomial const& cubic_polynomial() const { return cubic_polynomial_; }
+
+  void print_on(std::ostream& os) const;
+};
+
 class KineticEnergyEventData
 {
  protected:
@@ -172,7 +188,8 @@ class AlgorithmEventData
 {
  private:
   std::variant<ResetEventData, DifferenceEventData, FourthDegreeApproximationEventData, QuotientEventData, DerivativeEventData,
-    QuadraticPolynomialEventData, KineticEnergyEventData, ScaleDrawEventData, ScaleEraseEventData, HistoryAddEventData> event_data_;
+    QuadraticPolynomialEventData, KineticEnergyEventData, ScaleDrawEventData, ScaleEraseEventData, HistoryAddEventData,
+    CubicPolynomialEventData> event_data_;
 
  public:
   AlgorithmEventData() = default;
@@ -207,6 +224,11 @@ class AlgorithmEventData
   AlgorithmEventData(event_type, math::QuadraticPolynomial const& polynomial)
   {
     event_data_.emplace<QuadraticPolynomialEventData>(polynomial);
+  }
+
+  AlgorithmEventData(event_type, math::CubicPolynomial const& polynomial)
+  {
+    event_data_.emplace<CubicPolynomialEventData>(polynomial);
   }
 
   AlgorithmEventData(event_type, double max_Lw)

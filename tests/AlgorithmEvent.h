@@ -69,6 +69,7 @@ class AlgorithmEvent
   cairowindow::plot::Plot& plot_;
   boost::intrusive_ptr<cairowindow::Layer> const& layer_;
   cairowindow::plot::BezierFitter plot_approximation_curve_;
+  cairowindow::plot::BezierFitter plot_cubic_approximation_curve_;
   cairowindow::plot::BezierFitter plot_fourth_degree_approximation_curve_;
   cairowindow::plot::BezierFitter plot_quotient_curve_;
   cairowindow::plot::BezierFitter plot_derivative_curve_;
@@ -198,6 +199,17 @@ class AlgorithmEvent
         plot_.create_text(layer_, s_label_style({.position = cairowindow::draw::centered_below}),
               cairowindow::Point{data.current().w(), data.current().Lw()}, data.label()));
     }
+    else if (event.is_a<gradient_descent::CubicPolynomialEventData>())
+    {
+      auto const& data = event.get<gradient_descent::CubicPolynomialEventData>();
+
+      math::CubicPolynomial const& cubic_approximation = data.cubic_polynomial();
+      plot_cubic_approximation_curve_.solve([&cubic_approximation](double w) -> Point { return {w, cubic_approximation(w)}; }, plot_.viewport());
+      plot_.add_bezier_fitter(layer_, curve_line_style_({.line_color = color::magenta}), plot_cubic_approximation_curve_);
+    }
+    else
+      // Missing implementation.
+      ASSERT(false);
   }
 };
 

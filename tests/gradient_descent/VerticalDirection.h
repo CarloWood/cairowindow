@@ -10,6 +10,7 @@ namespace gradient_descent {
 enum class VerticalDirection
 {
   down = -1,
+  unknown = 0,
   up = 1
 };
 

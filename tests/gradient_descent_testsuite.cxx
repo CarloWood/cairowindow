@@ -160,6 +160,8 @@ int main()
   using Scale = gradient_descent::Scale;
   using HorizontalDirection = gradient_descent::HorizontalDirection;
   using VerticalDirection = gradient_descent::VerticalDirection;
+  using Sample = gradient_descent::Sample;
+  using Approximation = gradient_descent::Approximation;
 
   // Default values.
   constexpr double L_max = 100.0;
@@ -404,6 +406,16 @@ int main()
     ASSERT(gda.debug_hdirection() == HorizontalDirection::right);
     ASSERT(utils::almost_equal(gda.debug_small_step(), w0 - vertex, 10e-6));
   }
+
+  Sample s1(10.0, 50.0, 1.2);
+  Sample s2(13.0, 45.0, 1.3);
+  Approximation approximation;
+  approximation.add(&s1, false);
+  approximation.add(&s2, false);
+  HorizontalDirection hdirection = HorizontalDirection::undecided;
+  VerticalDirection vdirection = VerticalDirection::unknown;
+  Weight result = approximation.find_extreme(hdirection, vdirection);
+  Dout(dc::notice, "result = " << result << "; hdirection = " << hdirection << "; vdirection = " << vdirection);
 
   Dout(dc::notice, "Success!");
 }

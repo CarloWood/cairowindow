@@ -86,7 +86,7 @@ class Function : FunctionBase
     return derivative_.evaluate();
   }
 };
-#elif 1
+#elif 0
 class Function : FunctionBase
 {
  public:

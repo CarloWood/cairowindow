@@ -11,7 +11,8 @@ enum class HorizontalDirection
 {
   left = -1,
   undecided = 0,
-  right = 1
+  right = 1,
+  inbetween = 2
 };
 
 inline HorizontalDirection opposite(HorizontalDirection hdirection)

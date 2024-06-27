@@ -10,6 +10,7 @@ std::string to_string(VerticalDirection vdirection)
   switch (vdirection)
   {
     case VerticalDirection::down: return "down";
+    case VerticalDirection::unknown: return "unknown";
     case VerticalDirection::up: return "up";
   }
   AI_NEVER_REACHED

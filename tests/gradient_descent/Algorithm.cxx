@@ -463,12 +463,16 @@ void Algorithm::update_approximation(bool current_is_replacement)
   using namespace gradient_descent;
 
   math::QuadraticPolynomial old_parabola = approximation_ptr_->parabola();
-  ScaleUpdate result = approximation_ptr_->add(&history_.current(), approximation_ptr_ != &current_approximation_, current_is_replacement);
+  ScaleUpdate result;
+  if (approximation_ptr_ == &current_approximation_)
+    result = approximation_ptr_->add(&history_.current(), current_is_replacement);
+  else
+    result = approximation_ptr_->update_scale(history_.current());
 
   if (result == ScaleUpdate::disconnected)
   {
-    reset_history();
-    result = approximation_ptr_->add(&history_.current(), false, false);
+    reset_history();                                                    // This sets approximation_ptr_ = &current_approximation_.
+    result = approximation_ptr_->add(&history_.current(), false);       // Therefore call add().
   }
 #ifdef CWDEBUG
   else
@@ -485,6 +489,8 @@ void Algorithm::update_approximation(bool current_is_replacement)
 
 #ifdef CWDEBUG
   event_server_.trigger(AlgorithmEventType{quadratic_polynomial_event, approximation_ptr_->parabola()});
+  if (approximation_ptr_->number_of_relevant_samples() == 2)
+    event_server_.trigger(AlgorithmEventType{cubic_polynomial_event, approximation_ptr_->cubic()});
 #endif
 }
 
@@ -746,6 +752,11 @@ void QuadraticPolynomialEventData::print_on(std::ostream& os) const
   os << "QuadraticPolynomialEventData:{" << quadratic_polynomial_ << "}";
 }
 
+void CubicPolynomialEventData::print_on(std::ostream& os) const
+{
+  os << "CubicPolynomialEventData:{" << cubic_polynomial_ << "}";
+}
+
 void AlgorithmEventData::print_on(std::ostream& os) const
 {
   if (std::holds_alternative<ResetEventData>(event_data_))
@@ -768,6 +779,8 @@ void AlgorithmEventData::print_on(std::ostream& os) const
     std::get<ScaleEraseEventData>(event_data_).print_on(os);
   else if (std::holds_alternative<HistoryAddEventData>(event_data_))
     std::get<HistoryAddEventData>(event_data_).print_on(os);
+  else if (std::holds_alternative<CubicPolynomialEventData>(event_data_))
+    std::get<CubicPolynomialEventData>(event_data_).print_on(os);
   else
     // Missing implementation.
     ASSERT(false);
