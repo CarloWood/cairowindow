@@ -61,3 +61,7 @@ target_link_libraries(parabolic_fit AICxx::cairowindow AICxx::symbolic ${AICXX_O
 
 add_executable(histogram histogram.cxx)
 target_link_libraries(histogram ${AICXX_OBJECTS_LIST})
+
+add_executable(generate_cubic_tests generate_cubic_tests.cxx
+  gradient_descent/HorizontalDirection.cxx gradient_descent/VerticalDirection.cxx gradient_descent/Approximation.cxx)
+target_link_libraries(generate_cubic_tests AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST})

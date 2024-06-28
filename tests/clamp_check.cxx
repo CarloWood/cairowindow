@@ -1,6 +1,7 @@
 #include "sys.h"
 #include "QuadraticPolynomial.h"
 #include "Polynomial.h"
+#include "gradient_descent/Sample.h"
 #include "cairowindow/BezierCurve.h"
 #include "cairowindow/Window.h"
 #include "cairowindow/Layer.h"
@@ -23,6 +24,7 @@ int main()
   {
     using namespace cairowindow;
     using Window = cairowindow::Window;
+    using Sample = gradient_descent::Sample;
 
     // Create a window.
     Window window("Clamp Check", 1200, 900);
@@ -41,13 +43,27 @@ int main()
       event_loop.set_cleanly_terminated();
     });
 
+    Sample s1{10.1586, 47.5865, -0.164047}, s2{11.8608, 47.013, -0.358701};
+
+    double w1 = std::min(s1.w(), s2.w());
+    double w2 = std::max(s1.w(), s2.w());
+    double dw = w2 - w1;
+    double const w_min = w1 - 0.2 * dw;
+    double const w_max = w2 + 0.2 * dw;
+
+    double Lw1 = std::min(s1.Lw(), s2.Lw());
+    double Lw2 = std::max(s1.Lw(), s2.Lw());
+    double dLw = Lw2 - Lw1;
+    double const Lw_min = Lw1 - 0.2 * dLw;
+    double const Lw_max = Lw2 + 0.2 * dLw;
+
     // Create and draw plot area.
     plot::Plot plot(window.geometry(), { .grid = {.color = color::orange} },
         "Clamp Check", {},
         "x", {},
         "y", {});
-    plot.set_xrange({-10, 10});
-    plot.set_yrange({-10, 10});
+    plot.set_xrange({w_min, w_max});
+    plot.set_yrange({Lw_min, Lw_max});
     plot.add_to(background_layer, true);
 
     utils::ColorPool<32> color_pool;
@@ -60,15 +76,15 @@ int main()
     draw::ArcStyle arc_style({.line_color = color::blue, .line_width = 1.0});
 
     // Create a point P₀.
-    auto plot_P0 = plot.create_point(second_layer, point_style, {-6.0, 4.0});
+    auto plot_P0 = plot.create_point(second_layer, point_style, {s1.w(), s1.Lw()});
     // Create a point P₁.
-    auto plot_P1 = plot.create_point(second_layer, point_style, {2.0, 0.0});
+    auto plot_P1 = plot.create_point(second_layer, point_style, {s2.w(), s2.Lw()});
 
     // Create a point Q0 on the circle.
-    double const circle_radius = 2.0;
-    double phi0 = -0.25 * M_PI;
+    double const circle_radius = 0.2 * std::abs(s2.w() - s1.w());
+    double phi0 = std::atan(s1.dLdw());
     auto plot_Q0 = plot.create_point(second_layer, point_style({.color_index = 2}), plot_P0 + circle_radius * Direction{phi0});
-    double phi1 = -0.25 * M_PI;
+    double phi1 = std::atan(s2.dLdw());
     auto plot_Q1 = plot.create_point(second_layer, point_style({.color_index = 2}), plot_P1 + circle_radius * Direction{phi1});
 
     // Make all points draggable.
@@ -98,8 +114,8 @@ int main()
         }
     );
 
-    auto slider_d = plot.create_slider(second_layer, {978, 83, 7, 400}, 0.0520743, -0.01, 0.01);
-    auto slider_d_label = plot.create_text(second_layer, slider_style, Pixel{978, 483}, "d");
+//    auto slider_d = plot.create_slider(second_layer, {978, 83, 7, 400}, 0.0520743, -0.01, 0.01);
+//    auto slider_d_label = plot.create_text(second_layer, slider_style, Pixel{978, 483}, "d");
 
     while (true)
     {
@@ -147,7 +163,7 @@ int main()
 //      auto plot_vertex_line = plot.create_line(second_layer, line_style, Point{parabola.vertex_x(), 0.0}, Direction::up);
 
       Dout(dc::notice, "w₀ = " << w0 << "; L(w₀) = " << Lw0 << "; L'(w₀) = " << dLdw0 <<
-          "; w₁ = " << w1 << "; L(w₁) = " << Lw1 << "L'(w₁) = " << dLdw1);
+          "; w₁ = " << w1 << "; L(w₁) = " << Lw1 << "; L'(w₁) = " << dLdw1);
 
       // Let Q(w) = a + b w + c w² + d w³ be a cubic that has the same value and first derivative in w₀ and w₁.
       math::Polynomial cubic(4 COMMA_CWDEBUG_ONLY("cubic"));
@@ -184,6 +200,9 @@ int main()
         // Draw a vertical line where the maximum is.
         plot_maximum_line = Line{Point{maximum, 0.0}, Direction::up};
         plot.add_line(second_layer, line_style, plot_maximum_line);
+
+        Dout(dc::notice, std::setprecision(std::numeric_limits<long double>::max_digits10) <<
+            "minimum = " << minimum << ", maximum = " << maximum);
       }
 
       // Flush all expose events related to the drawing done above.

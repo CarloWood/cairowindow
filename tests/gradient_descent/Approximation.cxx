@@ -97,6 +97,8 @@ ScaleUpdate Approximation::add(Sample const* current, bool current_is_replacemen
     cubic_[1] = b;
     cubic_[0] = 0.0;
     cubic_[0] = Lw0 - cubic_(w0);
+
+    Dout(dc::notice, "cubic = " << cubic_);
   }
 
   ScaleUpdate result = ScaleUpdate::first_sample;
@@ -149,14 +151,91 @@ ScaleUpdate Approximation::update_scale(Sample const& current)
 //         left: the requested extreme is left of `left`.
 //        right: the requested extreme is right of `right`.
 //    inbetween: the requested extreme is in between `left` and `right`.
-//    undecided: there is no extreme (of the requested vdirection type).
 //  extreme:
 //           up: the extreme is a maximum.
 //         down: the extreme is a minimum.
-//      unknown: there is no extreme.
-Weight Approximation::find_extreme(HorizontalDirection& hdirection, VerticalDirection& extreme)
+//      unknown: there is no extreme (of the requested vdirection type), in this case hdirection is unchanged.
+Weight Approximation::find_extreme(HorizontalDirection& hdirection, VerticalDirection& extreme) const
 {
-  return {0.0};
+  DoutEntering(dc::notice, "Approximation::find_extreme(" << hdirection << ", " << extreme << ")");
+  // Otherwise the cubic approximation isn't even valid.
+  ASSERT(number_of_relevant_samples_ == 2);
+
+  double a = cubic_[0];
+  double b = cubic_[1];
+  double c = cubic_[2];
+  double d = cubic_[3];
+
+  double D = utils::square(c) - 3.0 * b * d;
+
+  // If D is equal to zero we have a point where the derivative is zero, but that isn't a maximum or minimum.
+  if (D <= 0.0)
+  {
+    extreme = VerticalDirection::unknown;
+    return {};
+  }
+
+  double sqrt_D = std::sqrt(D);
+  double minimum = (-c + sqrt_D) / (3.0 * d);
+  double maximum = (-c - sqrt_D) / (3.0 * d);
+
+  double wl = relevant_samples_[0]->w();
+  double wr = relevant_samples_[1]->w();
+
+  if (extreme == VerticalDirection::unknown)
+  {
+    //      unknown: looking for any extreme; the preference will depend on the value of hdirection.
+    //               If hdirection is left, the extreme nearest to, but left of, sr is returned.
+    //               If hdirection is right, the extreme nearest to, but right of, sl is returned.
+    //               if hdirection is undecided too, the prefered extreme is the one nearest to the center.
+    if (hdirection == HorizontalDirection::undecided)
+    {
+      double center = 0.5 * (wl + wr);
+      extreme = (std::abs(minimum - center) > std::abs(maximum - center)) ? VerticalDirection::up : VerticalDirection::down;
+    }
+    else
+    {
+      ASSERT(hdirection == HorizontalDirection::left || hdirection == HorizontalDirection::right);
+      double reference = (hdirection == HorizontalDirection::left) ? wr : wl;
+      double rel_pos_min = static_cast<int>(hdirection) * (minimum - reference);
+      double rel_pos_max = static_cast<int>(hdirection) * (maximum - reference);
+      if (rel_pos_min < 0.0 && rel_pos_max < 0.0)
+      {
+        // Both extremes are on the wrong side of reference.
+        extreme = VerticalDirection::unknown;
+        return {};
+      }
+      if (rel_pos_min < 0.0)
+        extreme = VerticalDirection::up;        // The minimum is on the wrong side of reference.
+      else if (rel_pos_max < 0.0)
+        extreme = VerticalDirection::down;      // The maximum is on the wrong side of reference.
+      else
+        extreme = (rel_pos_max < rel_pos_min) ? VerticalDirection::up : VerticalDirection::down;
+    }
+  }
+
+  double result = (extreme == VerticalDirection::up) ? maximum : minimum;
+
+  //         left: looking for an extreme left of `sr`.
+  //        right: looking for an extreme right of `sl`.
+  if ((hdirection == HorizontalDirection::left && result >= wr) ||
+      (hdirection == HorizontalDirection::right && result <= wl))
+  {
+    extreme = VerticalDirection::unknown;
+    return {};
+  }
+
+  //         left: the requested extreme is left of `left`.
+  //        right: the requested extreme is right of `right`.
+  //    inbetween: the requested extreme is in between `left` and `right`.
+  if (result < wl)
+    hdirection = HorizontalDirection::left;
+  else if (result > wr)
+    hdirection = HorizontalDirection::right;
+  else
+    hdirection = HorizontalDirection::inbetween;
+
+  return result;
 }
 
 } // namespace gradient_descent

@@ -10,11 +10,10 @@ class Weight
  protected:
   double w_;                    // w
 
- protected:
-  // Required by Sample().
+ public:
+  // Required by Sample() and find_extreme.
   Weight() = default;
 
- public:
   Weight(double w) : w_(w) { }
 
   Weight& operator-=(double delta_w)

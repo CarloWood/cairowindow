@@ -31,7 +31,7 @@ class Approximation
   ScaleUpdate add(Sample const* current, bool current_is_replacement);
   ScaleUpdate update_scale(Sample const& current);
 
-  Weight find_extreme(HorizontalDirection& hdirection, VerticalDirection& extreme);
+  Weight find_extreme(HorizontalDirection& hdirection, VerticalDirection& extreme) const;
 
   Sample const& current() const { ASSERT(number_of_relevant_samples_ > 0); return *relevant_samples_[current_index_]; }
   Sample const& prev() const { ASSERT(number_of_relevant_samples_ > 1); return *relevant_samples_[1 - current_index_]; }
