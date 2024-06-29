@@ -240,7 +240,7 @@ int main()
 
       // Create and draw plot area.
       plot::Plot plot(window.geometry(), { .grid = {.color = color::orange} },
-          "Clamp Check", {},
+          "Find extreme test", {},
           "x", {},
           "y", {});
 
@@ -318,8 +318,15 @@ int main()
       {
         // If there is no extreme, then vdirection should be 'unknown'.
         ASSERT(vdirection == VerticalDirection::unknown);
-        // hdirection should be untouched.
-        ASSERT(hdirection == input_hdirection);
+        // hdirection should be untouched if it wasn't undecided.
+        ASSERT(input_hdirection == HorizontalDirection::undecided || hdirection == input_hdirection);
+        // D being non-positive means that the derivative must have the same sign everywhere (though one of them can be zero).
+        double ld = cubic.derivative(wl);
+        double rd = cubic.derivative(wr);
+        ASSERT((D == 0.0 && (ld == 0.0 || rd == 0.0)) || (ld != 0 && rd != 0.0 && (ld < 0.0) == (rd < 0.0)));
+        // If hdirection was undecided it should now be set to "downhill".
+        ASSERT(input_hdirection != HorizontalDirection::undecided ||
+            hdirection == ((ld > 0.0) ? HorizontalDirection::left : HorizontalDirection::right));
         continue;
       }
 

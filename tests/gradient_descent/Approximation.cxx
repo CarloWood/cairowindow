@@ -154,7 +154,10 @@ ScaleUpdate Approximation::update_scale(Sample const& current)
 //  extreme:
 //           up: the extreme is a maximum.
 //         down: the extreme is a minimum.
-//      unknown: there is no extreme (of the requested vdirection type), in this case hdirection is unchanged.
+//      unknown: there is no extreme (of the requested vdirection type),
+//               in this case, if hdirection was undecided, it is set to
+//               point in the direction where we go downhill. Otherwise
+//               it is unchanged.
 Weight Approximation::find_extreme(HorizontalDirection& hdirection, VerticalDirection& extreme) const
 {
   DoutEntering(dc::notice, "Approximation::find_extreme(" << hdirection << ", " << extreme << ")");
@@ -172,6 +175,8 @@ Weight Approximation::find_extreme(HorizontalDirection& hdirection, VerticalDire
   if (D <= 0.0)
   {
     extreme = VerticalDirection::unknown;
+    if (hdirection == HorizontalDirection::undecided)
+      hdirection = (d > 0.0 || (d == 0.0 && b > 0.0)) ? HorizontalDirection::left : HorizontalDirection::right;
     return {};
   }
 
