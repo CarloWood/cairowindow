@@ -22,6 +22,7 @@
 #include <sstream>
 #include <thread>
 #include <vector>
+#include <random>
 #include "debug.h"
 #ifdef CWDEBUG
 #include "utils/debug_ostream_operators.h"
@@ -31,264 +32,84 @@
 
 using utils::has_print_on::operator<<;
 
-class FunctionBase
-{
- protected:
-  symbolic::Symbol const& w_ = symbolic::Symbol::realize("w");
-  symbolic::Symbol const& a_ = symbolic::Symbol::realize("a");
-  symbolic::Symbol const& b_ = symbolic::Symbol::realize("b");
-  symbolic::Symbol const& c_ = symbolic::Symbol::realize("c");
-  symbolic::Symbol const& d_ = symbolic::Symbol::realize("d");
-  symbolic::Symbol const& e_ = symbolic::Symbol::realize("e");
-};
-
-#if 0
-class Function : FunctionBase
-{
- public:
-  static constexpr double w_0 = 1.0;
-  static constexpr double w_min = -3.0;
-  static constexpr double w_max = 6.0;
-
- private:
-  using Expression = symbolic::Expression;
-
-  Expression const& function_ = a_ + b_ * w_ + c_ * (w_^2) + d_ * (w_^3) + e_ * (w_^4);
-  Expression const& derivative_ = function_.derivative(w_);
-
- public:
-  Function()
-  {
-    a_ = 25.0;
-    b_ = 25.0;
-    c_ = -10.0;
-    d_ = -10.0;
-    e_ = 2.0;
-  }
-
- public:
-  std::string as_string() const
-  {
-    std::ostringstream oss;
-    function_.print_on(oss);
-    return oss.str();
-  }
-
-  double operator()(double w) const
-  {
-    w_ = w;
-    return function_.evaluate();
-  }
-
-  double derivative(double w) const
-  {
-    w_ = w;
-    return derivative_.evaluate();
-  }
-};
-#elif 0
-class Function : FunctionBase
-{
- public:
-  static constexpr double w_0 = -40.0; //-51.0;
-  static constexpr double w_min = -80.0; // -60.0; //-80.0;
-  static constexpr double w_max = 20.0; //-40.0; //20.0;
-
- private:
-  using Expression = symbolic::Expression;
-  using Constant = symbolic::Constant;
-  using Symbol = symbolic::Symbol;
-  using Func = symbolic::Function;
-
-  static Constant const tp;
-  Symbol const& amplitude_ = symbolic::Symbol::realize("amplitude");
-  Symbol const& level_ = symbolic::Symbol::realize("level");
-  Symbol const& phase_ = symbolic::Symbol::realize("phase");
-
- private:
-  Func const& sigmoid_ = Func::realize("sigmoid", exp(3 * (w_ + tp)) / (1 + exp(3 * (w_ + tp))));
-
-  Expression const& function_ = (1.0 - sigmoid_) * (a_ + b_ * w_ + c_ * (w_^2)) +
-    (sigmoid_ * (amplitude_ * exp((tp - w_) / 10) * sin(d_ * w_ + phase_) + level_));
-
-  Expression const& derivative_ = function_.derivative(w_);
-
- public:
-  Function()
-  {
-    a_ = 14.6;
-    b_ = 3.15;
-    c_ = 0.451;
-    d_ = 0.5;
-    amplitude_ = 0.012027;
-    level_ = 1878.38;
-    phase_ = 1.91892;
-  }
-
-  std::string as_string() const
-  {
-    std::ostringstream oss;
-    function_.print_on(oss);
-    return oss.str();
-  }
-
-  double operator()(double w) const
-  {
-    w_ = w;
-    sigmoid_.reset_evaluation();
-    return function_.evaluate();
-  }
-
-  double derivative(double w) const
-  {
-    w_ = w;
-    sigmoid_.reset_evaluation();
-    return derivative_.evaluate();
-  }
-
-#if USE_SLIDERS
- public:
-  void set_sliders(double amplitude, double level, double phase)
-  {
-    amplitude_ = amplitude;
-    level_ = level;
-    phase_ = phase;
-    sigmoid_.reset_evaluation();
-  }
-#endif
-};
-
-//static
-symbolic::Constant const Function::tp = symbolic::Constant::realize(55);
-
-#elif 0
-class Function : FunctionBase
-{
- public:
-  static constexpr double w_0 = 12.0;
-  static constexpr double w_min = -20.0;
-  static constexpr double w_max = 80.0;
-
- private:
-  //symbolic::Expression const& function_ = a_ + b_ * w_ + c_ * (w_^2) + d_ * (w_^3) + e_ * (w_^4);
-  symbolic::Expression const& function_ = symbolic::sin(a_ + b_ * w_) + d_ * ((w_ - c_)^2);
-  symbolic::Expression const& derivative_ = function_.derivative(w_);
-
- public:
-  Function()
-  {
-    //    4        3
-    //  w    130⋅w          2
-    //  ── - ────── + 2200⋅w  - 32000⋅w + 10000
-    //  4      3
-
-    a_ = 15.0;
-    b_ = 0.3;
-    c_ = 49.4;
-    d_ = 0.0001;
-#if 0
-    a_ = 10000.0;
-    b_ = -32000.0;
-    c_ = 2200.0;
-    d_ = -130.0 / 3.0;
-    e_ = 0.25;
-#endif
-  }
-
-  std::string as_string() const
-  {
-    std::ostringstream oss;
-    function_.print_on(oss);
-    return oss.str();
-  }
-
-  double operator()(double w) const
-  {
-    w_ = w;
-    return function_.evaluate();
-  }
-
-  double derivative(double w) const
-  {
-    w_ = w;
-    return derivative_.evaluate();
-  }
-};
-#else
 class Function
 {
- public:
-  static constexpr double w_0 = 12.0;
-  static constexpr double w_min = -31.0;
-  static constexpr double w_max = 16.0;
-
  private:
-  using Expression = symbolic::Expression;
-  using Constant = symbolic::Constant;
-  using Symbol = symbolic::Symbol;
-  using Func = symbolic::Function;
-
- private:
-  Symbol const& w_ = Symbol::realize("w");
-  Symbol const& a1_ = Symbol::realize("a1");
-  Symbol const& a2_ = Symbol::realize("a2");
-  Symbol const& b1_ = Symbol::realize("b1");
-  Symbol const& b2_ = Symbol::realize("b2");
-  Symbol const& c1_ = Symbol::realize("c1");
-  Symbol const& c2_ = Symbol::realize("c2");
-
-  Func const& sigmoid_ = Func::realize("sigmoid", exp(5 * w_) / (1 + exp(5 * w_)));
-
-  Expression const& function_ = (a1_ + (a2_ - a1_) * sigmoid_ + (b1_ + (b2_ - b1_) * sigmoid_) * w_ + (c1_ + (c2_ - c1_) * sigmoid_) * (w_^2));
-  Expression const& derivative_ = function_.derivative(w_);
+  double w_0_;
+  double w_min_;
+  double w_max_;
+  math::CubicPolynomial cubic_;
 
  public:
-  Function()
+  Function(std::mt19937& engine)
   {
-    a1_ = 15.0;
-    b1_ = 3.1;
-    c1_ = 0.2;
-    a2_ = 14.6;
-    b2_ = 3.15;
-    c2_ = 0.451;
-  }
+    std::uniform_real_distribution<double> edge_dist(-20.0, 20.0);
+    w_min_ = edge_dist(engine);
+    w_max_ = edge_dist(engine);
+    if (w_max_ < w_min_)
+      std::swap(w_min_, w_max_);
 
-  std::string as_string() const
-  {
-    std::ostringstream oss;
-    function_.print_on(oss);
-    return oss.str();
+    std::uniform_real_distribution<double> L_dist(-20.0, 20.0);
+    double Lle = L_dist(engine);
+    double Lre = L_dist(engine);
+
+    std::uniform_real_distribution<double> slope_dist(-0.4 * M_PI, 0.4 * M_PI);
+    double la = slope_dist(engine);
+    double ra = slope_dist(engine);
+    double dle = std::atan(la);
+    double dre = std::atan(ra);
+
+    cubic_.initialize(w_min_, Lle, dle, w_max_, Lre, dre);
+
+    std::array<double, 2> extremes;
+    int number_of_extremes = cubic_.get_extremes(extremes);
+
+    if (number_of_extremes == 2)
+    {
+      double width = std::max(w_max_, extremes[1]) - std::min(w_min_, extremes[0]);
+      w_min_ = std::min(w_min_, extremes[0] - 0.1 * width);
+      w_max_ = std::max(w_max_, extremes[1] + 0.1 * width);
+    }
+
+    std::uniform_real_distribution<double> w0_dist(w_min_, w_max_);
+    w_0_ = w0_dist(engine);
   }
 
   double operator()(double w) const
   {
-    w_ = w;
-    sigmoid_.reset_evaluation();
-    double result = function_.evaluate();
-    return result;
+    return cubic_(w);
   }
 
   double derivative(double w) const
   {
-    w_ = w;
-    sigmoid_.reset_evaluation();
-    return derivative_.evaluate();
+    return cubic_.derivative(w);
   }
-};
+
+  std::string as_string() const
+  {
+    return "Generated function";
+  }
+
+  double w_0() const { return w_0_; }
+  double w_min() const { return w_min_; }
+  double w_max() const { return w_max_; }
+
+#ifdef CWDEBUG
+  void print_on(std::ostream& os) const
+  {
+    os << as_string();
+  }
 #endif
+};
 
 int main()
 {
   Debug(NAMESPACE_DEBUG::init());
   Dout(dc::notice, "Entering main()");
 
-  Function L;
-
-  double const w_0 = Function::w_0;
-  double const w_min = Function::w_min;
-  double const w_max = Function::w_max;
-
-  int const steps = 100;
+  int seed = 10248;
+  Dout(dc::notice, "seed = " << seed);
+  std::mt19937 engine(seed);
 
   try
   {
@@ -297,7 +118,7 @@ int main()
     using Window = cairowindow::Window;
 
     // Create a window.
-    Window window("Gradient descent of " + L.as_string(), 2*600, 2*450);
+    Window window("gradient_descent", 2*600, 2*450);
 
     // Create a new layer with a white background.
     auto background_layer = window.create_background_layer<Layer>(color::white COMMA_DEBUG_ONLY("background_layer"));
@@ -313,40 +134,8 @@ int main()
       event_loop.set_cleanly_terminated();
     });
 
-    double L_min = L(w_min);
-    double L_max = L_min;
-    {
-      double w = w_min;
-      double delta_w = (w_max - w_min) / (steps - 1);
-      for (int i = 0; i < steps; ++i)
-      {
-        double val = L(w);
-        L_min= std::min(L_min, val);
-        L_max= std::max(L_max, val);
-        w += delta_w;
-      }
-//      L_min = -100;
-//      L_max = 60.0;
-    }
-
-    // Create and draw plot area.
-    plot::Plot plot(window.geometry(), { .grid = {.color = color::orange} },
-        "(1−σ(3(w+55))) (14.6+3.15w+0.451w²) + σ(3(w+55))(0.012 exp((55-w)/10) sin(0.5w+1.92)+1878)", {},
-        "w", {},
-        "L", {});
-    plot.set_xrange({w_min, w_max});
-    plot.set_yrange({L_min, L_max});
-    plot.add_to(background_layer, false);
-
     draw::LineStyle curve_line_style({.line_width = 1.0});
     draw::LineStyle derivative_line_style({.line_color = color::turquoise, .line_width = 1.0});
-
-#if !USE_SLIDERS
-    BezierFitter L_fitter([&L](double w) -> Point { return {w, L(w)}; }, plot.viewport());
-    auto plot_curve = plot.create_bezier_fitter(second_layer, curve_line_style, std::move(L_fitter));
-#endif
-
-    gradient_descent::Algorithm gda(0.1, L_max);
 
 #if USE_SLIDERS
     // amplitude = 0.012027, level = 1878.38, phase = 1.91892
@@ -359,47 +148,88 @@ int main()
     auto slider_phase_label = plot.create_text(second_layer, slider_style, Pixel{1078, 483}, "phase");
 #endif
 
-#ifdef CWDEBUG
-    AlgorithmEvent algorithm_event(plot, second_layer);
-    auto algorithm_event_handle = gda.event_server().request(algorithm_event, &AlgorithmEvent::callback);
-#endif
-
-    // Loop over iterations of w.
-    for (Weight w(w_0);;)
+    for (int t = 0; t < 100; ++t)
     {
-      // Suppress immediate updating of the window for each created item, in order to avoid flickering.
-      window.set_send_expose_events(false);
+      Function L(engine);
 
-#if USE_SLIDERS
-      L.set_sliders(slider_amplitude.value(), slider_level.value(), slider_phase.value());
-      Dout(dc::notice,
-          "amplitude = " << slider_amplitude.value() << ", level = " << slider_level.value() << ", phase = " << slider_phase.value());
+      double const w_0 = L.w_0();
+      double const w_min = L.w_min();
+      double const w_max = L.w_max();
 
-      BezierFitter L_fitter([&L](double w) -> Point { return {w, L(w)}; }, plot.viewport());
-      auto plot_curve = plot.create_bezier_fitter(second_layer, curve_line_style, std::move(L_fitter));
-#else
-      // Replace w with a new point until the global minimum has been reached.
-      if (!gda(w, L(w), L.derivative(w)))
-        break;
-#endif
+      int const steps = 100;
+      double L_min = L(w_min);
+      double L_max = L_min;
+      {
+        double w = w_min;
+        double delta_w = (w_max - w_min) / (steps - 1);
+        for (int i = 0; i < steps; ++i)
+        {
+          double val = L(w);
+          L_min= std::min(L_min, val);
+          L_max= std::max(L_max, val);
+          w += delta_w;
+        }
+      }
 
-      // Flush all expose events related to the drawing done above.
-      window.set_send_expose_events(true);
-
-      // Block until a key is pressed.
-      if (!window.handle_input_events())
-        break;          // Program must be terminated.
-
-      Dout(dc::notice, "------------------------------------");
-    }
+      // Create and draw plot area.
+      plot::Plot plot(window.geometry(), { .grid = {.color = color::orange} },
+          L.as_string(), {},
+          "w", {},
+          "L", {});
+      plot.set_xrange({w_min, w_max});
+      plot.set_yrange({L_min, L_max});
+      plot.add_to(background_layer, false);
 
 #if !USE_SLIDERS
-    if (gda.success())
-      Dout(dc::notice, "Found global minimum " << gda.minimum());
+      BezierFitter L_fitter([&L](double w) -> Point { return {w, L(w)}; }, plot.viewport());
+      auto plot_curve = plot.create_bezier_fitter(second_layer, curve_line_style, std::move(L_fitter));
 #endif
 
-    algorithm_event_handle.cancel();
+      gradient_descent::Algorithm gda(0.1, L_max);
 
+#ifdef CWDEBUG
+      AlgorithmEvent algorithm_event(plot, second_layer);
+      auto algorithm_event_handle = gda.event_server().request(algorithm_event, &AlgorithmEvent::callback);
+#endif
+
+      // Loop over iterations of w.
+      for (Weight w(w_0);;)
+      {
+        // Suppress immediate updating of the window for each created item, in order to avoid flickering.
+        window.set_send_expose_events(false);
+
+#if USE_SLIDERS
+        L.set_sliders(slider_amplitude.value(), slider_level.value(), slider_phase.value());
+        Dout(dc::notice,
+            "amplitude = " << slider_amplitude.value() << ", level = " << slider_level.value() << ", phase = " << slider_phase.value());
+
+        BezierFitter L_fitter([&L](double w) -> Point { return {w, L(w)}; }, plot.viewport());
+        auto plot_curve = plot.create_bezier_fitter(second_layer, curve_line_style, std::move(L_fitter));
+#else
+        // Replace w with a new point until the global minimum has been reached.
+        if (!gda(w, L(w), L.derivative(w)))
+          break;
+#endif
+
+        // Flush all expose events related to the drawing done above.
+        window.set_send_expose_events(true);
+
+        // Block until a key is pressed.
+        if (!window.handle_input_events())
+          break;          // Program must be terminated.
+
+        Dout(dc::notice, "------------------------------------");
+      }
+
+#if !USE_SLIDERS
+      if (gda.success())
+        Dout(dc::notice, "Found global minimum " << gda.minimum());
+#endif
+
+      algorithm_event_handle.cancel();
+    }
+
+    window.close();
     event_loop.join();
   }
   catch (AIAlert::Error const& error)

@@ -54,6 +54,7 @@ ScaleUpdate Approximation::add(Sample const* current, bool current_is_replacemen
     double w1 = current->w();
     double Lw1 = current->Lw();
     double dLdw1 = current->dLdw();
+
     double delta_w = w0 - w1;
     double delta_w_squared = utils::square(delta_w);
     double delta_Lw = Lw0 - Lw1;
@@ -86,17 +87,7 @@ ScaleUpdate Approximation::add(Sample const* current, bool current_is_replacemen
     Dout(dc::notice, "    P'(" << w0 << ") = " << parabola_.derivative(w0) << " (requested: " << dLdw0 << ")");
     Dout(dc::notice, "    P'(" << w1 << ") = " << parabola_.derivative(w1) << " (requested: " << dLdw1 << ")");
 
-    // The theory of this approach is described here:
-    // https://math.stackexchange.com/a/4926903/489074
-    double d = (-2.0 * delta_Lw + delta_w * sum_dLdw) / (delta_w_squared * delta_w);
-    double c = delta_dLdw / (2.0 * delta_w) - 1.5 * sum_w * d;
-    double b = (w0 * dLdw1 - w1 * dLdw0) / delta_w + 3.0 * w0 * w1 * d;
-
-    cubic_[3] = d;
-    cubic_[2] = c;
-    cubic_[1] = b;
-    cubic_[0] = 0.0;
-    cubic_[0] = Lw0 - cubic_(w0);
+    cubic_.initialize(w0, Lw0, dLdw0, w1, Lw1, dLdw1);
 
     Dout(dc::notice, "cubic = " << cubic_);
   }
@@ -175,8 +166,12 @@ Weight Approximation::find_extreme(HorizontalDirection& hdirection, VerticalDire
   if (D <= 0.0)
   {
     extreme = VerticalDirection::unknown;
+    Dout(dc::notice, "Returning " << extreme << " because D <= 0.");
     if (hdirection == HorizontalDirection::undecided)
+    {
       hdirection = (d > 0.0 || (d == 0.0 && b > 0.0)) ? HorizontalDirection::left : HorizontalDirection::right;
+      Dout(dc::notice, "Returning " << hdirection << " because that is downhill.");
+    }
     return {};
   }
 
@@ -186,6 +181,35 @@ Weight Approximation::find_extreme(HorizontalDirection& hdirection, VerticalDire
 
   double wl = relevant_samples_[0]->w();
   double wr = relevant_samples_[1]->w();
+
+  if (std::isnan(minimum) || std::isnan(maximum) || utils::almost_equal(sqrt_D, std::abs(c), 1e-9))
+  {
+    Dout(dc::notice, "cubic_ = " << cubic_ << "; using parabolic approximation.");
+    // The cubic is, almost, a parabola. Use our parabolic approximation.
+    double vertex = parabola_.vertex_x();
+    VerticalDirection extreme_out = parabola_has_maximum() ? VerticalDirection::up : VerticalDirection::down;
+    if (extreme != VerticalDirection::unknown && extreme_out != extreme)
+    {
+      extreme = VerticalDirection::unknown;
+      Dout(dc::notice, "Returning " << extreme <<
+          " because the cubic looks like a parabola with an extreme different from what is requested (" << extreme << ").");
+      return {};
+    }
+    HorizontalDirection hdirection_out =
+      (vertex < wl) ? HorizontalDirection::left : (vertex > wr) ? HorizontalDirection::right : HorizontalDirection::inbetween;
+    if (hdirection != HorizontalDirection::undecided && hdirection_out != HorizontalDirection::inbetween &&
+        hdirection_out != hdirection)
+    {
+      extreme = VerticalDirection::unknown;
+      Dout(dc::notice, "Returning " << extreme <<
+          " because the cubic looks like a parabola with an extreme on the other side as what is requested (" << hdirection << ").");
+      return {};
+    }
+    extreme = extreme_out;
+    hdirection = hdirection_out;
+    Dout(dc::notice, "Returning " << hdirection << " because the cubic looks like a parabola and that's where the vertex is.");
+    return vertex;
+  }
 
   if (extreme == VerticalDirection::unknown)
   {
@@ -197,6 +221,7 @@ Weight Approximation::find_extreme(HorizontalDirection& hdirection, VerticalDire
     {
       double center = 0.5 * (wl + wr);
       extreme = (std::abs(minimum - center) > std::abs(maximum - center)) ? VerticalDirection::up : VerticalDirection::down;
+      Dout(dc::notice, "Returning " << extreme << " because that extreme is closest to the center of the two given samples.");
     }
     else
     {
@@ -206,16 +231,25 @@ Weight Approximation::find_extreme(HorizontalDirection& hdirection, VerticalDire
       double rel_pos_max = static_cast<int>(hdirection) * (maximum - reference);
       if (rel_pos_min < 0.0 && rel_pos_max < 0.0)
       {
-        // Both extremes are on the wrong side of reference.
         extreme = VerticalDirection::unknown;
+        Dout(dc::notice, "Returning " << extreme << " because both extremes are on the wrong side of reference (" << reference << ").");
         return {};
       }
       if (rel_pos_min < 0.0)
-        extreme = VerticalDirection::up;        // The minimum is on the wrong side of reference.
+      {
+        extreme = VerticalDirection::up;
+        Dout(dc::notice, "Returning " << extreme << " because the minimum is on the wrong side of reference (" << reference << ").");
+      }
       else if (rel_pos_max < 0.0)
-        extreme = VerticalDirection::down;      // The maximum is on the wrong side of reference.
+      {
+        extreme = VerticalDirection::down;
+        Dout(dc::notice, "Returning " << extreme << " because the maximum is on the wrong side of reference (" << reference << ").");
+      }
       else
+      {
         extreme = (rel_pos_max < rel_pos_min) ? VerticalDirection::up : VerticalDirection::down;
+        Dout(dc::notice, "Returning " << extreme << " because that extreme is closest to reference (" << reference << ").");
+      }
     }
   }
 
@@ -227,6 +261,7 @@ Weight Approximation::find_extreme(HorizontalDirection& hdirection, VerticalDire
       (hdirection == HorizontalDirection::right && result <= wl))
   {
     extreme = VerticalDirection::unknown;
+    Dout(dc::notice, "Returning " << extreme << " because the requested extreme is on the wrong side.");
     return {};
   }
 
@@ -239,8 +274,15 @@ Weight Approximation::find_extreme(HorizontalDirection& hdirection, VerticalDire
     hdirection = HorizontalDirection::right;
   else
     hdirection = HorizontalDirection::inbetween;
+  Dout(dc::notice, "Returning " << hdirection << " because this is where the required extreme (" << extreme << ") is.");
 
   return result;
+}
+
+void Approximation::set_current_index(HorizontalDirection hdirection)
+{
+  // If hdirection is left/right, then the left/right-most sample must be current.
+  current_index_ = ((relevant_samples_[0]->w() < relevant_samples_[1]->w()) == (hdirection == HorizontalDirection::left)) ? 0 : 1;
 }
 
 } // namespace gradient_descent

@@ -35,7 +35,7 @@ class Algorithm
   // The result is that we'll rather go away from the vertex of the current matching parabolic approximation
   // then towards it, if that doesn't match the current hdirection_.
   HorizontalDirection hdirection_;
-  VerticalDirection vdirection_;
+  VerticalDirection vdirection_;        // The extreme type (minimum or maximum) that we're looking for (next).
 
   // Using a std::list: pointers to elements may never be invalidated.
   using extremes_type = std::list<LocalExtreme>;
@@ -47,10 +47,10 @@ class Algorithm
   {
     done,                     // w was already updated.
     check_energy,             // After adding the new sample, abort if the required energy is too large.
-    vertex_jump,              // Only add the new sample to the history if we didn't overshoot another extreme dramatically.
-    clamped,                  // Attemped to jump to a vertex, but against hdirection, passed a previous sample. Use that last sample instead.
-    gamma_based,              // Internal state used to signify that w was already updated and a call to handle_parabolic_approximation
-                              // is not longer desired.
+    extreme_jump,             // Only add the new sample to the history if we didn't overshoot another extreme dramatically.
+//    clamped,                  // Attemped to jump to a vertex, but against hdirection, passed a previous sample. Use that last sample instead.
+//    gamma_based,              // Internal state used to signify that w was already updated and a call to handle_parabolic_approximation
+//                              // is not longer desired.
     local_extreme,            // After adding the new sample, handle the fact that we found an extreme.
     abort_hdirection          // Stop going in the current hdirection_.
   };
@@ -68,7 +68,7 @@ class Algorithm
     best_minimum_(extremes_.end()),
     last_extreme_(extremes_.end()),
     hdirection_(HorizontalDirection::undecided),
-    vdirection_(VerticalDirection::down)
+    vdirection_(VerticalDirection::unknown)
   {
   }
 
@@ -78,7 +78,7 @@ class Algorithm
   bool handle_local_extreme(Weight& w);
   void update_approximation(bool current_is_replacement);
   void handle_single_sample(Weight& w);
-  void handle_parabolic_approximation(Weight& w);
+  bool handle_approximation(Weight& w);
   bool handle_abort_hdirection(Weight& w);
 
 #ifdef CWDEBUG

@@ -32,6 +32,7 @@ class Approximation
   ScaleUpdate update_scale(Sample const& current);
 
   Weight find_extreme(HorizontalDirection& hdirection, VerticalDirection& extreme) const;
+  void set_current_index(HorizontalDirection hdirection);
 
   Sample const& current() const { ASSERT(number_of_relevant_samples_ > 0); return *relevant_samples_[current_index_]; }
   Sample const& prev() const { ASSERT(number_of_relevant_samples_ > 1); return *relevant_samples_[1 - current_index_]; }
@@ -41,7 +42,7 @@ class Approximation
     is_extreme_ = true;
   }
 
-  bool has_maximum() const
+  bool parabola_has_maximum() const
   {
     return parabola_[2] < 0.0;
   }
@@ -59,6 +60,8 @@ class Approximation
   Scale const& parabola_scale() const { return parabola_scale_; }
   bool is_extreme() const { return is_extreme_; }
   math::CubicPolynomial const& cubic() const { return cubic_; }
+  //FIXME: remove this
+  math::CubicPolynomial& cubic() { return cubic_; }
 
   int current_index() const
   {

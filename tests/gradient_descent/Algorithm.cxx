@@ -11,10 +11,11 @@ namespace gradient_descent {
 bool Algorithm::operator()(Weight& w, double Lw, double dLdw)
 {
   DoutEntering(dc::notice, "Algorithm::operator()(" << w << ", " << Lw << ", " << dLdw << ")");
+  Dout(dc::notice, "hdirection_ = " << hdirection_ << "; vdirection_ = " << vdirection_);
 
   using namespace gradient_descent;
 
-#if 1 // OLD CODE
+#if 0 // OLD CODE
   double gamma_based_w;
   if (state_ == IterationState::vertex_jump)
   {
@@ -103,45 +104,38 @@ bool Algorithm::operator()(Weight& w, double Lw, double dLdw)
     return true;
   }
 
-  if (hdirection_ == HorizontalDirection::undecided)
-  {
-    // Do a step towards the extreme of the parabolic approximation.
-    vdirection_ = approximation.has_maximum() ? VerticalDirection::up : VerticalDirection::down;
-    Dout(dc::notice, "vdirection_ is set to " << vdirection_ << " because hdirection_ is still undecided.");
-  }
-
-#if 1 // OLD CODE
+#if 0 // OLD CODE
   if (state_ == IterationState::gamma_based)
   {
     w = gamma_based_w;
     state_ = IterationState::done;
   }
   else
+#endif
+
+  if (!handle_approximation(w))
+    return false;
+#if 0 // OLD CODE
+  if (state_ == IterationState::clamped)
   {
-    handle_parabolic_approximation(w);
-    if (state_ == IterationState::clamped)
+    Dout(dc::notice, "Clamped by sample " << history_[clamped_history_index_]);
+    // The vertex of the current approximation doesn't make sense, aka the approximation doesn't make sense.
+    // We need to find a reasonable jump point based on the current sample and the one given by clamped_history_index_.
+    //FIXME: make this 0.5
+    w = 0.52 * (w + history_[clamped_history_index_].w());
+    state_ = IterationState::done;
+  }
+  else
+#endif
+  if (state_ == IterationState::local_extreme)
+  {
+    // Do not return a value that would replace the current sample.
+    if (approximation_ptr_->parabola_scale().negligible(w - history_.current().w()))
     {
-      Dout(dc::notice, "Clamped by sample " << history_[clamped_history_index_]);
-      // The vertex of the current approximation doesn't make sense, aka the approximation doesn't make sense.
-      // We need to find a reasonable jump point based on the current sample and the one given by clamped_history_index_.
-      //FIXME: make this 0.5
-      w = 0.52 * (w + history_[clamped_history_index_].w());
-      state_ = IterationState::done;
-    }
-    else if (state_ == IterationState::local_extreme)
-    {
-      // Do not return a value that would replace the current sample.
-      if (approximation_ptr_->parabola_scale().negligible(w - history_.current().w()))
-      {
-        if (!handle_local_extreme(w))
-          return handle_abort_hdirection(w);
-      }
+      if (!handle_local_extreme(w))
+        return handle_abort_hdirection(w);
     }
   }
-#else
-  // Implement.
-  ASSERT(false);
-#endif
 
   Dout(dc::notice, "Returning: " << std::setprecision(std::numeric_limits<double>::max_digits10) << w);
   return true;
@@ -471,8 +465,10 @@ void Algorithm::update_approximation(bool current_is_replacement)
 
   if (result == ScaleUpdate::disconnected)
   {
+#if 0
     reset_history();                                                    // This sets approximation_ptr_ = &current_approximation_.
     result = approximation_ptr_->add(&history_.current(), false);       // Therefore call add().
+#endif
   }
 #ifdef CWDEBUG
   else
@@ -568,11 +564,62 @@ void Algorithm::handle_single_sample(Weight& w)
   state_ = IterationState::done;
 }
 
-void Algorithm::handle_parabolic_approximation(Weight& w)
+bool Algorithm::handle_approximation(Weight& w)
 {
-  DoutEntering(dc::notice, "Algorithm::handle_parabolic_approximation(" << w << ")");
+  DoutEntering(dc::notice, "Algorithm::handle_approximation(" << w << ")");
 
   Approximation& approximation(*approximation_ptr_);
+  double new_w;
+
+  // Is this the first call, or after a reset?
+  if (hdirection_ == HorizontalDirection::undecided)
+  {
+    ASSERT(vdirection_ == VerticalDirection::unknown);
+    new_w = approximation_ptr_->find_extreme(hdirection_, vdirection_);
+
+    // find_extreme never returns undecided.
+    ASSERT(hdirection_ != HorizontalDirection::undecided);
+
+    // Sort the two samples that we have, so that the one in the direction of hdirection_ appears "last".
+    if (hdirection_ != HorizontalDirection::inbetween)
+      approximation_ptr_->set_current_index(hdirection_);
+
+    if (vdirection_ == VerticalDirection::unknown)
+    {
+      // The third degree polynomial fit does not have local extremes.
+      // In this case hdirection_ is set to point in the direction where we descent.
+      w += static_cast<int>(hdirection_) * std::abs(approximation_ptr_->parabola_scale());
+      Debug(set_algorithm_str(w, "downhill"));
+      vdirection_ = VerticalDirection::down;
+      Dout(dc::notice, "Setting vdirection_ to " << vdirection_ << " because we're going downhill.");
+      state_ = IterationState::done;
+      return true;
+    }
+    else
+    {
+      Debug(set_algorithm_str(new_w, "find_extreme jump"));
+    }
+  }
+  else if (hdirection_ != HorizontalDirection::inbetween)
+  {
+#if CW_DEBUG
+    HorizontalDirection prev_hdirection = hdirection_;
+#endif
+    new_w = approximation_ptr_->find_extreme(hdirection_, vdirection_);
+    // We really shouldn't change our mind about the direction.
+    ASSERT(hdirection_ == HorizontalDirection::inbetween || hdirection_ == prev_hdirection);
+
+    // What to do in this case?
+    ASSERT(vdirection_ != VerticalDirection::unknown);
+  }
+  else
+  {
+    // Implement.
+    Dout(dc::warning, "This code is not implemented!");
+    return false;
+  }
+
+#if 0 // OLD CODE
   // We have two relevant samples, and thus a parabolic approximation.
   //
   // Case:
@@ -596,7 +643,7 @@ void Algorithm::handle_parabolic_approximation(Weight& w)
 
   Sample const& current = approximation.current();
   Sample const& prev = approximation.prev();
-  VerticalDirection extreme_type = approximation.has_maximum() ? VerticalDirection::up : VerticalDirection::down;
+  VerticalDirection extreme_type = approximation.parabola_has_maximum() ? VerticalDirection::up : VerticalDirection::down;
 
   if (vdirection_ != extreme_type)
   {
@@ -618,7 +665,7 @@ void Algorithm::handle_parabolic_approximation(Weight& w)
 
   // Set w to the value where the derivative of this parabolic approximation is zero.
   Dout(dc::notice, "Setting new_sample to the extreme of parabolic approximation:");
-  bool looking_for_maximum = approximation.has_maximum();
+  bool looking_for_maximum = approximation.parabola_has_maximum();
   auto ignore = [&current, looking_for_maximum](Sample const& sample) {
     double w0 = current.w();
     double Lw0 = current.Lw();
@@ -652,36 +699,38 @@ void Algorithm::handle_parabolic_approximation(Weight& w)
     state_ = IterationState::clamped;
     return;
   }
+#endif
 
   double step = w - new_w;
   w = new_w;
-  expected_Lw_ = approximation.parabola().vertex_y();
-  state_ = IterationState::vertex_jump;
+  expected_Lw_ = approximation_ptr_->cubic()(w);
+  state_ = IterationState::extreme_jump;
 
   double abs_step = std::abs(step);
   Dout(dc::notice, "abs_step = " << abs_step << " (between " <<
       (history_.total_number_of_samples() - 1) << " and " << history_.total_number_of_samples() << " (to be added))");
 
   // Did we reach the (local) extreme?
-  if (abs_step < (extreme_type == VerticalDirection::down ? 0.01 : 0.05) * approximation.parabola_scale())
+  if (abs_step < (vdirection_ == VerticalDirection::down ? 0.01 : 0.05) * approximation.parabola_scale())
   {
-    Dout(dc::notice, (extreme_type == VerticalDirection::down ? "Minimum" : "Maximum") << " reached: " << abs_step <<
-        " < " << (extreme_type == VerticalDirection::down ? 0.01 : 0.05) << " * " << approximation.parabola_scale());
+    Dout(dc::notice, (vdirection_ == VerticalDirection::down ? "Minimum" : "Maximum") << " reached: " << abs_step <<
+        " < " << (vdirection_ == VerticalDirection::down ? 0.01 : 0.05) << " * " << approximation.parabola_scale());
     // If we do not already have at least three relevant samples, then delay reporting a local extreme
-    // until after adding one more sample, taking take it won't replace a previous one.
+    // until after adding one more sample, making sure it won't replace a previous one.
     if (history_.relevant_samples() < 3)
     {
       // Instead of returning this extreme, do a little overshoot.
       double step = static_cast<int>(hdirection_) * Scale::epsilon;
       w += approximation.parabola_scale().make_significant(step);
-      expected_Lw_ = approximation.parabola()(w);
+      expected_Lw_ = approximation_ptr_->cubic()(w);
       Debug(set_algorithm_str(w, "jump to vertex + small overshoot"));
-      return;
+      return true;
     }
     state_ = IterationState::local_extreme;
   }
 
   Debug(set_algorithm_str(w, "jump to vertex"));
+  return true;
 }
 
 bool Algorithm::handle_abort_hdirection(Weight& w)
