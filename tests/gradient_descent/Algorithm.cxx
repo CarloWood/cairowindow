@@ -11,7 +11,7 @@ namespace gradient_descent {
 bool Algorithm::operator()(Weight& w, double Lw, double dLdw)
 {
   DoutEntering(dc::notice, "Algorithm::operator()(" << w << ", " << Lw << ", " << dLdw << ")");
-  Dout(dc::notice, "hdirection_ = " << hdirection_ << "; vdirection_ = " << vdirection_);
+  Dout(dc::notice, "hdirection_ = " << hdirection_ << "; next_extreme_type_ = " << next_extreme_type_);
 
   using namespace gradient_descent;
 
@@ -157,9 +157,9 @@ bool Algorithm::update_energy()
     // direction is aborted.
 
     // If the horizontal direction is still unknown, then we should always go towards the extreme
-    // of the local parabolic approximation: in fact we would have jumped there and would not
+    // of the local approximation: in fact we would have jumped there and would not
     // care about the amount of available energy.
-    ASSERT(hdirection_ != HorizontalDirection::undecided);
+    ASSERT(hdirection_ != HorizontalDirection2::undecided);
 
     // Update the energy and check if we had enough energy to reach this height.
     if (!energy_.maybe_update(Lw))
@@ -204,11 +204,11 @@ bool Algorithm::handle_local_extreme(Weight& w)
   DoutEntering(dc::notice, "Algorithm::handle_local_extreme(" << w << ")");
 
   // Following adding the first extreme, we should have decided on a horizontal direction.
-  ASSERT(hdirection_ != HorizontalDirection::undecided || extremes_.empty());
+  ASSERT(hdirection_ != HorizontalDirection2::undecided || extremes_.empty());
 
   // Store it as an extreme.
   extremes_type::iterator new_extreme =
-    extremes_.emplace(hdirection_ == HorizontalDirection::right ? extremes_.end() : extremes_.begin(),
+    extremes_.emplace(hdirection_ == HorizontalDirection2::right ? extremes_.end() : extremes_.begin(),
         history_.current(), *approximation_ptr_, energy_.energy());
 
 #ifdef CWDEBUG
@@ -227,9 +227,10 @@ bool Algorithm::handle_local_extreme(Weight& w)
   Dout(dc::notice, "small_step_ set to " << small_step_);
 
   // Keep track of the best minimum so far; or abort if this minimum isn't better then one found before.
-  if (vdirection_ == VerticalDirection::down)
+  if (next_extreme_type_ == ExtremeType::minimum)
   {
-    // With vdirection_ down, we were looking for a minimum.
+    Dout(dc::notice, "new_extreme = " << *new_extreme);
+    // We were looking for a minimum.
     ASSERT(new_extreme->is_minimum());
     if (best_minimum_ == extremes_.end() || best_minimum_->vertex_sample().Lw() > new_extreme->vertex_sample().Lw())
     {
@@ -247,9 +248,9 @@ bool Algorithm::handle_local_extreme(Weight& w)
     }
   }
 
-  // After finding a maximum we want to find a minimum and visa versa. Change vdirection_.
-  vdirection_ = opposite(vdirection_);
-  Dout(dc::notice, "vdirection_ is toggled to " << vdirection_ << ".");
+  // After finding a maximum we want to find a minimum and visa versa. Change next_extreme_type_.
+  next_extreme_type_ = opposite(next_extreme_type_);
+  Dout(dc::notice, "next_extreme_type_ is toggled to " << next_extreme_type_ << ".");
 
   Sample const& w2 = history_.current();
   double w2_1 = w2.w();
@@ -370,9 +371,9 @@ bool Algorithm::handle_local_extreme(Weight& w)
   int number_of_zeroes = quotient.get_zeroes(zeroes);
 
   // It is possible that the zeroes are no usable because they are on the wrong side.
-  if (hdirection_ != HorizontalDirection::undecided)
+  if (hdirection_ != HorizontalDirection2::undecided)
   {
-    auto wrong_side = [this, w](double zero) { return (hdirection_ == HorizontalDirection::left) != (zero < w); };
+    auto wrong_side = [this, w](double zero) { return (hdirection_ == HorizontalDirection2::left) != (zero < w); };
     for (int zero = 0; zero < number_of_zeroes;)
       if (wrong_side(zeroes[zero]))
       {
@@ -396,19 +397,21 @@ bool Algorithm::handle_local_extreme(Weight& w)
     for (int zero = 0; zero < number_of_zeroes; ++zero)
       expected_Lw[zero] = fourth_degree_approximation(zeroes[zero]);
     int best_zero = (number_of_zeroes == 2 &&
-        (hdirection_ == HorizontalDirection::right ||
-         (hdirection_ == HorizontalDirection::undecided &&
+        (hdirection_ == HorizontalDirection2::right ||
+         (hdirection_ == HorizontalDirection2::undecided &&
           expected_Lw[1] < expected_Lw[0]))) ? 1 : 0;
     w = zeroes[best_zero];
     expected_Lw_ = expected_Lw[best_zero];
     Debug(set_algorithm_str(w, "best zero"));
-    reset_history();
-    Dout(dc::notice(hdirection_ == HorizontalDirection::undecided && number_of_zeroes == 2),
+//    reset_history();
+    Dout(dc::notice(hdirection_ == HorizontalDirection2::undecided && number_of_zeroes == 2),
         "Best zero was " << zeroes[best_zero] << " with A(" << zeroes[best_zero] << ") = " <<
         fourth_degree_approximation(zeroes[best_zero]) <<
         " (the other has value " << fourth_degree_approximation(zeroes[1 - best_zero]) << ")");
+    if (hdirection_ == HorizontalDirection2::undecided)
+      hdirection_ = (w < w2_1) ? HorizontalDirection2::left : HorizontalDirection2::right;
   }
-  else if (hdirection_ == HorizontalDirection::undecided)
+  else if (hdirection_ == HorizontalDirection2::undecided)
   {
     // The "scale" of the (current) parabolic approximation is set to 'edge sample' minus x-coordinate of the vertex (v_x),
     // where 'edge sample' is the sample that is "part of" the parabolic approximation that is the furthest away
@@ -434,11 +437,11 @@ bool Algorithm::handle_local_extreme(Weight& w)
     Debug(set_algorithm_str(w, "keep going (no zeroes)"));
   }
 
-  if (hdirection_ == HorizontalDirection::undecided)
+  if (hdirection_ == HorizontalDirection2::undecided)
   {
 
     // Now that the decision on which hdirection_ we explore is taken, store that decision.
-    hdirection_ = w - history_.current().w() < 0.0 ? HorizontalDirection::left : HorizontalDirection::right;
+    hdirection_ = w - history_.current().w() < 0.0 ? HorizontalDirection2::left : HorizontalDirection2::right;
     Dout(dc::notice, "Initialized hdirection_ to " << hdirection_ << ".");
   }
 
@@ -506,7 +509,7 @@ void Algorithm::handle_single_sample(Weight& w)
     // Did we drop on a (local) extreme as a starting point?!
     if (Scale::almost_zero(w, step))
     {
-      if (hdirection_ == HorizontalDirection::undecided)
+      if (hdirection_ == HorizontalDirection2::undecided)
       {
         // In this case we can't do anything else than just make a step in some random direction.
         step = learning_rate_;
@@ -522,7 +525,7 @@ void Algorithm::handle_single_sample(Weight& w)
 #endif
       }
     }
-    else if (hdirection_ == HorizontalDirection::undecided)
+    else if (hdirection_ == HorizontalDirection2::undecided)
     {
       // Just gradient descent: move downhill.
 #ifdef CWDEBUG
@@ -541,7 +544,7 @@ void Algorithm::handle_single_sample(Weight& w)
   else
   {
     // small_step_ should only be set once hdirection_ has been set.
-    ASSERT(hdirection_ != HorizontalDirection::undecided);
+    ASSERT(hdirection_ != HorizontalDirection2::undecided);
     step = static_cast<int>(hdirection_) * small_step_;
 #ifdef CWDEBUG
     algorithm_str = "small step";
@@ -572,45 +575,48 @@ bool Algorithm::handle_approximation(Weight& w)
   double new_w;
 
   // Is this the first call, or after a reset?
-  if (hdirection_ == HorizontalDirection::undecided)
+  if (last_region_ == Region::unknown)
   {
-    ASSERT(vdirection_ == VerticalDirection::unknown);
-    new_w = approximation_ptr_->find_extreme(hdirection_, vdirection_);
-
-    // find_extreme never returns undecided.
-    ASSERT(hdirection_ != HorizontalDirection::undecided);
+    ASSERT(next_extreme_type_ == ExtremeType::unknown);
+    new_w = approximation_ptr_->find_extreme(last_region_, next_extreme_type_, hrestriction_);
+    // This is expected to be set the first time.
+    ASSERT(last_region_ != Region::unknown);
 
     // Sort the two samples that we have, so that the one in the direction of hdirection_ appears "last".
-    if (hdirection_ != HorizontalDirection::inbetween)
-      approximation_ptr_->set_current_index(hdirection_);
+    if (last_region_ != Region::inbetween)
+      approximation_ptr_->set_current_index(last_region_);
 
-    if (vdirection_ == VerticalDirection::unknown)
+    if (next_extreme_type_ == ExtremeType::unknown)
     {
       // The third degree polynomial fit does not have local extremes.
-      // In this case hdirection_ is set to point in the direction where we descent.
-      w += static_cast<int>(hdirection_) * std::abs(approximation_ptr_->parabola_scale());
+      // In this case last_region_ is set to point in the direction where we descent.
+      ASSERT(last_region_ != Region::inbetween);
+      w += static_cast<int>(last_region_) * std::abs(approximation_ptr_->parabola_scale());
       Debug(set_algorithm_str(w, "downhill"));
-      vdirection_ = VerticalDirection::down;
-      Dout(dc::notice, "Setting vdirection_ to " << vdirection_ << " because we're going downhill.");
+      next_extreme_type_ = ExtremeType::minimum;
+      Dout(dc::notice, "Setting next_extreme_type_ to " << next_extreme_type_ << " because we're going downhill.");
       state_ = IterationState::done;
       return true;
     }
     else
     {
       Debug(set_algorithm_str(new_w, "find_extreme jump"));
+      state_ = IterationState::extreme_jump;
     }
   }
-  else if (hdirection_ != HorizontalDirection::inbetween)
+  else if (last_region_ != Region::inbetween)
   {
 #if CW_DEBUG
-    HorizontalDirection prev_hdirection = hdirection_;
+    Region prev_region = last_region_;
 #endif
-    new_w = approximation_ptr_->find_extreme(hdirection_, vdirection_);
+    new_w = approximation_ptr_->find_extreme(last_region_, next_extreme_type_, hrestriction_);
     // We really shouldn't change our mind about the direction.
-    ASSERT(hdirection_ == HorizontalDirection::inbetween || hdirection_ == prev_hdirection);
+    ASSERT(last_region_ == Region::inbetween || last_region_ == prev_region);
 
     // What to do in this case?
-    ASSERT(vdirection_ != VerticalDirection::unknown);
+    ASSERT(next_extreme_type_ != ExtremeType::unknown);
+
+    state_ = IterationState::extreme_jump;
   }
   else
   {
@@ -643,7 +649,7 @@ bool Algorithm::handle_approximation(Weight& w)
 
   Sample const& current = approximation.current();
   Sample const& prev = approximation.prev();
-  VerticalDirection extreme_type = approximation.parabola_has_maximum() ? VerticalDirection::up : VerticalDirection::down;
+  ExtremeType extreme_type = approximation.parabola_has_maximum() ? ExtremeType::maximum : ExtremeType::minimum;
 
   if (vdirection_ != extreme_type)
   {
@@ -704,17 +710,16 @@ bool Algorithm::handle_approximation(Weight& w)
   double step = w - new_w;
   w = new_w;
   expected_Lw_ = approximation_ptr_->cubic()(w);
-  state_ = IterationState::extreme_jump;
 
   double abs_step = std::abs(step);
   Dout(dc::notice, "abs_step = " << abs_step << " (between " <<
       (history_.total_number_of_samples() - 1) << " and " << history_.total_number_of_samples() << " (to be added))");
 
   // Did we reach the (local) extreme?
-  if (abs_step < (vdirection_ == VerticalDirection::down ? 0.01 : 0.05) * approximation.parabola_scale())
+  if (abs_step < (next_extreme_type_ == ExtremeType::minimum ? 0.01 : 0.05) * approximation.parabola_scale())
   {
-    Dout(dc::notice, (vdirection_ == VerticalDirection::down ? "Minimum" : "Maximum") << " reached: " << abs_step <<
-        " < " << (vdirection_ == VerticalDirection::down ? 0.01 : 0.05) << " * " << approximation.parabola_scale());
+    Dout(dc::notice, (next_extreme_type_ == ExtremeType::minimum ? "Minimum" : "Maximum") << " reached: " << abs_step <<
+        " < " << (next_extreme_type_ == ExtremeType::minimum ? 0.01 : 0.05) << " * " << approximation.parabola_scale());
     // If we do not already have at least three relevant samples, then delay reporting a local extreme
     // until after adding one more sample, making sure it won't replace a previous one.
     if (history_.relevant_samples() < 3)
@@ -753,7 +758,7 @@ bool Algorithm::handle_abort_hdirection(Weight& w)
   if (best_minimum_->done())
     return false;
 
-  ASSERT(hdirection_ != HorizontalDirection::undecided);
+  ASSERT(hdirection_ != HorizontalDirection2::undecided);
 
   // Change hdirection.
   hdirection_ = opposite(hdirection_);
@@ -768,8 +773,8 @@ bool Algorithm::handle_abort_hdirection(Weight& w)
   expected_Lw_ = best_minimum_->approximation().parabola()(w);
   Debug(set_algorithm_str(w, "best minimum, opposite direction"));
   best_minimum_->explored(hdirection_);
-  vdirection_ = VerticalDirection::up;
-  Dout(dc::notice, "vdirection_ is set to " << vdirection_ << " because we just jumped to a minimum.");
+  next_extreme_type_ = ExtremeType::maximum;
+  Dout(dc::notice, "next_extreme_type_ is set to " << next_extreme_type_ << " because we just jumped to a minimum.");
 
   // Restore the energy to what it was when this minimum was stored.
   energy_.set(best_minimum_->energy(), best_minimum_->vertex_sample().Lw());

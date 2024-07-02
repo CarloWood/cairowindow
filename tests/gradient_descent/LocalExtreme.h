@@ -36,11 +36,11 @@ class LocalExtreme
 
   double energy() const { return energy_; }
 
-  void explored(HorizontalDirection hdirection)
+  void explored(HorizontalDirection2 hdirection)
   {
     DoutEntering(dc::notice, "LocalExtreme::explored(" << hdirection << ") for extreme at " << vertex_sample_ << '.');
-    ASSERT(hdirection != HorizontalDirection::undecided);
-    int explore_flag = hdirection == HorizontalDirection::left ? 1 : 2;
+    ASSERT(hdirection != HorizontalDirection2::undecided);
+    int explore_flag = hdirection == HorizontalDirection2::left ? 1 : 2;
     // Don't call this function twice with the same value.
     ASSERT((explored_ & explore_flag) == 0);
     explored_ |= explore_flag;
@@ -53,6 +53,16 @@ class LocalExtreme
     Dout(dc::notice, "explored_ is " << (explored_ == 1 ? "left" : (explored_ == 2 ? "right" : "left|right")));
     return explored_ == 3;
   }
+
+#ifdef CWDEBUG
+  void print_on(std::ostream& os) const
+  {
+    os << "approximation:" << approximation_ <<
+        ", vertex_sample:" << vertex_sample_ <<
+        ", energy:" << energy_ <<
+        ", explored:" << explored_;
+  }
+#endif
 };
 
 } // namespace gradient_descent

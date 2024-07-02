@@ -9,7 +9,7 @@
 #include "gradient_descent/LocalExtreme.h"
 #include "gradient_descent/KineticEnergy.h"
 #include "gradient_descent/HorizontalDirection.h"
-#include "gradient_descent/VerticalDirection.h"
+#include "gradient_descent/ExtremeType.h"
 #include "gradient_descent/Algorithm.h"
 #include "gradient_descent/History.h"
 #include "gradient_descent/LocalExtreme.h"
@@ -193,7 +193,8 @@ int main()
 #endif
 
       // Loop over iterations of w.
-      for (Weight w(w_0);;)
+      bool next_curve = false;
+      for (Weight w(w_0); !next_curve;)
       {
         // Suppress immediate updating of the window for each created item, in order to avoid flickering.
         window.set_send_expose_events(false);
@@ -208,7 +209,7 @@ int main()
 #else
         // Replace w with a new point until the global minimum has been reached.
         if (!gda(w, L(w), L.derivative(w)))
-          break;
+          next_curve = true;
 #endif
 
         // Flush all expose events related to the drawing done above.

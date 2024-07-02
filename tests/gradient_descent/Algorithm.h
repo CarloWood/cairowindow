@@ -2,7 +2,7 @@
 
 #include "Approximation.h"
 #include "HorizontalDirection.h"
-#include "VerticalDirection.h"
+#include "ExtremeType.h"
 #include "Weight.h"
 #include "Sample.h"
 #include "History.h"
@@ -34,8 +34,11 @@ class Algorithm
   // hdirection_ is set when we find a local minimum and decide to explore left or right of that.
   // The result is that we'll rather go away from the vertex of the current matching parabolic approximation
   // then towards it, if that doesn't match the current hdirection_.
-  HorizontalDirection hdirection_;
-  VerticalDirection vdirection_;        // The extreme type (minimum or maximum) that we're looking for (next).
+  HorizontalDirection2 hdirection_;
+  ExtremeType next_extreme_type_;       // The extreme type (minimum or maximum) that we're looking for (next).
+
+  Restriction hrestriction_;            // The direction that we're looking for an extreme in, relative to the previous approximation samples.
+  Region last_region_;                  // The region returned by the last call to find_extreme.
 
   // Using a std::list: pointers to elements may never be invalidated.
   using extremes_type = std::list<LocalExtreme>;
@@ -45,14 +48,14 @@ class Algorithm
 
   enum class IterationState
   {
-    done,                     // w was already updated.
-    check_energy,             // After adding the new sample, abort if the required energy is too large.
-    extreme_jump,             // Only add the new sample to the history if we didn't overshoot another extreme dramatically.
+    done,                       // w was already updated.
+    check_energy,               // After adding the new sample, abort if the required energy is too large.
+    extreme_jump,               // Only add the new sample to the history if we didn't overshoot another extreme dramatically.
 //    clamped,                  // Attemped to jump to a vertex, but against hdirection, passed a previous sample. Use that last sample instead.
 //    gamma_based,              // Internal state used to signify that w was already updated and a call to handle_parabolic_approximation
 //                              // is not longer desired.
-    local_extreme,            // After adding the new sample, handle the fact that we found an extreme.
-    abort_hdirection          // Stop going in the current hdirection_.
+    local_extreme,              // After adding the new sample, handle the fact that we found an extreme.
+    abort_hdirection            // Stop going in the current hdirection_.
   };
 
   IterationState state_{IterationState::done};
@@ -67,8 +70,10 @@ class Algorithm
     energy_(L_max COMMA_CWDEBUG_ONLY(event_server_)),
     best_minimum_(extremes_.end()),
     last_extreme_(extremes_.end()),
-    hdirection_(HorizontalDirection::undecided),
-    vdirection_(VerticalDirection::unknown)
+    hdirection_(HorizontalDirection2::undecided),
+    next_extreme_type_(ExtremeType::unknown),
+    hrestriction_(Restriction::none),
+    last_region_(Region::unknown)
   {
   }
 
@@ -106,15 +111,15 @@ class Algorithm
 
   // Accessors for testsuite.
   double debug_small_step() const { return small_step_; }
-  HorizontalDirection debug_hdirection() const { return hdirection_; }
-  VerticalDirection debug_vdirection() const { return vdirection_; }
+  HorizontalDirection2 debug_hdirection() const { return hdirection_; }
+  ExtremeType debug_next_extreme_type() const { return next_extreme_type_; }
   std::string algorithm_str() const { return algorithm_str_; }
 
   // Manipulators for the testsuite.
-  void debug_set_hdirection_vdirection_small_step(HorizontalDirection hdirection, VerticalDirection vdirection, double small_step)
+  void debug_set_hdirection_next_extreme_type_small_step(HorizontalDirection2 hdirection, ExtremeType next_extreme_type, double small_step)
   {
     hdirection_ = hdirection;
-    vdirection_ = vdirection;
+    next_extreme_type_ = next_extreme_type;
     small_step_ = small_step;
   }
 #endif

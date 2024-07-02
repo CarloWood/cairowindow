@@ -1,6 +1,6 @@
 #include "sys.h"
 #include "gradient_descent/HorizontalDirection.h"
-#include "gradient_descent/VerticalDirection.h"
+#include "gradient_descent/ExtremeType.h"
 #include <iostream>
 #include <random>
 #include <array>
@@ -10,8 +10,7 @@
 #include <cassert>
 #include "debug.h"
 
-using HorizontalDirection = gradient_descent::HorizontalDirection;
-using VerticalDirection = gradient_descent::VerticalDirection;
+using HorizontalDirection = gradient_descent::HorizontalDirection2;
 
 constexpr int number_of_test_runs = 1000000;
 constexpr int min_number_of_extremes = 1;

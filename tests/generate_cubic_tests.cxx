@@ -2,7 +2,7 @@
 #include "CubicPolynomial.h"
 #include "gradient_descent/Sample.h"
 #include "gradient_descent/HorizontalDirection.h"
-#include "gradient_descent/VerticalDirection.h"
+#include "gradient_descent/ExtremeType.h"
 #include "gradient_descent/Approximation.h"
 #include "gradient_descent/Weight.h"
 #include "cairowindow/BezierCurve.h"
@@ -18,14 +18,14 @@
 #include <random>
 #include "debug.h"
 
-bool check_hdirection(gradient_descent::HorizontalDirection hdirection, double w, double wl, double wr)
+bool check_region(gradient_descent::Region region, double w, double wl, double wr)
 {
   ASSERT(wl < wr);
   if (w < wl)
-    return hdirection == gradient_descent::HorizontalDirection::left;
+    return region == gradient_descent::Region::left;
   else if (w > wr)
-    return hdirection == gradient_descent::HorizontalDirection::right;
-  return hdirection == gradient_descent::HorizontalDirection::inbetween;
+    return region == gradient_descent::Region::right;
+  return region == gradient_descent::Region::inbetween;
 }
 
 int main()
@@ -46,8 +46,10 @@ int main()
   {
     using namespace cairowindow;
     using Window = cairowindow::Window;
-    using HorizontalDirection = gradient_descent::HorizontalDirection;
-    using VerticalDirection = gradient_descent::VerticalDirection;
+    using HorizontalDirection2 = gradient_descent::HorizontalDirection2;
+    using Restriction = gradient_descent::Restriction;
+    using Region = gradient_descent::Region;
+    using ExtremeType = gradient_descent::ExtremeType;
 
     // Create a window.
     Window window("Cubic", 1200, 900);
@@ -223,9 +225,9 @@ int main()
       Dout(dc::notice, "sl = " << sl << ", sr = " << sr);
 
       std::uniform_int_distribution<int> dir_dist(-1, 1);
-      HorizontalDirection hdirection = static_cast<HorizontalDirection>(dir_dist(engine));
-      VerticalDirection vdirection = static_cast<VerticalDirection>(dir_dist(engine));
-      Dout(dc::notice, "hdirection = " << hdirection << ", vdirection = " << vdirection);
+      Restriction const restriction = static_cast<Restriction>(dir_dist(engine));
+      ExtremeType extreme_type = static_cast<ExtremeType>(dir_dist(engine));
+      Dout(dc::notice, "restriction = " << restriction << ", extreme_type = " << extreme_type);
 
       gradient_descent::Approximation approximation;
       approximation.add(&sl, false);
@@ -233,10 +235,10 @@ int main()
       if (ar == gradient_descent::ScaleUpdate::first_sample)
         continue;
 
-      HorizontalDirection const input_hdirection = hdirection;
-      VerticalDirection const input_vdirection = vdirection;
-      gradient_descent::Weight result = approximation.find_extreme(hdirection, vdirection);
-      Dout(dc::notice, "result = " << result << "; hdirection = " << hdirection << "; vdirection = " << vdirection);
+      Region region;
+      ExtremeType const input_extreme_type = extreme_type;
+      gradient_descent::Weight result = approximation.find_extreme(region, extreme_type, restriction);
+      Dout(dc::notice, "result = " << result << "; region = " << region << "; extreme_type = " << extreme_type);
 
       // Create and draw plot area.
       plot::Plot plot(window.geometry(), { .grid = {.color = color::orange} },
@@ -282,17 +284,17 @@ int main()
 
       plot::Line plot_minimum_line;
       plot::Line plot_maximum_line;
-      if (vdirection != VerticalDirection::unknown)
+      if (extreme_type != ExtremeType::unknown)
       {
         ASSERT(D > 0.0);
 
-        if (vdirection == VerticalDirection::down)
+        if (extreme_type == ExtremeType::minimum)
         {
           // Draw a vertical line where the minimum is.
           plot_minimum_line = Line{Point{minimum, 0.0}, Direction::up};
           plot.add_line(second_layer, line_style({.line_color = color::red}), plot_minimum_line);
         }
-        else if (vdirection == VerticalDirection::up)
+        else if (extreme_type == ExtremeType::maximum)
         {
           // Draw a vertical line where the maximum is.
           plot_maximum_line = Line{Point{maximum, 0.0}, Direction::up};
@@ -300,7 +302,7 @@ int main()
         }
       }
       plot::Line plot_center_line;
-      if (input_hdirection == HorizontalDirection::undecided && input_vdirection == VerticalDirection::unknown)
+      if (restriction == Restriction::none && input_extreme_type == ExtremeType::unknown)
       {
         // Draw a vertical line at the center.
         double center = 0.5 * (wl + wr);
@@ -311,54 +313,51 @@ int main()
       // Flush all expose events related to the drawing done above.
       window.set_send_expose_events(true);
 
-      Dout(dc::notice, "input_hdirection = " << input_hdirection << ", input_vdirection = " << input_vdirection);
+      Dout(dc::notice, "restriction = " << restriction << ", input_extreme_type = " << input_extreme_type);
 
       // Is there no extreme?
       if (D <= 0.0)
       {
-        // If there is no extreme, then vdirection should be 'unknown'.
-        ASSERT(vdirection == VerticalDirection::unknown);
-        // hdirection should be untouched if it wasn't undecided.
-        ASSERT(input_hdirection == HorizontalDirection::undecided || hdirection == input_hdirection);
+        // If there is no extreme, then extreme_type should be 'unknown'.
+        ASSERT(extreme_type == ExtremeType::unknown);
         // D being non-positive means that the derivative must have the same sign everywhere (though one of them can be zero).
         double ld = cubic.derivative(wl);
         double rd = cubic.derivative(wr);
         ASSERT((D == 0.0 && (ld == 0.0 || rd == 0.0)) || (ld != 0 && rd != 0.0 && (ld < 0.0) == (rd < 0.0)));
-        // If hdirection was undecided it should now be set to "downhill".
-        ASSERT(input_hdirection != HorizontalDirection::undecided ||
-            hdirection == ((ld > 0.0) ? HorizontalDirection::left : HorizontalDirection::right));
+        // If restriction was none region should now be set to "downhill".
+        ASSERT(restriction != Restriction::none || region == ((ld > 0.0) ? Region::left : Region::right));
         continue;
       }
 
       // Do we not care where the returned extreme is?
-      if (input_hdirection == HorizontalDirection::undecided)
+      if (restriction == Restriction::none)
       {
         // Then some extreme must be returned.
-        ASSERT(vdirection != VerticalDirection::unknown);
+        ASSERT(extreme_type != ExtremeType::unknown);
         // If we requested a certain type of extreme, then that must be returned.
-        ASSERT(input_vdirection == VerticalDirection::unknown || vdirection == input_vdirection);
-        // hdirection must be set correctly.
+        ASSERT(input_extreme_type == ExtremeType::unknown || extreme_type == input_extreme_type);
+        // region must be set correctly.
         double w = result;
-        ASSERT(check_hdirection(hdirection, w, wl, wr));
+        ASSERT(check_region(region, w, wl, wr));
         // The result must correspond to the correct extreme.
-        double extreme = (vdirection == VerticalDirection::down) ? minimum : maximum;
+        double extreme = (extreme_type == ExtremeType::minimum) ? minimum : maximum;
         ASSERT(std::abs(w - extreme) < 0.1 * std::abs(minimum - maximum));
         continue;
       }
 
-      // Was an extreme was returned?
-      if (vdirection != VerticalDirection::unknown)
+      // Was an extreme returned?
+      if (extreme_type != ExtremeType::unknown)
       {
         // If we requested a certain type of extreme, then that must be returned.
-        ASSERT(input_vdirection == VerticalDirection::unknown || vdirection == input_vdirection);
-        // hdirection must be set correctly.
+        ASSERT(input_extreme_type == ExtremeType::unknown || extreme_type == input_extreme_type);
+        // region must be set correctly.
         double w = result;
-        ASSERT(check_hdirection(hdirection, w, wl, wr));
+        ASSERT(check_region(region, w, wl, wr));
         // The result must correspond to the correct extreme.
-        double extreme = (vdirection == VerticalDirection::down) ? minimum : maximum;
+        double extreme = (extreme_type == ExtremeType::minimum) ? minimum : maximum;
         ASSERT(std::abs(w - extreme) < 0.1 * std::abs(minimum - maximum));
-        // The returned hdirection must correspond to the requested one.
-        ASSERT(hdirection == HorizontalDirection::inbetween || hdirection == input_hdirection);
+        // The returned region must correspond to the requested one.
+        ASSERT(region == restriction);
         continue;
       }
 
@@ -366,13 +365,13 @@ int main()
       for (int e = 0; e < 2; ++e)
       {
         double extreme = (e == 0) ? minimum : maximum;
-        // Skip extremes that should be rejected because of input_vdirection.
-        if ((e == 0 && input_vdirection == VerticalDirection::up) ||
-            (e == 1 && input_vdirection == VerticalDirection::down))
+        // Skip extremes that should be rejected because of input_extreme_type.
+        if ((e == 0 && input_extreme_type == ExtremeType::maximum) ||
+            (e == 1 && input_extreme_type == ExtremeType::minimum))
           continue;
-        // Then this extreme should be rejected because of input_hdirection.
-        ASSERT((input_hdirection == HorizontalDirection::left && extreme > std::max(wl, wr)) ||
-            (input_hdirection == HorizontalDirection::right && extreme < std::min(wl, wr)));
+        // Then this extreme should be rejected because of restriction.
+        ASSERT((restriction == Restriction::left && extreme > std::max(wl, wr)) ||
+            (restriction == Restriction::right && extreme < std::min(wl, wr)));
       }
       // Everything was checked with ASSERTs now.
       continue;

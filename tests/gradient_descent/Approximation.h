@@ -3,7 +3,7 @@
 #include "Scale.h"
 #include "Sample.h"
 #include "HorizontalDirection.h"
-#include "VerticalDirection.h"
+#include "ExtremeType.h"
 #include "../QuadraticPolynomial.h"
 #include "../CubicPolynomial.h"
 #include <array>
@@ -31,8 +31,8 @@ class Approximation
   ScaleUpdate add(Sample const* current, bool current_is_replacement);
   ScaleUpdate update_scale(Sample const& current);
 
-  Weight find_extreme(HorizontalDirection& hdirection, VerticalDirection& extreme) const;
-  void set_current_index(HorizontalDirection hdirection);
+  Weight find_extreme(Region& region, ExtremeType& extreme_type, Restriction restriction) const;
+  void set_current_index(Region region);
 
   Sample const& current() const { ASSERT(number_of_relevant_samples_ > 0); return *relevant_samples_[current_index_]; }
   Sample const& prev() const { ASSERT(number_of_relevant_samples_ > 1); return *relevant_samples_[1 - current_index_]; }
@@ -84,7 +84,20 @@ class Approximation
       os << " [v_x = " << parabola_.vertex_x() << "]";
     os << ", parabola_scale:" << parabola_scale_;
     if (number_of_relevant_samples_ > 1)
+    {
       os << ", cubic:" << cubic_;
+      std::array<double, 2> extremes;
+      int n = cubic_.get_extremes(extremes);
+      if (n == 0)
+        os << " [no extremes]";
+      else if (n == 1)
+        os << " [derivative root = " << extremes[0] << "]";
+      else
+      {
+        int index_minimum = (cubic_[3] > 0.0) ? 1 : 0;
+        os << " [x_minimum = " << extremes[index_minimum] << ", x_maximum = " << extremes[1 - index_minimum] << "]";
+      }
+    }
     os << "}";
   }
 #endif
