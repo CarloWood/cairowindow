@@ -46,7 +46,6 @@ int main()
   {
     using namespace cairowindow;
     using Window = cairowindow::Window;
-    using HorizontalDirection2 = gradient_descent::HorizontalDirection2;
     using Restriction = gradient_descent::Restriction;
     using Region = gradient_descent::Region;
     using ExtremeType = gradient_descent::ExtremeType;

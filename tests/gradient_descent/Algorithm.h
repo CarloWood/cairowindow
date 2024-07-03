@@ -34,7 +34,7 @@ class Algorithm
   // hdirection_ is set when we find a local minimum and decide to explore left or right of that.
   // The result is that we'll rather go away from the vertex of the current matching parabolic approximation
   // then towards it, if that doesn't match the current hdirection_.
-  HorizontalDirection2 hdirection_;
+  HorizontalDirection hdirection_;
   ExtremeType next_extreme_type_;       // The extreme type (minimum or maximum) that we're looking for (next).
 
   Restriction hrestriction_;            // The direction that we're looking for an extreme in, relative to the previous approximation samples.
@@ -70,7 +70,7 @@ class Algorithm
     energy_(L_max COMMA_CWDEBUG_ONLY(event_server_)),
     best_minimum_(extremes_.end()),
     last_extreme_(extremes_.end()),
-    hdirection_(HorizontalDirection2::undecided),
+    hdirection_(HorizontalDirection::undecided),
     next_extreme_type_(ExtremeType::unknown),
     hrestriction_(Restriction::none),
     last_region_(Region::unknown)
@@ -111,12 +111,12 @@ class Algorithm
 
   // Accessors for testsuite.
   double debug_small_step() const { return small_step_; }
-  HorizontalDirection2 debug_hdirection() const { return hdirection_; }
+  HorizontalDirection debug_hdirection() const { return hdirection_; }
   ExtremeType debug_next_extreme_type() const { return next_extreme_type_; }
   std::string algorithm_str() const { return algorithm_str_; }
 
   // Manipulators for the testsuite.
-  void debug_set_hdirection_next_extreme_type_small_step(HorizontalDirection2 hdirection, ExtremeType next_extreme_type, double small_step)
+  void debug_set_hdirection_next_extreme_type_small_step(HorizontalDirection hdirection, ExtremeType next_extreme_type, double small_step)
   {
     hdirection_ = hdirection;
     next_extreme_type_ = next_extreme_type;

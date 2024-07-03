@@ -135,22 +135,20 @@ class ScaleDrawEventData
 {
  protected:
   ScaleUpdate result_;
-  double x1_;
-  double x2_;
+  Scale const& scale_;
   math::QuadraticPolynomial const& old_parabola_;
 
  public:
-  ScaleDrawEventData(ScaleUpdate result, double x1, double x2, math::QuadraticPolynomial const& old_parabola) :
-    result_(result), x1_(x1), x2_(x2), old_parabola_(old_parabola) { }
+  ScaleDrawEventData(ScaleUpdate result, Scale const& scale, math::QuadraticPolynomial const& old_parabola) :
+    result_(result), scale_(scale), old_parabola_(old_parabola) { }
 
   ScaleUpdate result() const { return result_; }
-  double x1() const { return x1_; }
-  double x2() const { return x2_; }
+  Scale const& scale() const { return scale_; }
   math::QuadraticPolynomial const& old_parabola() const { return old_parabola_; }
 
   void print_on(std::ostream& os) const
   {
-    os << "ScaleDrawEventData:{" << result_ << ", " << x1_ << ", " << x2_ << ", " << old_parabola_ << "}";
+    os << "ScaleDrawEventData:{" << result_ << ", " << scale_ << ", " << old_parabola_ << "}";
   }
 };
 
@@ -236,9 +234,9 @@ class AlgorithmEventData
     event_data_.emplace<KineticEnergyEventData>(max_Lw);
   }
 
-  AlgorithmEventData(event_type, ScaleUpdate result, double x1, double x2, math::QuadraticPolynomial const& old_parabola)
+  AlgorithmEventData(event_type, ScaleUpdate result, Scale const& scale, math::QuadraticPolynomial const& old_parabola)
   {
-    event_data_.emplace<ScaleDrawEventData>(result, x1, x2, old_parabola);
+    event_data_.emplace<ScaleDrawEventData>(result, scale, old_parabola);
   }
 
   AlgorithmEventData(event_type, HistoryIndex index, Sample const& current, std::string const& label)

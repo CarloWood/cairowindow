@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include "debug.h"
 #ifdef CWDEBUG
 #include <ostream>
 #endif
@@ -8,7 +9,7 @@
 namespace gradient_descent {
 
 // Are we looking for the next extreme left or right of the previous extreme found?
-enum class HorizontalDirection2
+enum class HorizontalDirection
 {
   left = -1,
   undecided = 0,
@@ -60,17 +61,27 @@ inline bool operator==(Region region, Restriction restriction)
   return static_cast<int>(region) * static_cast<int>(restriction) == -1;
 }
 
-inline HorizontalDirection2 opposite(HorizontalDirection2 hdirection)
+inline HorizontalDirection opposite(HorizontalDirection hdirection)
 {
-  return static_cast<HorizontalDirection2>(-static_cast<int>(hdirection));
+  return static_cast<HorizontalDirection>(-static_cast<int>(hdirection));
 }
 
-std::string to_string(HorizontalDirection2 hdirection);
+class HorizontalDirectionToInt {
+ private:
+  int val_;
+ public:
+  HorizontalDirectionToInt(HorizontalDirection hdirection) : val_(static_cast<int>(hdirection)) { ASSERT(val_ == -1 || val_ == 1); }
+  HorizontalDirectionToInt(Restriction restriction) : val_(static_cast<int>(restriction)) { ASSERT(val_ == -1 || val_ == 1); }
+  HorizontalDirectionToInt(Region region) : val_(static_cast<int>(region)) { ASSERT(val_ == -1 || val_ == 1); }
+  operator int() const { return val_; }
+};
+
+std::string to_string(HorizontalDirection hdirection);
 std::string to_string(Region region);
 std::string to_string(Restriction region);
 
 #ifdef CWDEBUG
-inline std::ostream& operator<<(std::ostream& os, HorizontalDirection2 hdirection)
+inline std::ostream& operator<<(std::ostream& os, HorizontalDirection hdirection)
 {
   return os << to_string(hdirection);
 }

@@ -80,6 +80,12 @@ class CubicPolynomial
     return coefficients_[1] + (2.0 * coefficients_[2] + 3.0 * coefficients_[3] * x) * x;
   }
 
+  // Evaluate second derivative.
+  double second_derivative(double x) const
+  {
+    return 2.0 * coefficients_[2] + 6.0 * coefficients_[3] * x;
+  }
+
   // Access coefficients.
   double operator[](int i) const { ASSERT(0 <= i && i < coefficients_.size()); return coefficients_[i]; }
   double& operator[](int i) { ASSERT(0 <= i && i < coefficients_.size()); return coefficients_[i]; }

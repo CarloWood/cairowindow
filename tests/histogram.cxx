@@ -10,8 +10,6 @@
 #include <cassert>
 #include "debug.h"
 
-using HorizontalDirection = gradient_descent::HorizontalDirection2;
-
 constexpr int number_of_test_runs = 1000000;
 constexpr int min_number_of_extremes = 1;
 constexpr int max_number_of_extremes = 11;
@@ -24,6 +22,8 @@ std::uniform_int_distribution<int> height_step_distribution(1, max_step_size);
 
 unsigned long used_height_marker = 0;
 std::array<unsigned long, highest_possible_height - lowest_possible_height + 1> used_heights;
+
+using namespace gradient_descent;
 
 class Histogram
 {

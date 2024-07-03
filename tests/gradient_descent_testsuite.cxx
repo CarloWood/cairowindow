@@ -158,7 +158,7 @@ int main()
 
   using Weight = gradient_descent::Weight;
   using Scale = gradient_descent::Scale;
-  using HorizontalDirection2 = gradient_descent::HorizontalDirection2;
+  using HorizontalDirection = gradient_descent::HorizontalDirection;
   using Sample = gradient_descent::Sample;
   using Approximation = gradient_descent::Approximation;
 
@@ -233,15 +233,15 @@ int main()
 
   //==========================================================================
   Dout(dc::notice, "*** TEST: starting with a derivative of zero (while hdirection is known) ***");
-  std::array<HorizontalDirection2, 2> hdirections = {
-    HorizontalDirection2::left,
-    HorizontalDirection2::right
+  std::array<HorizontalDirection, 2> hdirections = {
+    HorizontalDirection::left,
+    HorizontalDirection::right
   };
   for (int hdi = 0; hdi < hdirections.size(); ++hdi)
   {
     // Algorithm: [one sample, derivative is zero]
     constexpr double w0 = 13.0;
-    HorizontalDirection2 const hdirection = hdirections[hdi];
+    HorizontalDirection const hdirection = hdirections[hdi];
 
     Dout(dc::notice, "* hdirection = " << hdirection);
 
@@ -265,7 +265,7 @@ int main()
   {
     // Algorithm: [one sample, derivative is zero]
     constexpr double w0 = 13.0;
-    HorizontalDirection2 const hdirection = hdirections[hdi];
+    HorizontalDirection const hdirection = hdirections[hdi];
 
     Dout(dc::notice, "* hdirection = " << hdirection);
 
@@ -288,7 +288,7 @@ int main()
   {
     // Algorithm: [one sample, derivative is zero]
     constexpr double w0 = 0.0;
-    HorizontalDirection2 const hdirection = hdirections[hdi];
+    HorizontalDirection const hdirection = hdirections[hdi];
 
     Dout(dc::notice, "* hdirection = " << hdirection);
 
@@ -312,7 +312,7 @@ int main()
   {
     // Algorithm: [one sample, same direction]
     constexpr double w0 = 0.0;
-    HorizontalDirection2 const hdirection = hdirections[hdi];
+    HorizontalDirection const hdirection = hdirections[hdi];
     double const dLdw = sign_of_dLdw * 1.5e-8;
 
     Dout(dc::notice, "* hdirection = " << hdirection << "; dLdw = " << dLdw);
@@ -337,7 +337,7 @@ int main()
     // Algorithm: [small step]
     constexpr double w0 = 13.0;
     constexpr double small_step = 0.12345;
-    HorizontalDirection2 const hdirection = hdirections[hdi];
+    HorizontalDirection const hdirection = hdirections[hdi];
 
     Dout(dc::notice, "* hdirection = " << hdirection);
 
@@ -402,7 +402,7 @@ int main()
     ASSERT(w == w0);
 
     // At this point, small_step must be zero and hdirection right.
-    ASSERT(gda.debug_hdirection() == HorizontalDirection2::right);
+    ASSERT(gda.debug_hdirection() == HorizontalDirection::right);
     ASSERT(utils::almost_equal(gda.debug_small_step(), w0 - vertex, 10e-6));
   }
 

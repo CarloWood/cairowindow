@@ -73,7 +73,7 @@ ScaleUpdate Approximation::add(Sample const* current, bool current_is_replacemen
     {
       parabola_[2] = 0.0;
       number_of_relevant_samples_ = 1;        // Ignore the oldest sample.
-      parabola_scale_.reset();
+      scale_.reset();
       Dout(dc::finish, "ScaleUpdate::first_sample");
       return ScaleUpdate::first_sample;
     }
@@ -96,7 +96,7 @@ ScaleUpdate Approximation::add(Sample const* current, bool current_is_replacemen
   // Don't update the scale when current was just replaced. In that case we return first_sample,
   // but the caller passed current_is_replacement, so it should know to ignore that.
   if (!current_is_replacement && number_of_relevant_samples_ == 2)
-    result = parabola_scale_.update(relevant_samples_, current_index_, parabola_, already_had_two_relevant_samples);
+    result = scale_.update(relevant_samples_, current_index_, cubic_, already_had_two_relevant_samples);
 
   Dout(dc::finish, result);
   return result;
@@ -110,7 +110,7 @@ ScaleUpdate Approximation::update_scale(Sample const& current)
   ASSERT(is_extreme_ && number_of_relevant_samples_ == 2);
 
   std::array<Sample const*, 2> samples = {{ &current, relevant_samples_[current_index_] }};
-  ScaleUpdate result = parabola_scale_.update(samples, 0, parabola_, true);
+  ScaleUpdate result = scale_.update(samples, 0, cubic_, true);
 
   Dout(dc::finish, result);
   return result;

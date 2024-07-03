@@ -21,7 +21,7 @@ class Approximation
   std::array<Sample const*, 2> relevant_samples_;       // Pointers to up to two samples that take part in this approximation. If
                                                         // number_of_relevant_samples_ is two then one with the smallest w is stored at index 0.
   math::QuadraticPolynomial parabola_;                  // A linear or parabolic approximation.
-  Scale parabola_scale_;                                // A measure of over what interval the parabolic approximation was tested to be correct.
+  Scale scale_;                                         // A measure of over what interval the approximation was tested to be correct.
   bool is_extreme_{false};                              // Set when this is a LocalExtreme::approximation_.
   math::CubicPolynomial cubic_;                         // A cubic approximation, only valid if number_of_relevant_samples_ == 2.
 
@@ -52,13 +52,14 @@ class Approximation
     // Forget any previous samples.
     number_of_relevant_samples_ = 0;
     current_index_ = 1;
-    parabola_scale_.reset();
+    scale_.reset();
   }
 
   int number_of_relevant_samples() const { return number_of_relevant_samples_; }
   math::QuadraticPolynomial const& parabola() const { return parabola_; }
-  Scale const& parabola_scale() const { return parabola_scale_; }
+  Scale const& scale() const { return scale_; }
   bool is_extreme() const { return is_extreme_; }
+  double at(double w) const { return cubic_(w); }
   math::CubicPolynomial const& cubic() const { return cubic_; }
   //FIXME: remove this
   math::CubicPolynomial& cubic() { return cubic_; }
@@ -82,7 +83,7 @@ class Approximation
     os << "{parabola:" << parabola_;
     if (number_of_relevant_samples_ > 1)
       os << " [v_x = " << parabola_.vertex_x() << "]";
-    os << ", parabola_scale:" << parabola_scale_;
+    os << ", scale:" << scale_;
     if (number_of_relevant_samples_ > 1)
     {
       os << ", cubic:" << cubic_;

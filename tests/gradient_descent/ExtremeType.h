@@ -7,7 +7,7 @@
 
 namespace gradient_descent {
 
-// Is the next local extreme that we're looking for a minimum or a maximum.
+// Is the next local extreme that we're looking for, a minimum or a maximum.
 enum class ExtremeType
 {
   minimum = -1,

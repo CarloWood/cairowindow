@@ -5,13 +5,13 @@
 
 namespace gradient_descent {
 
-std::string to_string(HorizontalDirection2 hdirection)
+std::string to_string(HorizontalDirection hdirection)
 {
   switch (hdirection)
   {
-    case HorizontalDirection2::left: return "left";
-    case HorizontalDirection2::undecided: return "undecided";
-    case HorizontalDirection2::right: return "right";
+    case HorizontalDirection::left: return "left";
+    case HorizontalDirection::undecided: return "undecided";
+    case HorizontalDirection::right: return "right";
   }
   AI_NEVER_REACHED
 }
