@@ -93,6 +93,7 @@ class Scale
   CriticalPointType type() const { return type_; }
   bool has_sample(int side) const { return members_[side].valid; }
   double value(int side) const { ASSERT(members_[side].valid); return members_[side].scale; }
+  double or_zero(int side) const { return members_[side].valid ? members_[side].scale : epsilon; }
   double critical_point_w() const { return critical_point_w_; }
   double edge_sample_w(int side) const { ASSERT(members_[side].valid); return members_[side].edge_sample_w; }
   double edge_sample_Lw(int side) const { ASSERT(members_[side].valid); return members_[side].edge_sample_Lw; }
@@ -176,13 +177,11 @@ class Scale
     return 0.1 * std::abs(beta);
   }
 
-  double or_zero(int side) const { /* Never return really zero */ return std::max(epsilon, value(side)); }
-
   // Return true if step is significantly smaller than the scale.
   // This is used to determine whether to add a new sample to the history or to replace an existing entry.
   bool negligible(double step) const
   {
-    return std::abs(step) < std::max(epsilon, 0.001 * (value(left) + value(right)));
+    return std::abs(step) < std::max(epsilon, 0.001 * (or_zero(left) + or_zero(right)));
   }
 
   // Return a value with the same sign as step that is just large enough for negligible to return false;
