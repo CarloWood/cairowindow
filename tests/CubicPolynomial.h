@@ -46,7 +46,7 @@ class CubicPolynomial
     coefficients_[0] = y0 - operator()(x0);
   }
 
-  int get_extremes(std::array<double, 2>& extremes_out) const
+  int get_extremes(std::array<double, 2>& extremes_out, bool left_most_first = true) const
   {
     DoutEntering(dc::notice, "CubicPolynomial::get_extremes()");
 
@@ -54,10 +54,15 @@ class CubicPolynomial
     Dout(dc::notice, "D = " << D);
 
     if (D < 0.0)
+    {
+      // Write the inflection point to index 0.
+      extremes_out[0] = -coefficients_[2] / (3.0 * coefficients_[3]);
       return 0;
+    }
 
-    // Put the left-most extreme in index 0.
-    int index_minimum = (coefficients_[3] > 0.0) ? 1 : 0;
+    // Put the left-most extreme in index 0 iff left_most_first is true.
+    // Otherwise, put the minimum in index 0.
+    int index_minimum = (left_most_first && coefficients_[3] > 0.0) ? 1 : 0;
 
     double sqrt_D = std::sqrt(D);
     extremes_out[index_minimum] = (-coefficients_[2] + sqrt_D) / (3.0 * coefficients_[3]);

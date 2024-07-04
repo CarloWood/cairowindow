@@ -53,10 +53,30 @@ inline std::ostream& operator<<(std::ostream& os, ScaleUpdate scale_update)
 
 enum class CriticalPointType
 {
+  none,
   minimum,
   maximum,
   inflection_point
 };
+
+#ifdef CWDEBUG
+inline std::string to_string(CriticalPointType critical_point_type)
+{
+  switch (critical_point_type)
+  {
+    AI_CASE_RETURN(CriticalPointType::none);
+    AI_CASE_RETURN(CriticalPointType::minimum);
+    AI_CASE_RETURN(CriticalPointType::maximum);
+    AI_CASE_RETURN(CriticalPointType::inflection_point);
+  }
+  AI_NEVER_REACHED
+}
+
+inline std::ostream& operator<<(std::ostream& os, CriticalPointType critical_point_type)
+{
+  return os << to_string(critical_point_type);
+}
+#endif
 
 class Scale
 {
@@ -88,6 +108,9 @@ class Scale
  public:
   Scale& operator=(Scale const& scale) = delete;
 
+  // Initialization.
+  void set_critical_point(double critical_point_w, CriticalPointType type) { type_ = type; critical_point_w_ = critical_point_w; }
+
   // Accessors.
   math::CubicPolynomial const& cubic() const { return cubic_; }
   CriticalPointType type() const { return type_; }
@@ -105,6 +128,8 @@ class Scale
     return direction * members_[side].scale;
   }
 
+  // Return a (positive) indication of over what scale the approximation is "good" (deviates less than 10% from the real samples).
+  // This function returns the scale that was initialized (left or right), or the average of those if both were initialized.
   double avg() const
   {
     // The number of valid sides.
@@ -117,6 +142,7 @@ class Scale
   void reset()
   {
     DoutEntering(dc::notice, "Scale::reset()");
+    type_ = CriticalPointType::none;
     members_[left].valid = false;
     members_[right].valid = false;
   }
@@ -375,8 +401,11 @@ class Scale
 #ifdef CWDEBUG
   void print_on(std::ostream& os) const
   {
-    os << "{scale:[" << members_[left].scale << ", " << members_[right].scale << "], has_sample:[" <<
-      std::boolalpha << members_[left].valid << ", " << members_[right].valid << "]}";
+    os << "{scale:[" << members_[left].scale << ", " << members_[right].scale << "], valid:[" <<
+      std::boolalpha << members_[left].valid << ", " << members_[right].valid << "], edge_sample_w:[" <<
+      members_[left].edge_sample_w << ", " << members_[right].edge_sample_w << "], edge_sample_Lw:[" <<
+      members_[left].edge_sample_Lw << ", " << members_[right].edge_sample_Lw << "], cubic:" <<
+      cubic_ << ", type:" << type_ << ", critical_point_w:" << critical_point_w_ << "}";
   }
 #endif
 };
