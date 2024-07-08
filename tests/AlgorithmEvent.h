@@ -78,7 +78,7 @@ class AlgorithmEvent
   cairowindow::plot::Text plot_energy_text_;
   std::array<cairowindow::plot::Connector, 2> plot_scale_indicator_;
   std::array<cairowindow::plot::Text, 2> plot_scale_text_;
-  cairowindow::plot::Line plot_vertical_line_through_w_;
+  std::array<cairowindow::plot::Line, 2> plot_vertical_line_through_w_;
   cairowindow::plot::Line plot_vertical_line_through_v_;
   cairowindow::plot::BezierFitter plot_old_parabola_;
   utils::Array<PlotSample, gradient_descent::History::size, gradient_descent::HistoryIndex> plot_samples_;
@@ -157,20 +157,23 @@ class AlgorithmEvent
 
       using namespace gradient_descent;
       if (data.result() == ScaleUpdate::initialized ||
-          data.result() == ScaleUpdate::towards_vertex ||
-          data.result() == ScaleUpdate::away_from_vertex)
+          data.result() == ScaleUpdate::towards_cp ||
+          data.result() == ScaleUpdate::away_from_cp)
       {
         Scale const& scale = data.scale();
+        double const x1 = scale.critical_point_w();
+        double prev_x2;
         double scale_y = plot_.yrange().min() + 0.5 * plot_.yrange().size();
-        for (int side = Scale::left; side <= Scale::right; ++side)
+        for (int side = 0; side < plot_scale_indicator_.size(); ++side)
         {
-          double x1 = scale.critical_point_w();
-          double x2 = scale.edge_sample_w(side);
-          plot_scale_indicator_[side] = plot::Connector{{x1, scale_y}, {x2, scale_y},
-              Connector::open_arrow, Connector::open_arrow};
+          double x2 = side == 0 ? scale.left_edge_sample_w() : scale.right_edge_sample_w();
+          if (side == 1 && std::copysign(1.0, x2 - x1) == std::copysign(1.0, prev_x2 - x1))
+            scale_y -= 15;
+          prev_x2 = x2;
+          plot_scale_indicator_[side] = plot::Connector{{x1, scale_y}, {x2, scale_y}, Connector::open_arrow, Connector::open_arrow};
           plot_.add_connector(layer_, s_indicator_style, plot_scale_indicator_[side]);
           plot_scale_text_[side] = plot_.create_text(layer_, {{.position = draw::centered_above, .offset = 2.0}},
-              Point{(x1 + x2) / 2, scale_y}, "scale");
+              Point{(x1 + x2) / 2, scale_y}, side == 0 ? "left" : "right");
 
           // Only draw the vertical line at critical_point_w once.
           if (side == 0)
@@ -179,11 +182,11 @@ class AlgorithmEvent
             plot_.add_line(layer_, s_indicator_style({.dashes = {3.0, 3.0}}), plot_vertical_line_through_v_);
           }
 
-          plot_vertical_line_through_w_ = plot::Line{{x2, scale_y}, Direction::up};
-          plot_.add_line(layer_, s_indicator_style, plot_vertical_line_through_w_);
+          plot_vertical_line_through_w_[side] = plot::Line{{x2, scale_y}, Direction::up};
+          plot_.add_line(layer_, s_indicator_style, plot_vertical_line_through_w_[side]);
         }
       }
-      if (data.result() == ScaleUpdate::towards_vertex)
+      if (data.result() == ScaleUpdate::towards_cp)
       {
         auto const& old_parabola = data.old_parabola();
         // Draw the old parabola.
@@ -193,12 +196,12 @@ class AlgorithmEvent
     }
     else if (event.is_a<ScaleEraseEventData>())
     {
-      for (int side = Scale::left; side <= Scale::right; ++side)
+      for (int side = 0; side < plot_scale_indicator_.size(); ++side)
       {
         plot_scale_indicator_[side].reset();
         plot_scale_text_[side].reset();
+        plot_vertical_line_through_w_[side].reset();
       }
-      plot_vertical_line_through_w_.reset();
       plot_vertical_line_through_v_.reset();
       plot_old_parabola_.reset();
     }

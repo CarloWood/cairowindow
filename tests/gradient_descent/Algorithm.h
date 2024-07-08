@@ -81,9 +81,9 @@ class Algorithm
   bool update_energy();
   void reset_history();
   bool handle_local_extreme(Weight& w);
-  void update_approximation(bool current_is_replacement);
+  double update_approximation(bool current_is_replacement);
   void handle_single_sample(Weight& w);
-  bool handle_approximation(Weight& w);
+  bool handle_approximation(Weight& w, bool first_call, double new_w);
   bool handle_abort_hdirection(Weight& w);
 
 #ifdef CWDEBUG

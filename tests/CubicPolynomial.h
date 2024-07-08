@@ -68,7 +68,7 @@ class CubicPolynomial
     extremes_out[index_minimum] = (-coefficients_[2] + sqrt_D) / (3.0 * coefficients_[3]);
     extremes_out[1 - index_minimum] = (-coefficients_[2] - sqrt_D) / (3.0 * coefficients_[3]);
 
-    Dout(dc::notice, "extremes_out = " << extremes_out);
+    Dout(dc::notice, "extremes_out = " << std::setprecision(std::numeric_limits<double>::digits10) << extremes_out);
 
     return (D == 0.0) ? 1 : 2;
   }

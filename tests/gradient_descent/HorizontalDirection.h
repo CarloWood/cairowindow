@@ -71,7 +71,7 @@ class HorizontalDirectionToInt {
   int val_;
  public:
   HorizontalDirectionToInt(HorizontalDirection hdirection) : val_(static_cast<int>(hdirection)) { ASSERT(val_ == -1 || val_ == 1); }
-  HorizontalDirectionToInt(Restriction restriction) : val_(static_cast<int>(restriction)) { ASSERT(val_ == -1 || val_ == 1); }
+  HorizontalDirectionToInt(Restriction restriction) : val_(static_cast<int>(restriction)) { }
   HorizontalDirectionToInt(Region region) : val_(static_cast<int>(region)) { ASSERT(val_ == -1 || val_ == 1); }
   operator int() const { return val_; }
 };

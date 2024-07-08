@@ -3,12 +3,12 @@
 
 namespace gradient_descent {
 
-ScaleUpdate Approximation::add(Sample const* current, bool current_is_replacement)
+void Approximation::add(Sample const* current, bool current_is_replacement, ExtremeType next_extreme_type)
 {
-  DoutEntering(dc::notice|continued_cf, "Approximation::add(" << *current << ", " <<
-      std::boolalpha << current_is_replacement << ") --> ");
+  DoutEntering(dc::notice, "Approximation::add(" << *current << ", " <<
+      std::boolalpha << current_is_replacement << ", " << next_extreme_type << ")");
 
-  bool already_had_two_relevant_samples = number_of_relevant_samples_ == 2;
+  already_had_two_relevant_samples_ = number_of_relevant_samples_ == 2;
   if (current_is_replacement)
   {
     // The sample that was replaced in the history should already be in this approximation.
@@ -19,7 +19,7 @@ ScaleUpdate Approximation::add(Sample const* current, bool current_is_replacemen
   {
     current_index_ = 1 - current_index_;
     relevant_samples_[current_index_] = current;
-    number_of_relevant_samples_ = already_had_two_relevant_samples ? 2 : number_of_relevant_samples_ + 1;
+    number_of_relevant_samples_ = already_had_two_relevant_samples_ ? 2 : number_of_relevant_samples_ + 1;
   }
 
   // Make sure that the samples are ordered, if we have two of them.
@@ -74,8 +74,7 @@ ScaleUpdate Approximation::add(Sample const* current, bool current_is_replacemen
       parabola_[2] = 0.0;
       number_of_relevant_samples_ = 1;        // Ignore the oldest sample.
       scale_.reset();
-      Dout(dc::finish, "ScaleUpdate::first_sample");
-      return ScaleUpdate::first_sample;
+      return;
     }
 
     parabola_[1] = delta_Lw / delta_w - sum_w * parabola_[2];
@@ -91,26 +90,36 @@ ScaleUpdate Approximation::add(Sample const* current, bool current_is_replacemen
 
     Dout(dc::notice, "cubic = " << cubic_);
   }
+}
+
+ScaleUpdate Approximation::update_scale(bool current_is_replacement, ExtremeType next_extreme_type)
+{
+  DoutEntering(dc::notice|continued_cf, "Approximation::update_scale(" << std::boolalpha << current_is_replacement << ", " <<
+      next_extreme_type << ") --> ");
 
   ScaleUpdate result = ScaleUpdate::first_sample;
   // Don't update the scale when current was just replaced. In that case we return first_sample,
   // but the caller passed current_is_replacement, so it should know to ignore that.
   if (!current_is_replacement && number_of_relevant_samples_ == 2)
-    result = scale_.update(relevant_samples_, current_index_, cubic_, already_had_two_relevant_samples);
+    result = scale_.update(next_extreme_type, relevant_samples_, current_index_, cubic_, already_had_two_relevant_samples_);
 
   Dout(dc::finish, result);
   return result;
 }
 
-ScaleUpdate Approximation::update_scale(Sample const& current)
+ScaleUpdate Approximation::update_local_extreme_scale(Sample const& current)
 {
-  DoutEntering(dc::notice|continued_cf, "Approximation::update_scale(" << current << ") --> ");
+  DoutEntering(dc::notice|continued_cf, "Approximation::update_local_extreme_scale(" << current << ") --> ");
 
   // This function should only be called on Approximation's that are part of a LocalExtreme.
   ASSERT(is_extreme_ && number_of_relevant_samples_ == 2);
 
   std::array<Sample const*, 2> samples = {{ &current, relevant_samples_[current_index_] }};
-  ScaleUpdate result = scale_.update(samples, 0, cubic_, true);
+  CriticalPointType critical_point_type = scale_.type();
+  // Since this Approximation is part of a LocalExtreme, it was used to find an extreme and thus must refer to either a minimum or maximum.
+  ASSERT(critical_point_type == CriticalPointType::minimum || critical_point_type == CriticalPointType::maximum);
+  ExtremeType next_extreme_type = critical_point_type == CriticalPointType::minimum ? ExtremeType::minimum : ExtremeType::maximum;
+  ScaleUpdate result = scale_.update(next_extreme_type, samples, 0, cubic_, true);
 
   Dout(dc::finish, result);
   return result;

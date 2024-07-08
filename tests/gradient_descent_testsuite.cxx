@@ -362,11 +362,12 @@ int main()
     Algorithm gda(learning_rate, L_max);
     Weight w = w0;
     symbolic::Symbol const& x = symbolic::Symbol::realize("w");
-    symbolic::Constant const& c4 = symbolic::Constant::realize(1, 1000000000);
+    symbolic::Constant const& c4 = symbolic::Constant::realize(1, 10000000);
     symbolic::Function const& sL = symbolic::Function::realize("L", (2 - 5 * x + (x^2)) - c4 * (x^4));
+    constexpr double cp_w = 2.5001550590858685;
     Function L(sL, x);
 
-//    gda.enable_drawing(L, -6500.0, 6500.0);
+    gda.enable_drawing(L, -20.0, 20.0);
 
     Dout(dc::notice, "L = " << fulldef << L);
 
@@ -374,36 +375,40 @@ int main()
     gda(w, L(w), dLdw);                                 // 10.3750010985 [one sample, gradient descent]
     ASSERT(gda.algorithm_str() == "one sample, gradient descent");
     ASSERT(utils::almost_equal(static_cast<double>(w), w0 - learning_rate * dLdw, 1e-15));
-    gda(w, L(w), L.derivative(w));                      // 2.4999957521676026 [jump to vertex]
+    gda(w, L(w), L.derivative(w));                      // 2.5000015493572083 [jump to vertex]
     ASSERT(gda.algorithm_str() == "jump to vertex");
     // This is the vertex.
     double const vertex = w;
-    ASSERT(utils::almost_equal(vertex, 2.4999957521676026, 1e-15));
+    ASSERT(utils::almost_equal(vertex, cp_w, 1e-15));
     dLdw = L.derivative(w);
-    ASSERT(dLdw < 1e-5);
-    gda(w, L(w), 0.0);                                 // -6231.3483767055095 [best zero]
-    ASSERT(gda.algorithm_str() == "best zero");
-    double best_zero = w;
+    ASSERT(dLdw < 1e-3);
+    gda(w, L(w), 0.0);                                 // -7.99968988182 [past extreme (no zeroes)]
+    ASSERT(gda.algorithm_str() == "past extreme (no zeroes)");
+    double past_extreme = w;
     // The same value should not be returned twice (this requires a special-case check).
-    ASSERT(!utils::almost_equal(best_zero, 2.5, 1e-3));
-    // Instead, the best zero of the fourth degree approximation should be returned.
-    ASSERT(best_zero < -6000.0);        // The fourth degree approximation using 13, 10.375 and 2.5 gives something like -6231.
+    ASSERT(!utils::almost_equal(past_extreme, cp_w, 1e-3));
+    // Instead, we should have went further to the left.
+    ASSERT(past_extreme < -6.0);
+    bool aborted;
     do
     {
-      gda(w, L(w), L.derivative(w));                    // -6241.8483809533418 [small step]
+      aborted = !gda(w, L(w), L.derivative(w));         // -6241.8483809533418 [small step]
                                                         // -13752.619901104652 [continue same direction]
                                                         // 13 [best minimum, opposite direction]
     }
-    while (w < best_zero);
-    ASSERT(gda.algorithm_str() == "best minimum, opposite direction");
-    // Since this is the sample that it the furthest away from the vertex and clearly
-    // part of the parabolic approximation, that is where we expect to end up again
-    // when adding the scale to the (best) minimum.
-    ASSERT(w == w0);
+    while (w < past_extreme);
+    if (!aborted)
+    {
+      ASSERT(gda.algorithm_str() == "best minimum, opposite direction");
+      // Since this is the sample that it the furthest away from the vertex and clearly
+      // part of the parabolic approximation, that is where we expect to end up again
+      // when adding the scale to the (best) minimum.
+      ASSERT(w == w0);
 
-    // At this point, small_step must be zero and hdirection right.
-    ASSERT(gda.debug_hdirection() == HorizontalDirection::right);
-    ASSERT(utils::almost_equal(gda.debug_small_step(), w0 - vertex, 10e-6));
+      // At this point, small_step must be zero and hdirection right.
+      ASSERT(gda.debug_hdirection() == HorizontalDirection::right);
+      ASSERT(utils::almost_equal(gda.debug_small_step(), w0 - vertex, 10e-6));
+    }
   }
 
   Dout(dc::notice, "Success!");

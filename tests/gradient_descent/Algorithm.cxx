@@ -47,8 +47,11 @@ bool Algorithm::operator()(Weight& w, double Lw, double dLdw)
     return true;        // w was successfully updated by handle_local_extreme.
   }
 
+  // last_region_ will be changed by the call to update_approximation, which (might) call find_extreme.
+  bool const first_call = last_region_ == Region::unknown;
+
   // Create/update a parabolic approximation from this and the previous sample (or a line if this is the first sample).
-  update_approximation(current_is_replacement);
+  double new_w = update_approximation(current_is_replacement);
   Approximation& approximation(*approximation_ptr_);
 
   if (approximation.number_of_relevant_samples() == 1)
@@ -60,7 +63,7 @@ bool Algorithm::operator()(Weight& w, double Lw, double dLdw)
 
   //FIXME: this test is only here in order to abort when the code for this case wasn't implemented yet.
   // In the end handle_approximation should return void.
-  if (!handle_approximation(w))
+  if (!handle_approximation(w, first_call, new_w))
     return false;
 
   if (state_ == IterationState::local_extreme)
@@ -158,8 +161,8 @@ bool Algorithm::handle_local_extreme(Weight& w)
   if (best_minimum_ != extremes_.end())
     new_extreme->explored(opposite(hdirection_));
 
-  // Update small_step_ (scale() returns an absolute value).
-  small_step_ = approximation_ptr_->scale().avg();
+  // Update small_step_ (value() returns an absolute value).
+  small_step_ = approximation_ptr_->scale().value();
   Dout(dc::notice, "small_step_ set to " << small_step_);
 
   // Keep track of the best minimum so far; or abort if this minimum isn't better then one found before.
@@ -189,24 +192,20 @@ bool Algorithm::handle_local_extreme(Weight& w)
   Dout(dc::notice, "next_extreme_type_ is toggled to " << next_extreme_type_ << ".");
 
   Sample const& w2 = history_.current();
-  double w2_1 = w2.w();
+  double const w2_1 = w2.w();
 
   // Find all samples that are within the scale range of the current approximation.
   Scale const& scale = approximation_ptr_->scale();
+  double const scale_value = scale.value();
+  // Should only store positive values. Zero would mean "not initialized", aka - !is_valid().
+  ASSERT(scale_value > 0.0);
   double const critical_point_w = scale.critical_point_w();
   std::array<int, 5> usable_samples;
   int number_of_usable_samples = 0;
   for (int i = 1; i < history_.relevant_samples() && number_of_usable_samples < usable_samples.size(); ++i)
   {
     Sample const& sample = history_.prev(i);
-    double offset = sample.w() - critical_point_w;
-    int side = (offset > 0.0) ? Scale::right : Scale::left;
-    if (!scale.has_sample(side))
-      continue;
-    double dist = std::abs(offset);
-    double scale_value = scale.value(side);
-    // Should only store positive values. Zero would mean "not initialized", aka - !has_sample(side).
-    ASSERT(scale_value > 0.0);
+    double dist = std::abs(sample.w() - critical_point_w);
     // If the current sample is too close or too far away from the critical point, then skip this sample.
     if (dist < 0.001 * scale_value || dist > 1.1 * scale_value)
       continue;
@@ -352,31 +351,18 @@ bool Algorithm::handle_local_extreme(Weight& w)
         "Best zero was " << zeroes[best_zero] << " with A(" << zeroes[best_zero] << ") = " <<
         fourth_degree_approximation(zeroes[best_zero]) <<
         " (the other has value " << fourth_degree_approximation(zeroes[1 - best_zero]) << ")");
-    if (hdirection_ == HorizontalDirection::undecided)
-      hdirection_ = (w < w2_1) ? HorizontalDirection::left : HorizontalDirection::right;
   }
   else if (hdirection_ == HorizontalDirection::undecided)
   {
-    // The "scale" of the (current) parabolic approximation is set to 'edge sample' minus x-coordinate of the vertex (v_x),
-    // where 'edge sample' is the sample that is "part of" the parabolic approximation that is the furthest away
-    // from the vertex. "Part of" here means that it deviates vertically less than 10% of the vertical distance to
-    // the vertex. In that sense we can consider that we "came from" the direction of that edge sample.
-    // For example, if the edge sample had x-coordinate w = w_E and we came from the right (w_E > v_x) then
-    // scale = w_E - v_x > 0. Subtracting a positive scale thus means we continue in the direction towards to the left.
-    // If w_E is on the left of the vertex then scale is negative and subtracting it causes us to continue to the right.
-    //
     // Keep going in the same direction.
-    w += new_extreme->approximation().scale().step(w, hrestriction_);
+    w += new_extreme->approximation().scale().step(hrestriction_);
     expected_Lw_ = new_extreme->approximation().at(w);
     Debug(set_algorithm_str(w, "past extreme (no zeroes)"));
-
-    // Note that w was already set to the v_x before, but the test below still works
-    // because |v_x - history_.current().w()| was determined to be less than 1% of approximation.parabola_scale().
   }
   else
   {
     // Keep going in the same hdirection.
-    w += new_extreme->approximation().scale().step(w, hdirection_);
+    w += new_extreme->approximation().scale().step(hdirection_);
     expected_Lw_ = new_extreme->approximation().at(w);
     Debug(set_algorithm_str(w, "keep going (no zeroes)"));
   }
@@ -385,7 +371,7 @@ bool Algorithm::handle_local_extreme(Weight& w)
   {
 
     // Now that the decision on which hdirection_ we explore is taken, store that decision.
-    hdirection_ = w - history_.current().w() < 0.0 ? HorizontalDirection::left : HorizontalDirection::right;
+    hdirection_ = w < history_.current().w() ? HorizontalDirection::left : HorizontalDirection::right;
     Dout(dc::notice, "Initialized hdirection_ to " << hdirection_ << ".");
   }
 
@@ -397,24 +383,46 @@ bool Algorithm::handle_local_extreme(Weight& w)
   return true;
 }
 
-void Algorithm::update_approximation(bool current_is_replacement)
+double Algorithm::update_approximation(bool current_is_replacement)
 {
   DoutEntering(dc::notice, "Algorithm::update_approximation(" << std::boolalpha << current_is_replacement << ")");
 
   using namespace gradient_descent;
 
+  bool const first_call = last_region_ == Region::unknown;
+  double new_w{};
+
   math::QuadraticPolynomial old_parabola = approximation_ptr_->parabola();
   ScaleUpdate result;
   if (approximation_ptr_ == &current_approximation_)
-    result = approximation_ptr_->add(&history_.current(), current_is_replacement);
+  {
+    approximation_ptr_->add(&history_.current(), current_is_replacement, next_extreme_type_);
+
+    if (first_call && approximation_ptr_->number_of_relevant_samples() != 1)
+    {
+      ASSERT(next_extreme_type_ == ExtremeType::unknown);
+      new_w = approximation_ptr_->find_extreme(last_region_, next_extreme_type_, hrestriction_);
+      // This is expected to be set the first time.
+      ASSERT(last_region_ != Region::unknown);
+    }
+
+    result = approximation_ptr_->update_scale(current_is_replacement, next_extreme_type_);
+  }
   else
-    result = approximation_ptr_->update_scale(history_.current());
+  {
+    result = approximation_ptr_->update_local_extreme_scale(history_.current());
+
+    // If this fails then apparently we even have to call find_extreme in this case!
+    ASSERT(!(first_call && approximation_ptr_->number_of_relevant_samples() != 1));
+  }
 
   if (result == ScaleUpdate::disconnected)
   {
 #if 0
-    reset_history();                                                    // This sets approximation_ptr_ = &current_approximation_.
-    result = approximation_ptr_->add(&history_.current(), false);       // Therefore call add().
+    reset_history();    // This sets approximation_ptr_ = &current_approximation_, therefore call add().
+    // This will not call Scale::update because we're adding the first sample (after the above reset).
+    result = approximation_ptr_->add(&history_.current(), false, next_extreme_type_);
+    ...
 #endif
   }
 #ifdef CWDEBUG
@@ -434,6 +442,8 @@ void Algorithm::update_approximation(bool current_is_replacement)
   if (approximation_ptr_->number_of_relevant_samples() == 2)
     event_server_.trigger(AlgorithmEventType{cubic_polynomial_event, approximation_ptr_->cubic()});
 #endif
+
+  return new_w;
 }
 
 void Algorithm::handle_single_sample(Weight& w)
@@ -510,21 +520,19 @@ void Algorithm::handle_single_sample(Weight& w)
   state_ = IterationState::done;
 }
 
-bool Algorithm::handle_approximation(Weight& w)
+bool Algorithm::handle_approximation(Weight& w, bool first_call, double new_w)
 {
-  DoutEntering(dc::notice, "Algorithm::handle_approximation(" << w << ")");
+  DoutEntering(dc::notice, "Algorithm::handle_approximation(" << w << ", " << std::boolalpha << first_call <<
+      ", " << new_w << ")");
 
   Approximation& approximation(*approximation_ptr_);
-  double new_w;
 
   // Is this the first call, or after a reset?
-  if (last_region_ == Region::unknown)
+  if (first_call)       // In this case find_extreme already called and new_w has already been initialized.
   {
-    ASSERT(next_extreme_type_ == ExtremeType::unknown);
-    new_w = approximation_ptr_->find_extreme(last_region_, next_extreme_type_, hrestriction_);
-    // This is expected to be set the first time.
-    ASSERT(last_region_ != Region::unknown);
-
+    // FIXME: remove this, it is possible that the new w value is actually zero!
+    // See comment above.
+    ASSERT(new_w != 0.0);
     // Sort the two samples that we have, so that the one in the direction of hdirection_ appears "last".
     if (last_region_ != Region::inbetween)
       approximation_ptr_->set_current_index(last_region_);
@@ -534,7 +542,7 @@ bool Algorithm::handle_approximation(Weight& w)
       // The third degree polynomial fit does not have local extremes.
       // In this case last_region_ is set to point in the direction where we descent.
       ASSERT(last_region_ != Region::inbetween);
-      w += static_cast<int>(last_region_) * approximation_ptr_->scale().step(w, last_region_);
+      w += static_cast<int>(last_region_) * approximation_ptr_->scale().step(last_region_);
       Debug(set_algorithm_str(w, "downhill"));
       next_extreme_type_ = ExtremeType::minimum;
       Dout(dc::notice, "Setting next_extreme_type_ to " << next_extreme_type_ << " because we're going downhill.");
@@ -546,6 +554,10 @@ bool Algorithm::handle_approximation(Weight& w)
       Debug(set_algorithm_str(new_w, "find_extreme jump"));
       state_ = IterationState::extreme_jump;
     }
+
+    // The extreme type set by find_extreme (or the minimum because we're going "downhill") must correspond with the scale type!
+    ASSERT((next_extreme_type_ == ExtremeType::minimum) == (approximation.scale().type() == CriticalPointType::minimum) &&
+           (next_extreme_type_ == ExtremeType::maximum) == (approximation.scale().type() == CriticalPointType::maximum));
   }
   else if (last_region_ != Region::inbetween)
   {
@@ -577,10 +589,10 @@ bool Algorithm::handle_approximation(Weight& w)
       (history_.total_number_of_samples() - 1) << " and " << history_.total_number_of_samples() << " (to be added))");
 
   // Did we reach the (local) extreme?
-  if (abs_step < (next_extreme_type_ == ExtremeType::minimum ? 0.01 : 0.05) * approximation.scale().avg())
+  if (abs_step < (next_extreme_type_ == ExtremeType::minimum ? 0.01 : 0.05) * approximation.scale().value())
   {
     Dout(dc::notice, (next_extreme_type_ == ExtremeType::minimum ? "Minimum" : "Maximum") << " reached: " << abs_step <<
-        " < " << (next_extreme_type_ == ExtremeType::minimum ? 0.01 : 0.05) << " * " << approximation.scale().avg() <<
+        " < " << (next_extreme_type_ == ExtremeType::minimum ? 0.01 : 0.05) << " * " << approximation.scale().value() <<
         "[" << approximation.scale() << "]");
     // If we do not already have at least three relevant samples, then delay reporting a local extreme
     // until after adding one more sample, making sure it won't replace a previous one.
@@ -631,7 +643,7 @@ bool Algorithm::handle_abort_hdirection(Weight& w)
   Dout(dc::notice, "Restored w to best minimum at " << w);
 
   // Restore small_step_ to what is was.
-  small_step_ = best_minimum_->approximation().scale().avg();
+  small_step_ = best_minimum_->approximation().scale().value();
 
   // Do a step with a size equal to the scale in this minimum: we expect it not to drastically change before that point.
   w += static_cast<int>(hdirection_) * small_step_;

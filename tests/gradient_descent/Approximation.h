@@ -24,12 +24,14 @@ class Approximation
   Scale scale_;                                         // A measure of over what interval the approximation was tested to be correct.
   bool is_extreme_{false};                              // Set when this is a LocalExtreme::approximation_.
   math::CubicPolynomial cubic_;                         // A cubic approximation, only valid if number_of_relevant_samples_ == 2.
+  bool already_had_two_relevant_samples_{false};        // Used as carry between add and update_scale.
 
  public:
   // Called with the latest samples that are expected to match this parabola (or that
   // should construct the parabola when there are not already two relevant samples stored).
-  ScaleUpdate add(Sample const* current, bool current_is_replacement);
-  ScaleUpdate update_scale(Sample const& current);
+  void add(Sample const* current, bool current_is_replacement, ExtremeType next_extreme_type);
+  ScaleUpdate update_scale(bool current_is_replacement, ExtremeType next_extreme_type);
+  ScaleUpdate update_local_extreme_scale(Sample const& current);
 
   Weight find_extreme(Region& region, ExtremeType& extreme_type, Restriction restriction) const;
   void set_current_index(Region region);
@@ -88,7 +90,9 @@ class Approximation
     {
       os << ", cubic:" << cubic_;
       std::array<double, 2> extremes;
+      Debug(libcw_do.off());
       int n = cubic_.get_extremes(extremes);
+      Debug(libcw_do.on());
       if (n == 0)
         os << " [no extremes]";
       else if (n == 1)
