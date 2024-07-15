@@ -110,7 +110,7 @@ class Algorithm
   {
     // Only call this function when success() returns true.
     ASSERT(success());
-    return best_minimum_->vertex_sample();
+    return best_minimum_->cp_sample();
   }
 
 #ifdef CWDEBUG

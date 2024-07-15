@@ -75,6 +75,7 @@ class HorizontalDirectionToInt {
   HorizontalDirectionToInt(Restriction restriction) : val_(static_cast<int>(restriction)) { }
   HorizontalDirectionToInt(Region region) : val_(static_cast<int>(region)) { ASSERT(val_ == -1 || val_ == 1); }
   operator int() const { return val_; }
+  int as_index() const { return (val_ + 1) >> 1; }
 };
 
 std::string to_string(HorizontalDirection hdirection);

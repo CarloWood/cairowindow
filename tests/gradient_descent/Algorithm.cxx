@@ -172,10 +172,18 @@ bool Algorithm::handle_local_extreme(Weight& w)
 
   if (state_ == IterationState::local_extreme)
   {
+    auto prev_extreme = last_extreme_;
+
     // This means that history_.current() is a local extreme. Store it as an extreme.
     last_extreme_ =
       extremes_.emplace(hdirection_ == HorizontalDirection::right ? extremes_.end() : extremes_.begin(),
           history_.current(), std::move(*approximation_ptr_), energy_.energy());
+
+    if (prev_extreme != extremes_.end())
+    {
+      // Add pointer back to the previous local extreme.
+      last_extreme_->set_neighbor(opposite(hdirection_), &*prev_extreme);
+    }
 
 #ifdef CWDEBUG
     event_server_.trigger(AlgorithmEventType{scale_erase_event});
@@ -198,16 +206,16 @@ bool Algorithm::handle_local_extreme(Weight& w)
       Dout(dc::notice, "new extreme = " << *last_extreme_);
       // We were looking for a minimum.
       ASSERT(last_extreme_->is_minimum());
-      if (best_minimum_ == extremes_.end() || best_minimum_->vertex_sample().Lw() > last_extreme_->vertex_sample().Lw())
+      if (best_minimum_ == extremes_.end() || best_minimum_->cp_sample().Lw() > last_extreme_->cp_sample().Lw())
       {
         best_minimum_ = last_extreme_;
-        Dout(dc::notice, "best_minimum_ set to " << best_minimum_->vertex_sample() <<
+        Dout(dc::notice, "best_minimum_ set to " << best_minimum_->cp_sample() <<
             " and parabolic approximation: " << best_minimum_->approximation());
       }
       if (last_extreme_ != best_minimum_)
       {
         // The new minimum isn't better than what we found already. Stop going into this direction.
-        Dout(dc::notice, "The new minimum (at " << last_extreme_->vertex_sample() << ") isn't better than what we found already. "
+        Dout(dc::notice, "The new minimum (at " << last_extreme_->cp_sample() << ") isn't better than what we found already. "
             "Stop going into the direction " << hdirection_ << ".");
         state_ = IterationState::abort_hdirection;
         return false;
@@ -517,6 +525,7 @@ double Algorithm::update_approximation(bool current_is_replacement)
     approximation_ptr_->add(nearest_sample, false, next_extreme_type_);
     approximation_ptr_->add(&history_.current(), false, next_extreme_type_);
     result = approximation_ptr_->update_scale(false, next_extreme_type_);
+    ASSERT(result == ScaleUpdate::initialized);
   }
 #ifdef CWDEBUG
   else
@@ -726,7 +735,7 @@ bool Algorithm::handle_abort_hdirection(Weight& w)
   }
 
   // Jump back to the best minimum and continue in the opposite hdirection.
-  Dout(dc::notice, "Aborting exploring " << hdirection_ << " of the minimum at " << best_minimum_->vertex_sample() << ".");
+  Dout(dc::notice, "Aborting exploring " << hdirection_ << " of the minimum at " << best_minimum_->cp_sample() << ".");
 
   // Was this minimum already explored in both directions?
   if (best_minimum_->done())
@@ -743,25 +752,42 @@ bool Algorithm::handle_abort_hdirection(Weight& w)
   hrestriction_ = static_cast<Restriction>(hdirection_);
   Dout(dc::notice, "hrestriction_ is now " << hrestriction_);
 
-  // Restore the current sample and scale to the values belonging to this minimum.
-  w = best_minimum_->vertex_sample().w();
+  // See if we already know a neighbor (maximum) into this direction.
+  // This can be the case if we didn't explore into hdirection yet from that maximum.
+  LocalExtreme* neighbor = best_minimum_->neighbor(hrestriction_);
+  LocalExtreme* new_local_extreme = neighbor ? neighbor : &*best_minimum_;
+
+  // Restore the current sample and scale to the values belonging to this new local extreme.
+  w = new_local_extreme->cp_sample().w();
   Dout(dc::notice, "Restored w to best minimum at " << w);
 
   // Restore small_step_ to what is was.
-  small_step_ = best_minimum_->approximation().scale().value();
+  small_step_ = new_local_extreme->approximation().scale().value();
 
   // Do a step with a size equal to the scale in this minimum: we expect it not to drastically change before that point.
   w += static_cast<int>(hdirection_) * small_step_;
-  expected_Lw_ = best_minimum_->approximation().at(w);
-  Debug(set_algorithm_str(w, "best minimum, opposite direction"));
+  expected_Lw_ = new_local_extreme->approximation().at(w);
+
+  if (neighbor)
+  {
+    Debug(set_algorithm_str(w, "neighbor of best minimum, opposite direction"));
+    next_extreme_type_ = ExtremeType::minimum;
+    neighbor->explored(hdirection_);
+  }
+  else
+  {
+    Debug(set_algorithm_str(w, "best minimum, opposite direction"));
+    next_extreme_type_ = ExtremeType::maximum;
+  }
+
   best_minimum_->explored(hdirection_);
-  next_extreme_type_ = ExtremeType::maximum;
   Dout(dc::notice, "next_extreme_type_ is set to " << next_extreme_type_ << " because we just jumped to a minimum.");
 
   // Restore the energy to what it was when this minimum was stored.
-  energy_.set(best_minimum_->energy(), best_minimum_->vertex_sample().Lw());
+  energy_.set(new_local_extreme->energy(), new_local_extreme->cp_sample().Lw());
 
   reset_history();
+  approximation_ptr_->add(&new_local_extreme->cp_sample(), false, next_extreme_type_);
 
   // w was successfully updated.
   Dout(dc::notice, "Returning: " << std::setprecision(std::numeric_limits<double>::max_digits10) << w);
