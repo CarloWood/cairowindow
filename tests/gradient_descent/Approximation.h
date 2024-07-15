@@ -25,8 +25,21 @@ class Approximation
   bool is_extreme_{false};                              // Set when this is a LocalExtreme::approximation_.
   math::CubicPolynomial cubic_;                         // A cubic approximation, only valid if number_of_relevant_samples_ == 2.
   bool already_had_two_relevant_samples_{false};        // Used as carry between add and update_scale.
+#ifdef CWDEBUG
+  bool moved_{false};
+#endif
 
  public:
+  Approximation() = default;
+  Approximation(Approximation&& orig) : number_of_relevant_samples_{orig.number_of_relevant_samples_}, current_index_{orig.current_index_},
+    relevant_samples_{orig.relevant_samples_}, parabola_{std::move(orig.parabola_)}, scale_{std::move(orig.scale_)},
+    is_extreme_{orig.is_extreme_}, cubic_{std::move(orig.cubic_)}, already_had_two_relevant_samples_{orig.already_had_two_relevant_samples_}
+  {
+#ifdef CWDEBUG
+    orig.moved_ = true;
+#endif
+  }
+
   // Called with the latest samples that are expected to match this parabola (or that
   // should construct the parabola when there are not already two relevant samples stored).
   void add(Sample const* current, bool current_is_replacement, ExtremeType next_extreme_type);
@@ -55,11 +68,12 @@ class Approximation
     number_of_relevant_samples_ = 0;
     current_index_ = 1;
     scale_.reset();
+    Debug(moved_ = false);
   }
 
   int number_of_relevant_samples() const { return number_of_relevant_samples_; }
   math::QuadraticPolynomial const& parabola() const { return parabola_; }
-  Scale const& scale() const { return scale_; }
+  Scale const& scale() const { ASSERT(!moved_); return scale_; }
   bool is_extreme() const { return is_extreme_; }
   double at(double w) const { return cubic_(w); }
   math::CubicPolynomial const& cubic() const { return cubic_; }
@@ -82,6 +96,12 @@ class Approximation
 
   void print_on(std::ostream& os) const
   {
+    if (moved_)
+    {
+      os << "<MOVED Approximation>";
+      return;
+    }
+
     os << "{parabola:" << parabola_;
     if (number_of_relevant_samples_ > 1)
       os << " [v_x = " << parabola_.vertex_x() << "]";

@@ -19,7 +19,7 @@ class History
   utils::Array<Sample, size, HistoryIndex> samples_;
   HistoryIndex current_;                // Index of the last Sample that was added.
   HistoryIndex prev_;                   // Index to the Sample that was added before current.
-  int old_samples_ = 0;                 // Samples elsewhere that should not be used for fitting a polynomial.
+  int old_samples_ = 0;                 // Samples elsewhere that should not be used for fitting a cubic.
   int total_number_of_samples_ = 0;     // The number of samples taken (not necessarily equal to the number that is (still) in the history).
 
 #ifdef CWDEBUG
@@ -83,6 +83,7 @@ class History
 
   void reset()
   {
+    DoutEntering(dc::notice, "History::reset()");
     old_samples_ = total_number_of_samples_;
   }
 

@@ -23,6 +23,8 @@ std::string to_string(Region region)
     case Region::left: return "left";
     case Region::inbetween: return "inbetween";
     case Region::right: return "right";
+    case Region::unknown: return "unknown";
+    case Region::invalid: return "invalid";
   }
   AI_NEVER_REACHED
 }

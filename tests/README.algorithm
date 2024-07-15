@@ -33,7 +33,7 @@ the current position is changed to the position of the best minimum
 found so far and then the other side is explored, if that wasn't already
 done.
 
-For efficiency and in order to be know when to terminate, extremes are
+For efficiency and in order to know when to terminate, extremes are
 marked as "being explored to the left/right"; the algorithm terminates
 when - after jumping back to the best minimum - that minimum is already
 marked as being explored both, to the left and to the right.
@@ -51,7 +51,7 @@ An extreme is marked as explored in a given direction if:
 
 If an extreme that is found is "immediately" next to the previous one
 or not depends on whether or not a "reset" found place in between.
-An algorithm is used to make a it very unlikely that we jump over an
+An algorithm is used to make it very unlikely that we jump over an
 existing extreme (if that happens, then it is lost; we don't know it
 exists). Normally we alternating find minima and maxima that are
 all adjacent. However, if we find a sample that tells us that we
@@ -85,8 +85,7 @@ its value is -1, and if it means 'right' its value is 1.
 
 The Algorithm has a member small_step_ that is initialized
 with the value zero, meaning it is unknown. If possible it
-is set to the absolute value of the "scale" of the current
-parabolic approximation.                                        //FIXME: parabolic? or another approximation as well?
+is set to the value of the "scale" of the current approximation.
 As long as small_step_ is unknown, we fall back to a constant
 given by learning_rate_.
 

@@ -7,7 +7,7 @@
 #include "utils/debug_ostream_operators.h"
 #include "utils/almost_equal.h"
 #include "utils/macros.h"
-#include <boost/container/devector.hpp>
+#include "utils/DEVector.h"
 #include <type_traits>
 #include <utility>
 #include "debug.h"
@@ -101,10 +101,13 @@ class Scale
   CriticalPointType type_{CriticalPointType::none};     // Whether distances are measured relative to the minimum, maximum or
                                         // the inflection point (if the cubic has no extremes).
   double critical_point_w_;             // Cached value of the x-coordinate of the critical point.
-  boost::container::devector<SampleData> samples_;      // All samples previously passed to add.
+  utils::DEVector<SampleData> samples_; // All samples previously passed to add.
 
  public:
   Scale() = default;
+  Scale(Scale const&) = delete;
+  Scale(Scale&& orig) : valid_{orig.valid_}, value_{orig.value_}, left_edge_{orig.left_edge_}, right_edge_{orig.right_edge_},
+    cubic_{std::move(orig.cubic_)}, type_{orig.type_}, critical_point_w_{orig.critical_point_w_}, samples_{std::move(orig.samples_)} { }
 
  public:
   Scale& operator=(Scale const& scale) = delete;
@@ -121,9 +124,28 @@ class Scale
   double left_edge_sample_Lw() const { ASSERT(valid_); return samples_[left_edge_].sample->Lw(); }
   double right_edge_sample_Lw() const { ASSERT(valid_); return samples_[right_edge_].sample->Lw(); }
 
+  Sample const* get_nearest_sample(Sample const* current) const
+  {
+    // This function is called on a Scale that is part of a LocalExtreme. It can not be empty.
+    ASSERT(samples_.size() > 2);        // Two samples to make a cubic, plus the disconnected current sample.
+    auto iter = std::find_if(samples_.begin(), samples_.end(), [current](SampleData const& data){ return data.sample == current; });
+    // current was already added to this Scale.
+    ASSERT(iter != samples_.end());
+
+    utils::DEVector<SampleData>::const_iterator right_iter = iter + 1;
+    if (iter == samples_.begin())
+      return right_iter->sample;
+    utils::DEVector<SampleData>::const_iterator left_iter = iter - 1;
+    if (right_iter == samples_.end())
+      return left_iter->sample;
+
+    return ((iter->w - left_iter->w < right_iter->w - iter->w) ? left_iter : right_iter)->sample;
+  }
+
   // Return a directional scale: minus the scale if direction is `left` and plus the scale if direction is `right`.
   double step(HorizontalDirectionToInt direction) const
   {
+    DoutEntering(dc::notice, "Scale::step(" << direction << ")");
     ASSERT(valid_);
     int dir = direction;
     if (dir == 0)
@@ -134,6 +156,8 @@ class Scale
       int far_edge = std::abs(samples_.front().w - critical_point_w_) > std::abs(samples_.back().w - critical_point_w_) ?
         0 : samples_.size() - 1;
       dir = std::copysign(1.0, critical_point_w_ - samples_[far_edge].w);
+      Dout(dc::notice, "Setting direction to " << dir << " as the furthest sample from " << critical_point_w_ <<
+          " is " << *samples_[far_edge].sample);
     }
     return dir * value_;
   }
@@ -141,6 +165,7 @@ class Scale
   void reset()
   {
     DoutEntering(dc::notice, "Scale::reset()");
+    samples_.clear();
     type_ = CriticalPointType::none;
     valid_ = false;
   }
@@ -169,34 +194,83 @@ class Scale
 
   double calculate_value() const
   {
+    // The (value of the) scale is losely defined at the distance over which w can change
+    // without L(w) starting to deviate significantly from the (current) approximation / cubic.
+    //
+    // Moreover, because of the nature of the algorithm, which approaches a critical point
+    // from one side, we don't want the scale to be much different if one side hasn't be
+    // explored yet.
+    //
+    // For example,
+    //
+    //      cp          : critical point
+    //     l|           : left-most sample
+    //     ↓↓
+    //     .-. r        : right-most sample
+    //    /   \↓
+    //   /     \
+    //
+    // If l is very close to cp, or non-existant, which gives a distance of 0, then
+    // we just want scale to be `r - cp`; assuming that there is no reason that
+    // L(w) would look different on the left side of cp if we never explored that side.
+    //
+    // But if `cp - l` is significant, although less than `r - cp` the chance increases
+    // that we DID explore the left side and there is too much deviation left of l.
+    //
+    // Therefore, we return a "weighted" average between `cp - l` and `r - cp`, weighted
+    // with their own value: (w1*A + w2*B) / (w1 + w2), where we'll use w1=A and w2=B.
+    // In this case A = cp - l and B = r - cp. Hence,
+    //
+    //   value = (A^2 + B^2) / (A + B)
+    //
+    // Where A and B are positive of l and r are on opposite sides of cp.
+    //
+    // However, if l and r are on the same side of cp, for example,
+    //
+    //      cp          : critical point
+    //     r|           : right-most sample (now B is negative)
+    //     ↓↓
+    //   l .-.          : left-most sample
+    //   ↓/   \
+    //   /     \
+    //
+    // Then we want the returned scale to be `r - l`.
+
     DoutEntering(dc::notice, "Scale::calculate_value()");
     Dout(dc::notice, "left_edge_w = " << samples_[left_edge_].w << "; right_edge_w = " << samples_[right_edge_].w <<
         "; critical_point_w = " << critical_point_w_);
     // critical_point_w_ should be initialized.
     ASSERT(type_ != CriticalPointType::none);
-    double L = samples_[left_edge_].w - critical_point_w_;
-    double R = samples_[right_edge_].w - critical_point_w_;
-    Dout(dc::notice, "L = " << L << "; R = " << R);
-    double sign_L = std::copysign(1.0, L);
-    double sign_R = std::copysign(1.0, R);
+    double A = critical_point_w_ - samples_[left_edge_].w;
+    double B = samples_[right_edge_].w - critical_point_w_;
+    Dout(dc::notice, "A = " << A << "; B = " << B);
+    double sign_A = std::copysign(1.0, A);
+    double sign_B = std::copysign(1.0, B);
     double result;
-    if (sign_L == sign_R)
-      result = sign_L == -1.0 ? -L : R;
+    if (sign_A != sign_B)                       // Are l and r on the same side of cp?
+    {
+      // The negative one is closer to cp and therefore has the smaller absolute value.
+      ASSERT(A + B > 0.0);
+      result = samples_[right_edge_].w - samples_[left_edge_].w;        // A + B, but without the risk of floating-point round off error.
+    }
     else
     {
-      // L must be left of R.
-      ASSERT(sign_L == -1.0 && sign_R == 1.0);
-      result = (L * L + R * R) / (-L + R);
+      // l must be left of r, therefore if l and r are on opposite sides of cp then both A and B must b positive.
+      ASSERT(sign_A == 1.0 && sign_B == 1.0);
+      result = (A * A + B * B) / (A + B);
     }
     Dout(dc::notice, "Returning value: " << result);
     return result;
   }
 
-  ScaleUpdate update(ExtremeType next_extreme_type, std::array<Sample const*, 2> const& relevant_samples, int current_index,
-      math::CubicPolynomial const& new_cubic, bool saw_more_than_two_relevant_samples)
+  ScaleUpdate update(ExtremeType extreme_type, std::array<Sample const*, 2> const& relevant_samples, int current_index,
+      math::CubicPolynomial const& new_cubic, bool saw_more_than_two_relevant_samples, bool local_extreme)
   {
+    // Note: if this an update of an already found local extreme, then `extreme_type` is
+    // the current extreme type (that matches the already found local extreme).
+    // Otherwise it is the next_extreme_type: the extreme type that we're looking for.
 #ifdef CWDEBUG
-    DoutEntering(dc::notice|continued_cf, "Scale::update(" << next_extreme_type << ", {");
+    DoutEntering(dc::notice|continued_cf, "Scale::update(" << extreme_type << ", {");
     char const* separator = "";
     for (int i = 0; i < relevant_samples.size(); ++i)
     {
@@ -205,7 +279,8 @@ class Scale
         Dout(dc::continued, " (current)");
       separator = ", ";
     }
-    Dout(dc::finish, "}, " << current_index << ", " << new_cubic << ", " << std::boolalpha << saw_more_than_two_relevant_samples << ")");
+    Dout(dc::finish, "}, " << current_index << ", " << new_cubic << ", " << std::boolalpha << saw_more_than_two_relevant_samples <<
+        ", " << local_extreme << ")");
 #endif
 
     // If we didn't have more than two relevant samples, then these two are the first two and this scale should still be invalid.
@@ -215,30 +290,45 @@ class Scale
 
     if (type_ == CriticalPointType::none)
     {
-      // next_extreme_type was set by find_extreme.
-      if (next_extreme_type == ExtremeType::unknown)
+      // In the case of a local_extreme, type_ is type of that extreme, so it can't be 'none'.
+      ASSERT(!local_extreme);
+      // extreme_type was set by find_extreme.
+      if (extreme_type == ExtremeType::unknown)
+      {
         //FIXME: is this correct?
         type_ = CriticalPointType::inflection_point;
+      }
       else
-        type_ = next_extreme_type == ExtremeType::minimum ? CriticalPointType::minimum : CriticalPointType::maximum;
+        type_ = extreme_type == ExtremeType::minimum ? CriticalPointType::minimum : CriticalPointType::maximum;
     }
     else
     {
       // The extreme types of this Scale and whatever Algorithm is looking for should correspond.
       // Can this fail because one is unknown, or inflection_point? If so, what to do here?
-      ASSERT((next_extreme_type == ExtremeType::minimum) == (type_ == CriticalPointType::minimum));
-      ASSERT((next_extreme_type == ExtremeType::maximum) == (type_ == CriticalPointType::maximum));
+      ASSERT((extreme_type == ExtremeType::minimum) == (type_ == CriticalPointType::minimum));
+      ASSERT((extreme_type == ExtremeType::maximum) == (type_ == CriticalPointType::maximum));
     }
 
-    // Get the w coordinate of the critical point of the new cubic.
-    std::array<double, 2> extremes;
-    int number_of_extremes = new_cubic.get_extremes(extremes, false);
-    cubic_ = new_cubic;
-    double new_cp_w = (number_of_extremes == 2 && type_ == CriticalPointType::maximum) ? extremes[1] : extremes[0];
-    Dout(dc::notice, "new_cp_w = " << new_cp_w);
+    [[maybe_unused]] double new_cp_w;
+    if (!local_extreme)
+    {
+      // Get the w coordinate of the critical point of the new cubic.
+      std::array<double, 2> extremes;
+      int number_of_extremes = new_cubic.get_extremes(extremes, false);
+      cubic_ = new_cubic;
+      new_cp_w = (number_of_extremes == 2 && type_ == CriticalPointType::maximum) ? extremes[1] : extremes[0];
+      Dout(dc::notice, "new_cp_w = " << new_cp_w);
+    }
+    else
+    {
+      // The approximation wasn't changed if this is a local extreme.
+      ASSERT(cubic_ == new_cubic);
+    }
 
     if (!saw_more_than_two_relevant_samples)
     {
+      // If we already found a local extreme then we had already two samples before this one.
+      ASSERT(!local_extreme);
       critical_point_w_ = new_cp_w;
       // This should be the first time this function is called.
       ASSERT(samples_.empty());
@@ -254,42 +344,127 @@ class Scale
       return ScaleUpdate::initialized;
     }
 
-    // Find the first element in samples_ that has a w value that is larger than current and then
-    // insert current in front of that.
     Sample const* current = relevant_samples[current_index];
     double w = current->w();
-    double prev_w = relevant_samples[1 - current_index]->w();
-    bool towards_cp = std::abs(w - critical_point_w_) < std::abs(prev_w - critical_point_w_);
-    critical_point_w_ = new_cp_w;
+#ifdef CWDEBUG
+    {
+      double prev_w = relevant_samples[1 - current_index]->w();
+      bool towards_cp = std::abs(w - critical_point_w_) < std::abs(prev_w - critical_point_w_);
+      // Shouldn't we always move towards the critical point when this isn't a found local extreme,
+      // and away from it when it is already found?
+      ASSERT(towards_cp != local_extreme);
+    }
+#endif
+
     bool at_back = samples_.back().w <= w;
     bool at_front = samples_.front().w > w;
-    ++right_edge_;
+    std::size_t index;          // The index into samples_ of current, after current was inserted.
     if (at_front)
+    {
+      index = 0;
       samples_.emplace_front(w, current);
+      ++left_edge_;
+      ++right_edge_;
+    }
     else if (at_back)
+    {
+      index = samples_.size();
       samples_.emplace_back(w, current);
+    }
     else
     {
+      // Support w = 2, and we have samples [-1, 1, 3, 4]
+      // then iter will point to                    ^--   the first element larger than w.
+      // We then insert before that element to get:
+      // [-1, 1, 2, 3, 4] - keeping the vector sorted.
+      //   0  1  2 <-- index.
       auto iter = std::find_if(samples_.begin(), samples_.end(), [w](SampleData const& element) { return element.w > w; });
+      index = std::distance(samples_.begin(), iter);
       samples_.emplace(iter, w, current);
-    }
-    value_ = calculate_value();
-
-    return towards_cp ? ScaleUpdate::towards_cp : ScaleUpdate::away_from_cp;
 #if 0
-    //...
-
-    // Get the w coordinate of the critical point of the old cubic.
-    number_of_extremes = cubic_.get_extremes(extremes, false);
-    double const old_cp_w = (number_of_extremes == 2 && type_ == CriticalPointType::maximum) ? extremes[1] : extremes[0];
-    Dout(dc::notice, "old_cp_w = " << old_cp_w);
-
-    // If the new sample is closer to the (old) vertex then we just jumped to it.
-    // Update the scale accordingly.
-    if (std::abs(relevant_samples[current_index]->w() - old_cp_w) < std::abs(relevant_samples[prev_sample_index]->w() - old_cp_w))
-    {
-      Dout(dc::notice, "The new w (" << *relevant_samples[current_index] << ") is closest to the old vertex (at " << old_cp_w << ")");
+      if (index <= left_edge_)
+      {
+        ++left_edge_;
+        ++right_edge_;
+      }
+      else if (index <= right_edge_)
+        ++right_edge_;
+#else
+      // We shouldn't try a sample in the same interval that was already tested in this case.
+      // Aka, if this is a local extreme then at_back or at_front is expected to be true.
+      ASSERT(!local_extreme);
 #endif
+    }
+
+    double cp_Lw = cubic_(critical_point_w_);
+    if (local_extreme)
+    {
+      double Lw = current->Lw();
+      double Aw = cubic_(w);
+      if (std::abs(Aw - Lw) > 0.1 * std::abs(Lw - cp_Lw))
+      {
+        Dout(dc::notice, "Ignoring new sample " << *current << " because cubic_(" << w << ") = " <<
+            Aw << " and |" << Aw << " - " << Lw << "| = " << (std::abs(Aw - Lw)) << " > 0.1 * |" << Lw << " - " << cp_Lw << "| = " <<
+            0.1 * std::abs(Lw - cp_Lw));
+        return ScaleUpdate::disconnected;
+      }
+      else
+      {
+        // It seems expected that current is right next to another matching, already added, sample, no?
+        ASSERT(index == left_edge_ - 1 || index == right_edge_ + 1);
+        if (index < left_edge_)
+          --left_edge_;
+        else
+          ++right_edge_;
+      }
+    }
+    else
+    {
+      // Find the first element in samples_ that has a w value that is larger than current and then insert current in front of that.
+      critical_point_w_ = new_cp_w;
+      // The current approximation cubic is based on current.
+      ASSERT(utils::almost_equal(cubic_(w), current->Lw(), 10e-6));
+      left_edge_ = right_edge_ = index;
+      while (left_edge_ > 0)
+      {
+        --left_edge_;
+        double Lw = samples_[left_edge_].sample->Lw();
+        double Aw = cubic_(samples_[left_edge_].w);
+        if (std::abs(Aw - Lw) > 0.1 * std::abs(Lw - cp_Lw))
+        {
+          Dout(dc::notice, "Ignoring sample " << *samples_[left_edge_].sample << " because cubic_(" << samples_[left_edge_].w << ") = " <<
+              Aw << " and |" << Aw << " - " << Lw << "| = " << (std::abs(Aw - Lw)) << " > 0.1 * |" << Lw << " - " << cp_Lw << "| = " <<
+              0.1 * std::abs(Lw - cp_Lw));
+          ++left_edge_;
+          break;
+        }
+        Dout(dc::notice, "Including sample " << *samples_[left_edge_].sample << " because cubic_(" << samples_[left_edge_].w << ") = " <<
+            Aw << " and |" << Aw << " - " << Lw << "| = " << (std::abs(Aw - Lw)) << " <= 0.1 * |" << Lw << " - " << cp_Lw << "| = " <<
+            0.1 * std::abs(Lw - cp_Lw));
+      }
+      Dout(dc::notice, "left_edge_ is now " << left_edge_);
+      while (right_edge_ + 1 < samples_.size())
+      {
+        ++right_edge_;
+        double Lw = samples_[right_edge_].sample->Lw();
+        double Aw = cubic_(samples_[right_edge_].w);
+        if (std::abs(Aw - Lw) > 0.1 * std::abs(Lw - cp_Lw))
+        {
+          Dout(dc::notice, "Ignoring sample " << *samples_[right_edge_].sample << " because cubic_(" << samples_[right_edge_].w << ") = " <<
+              Aw << " and |" << Aw << " - " << Lw << "| = " << (std::abs(Aw - Lw)) << " > 0.1 * |" << Lw << " - " << cp_Lw << "| = " <<
+              0.1 * std::abs(Lw - cp_Lw));
+          --right_edge_;
+          break;
+        }
+        Dout(dc::notice, "Including sample " << *samples_[right_edge_].sample << " because cubic_(" << samples_[right_edge_].w << ") = " <<
+            Aw << " and |" << Aw << " - " << Lw << "| = " << (std::abs(Aw - Lw)) << " <= 0.1 * |" << Lw << " - " << cp_Lw << "| = " <<
+            0.1 * std::abs(Lw - cp_Lw));
+      }
+      Dout(dc::notice, "right_edge_ is now " << right_edge_);
+    }
+
+    value_ = calculate_value();
+    return local_extreme ? ScaleUpdate::away_from_cp : ScaleUpdate::towards_cp;
   }
 
 #ifdef CWDEBUG

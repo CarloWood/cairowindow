@@ -49,7 +49,8 @@ enum class Region
   left = -1,
   inbetween = 0,
   right = 1,
-  unknown = 2
+  unknown = 2,
+  invalid = 3
 };
 
 inline bool operator==(Region region, Restriction restriction)
@@ -58,7 +59,7 @@ inline bool operator==(Region region, Restriction restriction)
   //     -1             | T  | T  | F  |
   //      0             | T  | T  | T  |
   //      1             | F  | T  | T  |
-  return static_cast<int>(region) * static_cast<int>(restriction) == -1;
+  return static_cast<int>(region) * static_cast<int>(restriction) != -1;
 }
 
 inline HorizontalDirection opposite(HorizontalDirection hdirection)

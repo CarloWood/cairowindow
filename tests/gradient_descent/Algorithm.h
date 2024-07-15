@@ -14,6 +14,11 @@ namespace gradient_descent {
 
 class Algorithm
 {
+#if CW_DEBUG
+ public:
+  static constexpr double uninitialized_magic = 12345678.876543211;
+#endif
+
  private:
   double learning_rate_;        // In unit_of(w)^2 / unit_of(L).
   double small_step_{};         // This will replace learning_rate_ as soon as we have an idea of the scale of changes.
@@ -31,8 +36,8 @@ class Algorithm
   KineticEnergy energy_;
   double expected_Lw_;                  // Whenever w is changed, this is set to what Lw value the approximation is expecting there.
 
-  // hdirection_ is set when we find a local minimum and decide to explore left or right of that.
-  // The result is that we'll rather go away from the vertex of the current matching parabolic approximation
+  // hdirection_ is set when we find a local extreme and decide to explore left or right of that.
+  // The result is that we'll rather go away from the critical point of the current matching cubic approximation
   // then towards it, if that doesn't match the current hdirection_.
   HorizontalDirection hdirection_;
   ExtremeType next_extreme_type_;       // The extreme type (minimum or maximum) that we're looking for (next).
@@ -55,8 +60,14 @@ class Algorithm
 //    gamma_based,              // Internal state used to signify that w was already updated and a call to handle_parabolic_approximation
 //                              // is not longer desired.
     local_extreme,              // After adding the new sample, handle the fact that we found an extreme.
+    need_extra_sample,          // Intermediate state before fitting a fourth degree approximation after finding a local extreme.
     abort_hdirection            // Stop going in the current hdirection_.
   };
+
+#ifdef CWDEBUG
+  static std::string to_string(IterationState state);
+  friend std::ostream& operator<<(std::ostream& os, IterationState state);
+#endif
 
   IterationState state_{IterationState::done};
 

@@ -95,6 +95,14 @@ class CubicPolynomial
   double operator[](int i) const { ASSERT(0 <= i && i < coefficients_.size()); return coefficients_[i]; }
   double& operator[](int i) { ASSERT(0 <= i && i < coefficients_.size()); return coefficients_[i]; }
 
+#if CW_DEBUG
+  // Return true if one was assigned from the other.
+  friend bool operator==(CubicPolynomial const& lhs, CubicPolynomial const& rhs)
+  {
+    return lhs.coefficients_ == rhs.coefficients_;
+  }
+#endif
+
 #ifdef CWDEBUG
   void print_on(std::ostream& os) const
   {

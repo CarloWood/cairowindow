@@ -23,8 +23,14 @@ class Sample : protected Weight
  public:
   // Create an uninitialized Sample.
   Sample() = default;
-
   Sample(Weight w, double Lw, double dLdw) : Weight(w), Lw_(Lw), dLdw_(dLdw) { }
+
+  // Disallow copying because we use pointers to Sample's all the time.
+  // If you know what you're doing, you can use this to make a copy however.
+  Sample(Sample&& orig) : Weight(orig), Lw_(orig.Lw_), dLdw_(orig.dLdw_) { }
+
+  // Same for assignment.
+  Sample& operator=(Sample&& orig) { w_ = orig.w_; Lw_ = orig.Lw_; dLdw_ = orig.dLdw_; return *this; }
 
   double w() const
   {

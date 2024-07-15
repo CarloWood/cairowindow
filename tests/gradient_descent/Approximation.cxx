@@ -1,5 +1,8 @@
 #include "sys.h"
 #include "Approximation.h"
+#if CW_DEBUG
+#include "Algorithm.h"          // Algorithm::uninitialized_magic
+#endif
 
 namespace gradient_descent {
 
@@ -101,7 +104,7 @@ ScaleUpdate Approximation::update_scale(bool current_is_replacement, ExtremeType
   // Don't update the scale when current was just replaced. In that case we return first_sample,
   // but the caller passed current_is_replacement, so it should know to ignore that.
   if (!current_is_replacement && number_of_relevant_samples_ == 2)
-    result = scale_.update(next_extreme_type, relevant_samples_, current_index_, cubic_, already_had_two_relevant_samples_);
+    result = scale_.update(next_extreme_type, relevant_samples_, current_index_, cubic_, already_had_two_relevant_samples_, false);
 
   Dout(dc::finish, result);
   return result;
@@ -118,8 +121,8 @@ ScaleUpdate Approximation::update_local_extreme_scale(Sample const& current)
   CriticalPointType critical_point_type = scale_.type();
   // Since this Approximation is part of a LocalExtreme, it was used to find an extreme and thus must refer to either a minimum or maximum.
   ASSERT(critical_point_type == CriticalPointType::minimum || critical_point_type == CriticalPointType::maximum);
-  ExtremeType next_extreme_type = critical_point_type == CriticalPointType::minimum ? ExtremeType::minimum : ExtremeType::maximum;
-  ScaleUpdate result = scale_.update(next_extreme_type, samples, 0, cubic_, true);
+  ExtremeType current_extreme_type = critical_point_type == CriticalPointType::minimum ? ExtremeType::minimum : ExtremeType::maximum;
+  ScaleUpdate result = scale_.update(current_extreme_type, samples, 0, cubic_, true, true);
 
   Dout(dc::finish, result);
   return result;
@@ -174,14 +177,18 @@ Weight Approximation::find_extreme(Region& region_out, ExtremeType& extreme_type
   // If D is equal to zero we have a point where the derivative is zero, but that isn't a maximum or minimum.
   if (D <= 0.0)
   {
-    extreme_type = ExtremeType::unknown;
-    Dout(dc::notice, "Returning " << extreme_type << " because D <= 0.");
+    Dout(dc::notice, "Returning ExtremeType::unknown because D <= 0.");
     if (restriction == Restriction::none)
     {
       region_out = (d > 0.0 || (d == 0.0 && b > 0.0)) ? Region::left : Region::right;
       Dout(dc::notice, "Returning " << region_out << " because that is downhill.");
     }
-    return {};
+    extreme_type = ExtremeType::unknown;
+#if CW_DEBUG
+    return Algorithm::uninitialized_magic;
+#else
+    return {};  // Not used.
+#endif
   }
 
   double sqrt_D = std::sqrt(D);
@@ -196,24 +203,32 @@ Weight Approximation::find_extreme(Region& region_out, ExtremeType& extreme_type
     Dout(dc::notice, "cubic_ = " << cubic_ << "; using parabolic approximation.");
     // The cubic is, almost, a parabola. Use our parabolic approximation.
     double vertex = parabola_.vertex_x();
-    ExtremeType extreme_type_out = parabola_has_maximum() ? ExtremeType::maximum : ExtremeType::minimum;
-    if (extreme_type != ExtremeType::unknown && extreme_type_out != extreme_type)
+    ExtremeType const extreme_type_found = parabola_has_maximum() ? ExtremeType::maximum : ExtremeType::minimum;
+    if (extreme_type != ExtremeType::unknown && extreme_type_found != extreme_type)
     {
+      Dout(dc::notice, "Returning ExtremeType::unknown because the cubic looks like a parabola with an extreme type (" <<
+          extreme_type_found << ") different from what is requested (" << extreme_type << ").");
       extreme_type = ExtremeType::unknown;
-      Dout(dc::notice, "Returning " << extreme_type <<
-          " because the cubic looks like a parabola with an extreme type different from what is requested (" << extreme_type << ").");
-      return {};
+#if CW_DEBUG
+      return Algorithm::uninitialized_magic;
+#else
+      return {};  // Not used.
+#endif
     }
     region_out =
       (vertex < wl) ? Region::left : (vertex > wr) ? Region::right : Region::inbetween;
     if (region_out != restriction)
     {
+      Dout(dc::notice, "Returning ExtremeType::unknown because the cubic looks like a parabola with an extreme type (" <<
+          extreme_type_found << " on the other side as what is requested (" << restriction << ").");
       extreme_type = ExtremeType::unknown;
-      Dout(dc::notice, "Returning " << extreme_type <<
-          " because the cubic looks like a parabola with an extreme type on the other side as what is requested (" << restriction << ").");
-      return {};
+#if CW_DEBUG
+      return Algorithm::uninitialized_magic;
+#else
+      return {};  // Not used.
+#endif
     }
-    extreme_type = extreme_type_out;
+    extreme_type = extreme_type_found;
     Dout(dc::notice, "Returning " << region_out << " because the cubic looks like a parabola and that's where the vertex is.");
     return vertex;
   }
@@ -237,9 +252,13 @@ Weight Approximation::find_extreme(Region& region_out, ExtremeType& extreme_type
       double rel_pos_max = static_cast<int>(restriction) * (maximum - border);
       if (rel_pos_min < 0.0 && rel_pos_max < 0.0)
       {
+        Dout(dc::notice, "Returning ExtremeType::unknown because both extremes are on the wrong side of border (" << border << ").");
         extreme_type = ExtremeType::unknown;
-        Dout(dc::notice, "Returning " << extreme_type << " because both extremes are on the wrong side of border (" << border << ").");
-        return {};
+#if CW_DEBUG
+        return Algorithm::uninitialized_magic;
+#else
+        return {};  // Not used.
+#endif
       }
       if (rel_pos_min < 0.0)
       {
@@ -266,9 +285,13 @@ Weight Approximation::find_extreme(Region& region_out, ExtremeType& extreme_type
   if ((restriction == Restriction::left && result >= wr) ||
       (restriction == Restriction::right && result <= wl))
   {
+    Dout(dc::notice, "Returning ExtremeType::unknown because the requested extreme is on the wrong side.");
     extreme_type = ExtremeType::unknown;
-    Dout(dc::notice, "Returning " << extreme_type << " because the requested extreme is on the wrong side.");
-    return {};
+#if CW_DEBUG
+    return Algorithm::uninitialized_magic;
+#else
+    return {};  // Not used.
+#endif
   }
 
   //         left: the requested extreme is left of `left`.
@@ -282,6 +305,8 @@ Weight Approximation::find_extreme(Region& region_out, ExtremeType& extreme_type
     region_out = Region::inbetween;
   Dout(dc::notice, "Returning " << region_out << " because this is where the required extreme (" << extreme_type << ") is.");
 
+  // An extreme_type of unknown means that the returned value should be ignored.
+  ASSERT(extreme_type != ExtremeType::unknown);
   return result;
 }
 
