@@ -45,7 +45,7 @@ class FunctionBase
 class Function : FunctionBase
 {
  public:
-  static constexpr double w_0 = 1.0;
+  static constexpr double w_0 = -2.0;
   static constexpr double w_min = -3.0;
   static constexpr double w_max = 7.2;
 
@@ -85,7 +85,7 @@ class Function : FunctionBase
     return derivative_.evaluate();
   }
 };
-#elif 1
+#elif 0
 class Function : FunctionBase
 {
  public:
@@ -160,7 +160,7 @@ class Function : FunctionBase
 //static
 symbolic::Constant const Function::tp = symbolic::Constant::realize(55);
 
-#elif 1
+#elif 0
 class Function : FunctionBase
 {
  public:
@@ -345,7 +345,7 @@ int main()
     auto plot_curve = plot.create_bezier_fitter(second_layer, curve_line_style, std::move(L_fitter));
 #endif
 
-    gradient_descent::Algorithm gda(0.1, L_max);
+    gradient_descent::Algorithm gda(0.007557, L_max);
 
 #if USE_SLIDERS
     // amplitude = 0.012027, level = 1878.38, phase = 1.91892

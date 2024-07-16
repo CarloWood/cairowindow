@@ -25,6 +25,8 @@ bool Algorithm::operator()(Weight& w, double Lw, double dLdw)
   // if there is only a single relevant sample in the history.
   ASSERT(!current_is_replacement || history_.relevant_samples() > 1);
 
+  bool have_zero = false;
+  Weight w_zero(w);
   if (state_ == IterationState::need_extra_sample)
   {
     // We're handling a local extreme, even though this is an extra sample.
@@ -35,11 +37,7 @@ bool Algorithm::operator()(Weight& w, double Lw, double dLdw)
     ASSERT(!current_is_replacement);
 
     // Fit a fourth degree polynomial through the local extreme and return the next point to jump to based on that.
-    Weight w_zero = w;
-    (void)handle_local_extreme(w_zero);         // Will always return true.
-    //FIXME: use w_zero
-
-    state_ = IterationState::done;
+    have_zero = handle_local_extreme(w_zero);   // Only returns false if the fitted fourth degree polynomial does not have usable extremes.
 
     // Fall-through to update_approximation; which we want to call update_local_extreme_scale.
     ASSERT(approximation_ptr_ != &current_approximation_);
@@ -86,18 +84,26 @@ bool Algorithm::operator()(Weight& w, double Lw, double dLdw)
   }
   // Here we have two samples, therefore now new_w must be valid if first_call is true.
 
-  //FIXME: this test is only here in order to abort when the code for this case wasn't implemented yet.
-  // In the end handle_approximation should return void.
-  if (!handle_approximation(w, first_call, new_w))
-    return false;
-
-  if (state_ == IterationState::local_extreme)
+  if (have_zero && !approximation_ptr_->scale().negligible(w - w_zero))
   {
-    // Do not return a value that would replace the current sample.
-    if (approximation_ptr_->scale().negligible(w - history_.current().w()))
+    w = w_zero;
+    state_ = IterationState::done;
+  }
+  else
+  {
+    //FIXME: this test is only here in order to abort when the code for this case wasn't implemented yet.
+    // In the end handle_approximation should return void.
+    if (!handle_approximation(w, first_call, new_w))
+      return false;
+
+    if (state_ == IterationState::local_extreme)
     {
-      if (!handle_local_extreme(w))
-        return handle_abort_hdirection(w);
+      // Do not return a value that would replace the current sample.
+      if (approximation_ptr_->scale().negligible(w - history_.current().w()))
+      {
+        if (!handle_local_extreme(w))
+          return handle_abort_hdirection(w);
+      }
     }
   }
 
@@ -273,22 +279,20 @@ bool Algorithm::handle_local_extreme(Weight& w)
     // the extra sample plus the other (non-extreme) sample from the approximation.
     ASSERT(state_ != IterationState::need_extra_sample);
 
+    // Request an extra sample on the other side of the critical point then that we already have.
+    HorizontalDirection direction = last_extreme_->approximation().prev_to_current();
+    w += last_extreme_->approximation().scale().step(direction);
+    expected_Lw_ = last_extreme_->approximation().at(w);
+    Debug(set_algorithm_str(w, "extra sample (keep going (no zeroes))"));
+
     if (hdirection_ == HorizontalDirection::undecided)
     {
-      // What to do in this case? (does this ever happen?)
-      ASSERT(hrestriction_ != Restriction::none);
-      // Keep going in the same direction.
-      w += last_extreme_->approximation().scale().step(hrestriction_);
-      expected_Lw_ = last_extreme_->approximation().at(w);
-      Debug(set_algorithm_str(w, "extra sample (past extreme (no zeroes))"));
+      hdirection_ = direction;
+      Dout(dc::notice, "Initialized hdirection_ to " << hdirection_ << ".");
     }
-    else
-    {
-      // Keep going in the same hdirection.
-      w += last_extreme_->approximation().scale().step(hdirection_);
-      expected_Lw_ = last_extreme_->approximation().at(w);
-      Debug(set_algorithm_str(w, "extra sample (keep going (no zeroes))"));
-    }
+
+    // Can this ever fail?
+    ASSERT(hdirection_ == direction);
 
     // The extra sample should be added on the other side of the critical point.
     ASSERT(number_of_usable_samples == 0 || (w > critical_point_w) != (usable_samples[0]->w() > critical_point_w));
@@ -422,12 +426,29 @@ bool Algorithm::handle_local_extreme(Weight& w)
   if (number_of_zeroes > 0)
   {
     std::array<double, 2> expected_Lw;
-    for (int zero = 0; zero < number_of_zeroes; ++zero)
-      expected_Lw[zero] = fourth_degree_approximation(zeroes[zero]);
-    int best_zero = (number_of_zeroes == 2 &&
-        (hdirection_ == HorizontalDirection::right ||
-         (hdirection_ == HorizontalDirection::undecided &&
-          expected_Lw[1] < expected_Lw[0]))) ? 1 : 0;
+    int best_zero = 0;
+    if (number_of_zeroes == 2)
+    {
+      if (w2_1 > zeroes[0] == w2_1 > zeroes[1])
+      {
+        // If both zeroes are on the same side of the found local extreme, pick the nearest one.
+        best_zero = std::abs(w2_1 - zeroes[0]) < std::abs(w2_1 - zeroes[1]) ? 0 : 1;
+      }
+      else
+      {
+        for (int zero = 0; zero < number_of_zeroes; ++zero)
+          expected_Lw[zero] = fourth_degree_approximation(zeroes[zero]);
+        int best_zero = (number_of_zeroes == 2 &&
+            (hdirection_ == HorizontalDirection::right ||
+             (hdirection_ == HorizontalDirection::undecided &&
+              expected_Lw[1] < expected_Lw[0]))) ? 1 : 0;
+      }
+    }
+    else
+    {
+      // There is only one usable zero.
+      expected_Lw[0] = fourth_degree_approximation(zeroes[0]);
+    }
     w = zeroes[best_zero];
     expected_Lw_ = expected_Lw[best_zero];
     Debug(set_algorithm_str(w, "best zero"));
@@ -439,10 +460,20 @@ bool Algorithm::handle_local_extreme(Weight& w)
   }
   else if (state_ == IterationState::need_extra_sample)
   {
-    //FIXME: if this assert fires, then how to determine what to set hdirection_ to?
+    // This should never assert: we already set hdirection_ when requesting the extra sample.
     ASSERT(hdirection_ != HorizontalDirection::undecided);
-    // This won't be returned; but is needed to set the correct hdirection_ below, if that is still undecided.
-//    w = history_.prev(1).w();
+
+    // The next call to find_extreme will use this local extreme and the w value that we return
+    // as the two samples for the cubic. Then we are only interested in extremes in the same
+    // direction as hdirection_.
+    hrestriction_ = static_cast<Restriction>(hdirection_);
+    Dout(dc::notice, "hrestriction_ is now " << hrestriction_);
+
+    // Remember in which direction we travelled from this extreme.
+    last_extreme_->explored(hdirection_);
+
+    // Returning false here signals that we did not find any zero.
+    return false;
   }
   else if (hdirection_ == HorizontalDirection::undecided)
   {

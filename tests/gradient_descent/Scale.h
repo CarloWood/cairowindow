@@ -349,7 +349,11 @@ class Scale
 #ifdef CWDEBUG
     {
       double prev_w = relevant_samples[1 - current_index]->w();
-      bool towards_cp = std::abs(w - critical_point_w_) < std::abs(prev_w - critical_point_w_);
+      bool towards_cp;
+      if (local_extreme)
+        towards_cp = std::abs(w - critical_point_w_) < std::abs(prev_w - critical_point_w_);
+      else
+        towards_cp = std::abs(w - new_cp_w) < std::abs(prev_w - new_cp_w);
       // Shouldn't we always move towards the critical point when this isn't a found local extreme,
       // and away from it when it is already found?
       ASSERT(towards_cp != local_extreme);

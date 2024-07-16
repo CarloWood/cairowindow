@@ -77,8 +77,7 @@ class Approximation
   bool is_extreme() const { return is_extreme_; }
   double at(double w) const { return cubic_(w); }
   math::CubicPolynomial const& cubic() const { return cubic_; }
-  //FIXME: remove this
-  math::CubicPolynomial& cubic() { return cubic_; }
+  HorizontalDirection prev_to_current() const { return prev().w() > current().w() ? HorizontalDirection::left : HorizontalDirection::right; }
 
   int current_index() const
   {
