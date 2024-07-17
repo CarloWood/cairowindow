@@ -26,10 +26,10 @@ enum class ScaleUpdate
 {
   first_sample,                 // When there is only one sample.
   initialized,                  // When there are two samples for the first time.
-  towards_cp,                   // When we already had two samples (and therefore an "old" parabolic approximation)
-                                // and the new sample is at the vertex of the new parabola.
-  away_from_cp,                 // When we already had two samples (and therefore an "old" parabolic approximation)
-                                // and the new sample was moved away from the vertex.
+  towards_cp,                   // When we already had two samples (and therefore an "old" cubic approximation)
+                                // and the new sample is at the critical point of the new cubic.
+  away_from_cp,                 // When we already had two samples (and therefore an "old" cubic approximation)
+                                // and the new sample was moved away from the critical point.
   disconnected                  // Same as away_from_vertex but the scale wasn't increased.
 };
 

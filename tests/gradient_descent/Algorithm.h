@@ -56,9 +56,6 @@ class Algorithm
     done,                       // w was already updated.
     check_energy,               // After adding the new sample, abort if the required energy is too large.
     extreme_jump,               // Only add the new sample to the history if we didn't overshoot another extreme dramatically.
-//    clamped,                  // Attemped to jump to a vertex, but against hdirection, passed a previous sample. Use that last sample instead.
-//    gamma_based,              // Internal state used to signify that w was already updated and a call to handle_parabolic_approximation
-//                              // is not longer desired.
     local_extreme,              // After adding the new sample, handle the fact that we found an extreme.
     need_extra_sample,          // Intermediate state before fitting a fourth degree approximation after finding a local extreme.
     abort_hdirection            // Stop going in the current hdirection_.
@@ -86,6 +83,7 @@ class Algorithm
     hrestriction_(Restriction::none),
     last_region_(Region::unknown)
   {
+    DoutEntering(dc::notice, "Algorithm::Algorithm(" << learning_rate << ", " << L_max << ")");
   }
 
   bool operator()(Weight& w, double Lw, double dLdw);

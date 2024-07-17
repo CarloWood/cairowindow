@@ -19,21 +19,23 @@ struct Function
 {
   symbolic::Function const& function_;
   symbolic::Symbol const& symbol_;
+  std::vector<symbolic::Function const*> deps_;
 
-  Function(symbolic::Function const& function, symbolic::Symbol const& symbol) :
-    function_(function), symbol_(symbol) { }
+  template<typename... Deps>
+  Function(symbolic::Symbol const& symbol, symbolic::Function const& function, Deps&&... deps) :
+    function_(function), symbol_(symbol), deps_({&deps...}) { }
 
   double operator()(double x) const
   {
     symbol_ = x;
-    function_.reset_evaluation();
+    reset_evaluation();
     return function_.evaluate();
   }
 
   double derivative(double x) const
   {
     symbol_ = x;
-    function_.reset_evaluation();
+    reset_evaluation();
     return function_.derivative(symbol_).evaluate();
   }
 
@@ -44,9 +46,16 @@ struct Function
 
  private:
   friend struct EnableDrawing;
-  symbolic::Function const* operator->() const
+  void reset_evaluation() const
   {
-    return &function_;
+    function_.reset_evaluation();
+    for (symbolic::Function const* dep : deps_)
+      dep->reset_evaluation();
+  }
+
+  std::string to_string() const
+  {
+    return function_.to_string();
   }
 };
 
@@ -98,7 +107,7 @@ class EnableDrawing
 };
 
 EnableDrawing::EnableDrawing(gradient_descent::Algorithm* algorithm, Function const& L, double w_min, double w_max) :
-  window("Gradient descent of " + L->to_string(), 2*600, 2*450),
+  window("Gradient descent of " + L.to_string(), 2*600, 2*450),
   background_layer(window.create_background_layer<Layer>(color::white COMMA_DEBUG_ONLY("background_layer"))),
   second_layer(window.create_layer<Layer>({} COMMA_DEBUG_ONLY("second_layer"))),
   event_loop([&](){
@@ -109,7 +118,7 @@ EnableDrawing::EnableDrawing(gradient_descent::Algorithm* algorithm, Function co
     }),
   L_min_max(get_L_min_max(L, w_min, w_max)),
   plot(window.geometry(), { .grid = {.color = color::orange} },
-        L->to_string(), {}, "w", {}, "L", {}),
+        L.to_string(), {}, "w", {}, "L", {}),
   algorithm_event(plot, second_layer),
   algorithm_event_handle(algorithm->event_server().request(algorithm_event, &AlgorithmEvent::callback))
 {
@@ -120,7 +129,7 @@ EnableDrawing::EnableDrawing(gradient_descent::Algorithm* algorithm, Function co
   plot_curve.solve([&L](double w) -> Point { return {w, L(w)}; }, plot.viewport());
   plot.add_bezier_fitter(second_layer, curve_line_style, plot_curve);
 
-  L->reset_evaluation();
+  L.reset_evaluation();
 }
 
 EnableDrawing::~EnableDrawing()
@@ -365,9 +374,9 @@ int main()
     symbolic::Constant const& c4 = symbolic::Constant::realize(1, 10000000);
     symbolic::Function const& sL = symbolic::Function::realize("L", (2 - 5 * x + (x^2)) - c4 * (x^4));
     constexpr double cp_w = 2.5001550590858685;
-    Function L(sL, x);
+    Function L(x, sL);
 
-    gda.enable_drawing(L, -20.0, 20.0);
+    //gda.enable_drawing(L, -20.0, 20.0);
 
     Dout(dc::notice, "L = " << fulldef << L);
 
@@ -375,8 +384,8 @@ int main()
     gda(w, L(w), dLdw);                                 // 10.3750010985 [one sample, gradient descent]
     ASSERT(gda.algorithm_str() == "one sample, gradient descent");
     ASSERT(utils::almost_equal(static_cast<double>(w), w0 - learning_rate * dLdw, 1e-15));
-    gda(w, L(w), L.derivative(w));                      // 2.5000015493572083 [jump to vertex]
-    ASSERT(gda.algorithm_str() == "jump to vertex");
+    gda(w, L(w), L.derivative(w));                      // 2.50015505909 [find_extreme jump]
+    ASSERT(gda.algorithm_str() == "initial find_extreme jump");
     // This is the vertex.
     double const vertex = w;
     ASSERT(utils::almost_equal(vertex, cp_w, 1e-15));
@@ -400,15 +409,198 @@ int main()
     if (!aborted)
     {
       ASSERT(gda.algorithm_str() == "best minimum, opposite direction");
-      // Since this is the sample that it the furthest away from the vertex and clearly
-      // part of the parabolic approximation, that is where we expect to end up again
+      // Since this is the sample that it the furthest away from the critical point and clearly
+      // part of the cubic approximation, that is where we expect to end up again
       // when adding the scale to the (best) minimum.
-      ASSERT(w == w0);
+      ASSERT(utils::almost_equal(static_cast<double>(w), static_cast<double>(w0), 10e-9));
 
       // At this point, small_step must be zero and hdirection right.
       ASSERT(gda.debug_hdirection() == HorizontalDirection::right);
       ASSERT(utils::almost_equal(gda.debug_small_step(), w0 - vertex, 10e-6));
     }
+  }
+
+  //==========================================================================
+  Dout(dc::notice, "*** TEST: connected parabolas ***");
+  {
+    constexpr double w0 = 12.0;
+    constexpr double learning_rate = 0.1;
+    constexpr double L_max = 180.456;
+
+    Algorithm gda(learning_rate, L_max);
+    Weight w = w0;
+
+    symbolic::Constant const& two = symbolic::Constant::realize(2);
+    symbolic::Symbol const& x = symbolic::Symbol::realize("w");
+    symbolic::Function const& sigmoid = symbolic::Function::realize("sigmoid", exp(5 * x) / (1 + exp(5 * x)));
+    symbolic::Constant const& a1 = symbolic::Constant::realize(15);
+    symbolic::Constant const& b1 = symbolic::Constant::realize(31, 10);
+    symbolic::Constant const& c1 = symbolic::Constant::realize(2, 10);
+    double vertex1 = (-b1 / (two * c1)).evaluate();
+    symbolic::Constant const& a2 = symbolic::Constant::realize(146, 10);
+    symbolic::Constant const& b2 = symbolic::Constant::realize(315, 100);
+    symbolic::Constant const& c2 = symbolic::Constant::realize(451, 1000);
+    double vertex2 = (-b2 / (two * c2)).evaluate();
+    symbolic::Function const& sL = symbolic::Function::realize("L",
+        a1 + (a2 - a1) * sigmoid + (b1 + (b2 - b1) * sigmoid) * x + (c1 + (c2 - c1) * sigmoid) * (x^2));
+    Function L(x, sL, sigmoid);
+
+//    gda.enable_drawing(L, -35.0, 20.0);
+
+    double dLdw = L.derivative(w);
+    gda(w, L(w), dLdw);
+    ASSERT(gda.algorithm_str() == "one sample, gradient descent");
+    ASSERT(utils::almost_equal(static_cast<double>(w), w0 - learning_rate * dLdw, 1e-15));
+    gda(w, L(w), L.derivative(w));                      // -3.49223946783 [find_extreme jump]
+    ASSERT(gda.algorithm_str() == "initial find_extreme jump");
+    ASSERT(utils::almost_equal(static_cast<double>(w), vertex2, 1e-9));
+    gda(w, L(w), L.derivative(w));                      // -7.65806821678 [find_extreme jump]
+    ASSERT(gda.algorithm_str() == "find_extreme jump");
+    ASSERT(utils::almost_equal(static_cast<double>(w), -7.65806821678, 1e-9));
+    gda(w, L(w), L.derivative(w));                      // -7.75000002673 [find_extreme jump]
+    ASSERT(gda.algorithm_str() == "find_extreme jump");
+    ASSERT(utils::almost_equal(static_cast<double>(w), vertex1, 1e-8));
+    gda(w, L(w), L.derivative(w));                      // -12.0077604322 [past extreme (no zeroes)]
+    ASSERT(gda.algorithm_str() == "past extreme (no zeroes)");
+    ASSERT(utils::almost_equal(static_cast<double>(w), -12.0077604322, 1e-8));
+    gda(w, L(w), L.derivative(w));                      // -16.2655209145 [keep going]
+    ASSERT(gda.algorithm_str() == "keep going");
+    ASSERT(utils::almost_equal(static_cast<double>(w), -16.2655209145, 1e-8));
+    gda(w, L(w), L.derivative(w));                      // -23.3617883757 [keep going]
+    ASSERT(gda.algorithm_str() == "keep going");
+    ASSERT(utils::almost_equal(static_cast<double>(w), -23.3617883757, 1e-8));
+    gda(w, L(w), L.derivative(w));                      // -36.5405707968 [keep going]
+    ASSERT(gda.algorithm_str() == "keep going");
+    ASSERT(utils::almost_equal(static_cast<double>(w), -36.5405707968, 1e-8));
+    gda(w, L(w), L.derivative(w));                      // 5.42878239433 [best minimum, opposite direction]
+    ASSERT(gda.algorithm_str() == "best minimum, opposite direction");
+    ASSERT(utils::almost_equal(static_cast<double>(w), 5.42878239433, 1e-8));
+    gda(w, L(w), L.derivative(w));                      // 18.6075648154 [keep going]
+    ASSERT(gda.algorithm_str() == "keep going");
+    ASSERT(utils::almost_equal(static_cast<double>(w), 18.6075648154, 1e-8));
+    bool finished = !gda(w, L(w), L.derivative(w));
+    ASSERT(finished);
+    ASSERT(gda.success());
+    Sample const& result = gda.minimum();
+    ASSERT(utils::almost_equal(result.w(), vertex1, 1e-8));
+  }
+
+  //==========================================================================
+  Dout(dc::notice, "*** TEST: parabola plus sin ***");
+  {
+    constexpr double w0 = 12.0;
+    constexpr double learning_rate = 0.1;
+    constexpr double L_max = 0;
+
+    Algorithm gda(learning_rate, L_max);
+    Weight w = w0;
+
+    symbolic::Symbol const& x = symbolic::Symbol::realize("w");
+    symbolic::Constant const& a = symbolic::Constant::realize(15);
+    symbolic::Constant const& b = symbolic::Constant::realize(3, 10);
+    symbolic::Constant const& c = symbolic::Constant::realize(494, 10);
+    symbolic::Constant const& d = symbolic::Constant::realize(1, 10000);
+    symbolic::Function const& sL = symbolic::Function::realize("L", sin(a + b * x) + d * ((x - c)^2));
+    Function L(x, sL);
+
+//    gda.enable_drawing(L, -20.0, 80.0);
+
+    gda(w, L(w), L.derivative(w));                      // 11.9716773342 [one sample, gradient descent]
+    ASSERT(gda.algorithm_str() == "one sample, gradient descent");
+    ASSERT(utils::almost_equal(static_cast<double>(w), 11.9716773342, 1e-8));
+    gda(w, L(w), L.derivative(w));                      // 8.12417155659 [initial find_extreme jump]
+    ASSERT(gda.algorithm_str() == "initial find_extreme jump");
+    ASSERT(utils::almost_equal(static_cast<double>(w), 8.12417155659, 1e-8));
+    gda(w, L(w), L.derivative(w));                      // 7.73480664643 [find_extreme jump]
+    ASSERT(gda.algorithm_str() == "find_extreme jump");
+    ASSERT(utils::almost_equal(static_cast<double>(w), 7.73480664643, 1e-8));
+    gda(w, L(w), L.derivative(w));                      // 7.68864155893 [find_extreme jump]
+    ASSERT(gda.algorithm_str() == "find_extreme jump");
+    ASSERT(utils::almost_equal(static_cast<double>(w), 7.68864155893, 1e-8));
+    gda(w, L(w), L.derivative(w));                      // 15.7327395835 [best zero]
+    ASSERT(gda.algorithm_str() == "best zero");
+    ASSERT(utils::almost_equal(static_cast<double>(w), 15.7327395835, 1e-8));
+    gda(w, L(w), L.derivative(w));                      // 17.667571638 [find_extreme jump]
+    ASSERT(gda.algorithm_str() == "find_extreme jump");
+    ASSERT(utils::almost_equal(static_cast<double>(w), 17.667571638, 1e-8));
+    gda(w, L(w), L.derivative(w));                      // 17.9850634722 [find_extreme jump]
+    ASSERT(gda.algorithm_str() == "find_extreme jump");
+    ASSERT(utils::almost_equal(static_cast<double>(w), 17.9850634722, 1e-8));
+    gda(w, L(w), L.derivative(w));                      // 17.9980425743 [find_extreme jump]
+    ASSERT(gda.algorithm_str() == "find_extreme jump");
+    ASSERT(utils::almost_equal(static_cast<double>(w), 17.9980425743, 1e-8));
+    gda(w, L(w), L.derivative(w));                      // 26.2673319378 [best zero]
+    ASSERT(gda.algorithm_str() == "best zero");
+    ASSERT(utils::almost_equal(static_cast<double>(w), 26.2673319378, 1e-8));
+    gda(w, L(w), L.derivative(w));                      // 29.0145983989 [find_extreme jump]
+    ASSERT(gda.algorithm_str() == "find_extreme jump");
+    ASSERT(utils::almost_equal(static_cast<double>(w), 29.0145983989, 1e-8));
+    gda(w, L(w), L.derivative(w));                      // 28.59944683 [find_extreme jump]
+    ASSERT(gda.algorithm_str() == "find_extreme jump");
+    ASSERT(utils::almost_equal(static_cast<double>(w), 28.59944683, 1e-8));
+#if 0
+    bool finished = !gda(w, L(w), L.derivative(w));
+    ASSERT(finished);
+    ASSERT(gda.success());
+    Sample const& result = gda.minimum();
+    ASSERT(utils::almost_equal(result.w(), vertex1, 1e-8));
+#endif
+  }
+
+  //==========================================================================
+  Dout(dc::notice, "*** TEST: parabola connected to dampened sin ***");
+  {
+    constexpr double w0 = -10.0;
+    constexpr double learning_rate = 0.1;
+    constexpr double L_max = 2649;
+
+    Algorithm gda(learning_rate, L_max);
+    Weight w = w0;
+
+    symbolic::Symbol const& x = symbolic::Symbol::realize("w");
+    symbolic::Constant const& tp = symbolic::Constant::realize(55);
+    symbolic::Function const& sigmoid = symbolic::Function::realize("sigmoid", exp(3 * (x + tp)) / (1 + exp(3 * (x + tp))));
+    symbolic::Constant const& a = symbolic::Constant::realize(146, 10);
+    symbolic::Constant const& b = symbolic::Constant::realize(315, 100);
+    symbolic::Constant const& c = symbolic::Constant::realize(451, 1000);
+    symbolic::Constant const& d = symbolic::Constant::realize(5, 10);
+    symbolic::Constant const& amplitude = symbolic::Constant::realize(12027, 1000000);
+    symbolic::Constant const& level = symbolic::Constant::realize(187838, 100);
+    symbolic::Constant const& phase = symbolic::Constant::realize(191892, 100000);
+    symbolic::Function const& sL = symbolic::Function::realize("L",
+        (1.0 - sigmoid) * (a + b * x + c * (x^2)) + (sigmoid * (amplitude * exp((tp - x) / 10) * sin(d * x + phase) + level)));
+    Function L(x, sL, sigmoid);
+
+//    gda.enable_drawing(L, -80.0, 20.0);
+
+// FIXME: Currently core dumps
+//    while (gda(w, L(w), L.derivative(w)))
+//      ;
+  }
+
+  //==========================================================================
+  Dout(dc::notice, "*** TEST: getting extra samples ***");
+  {
+    constexpr double w0 = 1.0;
+    constexpr double learning_rate = 0.007557;
+    constexpr double L_max = 1328.89;
+
+    Algorithm gda(learning_rate, L_max);
+    Weight w = w0;
+
+    symbolic::Symbol const& x = symbolic::Symbol::realize("w");
+    symbolic::Constant const& a = symbolic::Constant::realize(25);
+    symbolic::Constant const& b = symbolic::Constant::realize(25);
+    symbolic::Constant const& c = symbolic::Constant::realize(-10);
+    symbolic::Constant const& d = symbolic::Constant::realize(-10);
+    symbolic::Constant const& e = symbolic::Constant::realize(2);
+    symbolic::Function const& sL = symbolic::Function::realize("L", a + b * x + c * (x^2) + d * (x^3) + e * (x^4));
+    Function L(x, sL);
+
+    gda.enable_drawing(L, -3.0, 7.2);
+
+    while (gda(w, L(w), L.derivative(w)))
+      ;
   }
 
   Dout(dc::notice, "Success!");

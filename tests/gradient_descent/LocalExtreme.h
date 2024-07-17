@@ -35,12 +35,12 @@ class LocalExtreme
     return approximation_;
   }
 
+  Sample const& cp_sample() const { return cp_sample_; }
+
   bool is_minimum() const
   {
-    return approximation_.parabola()[2] > 0.0;
+    return approximation_.cubic().second_derivative(cp_sample_.w()) > 0.0;
   }
-
-  Sample const& cp_sample() const { return cp_sample_; }
 
   double energy() const { return energy_; }
 

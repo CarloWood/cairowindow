@@ -45,9 +45,10 @@ class FunctionBase
 class Function : FunctionBase
 {
  public:
-  static constexpr double w_0 = -2.0;
+  static constexpr double w_0 = 1.0;
   static constexpr double w_min = -3.0;
   static constexpr double w_max = 7.2;
+  static constexpr double learning_rate = 0.007557;
 
  private:
   using Expression = symbolic::Expression;
@@ -85,13 +86,14 @@ class Function : FunctionBase
     return derivative_.evaluate();
   }
 };
-#elif 0
+#elif 1
 class Function : FunctionBase
 {
  public:
-  static constexpr double w_0 = -40.0; //-51.0;
+  static constexpr double w_0 = -10.0;
   static constexpr double w_min = -80.0; // -60.0; //-80.0;
   static constexpr double w_max = 20.0; //-40.0; //20.0;
+  static constexpr double learning_rate = 0.1;
 
  private:
   using Expression = symbolic::Expression;
@@ -160,13 +162,14 @@ class Function : FunctionBase
 //static
 symbolic::Constant const Function::tp = symbolic::Constant::realize(55);
 
-#elif 0
+#elif 1
 class Function : FunctionBase
 {
  public:
   static constexpr double w_0 = 12.0;
   static constexpr double w_min = -20.0;
   static constexpr double w_max = 80.0;
+  static constexpr double learning_rate = 0.1;
 
  private:
   //symbolic::Expression const& function_ = a_ + b_ * w_ + c_ * (w_^2) + d_ * (w_^3) + e_ * (w_^4);
@@ -220,6 +223,7 @@ class Function
   static constexpr double w_0 = 12.0;
   static constexpr double w_min = -31.0;
   static constexpr double w_max = 16.0;
+  static constexpr double learning_rate = 0.1;
 
  private:
   using Expression = symbolic::Expression;
@@ -286,6 +290,7 @@ int main()
   double const w_0 = Function::w_0;
   double const w_min = Function::w_min;
   double const w_max = Function::w_max;
+  double const learning_rate = Function::learning_rate;
 
   int const steps = 100;
 
@@ -345,7 +350,7 @@ int main()
     auto plot_curve = plot.create_bezier_fitter(second_layer, curve_line_style, std::move(L_fitter));
 #endif
 
-    gradient_descent::Algorithm gda(0.007557, L_max);
+    gradient_descent::Algorithm gda(learning_rate, L_max);
 
 #if USE_SLIDERS
     // amplitude = 0.012027, level = 1878.38, phase = 1.91892

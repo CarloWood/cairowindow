@@ -80,7 +80,7 @@ class AlgorithmEvent
   std::array<cairowindow::plot::Text, 2> plot_scale_text_;
   std::array<cairowindow::plot::Line, 2> plot_vertical_line_through_w_;
   cairowindow::plot::Line plot_vertical_line_through_v_;
-  cairowindow::plot::BezierFitter plot_old_parabola_;
+  cairowindow::plot::BezierFitter plot_old_cubic_;
   utils::Array<PlotSample, gradient_descent::History::size, gradient_descent::HistoryIndex> plot_samples_;
 
  public:
@@ -188,10 +188,10 @@ class AlgorithmEvent
       }
       if (data.result() == ScaleUpdate::towards_cp)
       {
-        auto const& old_parabola = data.old_parabola();
-        // Draw the old parabola.
-        plot_old_parabola_.solve([&old_parabola](double w) -> Point { return {w, old_parabola(w)}; }, plot_.viewport());
-        plot_.add_bezier_fitter(layer_, {{.line_color = color::light_red, .line_width = 1.0}}, plot_old_parabola_);
+        auto const& old_cubic = data.old_cubic();
+        // Draw the old cubic.
+        plot_old_cubic_.solve([&old_cubic](double w) -> Point { return {w, old_cubic(w)}; }, plot_.viewport());
+        plot_.add_bezier_fitter(layer_, {{.line_color = color::light_red, .line_width = 1.0}}, plot_old_cubic_);
       }
     }
     else if (event.is_a<ScaleEraseEventData>())
@@ -203,7 +203,7 @@ class AlgorithmEvent
         plot_vertical_line_through_w_[side].reset();
       }
       plot_vertical_line_through_v_.reset();
-      plot_old_parabola_.reset();
+      plot_old_cubic_.reset();
     }
     else if (event.is_a<HistoryAddEventData>())
     {

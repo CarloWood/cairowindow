@@ -159,9 +159,6 @@ int main()
       // Get L'(w₁)
       double dLdw1 = D1.y() / D1.x();
 
-      // Draw a vertical line through the vertex of the parabola.
-//      auto plot_vertex_line = plot.create_line(second_layer, line_style, Point{parabola.vertex_x(), 0.0}, Direction::up);
-
       Dout(dc::notice, "w₀ = " << w0 << "; L(w₀) = " << Lw0 << "; L'(w₀) = " << dLdw0 <<
           "; w₁ = " << w1 << "; L(w₁) = " << Lw1 << "; L'(w₁) = " << dLdw1);
 

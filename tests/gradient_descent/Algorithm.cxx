@@ -13,6 +13,12 @@ bool Algorithm::operator()(Weight& w, double Lw, double dLdw)
   DoutEntering(dc::notice, "Algorithm::operator()(" << w << ", " << Lw << ", " << dLdw << ")");
   Dout(dc::notice, "hdirection_ = " << hdirection_ << "; next_extreme_type_ = " << next_extreme_type_ << "; state_ = " << state_);
 
+#ifdef CWDEBUG
+  // Erase all previous curves (if they exist).
+  event_server_.trigger(AlgorithmEventType{reset_event});
+  event_server_.trigger(AlgorithmEventType{difference_event, w, expected_Lw_, Lw});
+#endif
+
   // If the new sample (w) is too close to the previous sample (Scale::negligible returns true)
   // then the new sample replaces the previous sample, current_is_replacement is set to true
   // and no new sample is added to the history.
@@ -43,12 +49,6 @@ bool Algorithm::operator()(Weight& w, double Lw, double dLdw)
     ASSERT(approximation_ptr_ != &current_approximation_);
   }
 
-#ifdef CWDEBUG
-  // Erase all previous curves (if they exist).
-  event_server_.trigger(AlgorithmEventType{reset_event});
-  event_server_.trigger(AlgorithmEventType{difference_event, w, expected_Lw_, Lw});
-#endif
-
   // Update kinetic energy. Returns false if too much energy was used.
   if (!update_energy())
     return handle_abort_hdirection(w);
@@ -56,8 +56,8 @@ bool Algorithm::operator()(Weight& w, double Lw, double dLdw)
   // Handle the case where this sample is a local extreme.
   if (state_ == IterationState::local_extreme)
   {
-    // This state is set when locally the curve looks like a parabola that we're trying to find the
-    // extreme of, and the last sample is that extreme (that is, the derivative is now close to zero).
+    // This state is set when the curve that we're trying to find the extreme of locally looks like a cubic,
+    // and the last sample is in the extreme that we're looking for (i.e. has a derivative close to zero).
     // Returns false if this exreme is a minimum but isn't better than the previously found best minimum.
     if (!handle_local_extreme(w))
       return handle_abort_hdirection(w);
@@ -120,11 +120,10 @@ bool Algorithm::update_energy()
   {
     // Update the current kinetic energy. If this is an overshoot, abort this horizontal direction.
     //
-    // This state is set when locally the curve looks like a parabola with its minimum
-    // on the side that we just came from: in this case we move away from the vertex,
-    // losing energy. Since we're going uphill, we need to check if we didn't go too
-    // high for the kinetic energy that we have, in which case the exploration of this
-    // direction is aborted.
+    // This state is set when locally the curve looks like a cubic with its critical points
+    // on the side that we just came from: in this case we move away from the all critical points
+    // and going uphill, losing energy. Therefore we need to check if we didn't go too high for
+    // the kinetic energy that we have, in which case the exploration of this direction is aborted.
 
     // If the horizontal direction is still unknown, then we should always go towards the extreme
     // of the local approximation: in fact we would have jumped there and would not
@@ -155,7 +154,7 @@ void Algorithm::reset_history()
 #endif
   // Use the Approximation object on the stack again (as opposed to one from a LocalExtreme).
   approximation_ptr_ = &current_approximation_;
-  // Reset the parabolic approximation.
+  // Reset the cubic approximation.
   approximation_ptr_->reset();
   history_.reset();
 }
@@ -195,7 +194,7 @@ bool Algorithm::handle_local_extreme(Weight& w)
     event_server_.trigger(AlgorithmEventType{scale_erase_event});
 #endif
     // Switch approximation_ptr to the approximation stored in this extreme:
-    // we need to keep updating it when new samples are added that match the same parabolic.
+    // we need to keep updating it when new samples are added that match the same cubic.
     approximation_ptr_ = &last_extreme_->approximation();
 
     // If we came from (say) the left, and already found a minimum there, then mark left as explored.
@@ -216,7 +215,7 @@ bool Algorithm::handle_local_extreme(Weight& w)
       {
         best_minimum_ = last_extreme_;
         Dout(dc::notice, "best_minimum_ set to " << best_minimum_->cp_sample() <<
-            " and parabolic approximation: " << best_minimum_->approximation());
+            " and cubic approximation: " << best_minimum_->approximation());
       }
       if (last_extreme_ != best_minimum_)
       {
@@ -344,7 +343,7 @@ bool Algorithm::handle_local_extreme(Weight& w)
 
   Dout(dc::notice, "Fitting a fourth degree polynomial using the samples at " << w0_1 << ", " << w1_1 << " and " << w2_1);
 
-  // If we have (at least) three points, the approximation is a fourth degree parabola:
+  // If we have (at least) three points, the approximation is a fourth degree polynomial.
   //
   //   A(w) = a + b w + c w² + d w³ + e w⁴
   //
@@ -438,7 +437,7 @@ bool Algorithm::handle_local_extreme(Weight& w)
       {
         for (int zero = 0; zero < number_of_zeroes; ++zero)
           expected_Lw[zero] = fourth_degree_approximation(zeroes[zero]);
-        int best_zero = (number_of_zeroes == 2 &&
+        best_zero = (number_of_zeroes == 2 &&
             (hdirection_ == HorizontalDirection::right ||
              (hdirection_ == HorizontalDirection::undecided &&
               expected_Lw[1] < expected_Lw[0]))) ? 1 : 0;
@@ -520,7 +519,6 @@ double Algorithm::update_approximation(bool current_is_replacement)
   bool const first_call = last_region_ == Region::unknown;
   double new_w CWDEBUG_ONLY(= uninitialized_magic);
 
-  math::QuadraticPolynomial old_parabola = approximation_ptr_->parabola();
   ScaleUpdate result;
   if (approximation_ptr_ == &current_approximation_)
   {
@@ -558,22 +556,12 @@ double Algorithm::update_approximation(bool current_is_replacement)
     result = approximation_ptr_->update_scale(false, next_extreme_type_);
     ASSERT(result == ScaleUpdate::initialized);
   }
-#ifdef CWDEBUG
-  else
-  {
-    event_server_.trigger(AlgorithmEventType{scale_draw_event, result,
-        approximation_ptr_->scale(),
-        old_parabola});
-  }
-#endif
 
   Dout(dc::notice, "approximation = " << *approximation_ptr_ <<
       " (" << utils::print_using(*approximation_ptr_, &Approximation::print_based_on) << ")");
 
 #ifdef CWDEBUG
-  event_server_.trigger(AlgorithmEventType{quadratic_polynomial_event, approximation_ptr_->parabola()});
-  if (approximation_ptr_->number_of_relevant_samples() == 2)
-    event_server_.trigger(AlgorithmEventType{cubic_polynomial_event, approximation_ptr_->cubic()});
+  event_server_.trigger(AlgorithmEventType{cubic_polynomial_event, approximation_ptr_->cubic()});
 #endif
 
   return new_w;
@@ -648,7 +636,7 @@ void Algorithm::handle_single_sample(Weight& w)
 #endif
   }
   w += step;
-  expected_Lw_ = approximation_ptr_->parabola()(w);
+  expected_Lw_ = approximation_ptr_->cubic()(w);
   Debug(set_algorithm_str(w, algorithm_str));
   state_ = IterationState::done;
 }
@@ -686,7 +674,7 @@ bool Algorithm::handle_approximation(Weight& w, bool first_call, double new_w)
     {
       // See comment above; find_extreme should have set new_w in this case.
       ASSERT(new_w != uninitialized_magic);
-      Debug(set_algorithm_str(new_w, "find_extreme jump"));
+      Debug(set_algorithm_str(new_w, "initial find_extreme jump"));
       state_ = IterationState::extreme_jump;
     }
 

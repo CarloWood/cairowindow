@@ -32,7 +32,7 @@ void Approximation::add(Sample const* current, bool current_is_replacement, Extr
     current_index_ = 1 - current_index_;
   }
 
-  // LocalExtreme should only store parabolas of which the vertex was already determined;
+  // LocalExtreme should only store approximation of which the extremes were already determined;
   // hence changing it (by adding a new sample) doesn't make sense.
   ASSERT(!is_extreme_);
 
@@ -41,9 +41,10 @@ void Approximation::add(Sample const* current, bool current_is_replacement, Extr
     // If we have just one point, then the approximation is a linear function:
     //
     // A(w) = current->Lw() + L'(w) * (w - current->w())
-    parabola_[2] = 0.0;
-    parabola_[1] = current->dLdw();
-    parabola_[0] = current->Lw() - current->dLdw() * current->w();
+    cubic_[3] = 0.0;
+    cubic_[2] = 0.0;
+    cubic_[1] = current->dLdw();
+    cubic_[0] = current->Lw() - current->dLdw() * current->w();
   }
   else
   {
@@ -58,38 +59,16 @@ void Approximation::add(Sample const* current, bool current_is_replacement, Extr
     double Lw1 = current->Lw();
     double dLdw1 = current->dLdw();
 
-    double delta_w = w0 - w1;
-    double delta_w_squared = utils::square(delta_w);
-    double delta_Lw = Lw0 - Lw1;
-    double delta_dLdw = dLdw0 - dLdw1;
-    double sum_w = w0 + w1;
-    double sum_dLdw = dLdw0 + dLdw1;
-    double product_Lw = dLdw0 * dLdw1;
+    cubic_.initialize(w0, Lw0, dLdw0, w1, Lw1, dLdw1);
 
-    parabola_[2] = product_Lw < 0.0 ?
-      (delta_Lw * sum_dLdw - 2.0 * delta_w * product_Lw) / (delta_w_squared * delta_dLdw) :
-      delta_Lw * delta_dLdw / (delta_w_squared * sum_dLdw);
-
-    // If a parabola fit is not calculatable then treat it as a straight line through just the current sample.
-    if (std::isnan(parabola_[2]) || std::isinf(parabola_[2]) ||
-        std::abs(parabola_[2]) < Scale::epsilon || std::abs(delta_dLdw) < Scale::epsilon || std::abs(sum_dLdw) < Scale::epsilon)
+    // If a cubic fit is not calculatable then treat it as a straight line through just the current sample.
+    if (std::abs(cubic_[3]) < Scale::epsilon && std::abs(cubic_[2]) < Scale::epsilon)
     {
-      parabola_[2] = 0.0;
+      cubic_[3] = 0.0;
+      cubic_[2] = 0.0;
       number_of_relevant_samples_ = 1;        // Ignore the oldest sample.
       scale_.reset();
-      return;
     }
-
-    parabola_[1] = delta_Lw / delta_w - sum_w * parabola_[2];
-    parabola_[0] = (w0 * Lw1 - w1 * Lw0) / delta_w + w0 * w1 * parabola_[2];
-
-    Dout(dc::notice, "Parabola fit through (" << w0 << ", " << Lw0 << ") with derivative " << dLdw0);
-    Dout(dc::notice, "                 and (" << w1 << ", " << Lw1 << ") with derivative " << dLdw1);
-    Dout(dc::notice, "    P(x) = " << parabola_ << " --> P(" << w0 << ") = " << parabola_(w0) << " and P(" << w1 << ") = " << parabola_(w1));
-    Dout(dc::notice, "    P'(" << w0 << ") = " << parabola_.derivative(w0) << " (requested: " << dLdw0 << ")");
-    Dout(dc::notice, "    P'(" << w1 << ") = " << parabola_.derivative(w1) << " (requested: " << dLdw1 << ")");
-
-    cubic_.initialize(w0, Lw0, dLdw0, w1, Lw1, dLdw1);
 
     Dout(dc::notice, "cubic = " << cubic_);
   }
@@ -201,9 +180,9 @@ Weight Approximation::find_extreme(Region& region_out, ExtremeType& extreme_type
   if (std::isnan(minimum) || std::isnan(maximum) || utils::almost_equal(sqrt_D, std::abs(c), 1e-9))
   {
     Dout(dc::notice, "cubic_ = " << cubic_ << "; using parabolic approximation.");
-    // The cubic is, almost, a parabola. Use our parabolic approximation.
-    double vertex = parabola_.vertex_x();
-    ExtremeType const extreme_type_found = parabola_has_maximum() ? ExtremeType::maximum : ExtremeType::minimum;
+    // The cubic is, almost, a parabola. Use a parabolic approximation.
+    double vertex = -0.5 * cubic_[1] / cubic_[2];
+    ExtremeType const extreme_type_found = cubic_[2] < 0.0 ? ExtremeType::maximum : ExtremeType::minimum;
     if (extreme_type != ExtremeType::unknown && extreme_type_found != extreme_type)
     {
       Dout(dc::notice, "Returning ExtremeType::unknown because the cubic looks like a parabola with an extreme type (" <<

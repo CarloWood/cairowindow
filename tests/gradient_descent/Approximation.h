@@ -20,10 +20,9 @@ class Approximation
   int current_index_{1};                                // The index of the last sample that was added (iff number_of_relevant_samples_ > 0).
   std::array<Sample const*, 2> relevant_samples_;       // Pointers to up to two samples that take part in this approximation. If
                                                         // number_of_relevant_samples_ is two then one with the smallest w is stored at index 0.
-  math::QuadraticPolynomial parabola_;                  // A linear or parabolic approximation.
+  math::CubicPolynomial cubic_;                         // A cubic approximation, only valid if number_of_relevant_samples_ == 2.
   Scale scale_;                                         // A measure of over what interval the approximation was tested to be correct.
   bool is_extreme_{false};                              // Set when this is a LocalExtreme::approximation_.
-  math::CubicPolynomial cubic_;                         // A cubic approximation, only valid if number_of_relevant_samples_ == 2.
   bool already_had_two_relevant_samples_{false};        // Used as carry between add and update_scale.
 #ifdef CWDEBUG
   bool moved_{false};
@@ -32,7 +31,7 @@ class Approximation
  public:
   Approximation() = default;
   Approximation(Approximation&& orig) : number_of_relevant_samples_{orig.number_of_relevant_samples_}, current_index_{orig.current_index_},
-    relevant_samples_{orig.relevant_samples_}, parabola_{std::move(orig.parabola_)}, scale_{std::move(orig.scale_)},
+    relevant_samples_{orig.relevant_samples_}, scale_{std::move(orig.scale_)},
     is_extreme_{orig.is_extreme_}, cubic_{std::move(orig.cubic_)}, already_had_two_relevant_samples_{orig.already_had_two_relevant_samples_}
   {
 #ifdef CWDEBUG
@@ -40,8 +39,8 @@ class Approximation
 #endif
   }
 
-  // Called with the latest samples that are expected to match this parabola (or that
-  // should construct the parabola when there are not already two relevant samples stored).
+  // Called with the latest samples that are expected to match this cubic approximation (or that
+  // should construct the cubic when there are not already two relevant samples stored).
   void add(Sample const* current, bool current_is_replacement, ExtremeType next_extreme_type);
   ScaleUpdate update_scale(bool current_is_replacement, ExtremeType next_extreme_type);
   ScaleUpdate update_local_extreme_scale(Sample const& current);
@@ -57,11 +56,6 @@ class Approximation
     is_extreme_ = true;
   }
 
-  bool parabola_has_maximum() const
-  {
-    return parabola_[2] < 0.0;
-  }
-
   void reset()
   {
     // Forget any previous samples.
@@ -72,7 +66,6 @@ class Approximation
   }
 
   int number_of_relevant_samples() const { return number_of_relevant_samples_; }
-  math::QuadraticPolynomial const& parabola() const { return parabola_; }
   Scale const& scale() const { ASSERT(!moved_); return scale_; }
   bool is_extreme() const { return is_extreme_; }
   double at(double w) const { return cubic_(w); }
@@ -101,13 +94,10 @@ class Approximation
       return;
     }
 
-    os << "{parabola:" << parabola_;
-    if (number_of_relevant_samples_ > 1)
-      os << " [v_x = " << parabola_.vertex_x() << "]";
-    os << ", scale:" << scale_;
+    os << "cubic:" << cubic_ <<
+        ", scale:" << scale_;
     if (number_of_relevant_samples_ > 1)
     {
-      os << ", cubic:" << cubic_;
       std::array<double, 2> extremes;
       Debug(libcw_do.off());
       int n = cubic_.get_extremes(extremes);
