@@ -37,11 +37,6 @@ target_link_libraries(chess_diagram AICxx::cairowindow AICxx::symbolic AICxx::ch
 add_executable(pango_text pango_text.cxx)
 target_link_libraries(pango_text AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST})
 
-add_executable(gradient_descent1 gradient_descent1.cxx AlgorithmEvent.cxx
-  gradient_descent/Approximation.cxx gradient_descent/HorizontalDirection.cxx
-  gradient_descent/ExtremeType.cxx gradient_descent/Algorithm.cxx)
-target_link_libraries(gradient_descent1 AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST} Eigen3::Eigen)
-
 add_executable(gradient_descent_testsuite gradient_descent_testsuite.cxx AlgorithmEvent.cxx
   gradient_descent/Approximation.cxx gradient_descent/HorizontalDirection.cxx
   gradient_descent/ExtremeType.cxx gradient_descent/Algorithm.cxx)
@@ -66,7 +61,7 @@ add_executable(generate_cubic_tests generate_cubic_tests.cxx
   gradient_descent/HorizontalDirection.cxx gradient_descent/ExtremeType.cxx gradient_descent/Approximation.cxx)
 target_link_libraries(generate_cubic_tests AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST})
 
-add_executable(gradient_descent2 gradient_descent2.cxx AlgorithmEvent.cxx
+add_executable(gradient_descent gradient_descent.cxx AlgorithmEvent.cxx
   gradient_descent/Approximation.cxx gradient_descent/HorizontalDirection.cxx
   gradient_descent/ExtremeType.cxx gradient_descent/Algorithm.cxx)
-target_link_libraries(gradient_descent2 AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST} Eigen3::Eigen)
+target_link_libraries(gradient_descent AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST} Eigen3::Eigen)
