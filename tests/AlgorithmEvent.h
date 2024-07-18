@@ -82,6 +82,7 @@ class AlgorithmEvent
   cairowindow::plot::Line plot_vertical_line_through_v_;
   cairowindow::plot::BezierFitter plot_old_cubic_;
   utils::Array<PlotSample, gradient_descent::History::size, gradient_descent::HistoryIndex> plot_samples_;
+  std::vector<PlotSample> plot_local_extremes_;
 
  public:
   AlgorithmEvent(cairowindow::plot::Plot& plot, boost::intrusive_ptr<cairowindow::Layer> const& layer) :
@@ -221,6 +222,15 @@ class AlgorithmEvent
       math::CubicPolynomial const& cubic_approximation = data.cubic_polynomial();
       plot_cubic_approximation_curve_.solve([&cubic_approximation](double w) -> Point { return {w, cubic_approximation(w)}; }, plot_.viewport());
       plot_.add_bezier_fitter(layer_, curve_line_style_({.line_color = color::magenta}), plot_cubic_approximation_curve_);
+    }
+    else if (event.is_a<NewLocalExtremeEventData>())
+    {
+      auto const& data = event.get<NewLocalExtremeEventData>();
+
+      plot_local_extremes_.emplace_back(&data.local_extreme(),
+          plot_.create_point(layer_, point_style_({.color_index = 2}), {data.local_extreme().w(), data.local_extreme().Lw()}),
+          plot_.create_text(layer_, s_label_style({.position = cairowindow::draw::centered_above}),
+            cairowindow::Point{data.local_extreme().w(), data.local_extreme().Lw()}, data.label()));
     }
     else
       // Missing implementation.

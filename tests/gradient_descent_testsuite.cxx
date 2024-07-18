@@ -571,11 +571,11 @@ int main()
         (1.0 - sigmoid) * (a + b * x + c * (x^2)) + (sigmoid * (amplitude * exp((tp - x) / 10) * sin(d * x + phase) + level)));
     Function L(x, sL, sigmoid);
 
-//    gda.enable_drawing(L, -80.0, 20.0);
+    gda.enable_drawing(L, /*-80.0*/-40.0, 20.0);
 
 // FIXME: Currently core dumps
-//    while (gda(w, L(w), L.derivative(w)))
-//      ;
+    while (gda(w, L(w), L.derivative(w)))
+      ;
   }
 
   //==========================================================================

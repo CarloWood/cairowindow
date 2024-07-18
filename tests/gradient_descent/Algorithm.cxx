@@ -191,6 +191,8 @@ bool Algorithm::handle_local_extreme(Weight& w)
     }
 
 #ifdef CWDEBUG
+    event_server_.trigger(AlgorithmEventType{new_local_extreme_event, last_extreme_->cp_sample(),
+        std::to_string(history_.total_number_of_samples() - 1)});
     event_server_.trigger(AlgorithmEventType{scale_erase_event});
 #endif
     // Switch approximation_ptr to the approximation stored in this extreme:
@@ -232,6 +234,7 @@ bool Algorithm::handle_local_extreme(Weight& w)
     Dout(dc::notice, "next_extreme_type_ is toggled to " << next_extreme_type_ << ".");
     // Invalidate what was returned by find_extreme.
     last_region_ = Region::invalid;
+    Dout(dc::notice, "Invalidated last_region_ (set to Region::invalid)");
   }
 
   // Find all samples that are within the scale range of the current approximation.
@@ -806,6 +809,8 @@ bool Algorithm::handle_abort_hdirection(Weight& w)
   energy_.set(new_local_extreme->energy(), new_local_extreme->cp_sample().Lw());
 
   reset_history();
+  last_region_ = Region::invalid;
+  Dout(dc::notice, "Invalidated last_region_ (set to Region::invalid)");
   approximation_ptr_->add(&new_local_extreme->cp_sample(), false, next_extreme_type_);
 
   // w was successfully updated.

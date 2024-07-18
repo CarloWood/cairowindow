@@ -27,7 +27,8 @@ enum event_type
   kinetic_energy_event,
   scale_draw_event,
   scale_erase_event,
-  history_add_event
+  history_add_event,
+  new_local_extreme_event
 };
 
 class ResetEventData
@@ -182,12 +183,31 @@ class HistoryAddEventData
   }
 };
 
+class NewLocalExtremeEventData
+{
+ protected:
+  Sample const& local_extreme_;
+  std::string label_;
+
+ public:
+  NewLocalExtremeEventData(Sample const& local_extreme, std::string const& label) :
+    local_extreme_(local_extreme), label_(label) { }
+
+  Sample const& local_extreme() const { return local_extreme_; }
+  std::string const& label() const { return label_; }
+
+  void print_on(std::ostream& os) const
+  {
+    os << "NewLocalExtremeEventData:{" << local_extreme_ << ", \"" << label_ << "\"}";
+  }
+};
+
 class AlgorithmEventData
 {
  private:
   std::variant<ResetEventData, DifferenceEventData, FourthDegreeApproximationEventData, QuotientEventData, DerivativeEventData,
     QuadraticPolynomialEventData, KineticEnergyEventData, ScaleDrawEventData, ScaleEraseEventData, HistoryAddEventData,
-    CubicPolynomialEventData> event_data_;
+    CubicPolynomialEventData, NewLocalExtremeEventData> event_data_;
 
  public:
   AlgorithmEventData() = default;
@@ -242,6 +262,11 @@ class AlgorithmEventData
   AlgorithmEventData(event_type, HistoryIndex index, Sample const& current, std::string const& label)
   {
     event_data_.emplace<HistoryAddEventData>(index, current, label);
+  }
+
+  AlgorithmEventData(event_type, Sample const& current, std::string const& label)
+  {
+    event_data_.emplace<NewLocalExtremeEventData>(current, label);
   }
 
   template<typename T>
