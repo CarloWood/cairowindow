@@ -56,6 +56,7 @@ class Algorithm
     done,                       // w was already updated.
     check_energy,               // After adding the new sample, abort if the required energy is too large.
     extreme_jump,               // Only add the new sample to the history if we didn't overshoot another extreme dramatically.
+    back_tracking,              // In the process of back tracking.
     local_extreme,              // After adding the new sample, handle the fact that we found an extreme.
     need_extra_sample,          // Intermediate state before fitting a fourth degree approximation after finding a local extreme.
     abort_hdirection            // Stop going in the current hdirection_.
@@ -92,7 +93,7 @@ class Algorithm
   bool handle_local_extreme(Weight& w);
   double update_approximation(bool current_is_replacement);
   void handle_single_sample(Weight& w);
-  bool handle_approximation(Weight& w, bool first_call, double new_w);
+  void handle_approximation(Weight& w, bool first_call, double new_w);
   bool handle_abort_hdirection(Weight& w);
 
 #ifdef CWDEBUG

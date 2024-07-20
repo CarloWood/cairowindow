@@ -222,8 +222,9 @@ class AlgorithmEventData
       ASSERT(false);
   }
 
-  AlgorithmEventData(event_type, double w, double expected_Lw, double Lw)
+  AlgorithmEventData(event_type type, double w, double expected_Lw, double Lw)
   {
+    ASSERT(type == difference_event);
     event_data_.emplace<DifferenceEventData>(w, expected_Lw, Lw);
   }
 
@@ -239,33 +240,39 @@ class AlgorithmEventData
       ASSERT(false);
   }
 
-  AlgorithmEventData(event_type, math::QuadraticPolynomial const& polynomial)
+  AlgorithmEventData(event_type type, math::QuadraticPolynomial const& polynomial)
   {
+    ASSERT(type == quadratic_polynomial_event);
     event_data_.emplace<QuadraticPolynomialEventData>(polynomial);
   }
 
-  AlgorithmEventData(event_type, math::CubicPolynomial const& polynomial)
+  AlgorithmEventData(event_type type, math::CubicPolynomial const& polynomial)
   {
+    ASSERT(type == cubic_polynomial_event);
     event_data_.emplace<CubicPolynomialEventData>(polynomial);
   }
 
-  AlgorithmEventData(event_type, double max_Lw)
+  AlgorithmEventData(event_type type, double max_Lw)
   {
+    ASSERT(type == kinetic_energy_event);
     event_data_.emplace<KineticEnergyEventData>(max_Lw);
   }
 
-  AlgorithmEventData(event_type, ScaleUpdate result, Scale const& scale, math::CubicPolynomial const& old_cubic)
+  AlgorithmEventData(event_type type, ScaleUpdate result, Scale const& scale, math::CubicPolynomial const& old_cubic)
   {
+    ASSERT(type == scale_draw_event);
     event_data_.emplace<ScaleDrawEventData>(result, scale, old_cubic);
   }
 
-  AlgorithmEventData(event_type, HistoryIndex index, Sample const& current, std::string const& label)
+  AlgorithmEventData(event_type type, HistoryIndex index, Sample const& current, std::string const& label)
   {
+    ASSERT(type == history_add_event);
     event_data_.emplace<HistoryAddEventData>(index, current, label);
   }
 
-  AlgorithmEventData(event_type, Sample const& current, std::string const& label)
+  AlgorithmEventData(event_type type, Sample const& current, std::string const& label)
   {
+    ASSERT(type == new_local_extreme_event);
     event_data_.emplace<NewLocalExtremeEventData>(current, label);
   }
 

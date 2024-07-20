@@ -41,7 +41,7 @@ class Approximation
 
   // Called with the latest samples that are expected to match this cubic approximation (or that
   // should construct the cubic when there are not already two relevant samples stored).
-  void add(Sample const* current, bool current_is_replacement, ExtremeType next_extreme_type);
+  void add(Sample const* current, bool current_is_replacement, ExtremeType next_extreme_type, bool back_tracking);
   ScaleUpdate update_scale(bool current_is_replacement, ExtremeType next_extreme_type);
   ScaleUpdate update_local_extreme_scale(Sample const& current);
 

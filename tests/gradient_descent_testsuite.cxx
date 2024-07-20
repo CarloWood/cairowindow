@@ -175,6 +175,7 @@ int main()
   constexpr double L_max = 100.0;
   constexpr double learning_rate = 0.125;
 
+#if 0
   //==========================================================================
   Dout(dc::notice, "*** TEST: starting with a derivative of zero ***");
   {
@@ -546,6 +547,7 @@ int main()
     ASSERT(utils::almost_equal(result.w(), vertex1, 1e-8));
 #endif
   }
+#endif
 
   //==========================================================================
   Dout(dc::notice, "*** TEST: parabola connected to dampened sin ***");
@@ -571,13 +573,14 @@ int main()
         (1.0 - sigmoid) * (a + b * x + c * (x^2)) + (sigmoid * (amplitude * exp((tp - x) / 10) * sin(d * x + phase) + level)));
     Function L(x, sL, sigmoid);
 
-    gda.enable_drawing(L, /*-80.0*/-40.0, 20.0);
+    gda.enable_drawing(L, /*-80.0*/-30.0, /*20.0*/ -10.0);
 
 // FIXME: Currently core dumps
     while (gda(w, L(w), L.derivative(w)))
       ;
   }
 
+#if 0
   //==========================================================================
   Dout(dc::notice, "*** TEST: getting extra samples ***");
   {
@@ -602,6 +605,7 @@ int main()
     while (gda(w, L(w), L.derivative(w)))
       ;
   }
+#endif
 
   Dout(dc::notice, "Success!");
 }

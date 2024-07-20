@@ -43,15 +43,21 @@ bool Algorithm::operator()(Weight& w, double Lw, double dLdw)
     ASSERT(!current_is_replacement);
 
     // Fit a fourth degree polynomial through the local extreme and return the next point to jump to based on that.
-    have_zero = handle_local_extreme(w_zero);   // Only returns false if the fitted fourth degree polynomial does not have usable extremes.
+    // This call sets w_zero and returns true, or returns false if the fitted fourth degree polynomial does not have usable extremes.
+    have_zero = handle_local_extreme(w_zero);
 
     // Fall-through to update_approximation; which we want to call update_local_extreme_scale.
     ASSERT(approximation_ptr_ != &current_approximation_);
   }
 
-  // Update kinetic energy. Returns false if too much energy was used.
-  if (!update_energy())
-    return handle_abort_hdirection(w);
+  // While back tracking we're not really moving forward, we're just probing.
+  // Therefore we shouldn't decrease the kinetic energy as if we traveled a distance.
+  if (state_ != IterationState::back_tracking)
+  {
+    // Update kinetic energy. Returns false if too much energy was used.
+    if (!update_energy())
+      return handle_abort_hdirection(w);
+  }
 
   // Handle the case where this sample is a local extreme.
   if (state_ == IterationState::local_extreme)
@@ -59,6 +65,7 @@ bool Algorithm::operator()(Weight& w, double Lw, double dLdw)
     // This state is set when the curve that we're trying to find the extreme of locally looks like a cubic,
     // and the last sample is in the extreme that we're looking for (i.e. has a derivative close to zero).
     // Returns false if this exreme is a minimum but isn't better than the previously found best minimum.
+    // Otherwise returns true and sets w to the new jump point.
     if (!handle_local_extreme(w))
       return handle_abort_hdirection(w);
     Dout(dc::notice, "Returning: " << std::setprecision(std::numeric_limits<double>::max_digits10) << w);
@@ -67,43 +74,48 @@ bool Algorithm::operator()(Weight& w, double Lw, double dLdw)
 
   // last_region_ will be changed by the call to update_approximation, which (might) call find_extreme.
   bool const first_call = last_region_ == Region::unknown;
+  // If first_call is true, then approximation_ptr_ shouldn't point to a LocalExtreme.
+  ASSERT(!first_call || approximation_ptr_ == &current_approximation_);
 
   // Create/update a cubic approximation from this and the previous sample (or a line if this is the first sample).
-  // This might return nonsense. new_w is only set if set if first_call is true, the Approximation is not part
-  // of a LocalExtreme and the approximation has two relevant samples. If first_call is true, then approximation
-  // really shouldn't be a LocalExtreme to begin with however.
-  ASSERT(!first_call || approximation_ptr_ == &current_approximation_);
+  // This might return nonsense. new_w is only set if first_call is true, the Approximation is not part
+  // of a LocalExtreme and the approximation has two relevant samples.
   double new_w = update_approximation(current_is_replacement);
-  Approximation& approximation(*approximation_ptr_);
 
-  if (approximation.number_of_relevant_samples() == 1)
+  if (approximation_ptr_->number_of_relevant_samples() == 1)
   {
+    // This function decides where to probe for a new sample next, based on a single sample, and changes w accordingly.
     handle_single_sample(w);
     Dout(dc::notice, "Returning: " << std::setprecision(std::numeric_limits<double>::max_digits10) << w);
     return true;
   }
   // Here we have two samples, therefore now new_w must be valid if first_call is true.
 
+  // If have_zero is set then the current sample is an extra sample that was needed to
+  // fit a fourth degree polynomial through a found local extreme, and that fit had
+  // a usable extreme to jump to; hence jump there now. However, if the jump by
+  // coincidence ends up very close to where we are already anyway, then there is no
+  // need to return and ask for a new sample. In that case we might as well pretend
+  // we already jumped and continue with the current sample.
   if (have_zero && !approximation_ptr_->scale().negligible(w - w_zero))
   {
     w = w_zero;
     state_ = IterationState::done;
+    Dout(dc::notice, "Returning: " << std::setprecision(std::numeric_limits<double>::max_digits10) << w);
+    return true;
   }
-  else
-  {
-    //FIXME: this test is only here in order to abort when the code for this case wasn't implemented yet.
-    // In the end handle_approximation should return void.
-    if (!handle_approximation(w, first_call, new_w))
-      return false;
 
-    if (state_ == IterationState::local_extreme)
+  // Decide where to jump next based on the current approximation (this call changes w).
+  handle_approximation(w, first_call, new_w);
+
+  if (state_ == IterationState::local_extreme)
+  {
+    // Do not return a value that would replace the current sample.
+    if (approximation_ptr_->scale().negligible(w - history_.current().w()))
     {
-      // Do not return a value that would replace the current sample.
-      if (approximation_ptr_->scale().negligible(w - history_.current().w()))
-      {
-        if (!handle_local_extreme(w))
-          return handle_abort_hdirection(w);
-      }
+      // Instead handle the local extreme immediately (this call changes w).
+      if (!handle_local_extreme(w))
+        return handle_abort_hdirection(w);
     }
   }
 
@@ -522,10 +534,13 @@ double Algorithm::update_approximation(bool current_is_replacement)
   bool const first_call = last_region_ == Region::unknown;
   double new_w CWDEBUG_ONLY(= uninitialized_magic);
 
+#ifdef CWDEBUG
+  math::CubicPolynomial old_cubic = approximation_ptr_->cubic();
+#endif
   ScaleUpdate result;
   if (approximation_ptr_ == &current_approximation_)
   {
-    approximation_ptr_->add(&history_.current(), current_is_replacement, next_extreme_type_);
+    approximation_ptr_->add(&history_.current(), current_is_replacement, next_extreme_type_, state_ == IterationState::back_tracking);
 
     if (first_call && approximation_ptr_->number_of_relevant_samples() == 2)
     {
@@ -539,6 +554,8 @@ double Algorithm::update_approximation(bool current_is_replacement)
   }
   else
   {
+    // Does this ever happen?
+    ASSERT(state_ != IterationState::back_tracking);
     result = approximation_ptr_->update_local_extreme_scale(history_.current());
 
     // If this fails then apparently we even have to call find_extreme in this case!
@@ -554,16 +571,18 @@ double Algorithm::update_approximation(bool current_is_replacement)
     reset_history();    // This sets approximation_ptr_ = &current_approximation_, therefore call add().
 
     // Start the new approximation with nearest_sample + current.
-    approximation_ptr_->add(nearest_sample, false, next_extreme_type_);
-    approximation_ptr_->add(&history_.current(), false, next_extreme_type_);
+    approximation_ptr_->add(nearest_sample, false, next_extreme_type_, false);
+    approximation_ptr_->add(&history_.current(), false, next_extreme_type_, false);
     result = approximation_ptr_->update_scale(false, next_extreme_type_);
     ASSERT(result == ScaleUpdate::initialized);
   }
+#ifdef CWDEBUG
+  else
+    event_server_.trigger(AlgorithmEventType{scale_draw_event, result, approximation_ptr_->scale(), old_cubic});
 
   Dout(dc::notice, "approximation = " << *approximation_ptr_ <<
       " (" << utils::print_using(*approximation_ptr_, &Approximation::print_based_on) << ")");
 
-#ifdef CWDEBUG
   event_server_.trigger(AlgorithmEventType{cubic_polynomial_event, approximation_ptr_->cubic()});
 #endif
 
@@ -644,7 +663,7 @@ void Algorithm::handle_single_sample(Weight& w)
   state_ = IterationState::done;
 }
 
-bool Algorithm::handle_approximation(Weight& w, bool first_call, double new_w)
+void Algorithm::handle_approximation(Weight& w, bool first_call, double new_w)
 {
   DoutEntering(dc::notice, "Algorithm::handle_approximation(" << w << ", " << std::boolalpha << first_call <<
       ", " << new_w << ")");
@@ -671,7 +690,7 @@ bool Algorithm::handle_approximation(Weight& w, bool first_call, double new_w)
       next_extreme_type_ = ExtremeType::minimum;
       Dout(dc::notice, "Setting next_extreme_type_ to " << next_extreme_type_ << " because we're going downhill.");
       state_ = IterationState::done;
-      return true;
+      return;
     }
     else
     {
@@ -685,12 +704,6 @@ bool Algorithm::handle_approximation(Weight& w, bool first_call, double new_w)
     ASSERT((next_extreme_type_ == ExtremeType::minimum) == (approximation.scale().type() == CriticalPointType::minimum) &&
            (next_extreme_type_ == ExtremeType::maximum) == (approximation.scale().type() == CriticalPointType::maximum));
   }
-  else if (last_region_ == Region::inbetween)
-  {
-    // Implement.
-    DoutFatal(dc::core, "This code is not implemented!");
-    return false;
-  }
   else
   {
 #if CW_DEBUG
@@ -703,10 +716,11 @@ bool Algorithm::handle_approximation(Weight& w, bool first_call, double new_w)
 
     if (extreme_type != ExtremeType::unknown)
     {
-      state_ = IterationState::extreme_jump;
       if (next_extreme_type_ == ExtremeType::unknown)
         next_extreme_type_ = extreme_type;
       Debug(set_algorithm_str(new_w, "find_extreme jump"));
+      // If the extreme is in between the two samples used for the approximation then we jumped too far.
+      state_ = last_region_ == Region::inbetween ? IterationState::back_tracking : IterationState::extreme_jump;
     }
     else
     {
@@ -717,7 +731,7 @@ bool Algorithm::handle_approximation(Weight& w, bool first_call, double new_w)
       expected_Lw_ = approximation_ptr_->at(w);
       Debug(set_algorithm_str(w, "keep going"));
       state_ = IterationState::check_energy;
-      return true;
+      return;
     }
   }
 
@@ -739,8 +753,6 @@ bool Algorithm::handle_approximation(Weight& w, bool first_call, double new_w)
         "[" << approximation.scale() << "]");
     state_ = IterationState::local_extreme;
   }
-
-  return true;
 }
 
 bool Algorithm::handle_abort_hdirection(Weight& w)
@@ -811,7 +823,7 @@ bool Algorithm::handle_abort_hdirection(Weight& w)
   reset_history();
   last_region_ = Region::invalid;
   Dout(dc::notice, "Invalidated last_region_ (set to Region::invalid)");
-  approximation_ptr_->add(&new_local_extreme->cp_sample(), false, next_extreme_type_);
+  approximation_ptr_->add(&new_local_extreme->cp_sample(), false, next_extreme_type_, false);
 
   // w was successfully updated.
   Dout(dc::notice, "Returning: " << std::setprecision(std::numeric_limits<double>::max_digits10) << w);
@@ -877,6 +889,7 @@ std::string Algorithm::to_string(IterationState state)
     AI_CASE_RETURN(IterationState::done);
     AI_CASE_RETURN(IterationState::check_energy);
     AI_CASE_RETURN(IterationState::extreme_jump);
+    AI_CASE_RETURN(IterationState::back_tracking);
     AI_CASE_RETURN(IterationState::local_extreme);
     AI_CASE_RETURN(IterationState::need_extra_sample);
     AI_CASE_RETURN(IterationState::abort_hdirection);

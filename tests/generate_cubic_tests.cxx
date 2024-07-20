@@ -229,10 +229,10 @@ int main()
       Dout(dc::notice, "restriction = " << restriction << ", extreme_type = " << extreme_type);
 
       gradient_descent::Approximation approximation;
-      approximation.add(&sl, false, extreme_type);
+      approximation.add(&sl, false, extreme_type, false);
       auto al = approximation.update_scale(false, extreme_type);
       ASSERT(al == gradient_descent::ScaleUpdate::first_sample);
-      approximation.add(&sr, false, extreme_type);
+      approximation.add(&sr, false, extreme_type, false);
       auto ar = approximation.update_scale(false, extreme_type);
       if (ar == gradient_descent::ScaleUpdate::first_sample)
         continue;

@@ -6,21 +6,28 @@
 
 namespace gradient_descent {
 
-void Approximation::add(Sample const* current, bool current_is_replacement, ExtremeType next_extreme_type)
+void Approximation::add(Sample const* current, bool current_is_replacement, ExtremeType next_extreme_type, bool back_tracking)
 {
   DoutEntering(dc::notice, "Approximation::add(" << *current << ", " <<
-      std::boolalpha << current_is_replacement << ", " << next_extreme_type << ")");
+      std::boolalpha << current_is_replacement << ", " << next_extreme_type << ", " << back_tracking << ")");
+
+  Sample const* back_tracking_sample;
 
   already_had_two_relevant_samples_ = number_of_relevant_samples_ == 2;
   if (current_is_replacement)
   {
     // The sample that was replaced in the history should already be in this approximation.
     ASSERT(number_of_relevant_samples_ > 0);
+    // This would be unexpected. Does this happen?
+    ASSERT(!back_tracking);
     relevant_samples_[current_index_] = current;
   }
   else
   {
-    current_index_ = 1 - current_index_;
+    if (back_tracking)
+      back_tracking_sample = relevant_samples_[current_index_];
+    else
+      current_index_ = 1 - current_index_;
     relevant_samples_[current_index_] = current;
     number_of_relevant_samples_ = already_had_two_relevant_samples_ ? 2 : number_of_relevant_samples_ + 1;
   }
@@ -35,6 +42,9 @@ void Approximation::add(Sample const* current, bool current_is_replacement, Extr
   // LocalExtreme should only store approximation of which the extremes were already determined;
   // hence changing it (by adding a new sample) doesn't make sense.
   ASSERT(!is_extreme_);
+
+  // Can only be back tracking if we already had two relevant samples.
+  ASSERT(!back_tracking || (already_had_two_relevant_samples_ && number_of_relevant_samples_ == 2));
 
   if (number_of_relevant_samples_ == 1)
   {
@@ -71,6 +81,21 @@ void Approximation::add(Sample const* current, bool current_is_replacement, Extr
     }
 
     Dout(dc::notice, "cubic = " << cubic_);
+
+    if (back_tracking)
+    {
+      Region region_result;
+      ExtremeType extreme_type = next_extreme_type;
+      Restriction restriction = current_index_ == 0 ? Restriction::left : Restriction::right;
+      find_extreme(region_result, extreme_type, restriction);
+      if (extreme_type == ExtremeType::unknown || region_result != Region::inbetween)
+      {
+        // It shouldn't be on the other side of the two samples then previously predicted.
+        ASSERT(extreme_type == ExtremeType::unknown || region_result == (current_index_ == 0 ? Region::left : Region::right));
+        relevant_samples_[current_index_] = back_tracking_sample;
+        add(current, current_is_replacement, next_extreme_type, false);
+      }
+    }
   }
 }
 
