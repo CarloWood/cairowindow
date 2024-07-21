@@ -466,7 +466,7 @@ bool Algorithm::handle_local_extreme(Weight& w)
     w = zeroes[best_zero];
     expected_Lw_ = expected_Lw[best_zero];
     Debug(set_algorithm_str(w, "best zero"));
-//    reset_history();
+    reset_history();
     Dout(dc::notice(hdirection_ == HorizontalDirection::undecided && number_of_zeroes == 2),
         "Best zero was " << zeroes[best_zero] << " with A(" << zeroes[best_zero] << ") = " <<
         fourth_degree_approximation(zeroes[best_zero]) <<
@@ -658,7 +658,7 @@ void Algorithm::handle_single_sample(Weight& w)
 #endif
   }
   w += step;
-  expected_Lw_ = approximation_ptr_->cubic()(w);
+  expected_Lw_ = approximation_ptr_->at(w);
   Debug(set_algorithm_str(w, algorithm_str));
   state_ = IterationState::done;
 }
@@ -680,6 +680,7 @@ void Algorithm::handle_approximation(Weight& w, bool first_call, double new_w)
     if (last_region_ != Region::inbetween)
       approximation_ptr_->set_current_index(last_region_);
 
+    Debug(expected_Lw_ = 1234567.89);         // Should not be used.
     if (next_extreme_type_ == ExtremeType::unknown)
     {
       // The third degree polynomial fit does not have local extremes.
@@ -718,6 +719,7 @@ void Algorithm::handle_approximation(Weight& w, bool first_call, double new_w)
     {
       if (next_extreme_type_ == ExtremeType::unknown)
         next_extreme_type_ = extreme_type;
+      expected_Lw_ = approximation_ptr_->at(new_w);
       Debug(set_algorithm_str(new_w, "find_extreme jump"));
       // If the extreme is in between the two samples used for the approximation then we jumped too far.
       state_ = last_region_ == Region::inbetween ? IterationState::back_tracking : IterationState::extreme_jump;
