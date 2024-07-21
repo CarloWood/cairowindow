@@ -245,7 +245,7 @@ class Scale
     //
     //   value = (A^2 + B^2) / (A + B)
     //
-    // Where A and B are positive of l and r are on opposite sides of cp.
+    // Where A and B are positive if l and r are on opposite sides of cp.
     //
     // However, if l and r are on the same side of cp, for example,
     //
@@ -322,9 +322,8 @@ class Scale
       result = LCRI[Ri] - LCRI[Li];
     else
     {
-      if (type_ == CriticalPointType::inflection_point && Class == 2)
-        Class = 3;
-      LCRI[Class] = LCRI[Ii];
+      if (AI_LIKELY(type_ != CriticalPointType::inflection_point))
+        LCRI[Class] = LCRI[Ii];
       result = weighted_average(LCRI);
     }
     Dout(dc::notice, "Returning value: " << result);
