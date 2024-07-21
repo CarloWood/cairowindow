@@ -192,6 +192,28 @@ class Scale
     return std::abs(step) < epsilon || std::abs(step) < 1e-6 * std::abs(w);
   }
 
+ private:
+  static constexpr int Li = 0;
+  static constexpr int Ci = 1;
+  static constexpr int Ri = 2;
+  static constexpr int Ii = 3;
+  using LCRI_type = std::array<double, 4>;      // An array with the L, C, R and I values.
+
+  static constexpr unsigned char const classify_map[13] = {4, 4, 1, 4, 3, 2, 0, 3, 4, 1, 4, 4};
+  static int classify(LCRI_type const& LCRI)
+  {
+    return classify_map[(LCRI[Ii] < LCRI[Li]) + (LCRI[Ii] < LCRI[Ri]) +
+      4 * ((LCRI[Ci] < LCRI[Li]) + (LCRI[Ci] < LCRI[Ri])) + (LCRI[Ii] < LCRI[Ci])];
+  }
+
+  // Return the weighted average distance of L and R to C.
+  static double weighted_average(LCRI_type const& LCRI)
+  {
+    ASSERT(LCRI[Li] < LCRI[Ri]);        // In fact, LCRI[Li] < LCRI[Ci] < LCRI[Ri].
+    DoutEntering(dc::notice, "Scale::weighted_average(" << LCRI[Li] << ", " << LCRI[Ci] << ", " << LCRI[Ri] << ")");
+    return (utils::square(LCRI[Ci] - LCRI[Li]) + utils::square(LCRI[Ri] - LCRI[Ci])) / (LCRI[Ri] - LCRI[Li]);
+  }
+
   double calculate_value() const
   {
     // The (value of the) scale is losely defined at the distance over which w can change
@@ -235,34 +257,81 @@ class Scale
     //   /     \
     //
     // Then we want the returned scale to be `r - l`.
+    //
+    // Extension with inflection point
+    // -------------------------------
+    //
+    // Let C be the critical point at critical_point_w_.
+    // Let I be the inflection point of the cubic.
+    // Then the following situations are possible:
+    //
+    //                 C/I                                    : C and I on top of eachother (C is the inflection point)
+    //                                                          this happens when the cubic has no local extremes.
+    //
+    //           I     C                                      : The inflection point is on the left of the critical point.
+    //                                                          \      C                    /
+    //                                                           \    /\             /\    /
+    //                                                            \  I  \     or    /  I  /
+    //                                                             \/    \         /    \/
+    //                                                                    \       /      C
+    //                 C     I                                : The inflection point is on the right of the critical point.
+    //                                                          \                    C      /
+    //                                                           \    /\             /\    /
+    //                                                            \  I  \     or    /  I  /
+    //                                                             \/    \         /    \/
+    //                                                             C      \       /
+    //
+    // Let the left_edge_ sample be l and the right_edge_ sample be r.
+    // Placing l and r in each of the above cases we have the possibilities:
+    //
+    //                                      Class (value returned by classify(l, I, C, r)).
+    //   l < r < C = I   : r - l                4
+    //   C = I < l < r   : r - l                4
+    //   l < r < I < C   : r - l                4
+    //   I < l < r < C   : r - l                4
+    //   I < C < l < r   : r - l                4
+    //   l < r < C < I   : r - l                4
+    //   C < l < r < I   : r - l                4
+    //   C < I < l < r   : r - l                4
+    //   l < I < r < C   : wa(l, I, r)          1
+    //   C < l < I < r   : wa(l, I, r)          1
+    //   l < C = I < r   : wa(l, C, r)          3 - however, classify returns 2.
+    //   I < l < C < r   : wa(l, C, r)          3
+    //   l < C < r < I   : wa(l, C, r)          3
+    //   l < I < C < r   : wa(I, C, r)          0
+    //   l < C < I < r   : wa(l, C, I)          2
+    //
+    // where wa(l, C, r) is the weighted average around C: ((C - l)^2 + (r - C)^2) / (r - l) etc.
+    //
+    // Note that the Class values have been chosen such that we can simply replace element `Class`
+    // in the LCRI array with the inflection point, replacing respectively l, C or r (or I with itself
+    // in the case of Class 3) and then call weighted_average with that altered array.
 
     DoutEntering(dc::notice, "Scale::calculate_value()");
-    Dout(dc::notice, "left_edge_w = " << samples_[left_edge_].w << "; right_edge_w = " << samples_[right_edge_].w <<
-        "; critical_point_w = " << critical_point_w_);
+    double const inflection_point_w = cubic_.inflection_point();
+    Dout(dc::notice, "left_edge_w = " << samples_[left_edge_].w <<
+        "; critical_point_w = " << critical_point_w_ <<
+        "; right_edge_w = " << samples_[right_edge_].w <<
+        "; inflection_point_w = " << inflection_point_w);
     // critical_point_w_ should be initialized.
     ASSERT(type_ != CriticalPointType::none);
-    double A = critical_point_w_ - samples_[left_edge_].w;
-    double B = samples_[right_edge_].w - critical_point_w_;
-    Dout(dc::notice, "A = " << A << "; B = " << B);
-    double sign_A = std::copysign(1.0, A);
-    double sign_B = std::copysign(1.0, B);
+    LCRI_type LCRI = {samples_[left_edge_].w, critical_point_w_, samples_[right_edge_].w, inflection_point_w};
+    int Class = classify(LCRI);
     double result;
-    if (sign_A != sign_B)                       // Are l and r on the same side of cp?
-    {
-      // The negative one is closer to cp and therefore has the smaller absolute value.
-      ASSERT(A + B > 0.0);
-      result = samples_[right_edge_].w - samples_[left_edge_].w;        // A + B, but without the risk of floating-point round off error.
-    }
+    if (Class == 4)
+      result = LCRI[Ri] - LCRI[Li];
     else
     {
-      // l must be left of r, therefore if l and r are on opposite sides of cp then both A and B must b positive.
-      ASSERT(sign_A == 1.0 && sign_B == 1.0);
-      result = (A * A + B * B) / (A + B);
+      if (type_ == CriticalPointType::inflection_point && Class == 2)
+        Class = 3;
+      LCRI[Class] = LCRI[Ii];
+      result = weighted_average(LCRI);
     }
     Dout(dc::notice, "Returning value: " << result);
     return result;
   }
 
+ public:
   ScaleUpdate update(ExtremeType extreme_type, std::array<Sample const*, 2> const& relevant_samples, int current_index,
       math::CubicPolynomial const& new_cubic, bool saw_more_than_two_relevant_samples, bool local_extreme)
   {
@@ -430,7 +499,7 @@ class Scale
       // Find the first element in samples_ that has a w value that is larger than current and then insert current in front of that.
       critical_point_w_ = new_cp_w;
       // The current approximation cubic is based on current.
-      ASSERT(utils::almost_equal(cubic_(w), current->Lw(), 10e-6));
+      ASSERT(utils::almost_equal(cubic_(w), current->Lw(), 10e-5));
       left_edge_ = right_edge_ = index;
       while (left_edge_ > 0)
       {

@@ -91,6 +91,11 @@ class CubicPolynomial
     return 2.0 * coefficients_[2] + 6.0 * coefficients_[3] * x;
   }
 
+  double inflection_point() const
+  {
+    return -coefficients_[2] / (3.0 * coefficients_[3]);
+  }
+
   // Access coefficients.
   double operator[](int i) const { ASSERT(0 <= i && i < coefficients_.size()); return coefficients_[i]; }
   double& operator[](int i) { ASSERT(0 <= i && i < coefficients_.size()); return coefficients_[i]; }
