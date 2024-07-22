@@ -171,7 +171,7 @@ class AlgorithmEvent
         for (int side = 0; side < 2; ++side)    // left and right
         {
           double x2 = side == 0 ? l : r;
-#if 0
+#if 0   // Do not draw the left/right connectors for now.
           if (side == 1 && std::copysign(1.0, x2 - cp) == std::copysign(1.0, prev_x2 - cp))
             scale_y -= plot_.convert_vertical_offset_from_pixel(15.0);
           prev_x2 = x2;

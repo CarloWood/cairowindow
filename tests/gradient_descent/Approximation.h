@@ -24,9 +24,16 @@ class Approximation
   Scale scale_;                                         // A measure of over what interval the approximation was tested to be correct.
   bool is_extreme_{false};                              // Set when this is a LocalExtreme::approximation_.
   bool already_had_two_relevant_samples_{false};        // Used as carry between add and update_scale.
-#ifdef CWDEBUG
-  bool moved_{false};
-#endif
+
+ private:
+  // Only called by the move constructor.
+  void reset()
+  {
+    // Forget any previous samples.
+    number_of_relevant_samples_ = 0;
+    current_index_ = 1;
+    scale_.reset();
+  }
 
  public:
   Approximation() = default;
@@ -34,9 +41,7 @@ class Approximation
     relevant_samples_{orig.relevant_samples_}, scale_{std::move(orig.scale_)},
     is_extreme_{orig.is_extreme_}, cubic_{std::move(orig.cubic_)}, already_had_two_relevant_samples_{orig.already_had_two_relevant_samples_}
   {
-#ifdef CWDEBUG
-    orig.moved_ = true;
-#endif
+    orig.reset();
   }
 
   // Called with the latest samples that are expected to match this cubic approximation (or that
@@ -56,17 +61,8 @@ class Approximation
     is_extreme_ = true;
   }
 
-  void reset()
-  {
-    // Forget any previous samples.
-    number_of_relevant_samples_ = 0;
-    current_index_ = 1;
-    scale_.reset();
-    Debug(moved_ = false);
-  }
-
   int number_of_relevant_samples() const { return number_of_relevant_samples_; }
-  Scale const& scale() const { ASSERT(!moved_); return scale_; }
+  Scale const& scale() const { ASSERT(scale_.is_valid()); return scale_; }
   bool is_extreme() const { return is_extreme_; }
   double at(double w) const { return cubic_(w); }
   math::CubicPolynomial const& cubic() const { return cubic_; }
@@ -88,12 +84,6 @@ class Approximation
 
   void print_on(std::ostream& os) const
   {
-    if (moved_)
-    {
-      os << "<MOVED Approximation>";
-      return;
-    }
-
     os << "cubic:" << cubic_ <<
         ", scale:" << scale_;
     if (number_of_relevant_samples_ > 1)

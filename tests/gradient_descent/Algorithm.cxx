@@ -164,10 +164,11 @@ void Algorithm::reset_history()
 #ifdef CWDEBUG
   event_server_.trigger(AlgorithmEventType{scale_erase_event});
 #endif
+  // This function is expected to be called only after current_approximation_ was moved to a LocalExtreme.
+  ASSERT(approximation_ptr_->is_extreme());
   // Use the Approximation object on the stack again (as opposed to one from a LocalExtreme).
+  // current_approximation_ was already reset.
   approximation_ptr_ = &current_approximation_;
-  // Reset the cubic approximation.
-  approximation_ptr_->reset();
   history_.reset();
 }
 
@@ -189,12 +190,15 @@ bool Algorithm::handle_local_extreme(Weight& w)
 
   if (state_ == IterationState::local_extreme)
   {
+    // At the moment we find a new local extreme, that can't be done by an Approximation that is part of a LocalExtreme.
+    ASSERT(approximation_ptr_ == &current_approximation_);
+
     auto prev_extreme = last_extreme_;
 
     // This means that history_.current() is a local extreme. Store it as an extreme.
     last_extreme_ =
       extremes_.emplace(hdirection_ == HorizontalDirection::right ? extremes_.end() : extremes_.begin(),
-          history_.current(), std::move(*approximation_ptr_), energy_.energy());
+          history_.current(), std::move(current_approximation_), energy_.energy());
 
     if (prev_extreme != extremes_.end())
     {

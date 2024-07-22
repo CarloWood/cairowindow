@@ -302,7 +302,7 @@ HorizontalDirection Algorithm::lowest_side(Weight const& w)
 //
 // Returns 0 if there is no jump possible in that direction (because the immediate neighbor was already visited).
 //
-// In the real code a polynomial is fitted and extra polated to predict the next extreme
+// In the real code a polynomial is fitted and extrapolated to predict the next extreme
 // to jump to. Since this can completely miss the target, those jumps are generated as
 // random values in this test. However, we should never jump past an already sampled point.
 // To mimic this here we never jump past an already visited "extreme" (histogram index).

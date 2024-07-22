@@ -105,7 +105,6 @@ class Scale
 
  public:
   Scale() = default;
-  Scale(Scale const&) = delete;
   Scale(Scale&& orig) : valid_{orig.valid_}, value_{orig.value_}, left_edge_{orig.left_edge_}, right_edge_{orig.right_edge_},
     cubic_{std::move(orig.cubic_)}, type_{orig.type_}, critical_point_w_{orig.critical_point_w_}, samples_{std::move(orig.samples_)} { }
 
