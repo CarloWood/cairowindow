@@ -233,6 +233,12 @@ class Plot : public Printable
   double convert_y(double y) const;
   Pixel convert_to_pixel(cairowindow::Point const& point) const;
 
+  double convert_from_pixel_x(double pixel_x) const;
+  double convert_from_pixel_y(double pixel_y) const;
+  cairowindow::Point convert_from_pixel(Pixel const& pixel) const;
+
+  double convert_vertical_offset_from_pixel(double pixel_offset_y) const;
+
   //--------------------------------------------------------------------------
   // Point
 

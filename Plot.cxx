@@ -172,6 +172,60 @@ Pixel Plot::convert_to_pixel(cairowindow::Point const& point) const
   return Pixel{x, y};
 }
 
+double Plot::convert_from_pixel_x(double pixel_x) const
+{
+  double x = pixel_x;
+
+  cairowindow::Rectangle const& g = plot_area_.geometry();
+
+  x -= g.offset_x();
+  x /= g.width();
+  x *= range_[x_axis].size();
+  x += range_[x_axis].min();
+
+  return x;
+}
+
+double Plot::convert_from_pixel_y(double pixel_y) const
+{
+  double y = pixel_y;
+
+  cairowindow::Rectangle const& g = plot_area_.geometry();
+
+  y -= g.offset_y();
+  y /= g.height();
+  y *= range_[y_axis].size();
+  y = range_[y_axis].max() - y;
+
+  return y;
+}
+
+cairowindow::Point Plot::convert_from_pixel(Pixel const& pixel) const
+{
+  double x = pixel.x();
+  double y = pixel.y();
+
+  cairowindow::Rectangle const& g = plot_area_.geometry();
+
+  x -= g.offset_x();
+  x /= g.width();
+  x *= range_[x_axis].size();
+  x += range_[x_axis].min();
+
+  y -= g.offset_y();
+  y /= g.height();
+  y *= range_[y_axis].size();
+  y = range_[y_axis].max() - y;
+
+  return {x, y};
+}
+
+double Plot::convert_vertical_offset_from_pixel(double pixel_offset_y) const
+{
+  cairowindow::Rectangle const& g = plot_area_.geometry();
+  return pixel_offset_y / g.height() * range_[y_axis].size();
+}
+
 //--------------------------------------------------------------------------
 // Point
 
@@ -462,25 +516,9 @@ Curve Plot::create_curve(boost::intrusive_ptr<Layer> const& layer,
 
 cairowindow::Rectangle Plot::update_grabbed(utils::Badge<Window>, ClickableIndex grabbed_point, double pixel_x, double pixel_y)
 {
-  double x = pixel_x;
-  double y = pixel_y;
   Draggable* draggable = draggables_[grabbed_point];
-
-  if (draggable->convert())
-  {
-    cairowindow::Rectangle const& g = plot_area_.geometry();
-    x -= g.offset_x();
-    x /= g.width();
-    x *= range_[x_axis].size();
-    x += range_[x_axis].min();
-
-    y -= g.offset_y();
-    y /= g.height();
-    y *= range_[y_axis].size();
-    y = range_[y_axis].max() - y;
-  }
-
-  cairowindow::Point new_position{x, y};
+  // If convert is not true then pixel_x, pixel_y are actually Point coordinates.
+  cairowindow::Point new_position = draggable->convert() ? convert_from_pixel(Pixel{pixel_x, pixel_y}) : cairowindow::Point{pixel_x, pixel_y};
 
   if (draggable_restrictions_[grabbed_point])
     new_position = draggable_restrictions_[grabbed_point](new_position);

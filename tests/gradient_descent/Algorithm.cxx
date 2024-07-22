@@ -431,11 +431,11 @@ bool Algorithm::handle_local_extreme(Weight& w)
   }
 
   if (number_of_zeroes > 1)
-    Dout(dc::notice, "with zeroes " << zeroes[0] << " and " << zeroes[1]);
+    Dout(dc::notice, "with other local extremes at " << zeroes[0] << " and " << zeroes[1]);
   else if (number_of_zeroes == 1)
-    Dout(dc::notice, "with one zero at " << zeroes[0]);
+    Dout(dc::notice, "with one other local extreme at " << zeroes[0]);
   else
-    Dout(dc::notice, "with no zeroes!");
+    Dout(dc::notice, "with no other local extremes!");
 
   if (number_of_zeroes > 0)
   {
@@ -470,7 +470,7 @@ bool Algorithm::handle_local_extreme(Weight& w)
     hrestriction_ = Restriction::none;
     Dout(dc::notice, "hrestriction_ is now " << hrestriction_);
     Dout(dc::notice(hdirection_ == HorizontalDirection::undecided && number_of_zeroes == 2),
-        "Best zero was " << zeroes[best_zero] << " with A(" << zeroes[best_zero] << ") = " <<
+        "Best other local extreme was " << zeroes[best_zero] << " with A(" << zeroes[best_zero] << ") = " <<
         fourth_degree_approximation(zeroes[best_zero]) <<
         " (the other has value " << fourth_degree_approximation(zeroes[1 - best_zero]) << ")");
   }
@@ -491,16 +491,13 @@ bool Algorithm::handle_local_extreme(Weight& w)
     // Returning false here signals that we did not find any zero.
     return false;
   }
-  else if (hdirection_ == HorizontalDirection::undecided)
-  {
-    // Keep going in the same direction.
-    w += last_extreme_->approximation().scale().step(hrestriction_);
-    expected_Lw_ = last_extreme_->approximation().at(w);
-    Debug(set_algorithm_str(w, "past extreme (no zeroes)"));
-  }
   else
   {
     // Keep going in the same hdirection.
+    //
+    // Note: if hdirection_ is still undecided at this point then this will make a
+    // step in the direction from the sample (part of scale) that is the furthest away
+    // from the critical point of the approximation, towards that critical point.
     w += last_extreme_->approximation().scale().step(hdirection_);
     expected_Lw_ = last_extreme_->approximation().at(w);
     Debug(set_algorithm_str(w, "keep going (no zeroes)"));
@@ -644,9 +641,9 @@ void Algorithm::handle_single_sample(Weight& w)
   }
   else
   {
-    // small_step_ should only be set once hdirection_ has been set.
-    ASSERT(hdirection_ != HorizontalDirection::undecided);
-    step = static_cast<int>(hdirection_) * small_step_;
+    // small_step_ should only be set once next_extreme_type_ has been set.
+    ASSERT(next_extreme_type_ != ExtremeType::unknown);
+    step = ((next_extreme_type_ == ExtremeType::minimum) == (history_.current().dLdw() > 0.0) ? -small_step_ : small_step_);
 #ifdef CWDEBUG
     algorithm_str = "small step";
 #endif
@@ -795,7 +792,7 @@ bool Algorithm::handle_abort_hdirection(Weight& w)
 
   // See if we already know a neighbor (maximum) into this direction.
   // This can be the case if we didn't explore into hdirection yet from that maximum.
-  LocalExtreme* neighbor = best_minimum_->neighbor(hrestriction_);
+  LocalExtreme* neighbor = best_minimum_->neighbor(hdirection_);
   LocalExtreme* new_local_extreme = neighbor ? neighbor : &*best_minimum_;
 
   // Restore the current sample and scale to the values belonging to this new local extreme.

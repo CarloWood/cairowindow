@@ -573,6 +573,7 @@ int main()
         (1.0 - sigmoid) * (a + b * x + c * (x^2)) + (sigmoid * (amplitude * exp((tp - x) / 10) * sin(d * x + phase) + level)));
     Function L(x, sL, sigmoid);
 
+    //gda.enable_drawing(L, /*-80.0*/ -60.0, /*20.0*/-50.0);
     gda.enable_drawing(L, -80.0, 20.0);
 
 // FIXME: Currently core dumps
@@ -580,6 +581,11 @@ int main()
     {
       Dout(dc::notice, "-------------------------------------------");
     }
+
+    ASSERT(gda.success());
+    Sample const& result = gda.minimum();
+    //ASSERT(utils::almost_equal(result.w(), vertex1, 1e-8));
+    Dout(dc::notice, "Global minimum: " << result);
   }
 
 #if 0

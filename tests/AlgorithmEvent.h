@@ -76,10 +76,9 @@ class AlgorithmEvent
   cairowindow::plot::Connector plot_difference_expected_;
   cairowindow::plot::Line plot_horizontal_line_;
   cairowindow::plot::Text plot_energy_text_;
-  std::array<cairowindow::plot::Connector, 2> plot_scale_indicator_;
-  std::array<cairowindow::plot::Text, 2> plot_scale_text_;
-  std::array<cairowindow::plot::Line, 2> plot_vertical_line_through_w_;
-  cairowindow::plot::Line plot_vertical_line_through_v_;
+  std::array<cairowindow::plot::Connector, 3> plot_scale_indicator_;    // 0: left, 1: right, 2: scale
+  std::array<cairowindow::plot::Text, 3> plot_scale_text_;              // idem
+  std::array<cairowindow::plot::Line, 4> plot_vertical_line_through_w_; // 0: left, 1: right, 2: cp, 3: I
   cairowindow::plot::BezierFitter plot_old_cubic_;
   utils::Array<PlotSample, gradient_descent::History::size, gradient_descent::HistoryIndex> plot_samples_;
   std::vector<PlotSample> plot_local_extremes_;
@@ -162,30 +161,65 @@ class AlgorithmEvent
           data.result() == ScaleUpdate::away_from_cp)
       {
         Scale const& scale = data.scale();
-        double const x1 = scale.critical_point_w();
+        double const I = scale.inflection_point_w();
+        double const cp = scale.critical_point_w();
+        double const l = scale.left_edge_sample_w();
+        double const r = scale.right_edge_sample_w();
         double prev_x2;
-        double scale_y = plot_.yrange().min() + 0.5 * plot_.yrange().size();
-        for (int side = 0; side < plot_scale_indicator_.size(); ++side)
+        double const y = plot_.yrange().min() + 0.75 * plot_.yrange().size();
+        double scale_y = y;
+        for (int side = 0; side < 2; ++side)    // left and right
         {
-          double x2 = side == 0 ? scale.left_edge_sample_w() : scale.right_edge_sample_w();
-          if (side == 1 && std::copysign(1.0, x2 - x1) == std::copysign(1.0, prev_x2 - x1))
-            scale_y -= 15;
+          double x2 = side == 0 ? l : r;
+#if 0
+          if (side == 1 && std::copysign(1.0, x2 - cp) == std::copysign(1.0, prev_x2 - cp))
+            scale_y -= plot_.convert_vertical_offset_from_pixel(15.0);
           prev_x2 = x2;
-          plot_scale_indicator_[side] = plot::Connector{{x1, scale_y}, {x2, scale_y}, Connector::open_arrow, Connector::open_arrow};
+          plot_scale_indicator_[side] = plot::Connector{{cp, scale_y}, {x2, scale_y}, Connector::open_arrow, Connector::open_arrow};
           plot_.add_connector(layer_, s_indicator_style, plot_scale_indicator_[side]);
           plot_scale_text_[side] = plot_.create_text(layer_, {{.position = draw::centered_above, .offset = 2.0}},
-              Point{(x1 + x2) / 2, scale_y}, side == 0 ? "left" : "right");
+              Point{(cp + x2) / 2, scale_y}, side == 0 ? "left" : "right");
+#endif
 
-          // Only draw the vertical line at critical_point_w once.
+          // Only draw the vertical line at critical_point_w and inflection point once.
           if (side == 0)
           {
-            plot_vertical_line_through_v_ = plot::Line{{x1, scale_y}, Direction::up};
-            plot_.add_line(layer_, s_indicator_style({.dashes = {3.0, 3.0}}), plot_vertical_line_through_v_);
+            plot_vertical_line_through_w_[2] = plot::Line{{cp, 0.0}, Direction::up};
+            plot_.add_line(layer_, s_indicator_style({.dashes = {3.0, 3.0}}), plot_vertical_line_through_w_[2]);
+            plot_vertical_line_through_w_[3] = plot::Line{{I, 0.0}, Direction::up};
+            plot_.add_line(layer_, s_indicator_style({.line_color = color::violet, .dashes = {5.0, 2.0}}), plot_vertical_line_through_w_[3]);
           }
 
-          plot_vertical_line_through_w_[side] = plot::Line{{x2, scale_y}, Direction::up};
+          plot_vertical_line_through_w_[side] = plot::Line{{x2, 0.0}, Direction::up};
           plot_.add_line(layer_, s_indicator_style, plot_vertical_line_through_w_[side]);
         }
+        // Draw the "scale" connector.
+        scale_y = y + plot_.convert_vertical_offset_from_pixel(15.0);
+        double x_center;
+        Scale::LCRI_type const LCRI{l, cp, r, I};
+        switch (Scale::classify(LCRI))
+        {
+          case 0:       // Weighted average of {I, r} around cp.
+            x_center = cp;
+            break;
+          case 1:       // Weighted average of {l, r} around I.
+            x_center = I;
+            break;
+          case 2:       // Weighted average of {l, I} around cp.
+            x_center = cp;
+            break;
+          case 3:       // Weighted average of {l, r} around cp.
+            x_center = cp;
+            break;
+          case 4:       // r - l
+            x_center = 0.5 * (l + r);
+            break;
+        }
+        double width = scale.value();
+        plot_scale_indicator_[2] = plot::Connector{{x_center - 0.5 * width, scale_y}, {x_center + 0.5 * width, scale_y},
+          Connector::open_arrow, Connector::open_arrow};
+        plot_.add_connector(layer_, s_indicator_style, plot_scale_indicator_[2]);
+        plot_scale_text_[2] = plot_.create_text(layer_, {{.position = draw::centered_above, .offset = 2.0}}, Point{x_center, scale_y}, "scale");
       }
       if (data.result() == ScaleUpdate::towards_cp)
       {
@@ -201,9 +235,9 @@ class AlgorithmEvent
       {
         plot_scale_indicator_[side].reset();
         plot_scale_text_[side].reset();
-        plot_vertical_line_through_w_[side].reset();
       }
-      plot_vertical_line_through_v_.reset();
+      for (int i = 0; i < plot_vertical_line_through_w_.size(); ++i)
+        plot_vertical_line_through_w_[i].reset();
       plot_old_cubic_.reset();
     }
     else if (event.is_a<HistoryAddEventData>())

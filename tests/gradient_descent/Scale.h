@@ -118,6 +118,7 @@ class Scale
   double or_zero() const { return valid_ ? value_ : epsilon; }
   math::CubicPolynomial const& cubic() const { return cubic_; }
   CriticalPointType type() const { return type_; }
+  double inflection_point_w() const { return cubic_.inflection_point(); }
   double critical_point_w() const { return critical_point_w_; }
   double left_edge_sample_w() const { ASSERT(valid_); return samples_[left_edge_].w; }
   double right_edge_sample_w() const { ASSERT(valid_); return samples_[right_edge_].w; }
@@ -192,7 +193,7 @@ class Scale
     return std::abs(step) < epsilon || std::abs(step) < 1e-6 * std::abs(w);
   }
 
- private:
+ public:
   static constexpr int Li = 0;
   static constexpr int Ci = 1;
   static constexpr int Ri = 2;
@@ -206,6 +207,7 @@ class Scale
       4 * ((LCRI[Ci] < LCRI[Li]) + (LCRI[Ci] < LCRI[Ri])) + (LCRI[Ii] < LCRI[Ci])];
   }
 
+ private:
   // Return the weighted average distance of L and R to C.
   static double weighted_average(LCRI_type const& LCRI)
   {
