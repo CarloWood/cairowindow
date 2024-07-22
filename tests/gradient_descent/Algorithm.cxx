@@ -467,6 +467,8 @@ bool Algorithm::handle_local_extreme(Weight& w)
     expected_Lw_ = expected_Lw[best_zero];
     Debug(set_algorithm_str(w, "best zero"));
     reset_history();
+    hrestriction_ = Restriction::none;
+    Dout(dc::notice, "hrestriction_ is now " << hrestriction_);
     Dout(dc::notice(hdirection_ == HorizontalDirection::undecided && number_of_zeroes == 2),
         "Best zero was " << zeroes[best_zero] << " with A(" << zeroes[best_zero] << ") = " <<
         fourth_degree_approximation(zeroes[best_zero]) <<
@@ -511,11 +513,14 @@ bool Algorithm::handle_local_extreme(Weight& w)
     Dout(dc::notice, "Initialized hdirection_ to " << hdirection_ << ".");
   }
 
-  // The next call to find_extreme will use this local extreme and the w value that we return
-  // as the two samples for the cubic. Then we are only interested in extremes in the same
-  // direction as hdirection_.
-  hrestriction_ = static_cast<Restriction>(hdirection_);
-  Dout(dc::notice, "hrestriction_ is now " << hrestriction_);
+  if (number_of_zeroes == 0)
+  {
+    // The next call to find_extreme will use this local extreme and the w value that we return
+    // as the two samples for the cubic. Then we are only interested in extremes in the same
+    // direction as hdirection_.
+    hrestriction_ = static_cast<Restriction>(hdirection_);
+    Dout(dc::notice, "hrestriction_ is now " << hrestriction_);
+  }
 
   // Remember in which direction we travelled from this extreme.
   last_extreme_->explored(hdirection_);
