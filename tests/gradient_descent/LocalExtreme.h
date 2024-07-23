@@ -9,13 +9,18 @@ namespace gradient_descent {
 
 class LocalExtreme
 {
+ public:
+  using extremes_type = std::list<LocalExtreme>;
+  static extremes_type s_dummy_list;
+
  protected:
   Approximation approximation_;         // The (cubic) polynomial approximation around this extreme.
   Sample cp_sample_;                    // Sample taken at the critical point of the approximation_;
   double energy_;                       // The maximum height (Lw) that can be reached from here.
   int explored_{0};                     // Bit 1: exploration to the left of this extreme has started.
                                         // Bit 2: same, on the right.
-  std::array<LocalExtreme*, 2> neighbors_{};      // The extremes on the left (0) and right (1) of this one, if any.
+  std::array<extremes_type::iterator, 2> neighbors_{s_dummy_list.end(), s_dummy_list.end()};
+                                        // The extremes on the left (0) and right (1) of this one, if any.
 
  public:
   LocalExtreme(Sample const& cp_sample, Approximation&& approximation, double energy) :
@@ -62,12 +67,24 @@ class LocalExtreme
     return explored_ == 3;
   }
 
-  void set_neighbor(HorizontalDirectionToInt direction, LocalExtreme* neighbor)
+  void set_neighbor(HorizontalDirectionToInt direction, extremes_type::iterator neighbor)
   {
-    ASSERT(!neighbors_[direction.as_index()]);
+#ifdef CWDEBUG
+    // Can only assign each element of neighbors_ once, and only with a non-end iterator.
+    ASSERT(neighbors_[direction.as_index()] == s_dummy_list.end());
+#endif
     neighbors_[direction.as_index()] = neighbor;
   }
-  LocalExtreme* neighbor(HorizontalDirectionToInt direction) const { return neighbors_[direction.as_index()]; }
+  bool has_neighbor(HorizontalDirectionToInt direction) const
+  {
+    return neighbors_[direction.as_index()] != s_dummy_list.end();
+  }
+  extremes_type::iterator neighbor(HorizontalDirectionToInt direction) const
+  {
+    // Call has_neighbor first.
+    ASSERT(neighbors_[direction.as_index()] == s_dummy_list.end());
+    return neighbors_[direction.as_index()];
+  }
 
 #ifdef CWDEBUG
   void print_on(std::ostream& os) const
@@ -76,11 +93,11 @@ class LocalExtreme
         ", cp_sample:" << cp_sample_ <<
         ", energy:" << energy_ <<
         ", explored:" << explored_ <<
-        ", neighbors:{" << neighbor(HorizontalDirection::left);
-    if (neighbor(HorizontalDirection::left))
+        ", neighbors:{" << neighbor(HorizontalDirection::left)->cp_sample().w();
+    if (neighbor(HorizontalDirection::left) != s_dummy_list.end())
       os << " (" << neighbor(HorizontalDirection::left)->cp_sample().w() << ")";
-    os << ", right:" << neighbor(HorizontalDirection::right);
-    if (neighbor(HorizontalDirection::right))
+    os << ", right:" << neighbor(HorizontalDirection::right)->cp_sample().w();
+    if (neighbor(HorizontalDirection::right) != s_dummy_list.end())
       os << " (" << neighbor(HorizontalDirection::right)->cp_sample().w() << ")";
   }
 #endif

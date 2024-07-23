@@ -193,7 +193,7 @@ bool Algorithm::handle_local_extreme(Weight& w)
     // At the moment we find a new local extreme, that can't be done by an Approximation that is part of a LocalExtreme.
     ASSERT(approximation_ptr_ == &current_approximation_);
 
-    auto prev_extreme = last_extreme_;
+    extremes_type::iterator prev_extreme = last_extreme_;
 
     // This means that history_.current() is a local extreme. Store it as an extreme.
     last_extreme_ =
@@ -203,7 +203,7 @@ bool Algorithm::handle_local_extreme(Weight& w)
     if (prev_extreme != extremes_.end())
     {
       // Add pointer back to the previous local extreme.
-      last_extreme_->set_neighbor(opposite(hdirection_), &*prev_extreme);
+      last_extreme_->set_neighbor(opposite(hdirection_), prev_extreme);
     }
 
 #ifdef CWDEBUG
@@ -475,8 +475,6 @@ bool Algorithm::handle_local_extreme(Weight& w)
     expected_Lw_ = expected_Lw[best_zero];
     Debug(set_algorithm_str(w, "best zero"));
     reset_history();
-    hrestriction_ = Restriction::none;
-    Dout(dc::notice, "hrestriction_ is now " << hrestriction_);
     Dout(dc::notice(hdirection_ == HorizontalDirection::undecided && number_of_zeroes == 2),
         "Best other local extreme was " << zeroes[best_zero] << " with A(" << zeroes[best_zero] << ") = " <<
         fourth_degree_approximation(zeroes[best_zero]) <<
@@ -486,12 +484,6 @@ bool Algorithm::handle_local_extreme(Weight& w)
   {
     // This should never assert: we already set hdirection_ when requesting the extra sample.
     ASSERT(hdirection_ != HorizontalDirection::undecided);
-
-    // The next call to find_extreme will use this local extreme and the w value that we return
-    // as the two samples for the cubic. Then we are only interested in extremes in the same
-    // direction as hdirection_.
-    hrestriction_ = static_cast<Restriction>(hdirection_);
-    Dout(dc::notice, "hrestriction_ is now " << hrestriction_);
 
     // Remember in which direction we travelled from this extreme.
     last_extreme_->explored(hdirection_);
@@ -522,15 +514,6 @@ bool Algorithm::handle_local_extreme(Weight& w)
   event_server_.trigger(AlgorithmEventType{hdirection_known_event, last_extreme_->cp_sample(), hdirection_});
 #endif
 
-  if (number_of_zeroes == 0)
-  {
-    // The next call to find_extreme will use this local extreme and the w value that we return
-    // as the two samples for the cubic. Then we are only interested in extremes in the same
-    // direction as hdirection_.
-    hrestriction_ = static_cast<Restriction>(hdirection_);
-    Dout(dc::notice, "hrestriction_ is now " << hrestriction_);
-  }
-
   // Remember in which direction we travelled from this extreme.
   last_extreme_->explored(hdirection_);
 
@@ -559,7 +542,7 @@ double Algorithm::update_approximation(bool current_is_replacement)
     if (first_call && approximation_ptr_->number_of_relevant_samples() == 2)
     {
       ASSERT(next_extreme_type_ == ExtremeType::unknown);
-      new_w = approximation_ptr_->find_extreme(last_region_, next_extreme_type_, hrestriction_);
+      new_w = approximation_ptr_->find_extreme(last_region_, next_extreme_type_);
       // This is expected to be set the first time.
       ASSERT(last_region_ != Region::unknown);
     }
@@ -725,7 +708,7 @@ void Algorithm::handle_approximation(Weight& w, bool first_call, double new_w)
     Region prev_region = last_region_;
 #endif
     ExtremeType extreme_type = next_extreme_type_;
-    new_w = approximation_ptr_->find_extreme(last_region_, extreme_type, hrestriction_);
+    new_w = approximation_ptr_->find_extreme(last_region_, extreme_type);
     // We really shouldn't change our mind about the direction.
     ASSERT(prev_region == Region::invalid || last_region_ == Region::inbetween || last_region_ == prev_region);
 
@@ -797,19 +780,21 @@ bool Algorithm::handle_abort_hdirection(Weight& w)
   hdirection_ = opposite(hdirection_);
   Dout(dc::notice, "Changed horizontal direction to " << hdirection_);
 
-  // Now going in a different direction, from a local minimum (which can happen if we
-  // didn't explore the next minimum into that direction yet) we must update hrestriction_.
-  hrestriction_ = static_cast<Restriction>(hdirection_);
-  Dout(dc::notice, "hrestriction_ is now " << hrestriction_);
-
   // See if we already know a neighbor (maximum) into this direction.
   // This can be the case if we didn't explore into hdirection yet from that maximum.
-  LocalExtreme* neighbor = best_minimum_->neighbor(hdirection_);
-  LocalExtreme* new_local_extreme = neighbor ? neighbor : &*best_minimum_;
+  bool has_neighbor = best_minimum_->has_neighbor(hdirection_);
+  extremes_type::iterator new_local_extreme = has_neighbor ? best_minimum_->neighbor(hdirection_) : best_minimum_;
 
   // Restore the current sample and scale to the values belonging to this new local extreme.
   w = new_local_extreme->cp_sample().w();
   Dout(dc::notice, "Restored w to best minimum at " << w);
+
+  // Now going in a different direction, from a local minimum (which can happen if we
+  // didn't explore the next minimum into that direction yet).
+  last_extreme_ = new_local_extreme;
+#ifdef CWDEBUG
+  event_server_.trigger(AlgorithmEventType{hdirection_known_event, last_extreme_->cp_sample(), hdirection_});
+#endif
 
   // Restore small_step_ to what is was.
   small_step_ = new_local_extreme->approximation().scale().value();
@@ -818,11 +803,11 @@ bool Algorithm::handle_abort_hdirection(Weight& w)
   w += static_cast<int>(hdirection_) * small_step_;
   expected_Lw_ = new_local_extreme->approximation().at(w);
 
-  if (neighbor)
+  if (has_neighbor)
   {
     Debug(set_algorithm_str(w, "neighbor of best minimum, opposite direction"));
     next_extreme_type_ = ExtremeType::minimum;
-    neighbor->explored(hdirection_);
+    new_local_extreme->explored(hdirection_);
   }
   else
   {

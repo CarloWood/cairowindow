@@ -50,7 +50,7 @@ class Approximation
   ScaleUpdate update_scale(bool current_is_replacement, ExtremeType next_extreme_type);
   ScaleUpdate update_local_extreme_scale(Sample const& current);
 
-  Weight find_extreme(Region& region, ExtremeType& extreme_type, Restriction restriction) const;
+  Weight find_extreme(Region& region, ExtremeType& extreme_type) const;
   void set_current_index(Region region);
 
   Sample const& current() const { ASSERT(number_of_relevant_samples_ > 0); return *relevant_samples_[current_index_]; }

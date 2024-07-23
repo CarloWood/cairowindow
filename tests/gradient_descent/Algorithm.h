@@ -41,12 +41,10 @@ class Algorithm
   // then towards it, if that doesn't match the current hdirection_.
   HorizontalDirection hdirection_;
   ExtremeType next_extreme_type_;       // The extreme type (minimum or maximum) that we're looking for (next).
-
-  Restriction hrestriction_;            // The direction that we're looking for an extreme in, relative to the previous approximation samples.
   Region last_region_;                  // The region returned by the last call to find_extreme.
 
   // Using a std::list: pointers to elements may never be invalidated.
-  using extremes_type = std::list<LocalExtreme>;
+  using extremes_type = LocalExtreme::extremes_type;
   extremes_type extremes_;
   extremes_type::iterator best_minimum_;
   extremes_type::iterator last_extreme_;
@@ -81,7 +79,6 @@ class Algorithm
     last_extreme_(extremes_.end()),
     hdirection_(HorizontalDirection::undecided),
     next_extreme_type_(ExtremeType::unknown),
-    hrestriction_(Restriction::none),
     last_region_(Region::unknown)
   {
     DoutEntering(dc::notice, "Algorithm::Algorithm(" << learning_rate << ", " << L_max << ")");

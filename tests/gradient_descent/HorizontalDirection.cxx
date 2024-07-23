@@ -29,15 +29,4 @@ std::string to_string(Region region)
   AI_NEVER_REACHED
 }
 
-std::string to_string(Restriction restriction)
-{
-  switch (restriction)
-  {
-    case Restriction::left: return "left";
-    case Restriction::none: return "none";
-    case Restriction::right: return "right";
-  }
-  AI_NEVER_REACHED
-}
-
 } // namespace gradient_descent

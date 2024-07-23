@@ -46,7 +46,6 @@ int main()
   {
     using namespace cairowindow;
     using Window = cairowindow::Window;
-    using Restriction = gradient_descent::Restriction;
     using Region = gradient_descent::Region;
     using ExtremeType = gradient_descent::ExtremeType;
 
@@ -224,9 +223,8 @@ int main()
       Dout(dc::notice, "sl = " << sl << ", sr = " << sr);
 
       std::uniform_int_distribution<int> dir_dist(-1, 1);
-      Restriction const restriction = static_cast<Restriction>(dir_dist(engine));
       ExtremeType extreme_type = static_cast<ExtremeType>(dir_dist(engine));
-      Dout(dc::notice, "restriction = " << restriction << ", extreme_type = " << extreme_type);
+      Dout(dc::notice, "extreme_type = " << extreme_type);
 
       gradient_descent::Approximation approximation;
       approximation.add(&sl, false, extreme_type, false);
@@ -239,7 +237,7 @@ int main()
 
       Region region;
       ExtremeType const input_extreme_type = extreme_type;
-      gradient_descent::Weight result = approximation.find_extreme(region, extreme_type, restriction);
+      gradient_descent::Weight result = approximation.find_extreme(region, extreme_type);
       Dout(dc::notice, "result = " << result << "; region = " << region << "; extreme_type = " << extreme_type);
 
       // Create and draw plot area.
@@ -304,7 +302,7 @@ int main()
         }
       }
       plot::Line plot_center_line;
-      if (restriction == Restriction::none && input_extreme_type == ExtremeType::unknown)
+      if (input_extreme_type == ExtremeType::unknown)
       {
         // Draw a vertical line at the center.
         double center = 0.5 * (wl + wr);
@@ -315,7 +313,7 @@ int main()
       // Flush all expose events related to the drawing done above.
       window.set_send_expose_events(true);
 
-      Dout(dc::notice, "restriction = " << restriction << ", input_extreme_type = " << input_extreme_type);
+      Dout(dc::notice, "input_extreme_type = " << input_extreme_type);
 
       // Is there no extreme?
       if (D <= 0.0)
@@ -326,55 +324,22 @@ int main()
         double ld = cubic.derivative(wl);
         double rd = cubic.derivative(wr);
         ASSERT((D == 0.0 && (ld == 0.0 || rd == 0.0)) || (ld != 0 && rd != 0.0 && (ld < 0.0) == (rd < 0.0)));
-        // If restriction was none region should now be set to "downhill".
-        ASSERT(restriction != Restriction::none || region == ((ld > 0.0) ? Region::left : Region::right));
+        // region should now be set to "downhill".
+        ASSERT(region == ((ld > 0.0) ? Region::left : Region::right));
         continue;
       }
 
-      // Do we not care where the returned extreme is?
-      if (restriction == Restriction::none)
-      {
-        // Then some extreme must be returned.
-        ASSERT(extreme_type != ExtremeType::unknown);
-        // If we requested a certain type of extreme, then that must be returned.
-        ASSERT(input_extreme_type == ExtremeType::unknown || extreme_type == input_extreme_type);
-        // region must be set correctly.
-        double w = result;
-        ASSERT(check_region(region, w, wl, wr));
-        // The result must correspond to the correct extreme.
-        double extreme = (extreme_type == ExtremeType::minimum) ? minimum : maximum;
-        ASSERT(std::abs(w - extreme) < 0.1 * std::abs(minimum - maximum));
-        continue;
-      }
+      // Some extreme must be returned.
+      ASSERT(extreme_type != ExtremeType::unknown);
+      // If we requested a certain type of extreme, then that must be returned.
+      ASSERT(input_extreme_type == ExtremeType::unknown || extreme_type == input_extreme_type);
+      // region must be set correctly.
+      double w = result;
+      ASSERT(check_region(region, w, wl, wr));
+      // The result must correspond to the correct extreme.
+      double extreme = (extreme_type == ExtremeType::minimum) ? minimum : maximum;
+      ASSERT(std::abs(w - extreme) < 0.1 * std::abs(minimum - maximum));
 
-      // Was an extreme returned?
-      if (extreme_type != ExtremeType::unknown)
-      {
-        // If we requested a certain type of extreme, then that must be returned.
-        ASSERT(input_extreme_type == ExtremeType::unknown || extreme_type == input_extreme_type);
-        // region must be set correctly.
-        double w = result;
-        ASSERT(check_region(region, w, wl, wr));
-        // The result must correspond to the correct extreme.
-        double extreme = (extreme_type == ExtremeType::minimum) ? minimum : maximum;
-        ASSERT(std::abs(w - extreme) < 0.1 * std::abs(minimum - maximum));
-        // The returned region must correspond to the requested one.
-        ASSERT(region == restriction);
-        continue;
-      }
-
-      // Run over the two possible extremes.
-      for (int e = 0; e < 2; ++e)
-      {
-        double extreme = (e == 0) ? minimum : maximum;
-        // Skip extremes that should be rejected because of input_extreme_type.
-        if ((e == 0 && input_extreme_type == ExtremeType::maximum) ||
-            (e == 1 && input_extreme_type == ExtremeType::minimum))
-          continue;
-        // Then this extreme should be rejected because of restriction.
-        ASSERT((restriction == Restriction::left && extreme > std::max(wl, wr)) ||
-            (restriction == Restriction::right && extreme < std::min(wl, wr)));
-      }
       // Everything was checked with ASSERTs now.
       continue;
 

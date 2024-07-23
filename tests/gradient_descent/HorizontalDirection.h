@@ -16,25 +16,6 @@ enum class HorizontalDirection
   right = 1,
 };
 
-// In the context of find_extreme, two samples are involved -
-// the left-most sample (at wl) and the right-most sample (at wr).
-//
-// As input of find_extreme:
-//   - an optional restriction on the region(s) where the returned extreme is allowed to be in.
-//
-//      ------------|---------------|--------------
-//                  wl              wr
-// input:           |               |
-//      -----------left------------>|                   : only returns inbetween or left.
-//                  |<--------------right----------     : only returns inbetween or right.
-//      -------------------none--------------------     : returns whatever.
-enum class Restriction
-{
-  left = -1,
-  none = 0,
-  right = 1,
-};
-
 // The output of find_extreme:
 //   - the region where the requested (or returned) extreme is found in.
 //
@@ -53,15 +34,6 @@ enum class Region
   invalid = 3
 };
 
-inline bool operator==(Region region, Restriction restriction)
-{
-  // Restriction; Region: -1   0     1
-  //     -1             | T  | T  | F  |
-  //      0             | T  | T  | T  |
-  //      1             | F  | T  | T  |
-  return static_cast<int>(region) * static_cast<int>(restriction) != -1;
-}
-
 inline HorizontalDirection opposite(HorizontalDirection hdirection)
 {
   return static_cast<HorizontalDirection>(-static_cast<int>(hdirection));
@@ -72,7 +44,6 @@ class HorizontalDirectionToInt {
   int val_;
  public:
   HorizontalDirectionToInt(HorizontalDirection hdirection) : val_(static_cast<int>(hdirection)) { ASSERT(val_ == -1 || val_ == 1); }
-  HorizontalDirectionToInt(Restriction restriction) : val_(static_cast<int>(restriction)) { }
   HorizontalDirectionToInt(Region region) : val_(static_cast<int>(region)) { ASSERT(val_ == -1 || val_ == 1); }
   operator int() const { return val_; }
   int as_index() const { return (val_ + 1) >> 1; }
@@ -80,7 +51,6 @@ class HorizontalDirectionToInt {
 
 std::string to_string(HorizontalDirection hdirection);
 std::string to_string(Region region);
-std::string to_string(Restriction region);
 
 #ifdef CWDEBUG
 inline std::ostream& operator<<(std::ostream& os, HorizontalDirection hdirection)
@@ -91,11 +61,6 @@ inline std::ostream& operator<<(std::ostream& os, HorizontalDirection hdirection
 inline std::ostream& operator<<(std::ostream& os, Region region)
 {
   return os << to_string(region);
-}
-
-inline std::ostream& operator<<(std::ostream& os, Restriction restriction)
-{
-  return os << to_string(restriction);
 }
 #endif
 

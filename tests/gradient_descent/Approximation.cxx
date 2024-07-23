@@ -86,8 +86,7 @@ void Approximation::add(Sample const* current, bool current_is_replacement, Extr
     {
       Region region_result;
       ExtremeType extreme_type = next_extreme_type;
-      Restriction restriction = current_index_ == 0 ? Restriction::left : Restriction::right;
-      find_extreme(region_result, extreme_type, restriction);
+      find_extreme(region_result, extreme_type);
       if (extreme_type == ExtremeType::unknown || region_result != Region::inbetween)
       {
         // It shouldn't be on the other side of the two samples then previously predicted.
@@ -141,17 +140,10 @@ ScaleUpdate Approximation::update_local_extreme_scale(Sample const& current)
 // because that is how relevant_samples_ is sorted).
 //
 // Input:
-//  restriction:
-//         left: looking for an extreme left of `sr`.
-//        right: looking for an extreme right of `sl`.
-//         none: looking for an extreme, anywhere.
 //  extreme_type:
 //      maximum: looking for a maximum.
 //      minimum: looking for a minimum.
-//      unknown: looking for any extreme; the preference will depend on the value of restriction.
-//               If restriction is left, the extreme nearest to, but left of, sr is returned.
-//               If restriction is right, the extreme nearest to, but right of, sl is returned.
-//               if restriction is none, the prefered extreme is the one nearest to the center.
+//      unknown: looking for any extreme; the prefered extreme is the one nearest to the center.
 //
 // Output:
 //  region_out:
@@ -162,12 +154,10 @@ ScaleUpdate Approximation::update_local_extreme_scale(Sample const& current)
 //           up: the extreme is a maximum.
 //         down: the extreme is a minimum.
 //      unknown: there is no extreme (of the requested `extreme_type`),
-//               in this case, if restriction is none, region_out is set to
-//               point in the direction where we go downhill. Otherwise
-//               it is set to the direction equivalent to restriction.
-Weight Approximation::find_extreme(Region& region_out, ExtremeType& extreme_type, Restriction restriction) const
+//               region_out is set to point in the direction where we go downhill.
+Weight Approximation::find_extreme(Region& region_out, ExtremeType& extreme_type) const
 {
-  DoutEntering(dc::notice, "Approximation::find_extreme(region_out, " << extreme_type << ", " << restriction << ")");
+  DoutEntering(dc::notice, "Approximation::find_extreme(region_out, " << extreme_type << ")");
   // Otherwise the cubic approximation isn't even valid.
   ASSERT(number_of_relevant_samples_ == 2);
 
@@ -181,13 +171,10 @@ Weight Approximation::find_extreme(Region& region_out, ExtremeType& extreme_type
   // If D is equal to zero we have a point where the derivative is zero, but that isn't a maximum or minimum.
   if (D <= 0.0)
   {
-    Dout(dc::notice, "Returning ExtremeType::unknown because D <= 0.");
-    if (restriction == Restriction::none)
-    {
-      region_out = (d > 0.0 || (d == 0.0 && b > 0.0)) ? Region::left : Region::right;
-      Dout(dc::notice, "Returning " << region_out << " because that is downhill.");
-    }
     extreme_type = ExtremeType::unknown;
+    Dout(dc::notice, "Returning ExtremeType::unknown because D <= 0.");
+    region_out = (d > 0.0 || (d == 0.0 && b > 0.0)) ? Region::left : Region::right;
+    Dout(dc::notice, "Returning " << region_out << " because that is downhill.");
 #if CW_DEBUG
     return Algorithm::uninitialized_magic;
 #else
@@ -221,17 +208,6 @@ Weight Approximation::find_extreme(Region& region_out, ExtremeType& extreme_type
     }
     region_out =
       (vertex < wl) ? Region::left : (vertex > wr) ? Region::right : Region::inbetween;
-    if (region_out != restriction)
-    {
-      Dout(dc::notice, "Returning ExtremeType::unknown because the cubic looks like a parabola with an extreme type (" <<
-          extreme_type_found << " on the other side as what is requested (" << restriction << ").");
-      extreme_type = ExtremeType::unknown;
-#if CW_DEBUG
-      return Algorithm::uninitialized_magic;
-#else
-      return {};  // Not used.
-#endif
-    }
     extreme_type = extreme_type_found;
     Dout(dc::notice, "Returning " << region_out << " because the cubic looks like a parabola and that's where the vertex is.");
     return vertex;
@@ -239,64 +215,13 @@ Weight Approximation::find_extreme(Region& region_out, ExtremeType& extreme_type
 
   if (extreme_type == ExtremeType::unknown)
   {
-    //      unknown: looking for any extreme; the preference will depend on the value of restriction.
-    //               If restriction is left, the extreme nearest to, but left of, sr is returned.
-    //               If restriction is right, the extreme nearest to, but right of, sl is returned.
-    //               if restriction is none, the prefered extreme is the one nearest to the center.
-    if (restriction == Restriction::none)
-    {
-      double center = 0.5 * (wl + wr);
-      extreme_type = (std::abs(minimum - center) > std::abs(maximum - center)) ? ExtremeType::maximum : ExtremeType::minimum;
-      Dout(dc::notice, "Returning " << extreme_type << " because that extreme is closest to the center of the two given samples.");
-    }
-    else
-    {
-      double border = (restriction == Restriction::left) ? wr : wl;
-      double rel_pos_min = static_cast<int>(restriction) * (minimum - border);
-      double rel_pos_max = static_cast<int>(restriction) * (maximum - border);
-      if (rel_pos_min < 0.0 && rel_pos_max < 0.0)
-      {
-        Dout(dc::notice, "Returning ExtremeType::unknown because both extremes are on the wrong side of border (" << border << ").");
-        extreme_type = ExtremeType::unknown;
-#if CW_DEBUG
-        return Algorithm::uninitialized_magic;
-#else
-        return {};  // Not used.
-#endif
-      }
-      if (rel_pos_min < 0.0)
-      {
-        extreme_type = ExtremeType::maximum;
-        Dout(dc::notice, "Returning " << extreme_type << " because the minimum is on the wrong side of border (" << border << ").");
-      }
-      else if (rel_pos_max < 0.0)
-      {
-        extreme_type = ExtremeType::minimum;
-        Dout(dc::notice, "Returning " << extreme_type << " because the maximum is on the wrong side of border (" << border << ").");
-      }
-      else
-      {
-        extreme_type = (rel_pos_max < rel_pos_min) ? ExtremeType::maximum : ExtremeType::minimum;
-        Dout(dc::notice, "Returning " << extreme_type << " because that extreme is closest to border (" << border << ").");
-      }
-    }
+    //      unknown: looking for any extreme; the prefered extreme is the one nearest to the center.
+    double center = 0.5 * (wl + wr);
+    extreme_type = (std::abs(minimum - center) > std::abs(maximum - center)) ? ExtremeType::maximum : ExtremeType::minimum;
+    Dout(dc::notice, "Returning " << extreme_type << " because that extreme is closest to the center of the two given samples.");
   }
 
   double result = (extreme_type == ExtremeType::maximum) ? maximum : minimum;
-
-  //         left: looking for an extreme left of `sr`.
-  //        right: looking for an extreme right of `sl`.
-  if ((restriction == Restriction::left && result >= wr) ||
-      (restriction == Restriction::right && result <= wl))
-  {
-    Dout(dc::notice, "Returning ExtremeType::unknown because the requested extreme is on the wrong side.");
-    extreme_type = ExtremeType::unknown;
-#if CW_DEBUG
-    return Algorithm::uninitialized_magic;
-#else
-    return {};  // Not used.
-#endif
-  }
 
   //         left: the requested extreme is left of `left`.
   //        right: the requested extreme is right of `right`.
