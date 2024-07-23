@@ -28,7 +28,8 @@ enum event_type
   scale_draw_event,
   scale_erase_event,
   history_add_event,
-  new_local_extreme_event
+  new_local_extreme_event,
+  hdirection_known_event
 };
 
 class ResetEventData
@@ -202,12 +203,31 @@ class NewLocalExtremeEventData
   }
 };
 
+class HDirectionKnownEventData
+{
+ protected:
+  Sample const& local_extreme_;
+  HorizontalDirection hdirection_;
+
+ public:
+  HDirectionKnownEventData(Sample const& local_extreme, HorizontalDirection hdirection) :
+    local_extreme_(local_extreme), hdirection_(hdirection) { }
+
+  Sample const& local_extreme() const { return local_extreme_; }
+  HorizontalDirection hdirection() const { return hdirection_; }
+
+  void print_on(std::ostream& os) const
+  {
+    os << "HDirectionKnownEventData:{" << local_extreme_ << ", " << hdirection_ << "}";
+  }
+};
+
 class AlgorithmEventData
 {
  private:
   std::variant<ResetEventData, DifferenceEventData, FourthDegreeApproximationEventData, QuotientEventData, DerivativeEventData,
     QuadraticPolynomialEventData, KineticEnergyEventData, ScaleDrawEventData, ScaleEraseEventData, HistoryAddEventData,
-    CubicPolynomialEventData, NewLocalExtremeEventData> event_data_;
+    CubicPolynomialEventData, NewLocalExtremeEventData, HDirectionKnownEventData> event_data_;
 
  public:
   AlgorithmEventData() = default;
@@ -274,6 +294,12 @@ class AlgorithmEventData
   {
     ASSERT(type == new_local_extreme_event);
     event_data_.emplace<NewLocalExtremeEventData>(current, label);
+  }
+
+  AlgorithmEventData(event_type type, Sample const& current, HorizontalDirection hdirection)
+  {
+    ASSERT(type == hdirection_known_event);
+    event_data_.emplace<HDirectionKnownEventData>(current, hdirection);
   }
 
   template<typename T>

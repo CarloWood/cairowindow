@@ -174,7 +174,7 @@ class Scale
   // This is used to determine whether to add a new sample to the history or to replace an existing entry.
   bool negligible(double step) const
   {
-    return std::abs(step) < std::max(epsilon, 0.001 * or_zero());
+    return valid_ && std::abs(step) < std::max(epsilon, 0.001 * or_zero());
   }
 
   // Return a value with the same sign as step that is just large enough for negligible to return false;

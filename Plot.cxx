@@ -220,6 +220,12 @@ cairowindow::Point Plot::convert_from_pixel(Pixel const& pixel) const
   return {x, y};
 }
 
+double Plot::convert_horizontal_offset_from_pixel(double pixel_offset_x) const
+{
+  cairowindow::Rectangle const& g = plot_area_.geometry();
+  return pixel_offset_x / g.width() * range_[x_axis].size();
+}
+
 double Plot::convert_vertical_offset_from_pixel(double pixel_offset_y) const
 {
   cairowindow::Rectangle const& g = plot_area_.geometry();

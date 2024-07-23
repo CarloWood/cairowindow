@@ -62,7 +62,7 @@ class Approximation
   }
 
   int number_of_relevant_samples() const { return number_of_relevant_samples_; }
-  Scale const& scale() const { ASSERT(scale_.is_valid()); return scale_; }
+  Scale const& scale() const { return scale_; }
   bool is_extreme() const { return is_extreme_; }
   double at(double w) const { return cubic_(w); }
   math::CubicPolynomial const& cubic() const { return cubic_; }

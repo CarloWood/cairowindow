@@ -312,6 +312,10 @@ bool Algorithm::handle_local_extreme(Weight& w)
     // Can this ever fail?
     ASSERT(hdirection_ == direction);
 
+#ifdef CWDEBUG
+    event_server_.trigger(AlgorithmEventType{hdirection_known_event, last_extreme_->cp_sample(), hdirection_});
+#endif
+
     // The extra sample should be added on the other side of the critical point.
     ASSERT(number_of_usable_samples == 0 || (w > critical_point_w) != (usable_samples[0]->w() > critical_point_w));
 
@@ -513,6 +517,10 @@ bool Algorithm::handle_local_extreme(Weight& w)
     hdirection_ = w < w2_1 ? HorizontalDirection::left : HorizontalDirection::right;
     Dout(dc::notice, "Initialized hdirection_ to " << hdirection_ << ".");
   }
+
+#ifdef CWDEBUG
+  event_server_.trigger(AlgorithmEventType{hdirection_known_event, last_extreme_->cp_sample(), hdirection_});
+#endif
 
   if (number_of_zeroes == 0)
   {
@@ -884,6 +892,10 @@ void AlgorithmEventData::print_on(std::ostream& os) const
     std::get<HistoryAddEventData>(event_data_).print_on(os);
   else if (std::holds_alternative<CubicPolynomialEventData>(event_data_))
     std::get<CubicPolynomialEventData>(event_data_).print_on(os);
+  else if (std::holds_alternative<NewLocalExtremeEventData>(event_data_))
+    std::get<NewLocalExtremeEventData>(event_data_).print_on(os);
+  else if (std::holds_alternative<HDirectionKnownEventData>(event_data_))
+    std::get<HDirectionKnownEventData>(event_data_).print_on(os);
   else
     // Missing implementation.
     ASSERT(false);

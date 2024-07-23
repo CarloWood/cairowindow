@@ -82,6 +82,7 @@ class AlgorithmEvent
   cairowindow::plot::BezierFitter plot_old_cubic_;
   utils::Array<PlotSample, gradient_descent::History::size, gradient_descent::HistoryIndex> plot_samples_;
   std::vector<PlotSample> plot_local_extremes_;
+  cairowindow::plot::Connector plot_current_hdirection_;
 
  public:
   AlgorithmEvent(cairowindow::plot::Plot& plot, boost::intrusive_ptr<cairowindow::Layer> const& layer) :
@@ -265,6 +266,17 @@ class AlgorithmEvent
           plot_.create_point(layer_, point_style_({.color_index = 2}), {data.local_extreme().w(), data.local_extreme().Lw()}),
           plot_.create_text(layer_, s_label_style({.position = cairowindow::draw::centered_above}),
             cairowindow::Point{data.local_extreme().w(), data.local_extreme().Lw()}, data.label()));
+    }
+    else if (event.is_a<HDirectionKnownEventData>())
+    {
+      auto const& data = event.get<HDirectionKnownEventData>();
+      double x = data.local_extreme().w();
+      double y = data.local_extreme().Lw();
+
+      plot_current_hdirection_ = plot::Connector{{x, y},
+        {x + static_cast<int>(data.hdirection()) * plot_.convert_horizontal_offset_from_pixel(25.0), y},
+        Connector::no_arrow, Connector::open_arrow};
+      plot_.add_connector(layer_, s_indicator_style, plot_current_hdirection_);
     }
     else
       // Missing implementation.
