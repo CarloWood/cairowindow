@@ -82,23 +82,29 @@ class LocalExtreme
   extremes_type::iterator neighbor(HorizontalDirectionToInt direction) const
   {
     // Call has_neighbor first.
-    ASSERT(neighbors_[direction.as_index()] == s_dummy_list.end());
+    ASSERT(neighbors_[direction.as_index()] != s_dummy_list.end());
     return neighbors_[direction.as_index()];
   }
 
 #ifdef CWDEBUG
   void print_on(std::ostream& os) const
   {
+    bool has_left_neighbor = has_neighbor(HorizontalDirection::left);
+    bool has_right_neighbor = has_neighbor(HorizontalDirection::right);
     os << "approximation:" << approximation_ <<
         ", cp_sample:" << cp_sample_ <<
         ", energy:" << energy_ <<
         ", explored:" << explored_ <<
-        ", neighbors:{" << neighbor(HorizontalDirection::left)->cp_sample().w();
-    if (neighbor(HorizontalDirection::left) != s_dummy_list.end())
-      os << " (" << neighbor(HorizontalDirection::left)->cp_sample().w() << ")";
-    os << ", right:" << neighbor(HorizontalDirection::right)->cp_sample().w();
-    if (neighbor(HorizontalDirection::right) != s_dummy_list.end())
-      os << " (" << neighbor(HorizontalDirection::right)->cp_sample().w() << ")";
+        ", neighbors:{";
+    if (has_left_neighbor)
+      os << "left:" << neighbor(HorizontalDirection::left)->cp_sample().w();
+    if (has_right_neighbor)
+    {
+      if (has_left_neighbor)
+        os << ", ";
+      os << "right:" << neighbor(HorizontalDirection::right)->cp_sample().w();
+    }
+    os << '}';
   }
 #endif
 };

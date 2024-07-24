@@ -171,10 +171,10 @@ Weight Approximation::find_extreme(Region& region_out, ExtremeType& extreme_type
   // If D is equal to zero we have a point where the derivative is zero, but that isn't a maximum or minimum.
   if (D <= 0.0)
   {
+    region_out = (d > 0.0 || (d == 0.0 && b > 0.0)) != (extreme_type == ExtremeType::maximum) ? Region::left : Region::right;
+    Dout(dc::notice, "Returning " << region_out << " because that is " << (extreme_type == ExtremeType::maximum ? "uphill" : "downhill") << ".");
     extreme_type = ExtremeType::unknown;
     Dout(dc::notice, "Returning ExtremeType::unknown because D <= 0.");
-    region_out = (d > 0.0 || (d == 0.0 && b > 0.0)) ? Region::left : Region::right;
-    Dout(dc::notice, "Returning " << region_out << " because that is downhill.");
 #if CW_DEBUG
     return Algorithm::uninitialized_magic;
 #else
