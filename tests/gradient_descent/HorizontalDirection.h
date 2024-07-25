@@ -39,6 +39,27 @@ inline HorizontalDirection opposite(HorizontalDirection hdirection)
   return static_cast<HorizontalDirection>(-static_cast<int>(hdirection));
 }
 
+// Return if x is left or right of y.
+inline HorizontalDirection side(double x, double y)
+{
+  ASSERT(x != y);
+  return x < y ? HorizontalDirection::left : HorizontalDirection::right;
+}
+
+// Return if step is going left or right.
+inline HorizontalDirection side(double step)
+{
+  ASSERT(step != 0.0);
+  return step < 0.0 ? HorizontalDirection::left : HorizontalDirection::right;
+}
+
+// Add -/+ delta to x so that we go left/right as per hdirection.
+inline double add_to(double x, double delta, HorizontalDirection hdirection)
+{
+  ASSERT(delta > 0.0);
+  return x + static_cast<int>(hdirection) * delta;
+}
+
 class HorizontalDirectionToInt {
  private:
   int val_;

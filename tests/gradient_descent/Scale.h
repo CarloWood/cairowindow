@@ -85,11 +85,6 @@ class Scale
  public:
   static constexpr double epsilon = 1e-30;
 
-  struct SampleData {
-    double w;
-    Sample const* sample;
-  };
-
  protected:
   bool valid_{false};                   // True iff the members below are valid.
   double value_{};                      // Cache of value(). An indication of what changes to w are significant,
@@ -101,16 +96,19 @@ class Scale
   CriticalPointType type_{CriticalPointType::none};     // Whether distances are measured relative to the minimum, maximum or
                                         // the inflection point (if the cubic has no extremes).
   double critical_point_w_;             // Cached value of the x-coordinate of the critical point.
-  utils::DEVector<SampleData> samples_; // All samples previously passed to add.
+  utils::DEVector<Sample> samples_;     // All samples previously passed to add.
 
  public:
   Scale() = default;
   Scale(Scale&& orig) : valid_{orig.valid_}, value_{orig.value_}, left_edge_{orig.left_edge_}, right_edge_{orig.right_edge_},
     cubic_{std::move(orig.cubic_)}, type_{orig.type_}, critical_point_w_{orig.critical_point_w_}, samples_{std::move(orig.samples_)} { }
 
- public:
-  Scale& operator=(Scale const& scale) = delete;
+ private:
+  friend class Approximation;
+  Scale(Scale const& orig) = default;
+  Scale& operator=(Scale const& scale) = default;
 
+ public:
   // Accessors.
   bool is_valid() const { return valid_; }
   double value() const { ASSERT(valid_); return value_; }
@@ -119,27 +117,32 @@ class Scale
   CriticalPointType type() const { return type_; }
   double inflection_point_w() const { return cubic_.inflection_point(); }
   double critical_point_w() const { return critical_point_w_; }
-  double left_edge_sample_w() const { ASSERT(valid_); return samples_[left_edge_].w; }
-  double right_edge_sample_w() const { ASSERT(valid_); return samples_[right_edge_].w; }
-  double left_edge_sample_Lw() const { ASSERT(valid_); return samples_[left_edge_].sample->Lw(); }
-  double right_edge_sample_Lw() const { ASSERT(valid_); return samples_[right_edge_].sample->Lw(); }
+  double left_edge_sample_w() const { ASSERT(valid_); return samples_[left_edge_].w(); }
+  double right_edge_sample_w() const { ASSERT(valid_); return samples_[right_edge_].w(); }
+  double left_edge_sample_Lw() const { ASSERT(valid_); return samples_[left_edge_].Lw(); }
+  double right_edge_sample_Lw() const { ASSERT(valid_); return samples_[right_edge_].Lw(); }
 
-  Sample const* get_nearest_sample(Sample const* current) const
+  utils::DEVector<Sample>::const_iterator get_nearest_sample(Sample const& current) const
   {
     // This function is called on a Scale that is part of a LocalExtreme. It can not be empty.
     ASSERT(samples_.size() > 2);        // Two samples to make a cubic, plus the disconnected current sample.
-    auto iter = std::find_if(samples_.begin(), samples_.end(), [current](SampleData const& data){ return data.sample == current; });
+    auto iter = std::find_if(samples_.begin(), samples_.end(),
+        [current](Sample const& sample)
+        {
+          // Samples that compare equal are copies of eachother - and can therefore be compared by their exact w value.
+          return sample.w() == current.w();
+        });
     // current was already added to this Scale.
     ASSERT(iter != samples_.end());
 
-    utils::DEVector<SampleData>::const_iterator right_iter = iter + 1;
+    utils::DEVector<Sample>::const_iterator right_iter = iter + 1;
     if (iter == samples_.begin())
-      return right_iter->sample;
-    utils::DEVector<SampleData>::const_iterator left_iter = iter - 1;
+      return right_iter;
+    utils::DEVector<Sample>::const_iterator left_iter = iter - 1;
     if (right_iter == samples_.end())
-      return left_iter->sample;
+      return left_iter;
 
-    return ((iter->w - left_iter->w < right_iter->w - iter->w) ? left_iter : right_iter)->sample;
+    return iter->w() - left_iter->w() < right_iter->w() - iter->w() ? left_iter : right_iter;
   }
 
   // Return a directional scale: minus the scale if direction is `left` and plus the scale if direction is `right`.
@@ -153,11 +156,11 @@ class Scale
       // If the direction passed is undecided, then set dir to the direction from the sample that is
       // the furthest away from the critical_point towards the critical point (even including samples
       // that don't fit the current cubic).
-      int far_edge = std::abs(samples_.front().w - critical_point_w_) > std::abs(samples_.back().w - critical_point_w_) ?
+      int far_edge = std::abs(samples_.front().w() - critical_point_w_) > std::abs(samples_.back().w() - critical_point_w_) ?
         0 : samples_.size() - 1;
-      dir = std::copysign(1.0, critical_point_w_ - samples_[far_edge].w);
+      dir = std::copysign(1.0, critical_point_w_ - samples_[far_edge].w());
       Dout(dc::notice, "Setting direction to " << dir << " as the furthest sample from " << critical_point_w_ <<
-          " is " << *samples_[far_edge].sample);
+          " is " << samples_[far_edge]);
     }
     return dir * value_;
   }
@@ -310,13 +313,13 @@ class Scale
 
     DoutEntering(dc::notice, "Scale::calculate_value()");
     double const inflection_point_w = cubic_.inflection_point();
-    Dout(dc::notice, "left_edge_w = " << samples_[left_edge_].w <<
+    Dout(dc::notice, "left_edge_w = " << samples_[left_edge_].w() <<
         "; critical_point_w = " << critical_point_w_ <<
-        "; right_edge_w = " << samples_[right_edge_].w <<
+        "; right_edge_w = " << samples_[right_edge_].w() <<
         "; inflection_point_w = " << inflection_point_w);
     // critical_point_w_ should be initialized.
     ASSERT(type_ != CriticalPointType::none);
-    LCRI_type LCRI = {samples_[left_edge_].w, critical_point_w_, samples_[right_edge_].w, inflection_point_w};
+    LCRI_type LCRI = {samples_[left_edge_].w(), critical_point_w_, samples_[right_edge_].w(), inflection_point_w};
     int Class = classify(LCRI);
     double result;
     if (Class == 4)
@@ -404,8 +407,8 @@ class Scale
       // Add the two samples in order of w value.
       int left_index = relevant_samples[0]->w() < relevant_samples[1]->w() ? 0 : 1;
       int right_index = 1 - left_index;
-      samples_.emplace_front(relevant_samples[left_index]->w(), relevant_samples[left_index]);
-      samples_.emplace_back(relevant_samples[right_index]->w(), relevant_samples[right_index]);
+      samples_.emplace_front(*relevant_samples[left_index]);
+      samples_.emplace_back(*relevant_samples[right_index]);
       left_edge_ = 0;
       right_edge_ = 1;
       value_ = calculate_value();
@@ -430,20 +433,20 @@ class Scale
     }
 #endif
 
-    bool at_back = samples_.back().w <= w;
-    bool at_front = samples_.front().w > w;
+    bool at_back = samples_.back().w() <= w;
+    bool at_front = samples_.front().w() > w;
     std::size_t index;          // The index into samples_ of current, after current was inserted.
     if (at_front)
     {
       index = 0;
-      samples_.emplace_front(w, current);
+      samples_.emplace_front(*current);
       ++left_edge_;
       ++right_edge_;
     }
     else if (at_back)
     {
       index = samples_.size();
-      samples_.emplace_back(w, current);
+      samples_.emplace_back(*current);
     }
     else
     {
@@ -452,9 +455,9 @@ class Scale
       // We then insert before that element to get:
       // [-1, 1, 2, 3, 4] - keeping the vector sorted.
       //   0  1  2 <-- index.
-      auto iter = std::find_if(samples_.begin(), samples_.end(), [w](SampleData const& element) { return element.w > w; });
+      auto iter = std::find_if(samples_.begin(), samples_.end(), [w](Sample const& sample) { return sample.w() > w; });
       index = std::distance(samples_.begin(), iter);
-      samples_.emplace(iter, w, current);
+      samples_.emplace(iter, *current);
 #if 0
       if (index <= left_edge_)
       {
@@ -504,17 +507,17 @@ class Scale
       while (left_edge_ > 0)
       {
         --left_edge_;
-        double Lw = samples_[left_edge_].sample->Lw();
-        double Aw = cubic_(samples_[left_edge_].w);
+        double Lw = samples_[left_edge_].Lw();
+        double Aw = cubic_(samples_[left_edge_].w());
         if (std::abs(Aw - Lw) > 0.1 * std::abs(Lw - cp_Lw))
         {
-          Dout(dc::notice, "Ignoring sample " << *samples_[left_edge_].sample << " because cubic_(" << samples_[left_edge_].w << ") = " <<
+          Dout(dc::notice, "Ignoring sample " << samples_[left_edge_] << " because cubic_(" << samples_[left_edge_].w() << ") = " <<
               Aw << " and |" << Aw << " - " << Lw << "| = " << (std::abs(Aw - Lw)) << " > 0.1 * |" << Lw << " - " << cp_Lw << "| = " <<
               0.1 * std::abs(Lw - cp_Lw));
           ++left_edge_;
           break;
         }
-        Dout(dc::notice, "Including sample " << *samples_[left_edge_].sample << " because cubic_(" << samples_[left_edge_].w << ") = " <<
+        Dout(dc::notice, "Including sample " << samples_[left_edge_] << " because cubic_(" << samples_[left_edge_].w() << ") = " <<
             Aw << " and |" << Aw << " - " << Lw << "| = " << (std::abs(Aw - Lw)) << " <= 0.1 * |" << Lw << " - " << cp_Lw << "| = " <<
             0.1 * std::abs(Lw - cp_Lw));
       }
@@ -522,17 +525,17 @@ class Scale
       while (right_edge_ + 1 < samples_.size())
       {
         ++right_edge_;
-        double Lw = samples_[right_edge_].sample->Lw();
-        double Aw = cubic_(samples_[right_edge_].w);
+        double Lw = samples_[right_edge_].Lw();
+        double Aw = cubic_(samples_[right_edge_].w());
         if (std::abs(Aw - Lw) > 0.1 * std::abs(Lw - cp_Lw))
         {
-          Dout(dc::notice, "Ignoring sample " << *samples_[right_edge_].sample << " because cubic_(" << samples_[right_edge_].w << ") = " <<
+          Dout(dc::notice, "Ignoring sample " << samples_[right_edge_] << " because cubic_(" << samples_[right_edge_].w() << ") = " <<
               Aw << " and |" << Aw << " - " << Lw << "| = " << (std::abs(Aw - Lw)) << " > 0.1 * |" << Lw << " - " << cp_Lw << "| = " <<
               0.1 * std::abs(Lw - cp_Lw));
           --right_edge_;
           break;
         }
-        Dout(dc::notice, "Including sample " << *samples_[right_edge_].sample << " because cubic_(" << samples_[right_edge_].w << ") = " <<
+        Dout(dc::notice, "Including sample " << samples_[right_edge_] << " because cubic_(" << samples_[right_edge_].w() << ") = " <<
             Aw << " and |" << Aw << " - " << Lw << "| = " << (std::abs(Aw - Lw)) << " <= 0.1 * |" << Lw << " - " << cp_Lw << "| = " <<
             0.1 * std::abs(Lw - cp_Lw));
       }
@@ -548,9 +551,9 @@ class Scale
   {
     os << "{valid_:" << std::boolalpha << valid_ << ", samples_:{";
     char const* separator = "";
-    for (auto&& sample_data : samples_)
+    for (auto&& sample : samples_)
     {
-      os << separator << *sample_data.sample;
+      os << separator << sample;
       separator = ", ";
     }
     os << "}";

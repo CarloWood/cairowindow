@@ -120,6 +120,9 @@ bool Algorithm::operator()(Weight& w, double Lw, double dLdw)
   }
 
   Dout(dc::notice, "Returning: " << std::setprecision(std::numeric_limits<double>::max_digits10) << w);
+  // The result should never be passed the latest local extreme.
+  ASSERT(last_extreme_ == extremes_.end() || side(w, last_extreme_->cp_sample().w()) == hdirection_);
+
   return true;
 }
 
@@ -133,7 +136,7 @@ bool Algorithm::update_energy()
     // Update the current kinetic energy. If this is an overshoot, abort this horizontal direction.
     //
     // This state is set when locally the curve looks like a cubic with its critical points
-    // on the side that we just came from: in this case we move away from the all critical points
+    // on the side that we just came from: in this case we move away from all critical points
     // and going uphill, losing energy. Therefore we need to check if we didn't go too high for
     // the kinetic energy that we have, in which case the exploration of this direction is aborted.
 
@@ -190,8 +193,14 @@ bool Algorithm::handle_local_extreme(Weight& w)
 
   if (state_ == IterationState::local_extreme)
   {
-    // At the moment we find a new local extreme, that can't be done by an Approximation that is part of a LocalExtreme.
-    ASSERT(approximation_ptr_ == &current_approximation_);
+    // At the moment we find a new local extreme, we want out own Approximation,
+    // not the Approximation that is part of the previous LocalExtreme!
+    if (approximation_ptr_ != &current_approximation_)
+    {
+      current_approximation_ = *approximation_ptr_;
+      current_approximation_.unset_is_extreme();
+      approximation_ptr_ = &current_approximation_;
+    }
 
     extremes_type::iterator prev_extreme = last_extreme_;
 
@@ -552,7 +561,7 @@ double Algorithm::update_approximation(bool current_is_replacement)
   else
   {
     // Does this ever happen?
-    ASSERT(state_ != IterationState::back_tracking);
+//    ASSERT(state_ != IterationState::back_tracking);
     result = approximation_ptr_->update_local_extreme_scale(history_.current());
 
     // If this fails then apparently we even have to call find_extreme in this case!
@@ -564,11 +573,11 @@ double Algorithm::update_approximation(bool current_is_replacement)
     // disconnected can only be returned by update_local_extreme_scale.
     ASSERT(approximation_ptr_ != &current_approximation_);
 
-    Sample const* nearest_sample = approximation_ptr_->scale().get_nearest_sample(&history_.current());
+    auto nearest_sample = approximation_ptr_->scale().get_nearest_sample(history_.current());
     reset_history();    // This sets approximation_ptr_ = &current_approximation_, therefore call add().
 
     // Start the new approximation with nearest_sample + current.
-    approximation_ptr_->add(nearest_sample, false, next_extreme_type_, false);
+    approximation_ptr_->add(&*nearest_sample, false, next_extreme_type_, false);
     approximation_ptr_->add(&history_.current(), false, next_extreme_type_, false);
     result = approximation_ptr_->update_scale(false, next_extreme_type_);
     ASSERT(result == ScaleUpdate::initialized);
@@ -667,6 +676,22 @@ void Algorithm::handle_approximation(Weight& w, bool first_call, double new_w)
 
   Approximation& approximation(*approximation_ptr_);
 
+#ifdef CWDEBUG
+  Dout(dc::notice|continued_cf, "The current approximation has " << approximation.number_of_relevant_samples() << " samples; ");
+  for (int i = 0; i < approximation.number_of_relevant_samples(); ++i)
+  {
+    if (i == 0)
+      Dout(dc::continued, approximation.current());
+    else
+      Dout(dc::continued, " and " << approximation.prev());
+  }
+  Dout(dc::finish, "; current_index_ is " << approximation.current_index() << ".");
+#endif
+
+#if CW_DEBUG
+    Region prev_region = Region::unknown;       // Only known if we call find_extreme ourselves.
+#endif
+
   // Is this the first call, or after a reset?
   if (first_call)       // In this case find_extreme is already called and new_w has already been initialized.
   {
@@ -705,18 +730,15 @@ void Algorithm::handle_approximation(Weight& w, bool first_call, double new_w)
   else
   {
 #if CW_DEBUG
-    Region prev_region = last_region_;
+    prev_region = last_region_;
 #endif
     ExtremeType extreme_type = next_extreme_type_;
     new_w = approximation_ptr_->find_extreme(last_region_, extreme_type);
-    // We really shouldn't change our mind about the direction.
-    ASSERT(prev_region == Region::invalid || last_region_ == Region::inbetween || last_region_ == prev_region);
 
     if (extreme_type != ExtremeType::unknown)
     {
       if (next_extreme_type_ == ExtremeType::unknown)
         next_extreme_type_ = extreme_type;
-      expected_Lw_ = approximation_ptr_->at(new_w);
       Debug(set_algorithm_str(new_w, "find_extreme jump"));
       // If the extreme is in between the two samples used for the approximation then we jumped too far.
       state_ = last_region_ == Region::inbetween ? IterationState::back_tracking : IterationState::extreme_jump;
@@ -736,9 +758,7 @@ void Algorithm::handle_approximation(Weight& w, bool first_call, double new_w)
 
   // The above code must always set a new w value (or use the one passed).
   ASSERT(new_w != uninitialized_magic);
-  double step = w - new_w;
-  w = new_w;
-  expected_Lw_ = approximation_ptr_->at(w);
+  double step = new_w - w;
 
   double abs_step = std::abs(step);
   Dout(dc::notice, "abs_step = " << abs_step << " (between " <<
@@ -752,6 +772,38 @@ void Algorithm::handle_approximation(Weight& w, bool first_call, double new_w)
         "[" << approximation.scale() << "]");
     state_ = IterationState::local_extreme;
   }
+  else if (side(step) == hdirection_)
+  {
+    // FIXME: What is the Right Way to do this? Limits the size of the step taken - away from the last local extreme.
+    double abs_step_limit = 15.0 * approximation.scale().value();
+    if (last_region_ != Region::inbetween && abs_step > abs_step_limit)
+    {
+      Dout(dc::warning, "Step is " << (abs_step / approximation.scale().value()) << " times larger than scale. Reducing step.");
+      step = std::copysign(abs_step_limit, step);
+    }
+  }
+  else if (last_extreme_ != extremes_.end())
+  {
+    double limit = add_to(last_extreme_->cp_sample().w(), 0.1 * approximation.scale().value(), hdirection_);
+    if (side(w + step, limit) != hdirection_)
+    {
+      Dout(dc::notice, "A step of " << std::setprecision(std::numeric_limits<double>::max_digits10) << step << " brings us " <<
+          opposite(hdirection_) << " of the hdirection limit at " << limit << "! Ignoring this exteme.");
+      last_region_ = Region::invalid;
+#if CW_DEBUG
+      prev_region = Region::invalid;
+#endif
+      step = approximation_ptr_->scale().step(hdirection_);
+      Debug(set_algorithm_str(w + step, "keep going (bad extreme)"));
+      state_ = IterationState::check_energy;
+    }
+  }
+
+  // We really shouldn't change our mind about the direction.
+  ASSERT(prev_region == Region::unknown || prev_region == Region::invalid || last_region_ == Region::inbetween || last_region_ == prev_region);
+
+  w += step;
+  expected_Lw_ = approximation_ptr_->at(w);
 }
 
 bool Algorithm::handle_abort_hdirection(Weight& w)

@@ -11,6 +11,9 @@ void Approximation::add(Sample const* current, bool current_is_replacement, Extr
   DoutEntering(dc::notice, "Approximation::add(" << *current << ", " <<
       std::boolalpha << current_is_replacement << ", " << next_extreme_type << ", " << back_tracking << ")");
 
+//  if (utils::almost_equal(current->w(), -32.4471, 0.001))
+//    Debug(attach_gdb());
+
   Sample const* back_tracking_sample;
 
   already_had_two_relevant_samples_ = number_of_relevant_samples_ == 2;
@@ -20,14 +23,27 @@ void Approximation::add(Sample const* current, bool current_is_replacement, Extr
     ASSERT(number_of_relevant_samples_ > 0);
     // This would be unexpected. Does this happen?
     ASSERT(!back_tracking);
+    // Should never end up with twice the same sample.
+    ASSERT(!already_had_two_relevant_samples_ || relevant_samples_[1 - current_index_] != current);
     relevant_samples_[current_index_] = current;
   }
   else
   {
     if (back_tracking)
+    {
+      ASSERT(number_of_relevant_samples_ == 2);
       back_tracking_sample = relevant_samples_[current_index_];
+      if (relevant_samples_[1 - current_index_] != &back_tracking_pivot_)
+      {
+        // Preserve the lifetime of the Sample that is not being replaced during back tracking.
+        back_tracking_pivot_ = *relevant_samples_[1 - current_index_];
+        relevant_samples_[1 - current_index_] = &back_tracking_pivot_;
+      }
+    }
     else
       current_index_ = 1 - current_index_;
+    // Should never end up with twice the same sample.
+    ASSERT(number_of_relevant_samples_ == 0 || relevant_samples_[1 - current_index_] != current);
     relevant_samples_[current_index_] = current;
     number_of_relevant_samples_ = already_had_two_relevant_samples_ ? 2 : number_of_relevant_samples_ + 1;
   }
@@ -89,8 +105,10 @@ void Approximation::add(Sample const* current, bool current_is_replacement, Extr
       find_extreme(region_result, extreme_type);
       if (extreme_type == ExtremeType::unknown || region_result != Region::inbetween)
       {
-        // It shouldn't be on the other side of the two samples then previously predicted.
+        // It shouldn't be on the other side of the two samples than previously predicted.
         ASSERT(extreme_type == ExtremeType::unknown || region_result == (current_index_ == 0 ? Region::left : Region::right));
+        // Should never end up with twice the same sample.
+        ASSERT(number_of_relevant_samples_ != 2 || relevant_samples_[1 - current_index_] != back_tracking_sample);
         relevant_samples_[current_index_] = back_tracking_sample;
         add(current, current_is_replacement, next_extreme_type, false);
       }

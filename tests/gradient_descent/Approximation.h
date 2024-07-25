@@ -20,6 +20,8 @@ class Approximation
   int current_index_{1};                                // The index of the last sample that was added (iff number_of_relevant_samples_ > 0).
   std::array<Sample const*, 2> relevant_samples_;       // Pointers to up to two samples that take part in this approximation. If
                                                         // number_of_relevant_samples_ is two then one with the smallest w is stored at index 0.
+  Sample back_tracking_pivot_;                          // Copy of a sample that is used while back tracking and might be needed longer than
+                                                        // the lifetime of the original in the history.
   math::CubicPolynomial cubic_;                         // A cubic approximation, only valid if number_of_relevant_samples_ == 2.
   Scale scale_;                                         // A measure of over what interval the approximation was tested to be correct.
   bool is_extreme_{false};                              // Set when this is a LocalExtreme::approximation_.
@@ -37,11 +39,27 @@ class Approximation
 
  public:
   Approximation() = default;
+  Approximation(Approximation const&) = default;
+
   Approximation(Approximation&& orig) : number_of_relevant_samples_{orig.number_of_relevant_samples_}, current_index_{orig.current_index_},
     relevant_samples_{orig.relevant_samples_}, scale_{std::move(orig.scale_)},
     is_extreme_{orig.is_extreme_}, cubic_{std::move(orig.cubic_)}, already_had_two_relevant_samples_{orig.already_had_two_relevant_samples_}
   {
     orig.reset();
+  }
+
+  Approximation& operator=(Approximation const&) = default;
+  Approximation& operator=(Approximation&& orig)
+  {
+    number_of_relevant_samples_ = orig.number_of_relevant_samples_;
+    current_index_ = orig.current_index_;
+    relevant_samples_ = orig.relevant_samples_;
+    scale_ = std::move(orig.scale_);
+    is_extreme_ = orig.is_extreme_;
+    cubic_ = std::move(orig.cubic_);
+    already_had_two_relevant_samples_ = orig.already_had_two_relevant_samples_;
+    orig.reset();
+    return *this;
   }
 
   // Called with the latest samples that are expected to match this cubic approximation (or that
@@ -59,6 +77,11 @@ class Approximation
   void set_is_extreme()
   {
     is_extreme_ = true;
+  }
+
+  void unset_is_extreme()
+  {
+    is_extreme_ = false;
   }
 
   int number_of_relevant_samples() const { return number_of_relevant_samples_; }
