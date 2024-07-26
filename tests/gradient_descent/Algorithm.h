@@ -93,10 +93,6 @@ class Algorithm
   void handle_approximation(Weight& w, bool first_call, double new_w);
   bool handle_abort_hdirection(Weight& w);
 
-#ifdef CWDEBUG
-  void set_algorithm_str(double new_w, char const* algorithm_str);
-#endif
-
   bool success() const
   {
     return best_minimum_ != extremes_.end();
@@ -123,6 +119,7 @@ class Algorithm
   std::string algorithm_str() const { return algorithm_str_; }
 
   // Manipulators for the testsuite.
+  void set_algorithm_str(double new_w, char const* algorithm_str);
   void debug_set_hdirection_next_extreme_type_small_step(HorizontalDirection hdirection, ExtremeType next_extreme_type, double small_step)
   {
     hdirection_ = hdirection;

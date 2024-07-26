@@ -39,7 +39,8 @@ target_link_libraries(pango_text AICxx::cairowindow AICxx::symbolic ${AICXX_OBJE
 
 add_executable(gradient_descent_testsuite gradient_descent_testsuite.cxx AlgorithmEvent.cxx
   gradient_descent/Approximation.cxx gradient_descent/HorizontalDirection.cxx
-  gradient_descent/ExtremeType.cxx gradient_descent/Algorithm.cxx gradient_descent/LocalExtreme.cxx)
+  gradient_descent/ExtremeType.cxx gradient_descent/Algorithm.cxx gradient_descent/LocalExtreme.cxx
+  gradient_descent/AlgorithmEventType.cxx)
 target_link_libraries(gradient_descent_testsuite AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST} Eigen3::Eigen)
 
 add_executable(parabolic_scale parabolic_scale.cxx)
@@ -63,5 +64,13 @@ target_link_libraries(generate_cubic_tests AICxx::cairowindow AICxx::symbolic ${
 
 add_executable(gradient_descent gradient_descent.cxx AlgorithmEvent.cxx
   gradient_descent/Approximation.cxx gradient_descent/HorizontalDirection.cxx
-  gradient_descent/ExtremeType.cxx gradient_descent/Algorithm.cxx gradient_descent/LocalExtreme.cxx)
+  gradient_descent/ExtremeType.cxx gradient_descent/Algorithm.cxx gradient_descent/LocalExtreme.cxx
+  gradient_descent/AlgorithmEventType.cxx)
 target_link_libraries(gradient_descent AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST} Eigen3::Eigen)
+
+add_executable(gradient_descent_testsuite2 gradient_descent_testsuite2.cxx AlgorithmEvent2.cxx
+  gradient_descent2/Algorithm.cxx gradient_descent2/IterationState.cxx
+  gradient_descent2/HorizontalDirection.cxx gradient_descent2/ExtremeType.cxx
+  gradient_descent2/AlgorithmEventType.cxx gradient_descent2/CubicToNextSampleType.cxx
+  gradient_descent2/Sample.cxx)
+target_link_libraries(gradient_descent_testsuite2 AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST})
