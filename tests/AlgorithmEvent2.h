@@ -55,7 +55,6 @@ class AlgorithmEvent
   cairowindow::plot::Plot& plot_;
   boost::intrusive_ptr<cairowindow::Layer> const& layer_;
   cairowindow::plot::BezierFitter plot_quadratic_approximation_curve_;
-  cairowindow::plot::BezierFitter plot_cubic_approximation_curve_;
   cairowindow::plot::BezierFitter plot_fourth_degree_approximation_curve_;
   cairowindow::plot::BezierFitter plot_quotient_curve_;
   cairowindow::plot::BezierFitter plot_derivative_curve_;
@@ -65,6 +64,7 @@ class AlgorithmEvent
   std::array<cairowindow::plot::Connector, 3> plot_scale_indicator_;    // 0: left, 1: right, 2: scale
   std::array<cairowindow::plot::Text, 3> plot_scale_text_;              // idem
   std::array<cairowindow::plot::Line, 4> plot_vertical_line_through_w_; // 0: left, 1: right, 2: cp, 3: I
+  std::array<cairowindow::plot::BezierFitter, 2> plot_cubic_curve_;     // 0: left, 1: right
   cairowindow::plot::BezierFitter plot_old_cubic_;
   std::array<PlotSample, 9> plot_samples_;                              // Circular buffer for the last nine added samples.
   int current_{};                                                       // Index into plot_samples_.
@@ -83,7 +83,8 @@ class AlgorithmEvent
     if (event.is_a<ResetEventData>())
     {
       plot_quadratic_approximation_curve_.reset();
-      plot_cubic_approximation_curve_.reset();
+      for (int i = 0; i < plot_cubic_curve_.size(); ++i)
+        plot_cubic_curve_[i].reset();
       plot_derivative_curve_.reset();
       plot_quotient_curve_.reset();
       plot_fourth_degree_approximation_curve_.reset();
@@ -215,7 +216,7 @@ class AlgorithmEvent
         auto const& old_cubic = data.old_cubic();
         // Draw the old cubic.
         plot_old_cubic_.solve([&old_cubic](double w) -> Point { return {w, old_cubic(w)}; }, plot_.viewport());
-        plot_.add_bezier_fitter(layer_, {{.line_color = color::light_red, .line_width = 1.0}}, plot_old_cubic_);
+        plot_.add_bezier_fitter(layer_, {{.line_color = color::lightred, .line_width = 1.0}}, plot_old_cubic_);
       }
     }
     else if (event.is_a<ScaleEraseEventData>())
@@ -246,8 +247,10 @@ class AlgorithmEvent
       auto const& data = event.get<CubicPolynomialEventData>();
 
       math::CubicPolynomial const& cubic_approximation = data.cubic_polynomial();
-      plot_cubic_approximation_curve_.solve([&cubic_approximation](double w) -> Point { return {w, cubic_approximation(w)}; }, plot_.viewport());
-      plot_.add_bezier_fitter(layer_, curve_line_style_({.line_color = color::magenta}), plot_cubic_approximation_curve_);
+      plot_cubic_curve_[data.index()].solve(
+          [&cubic_approximation](double w) -> Point { return {w, cubic_approximation(w)}; }, plot_.viewport());
+      plot_.add_bezier_fitter(layer_, curve_line_style_({.line_color = (data.index() == 0 ? color::palevioletred : color::magenta)}),
+          plot_cubic_curve_[data.index()]);
     }
     else if (event.is_a<NewLocalExtremeEventData>())
     {

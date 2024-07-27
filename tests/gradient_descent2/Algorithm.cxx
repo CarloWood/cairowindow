@@ -14,18 +14,19 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
   event_server_.trigger(AlgorithmEventType{reset_event});
   if (have_expected_Lw_)
   {
+    // Draw an arrow from where expected to end up, based on the approximation, and the actual value of L(w).
     event_server_.trigger(AlgorithmEventType{difference_event, w, expected_Lw_, Lw});
     have_expected_Lw_ = false;
   }
 #endif
 
-  // Create a new SampleNode for this sample.
-  auto current = std::make_unique<SampleNode>(w, Lw, dLdw);
-  Dout(dc::notice, "current = " << *current);
+  // Create a new Sample for this sample.
+  Sample current{w, Lw, dLdw COMMA_CWDEBUG_ONLY(label_context_)};
+  Dout(dc::notice, "current = " << current);
 
 #ifdef CWDEBUG
   // Draw the new sample.
-  event_server_.trigger(AlgorithmEventType{new_sample_event, *current});
+  event_server_.trigger(AlgorithmEventType{new_sample_event, current});
 #endif
 
   // Update kinetic energy. Returns false if too much energy was used.
@@ -37,21 +38,21 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
   {
     case IterationState::initialization:
     {
-      // We should only get here once.
-      ASSERT(!last_);
+      // We should only get here only the first time.
+      ASSERT(chain_.empty());
 
       // Add the first sample.
-      last_ = std::move(current);
+      chain_.initialize(std::move(current));
 
 #ifdef CWDEBUG
       {
         // Draw a line through this sample.
-        math::CubicPolynomial cubic{Lw - dLdw * w, dLdw, 0.0, 0.0};
-        event_server_.trigger(AlgorithmEventType{cubic_polynomial_event, cubic});
+        math::QuadraticPolynomial line{Lw - dLdw * w, dLdw, 0.0};
+        event_server_.trigger(AlgorithmEventType{quadratic_polynomial_event, line});
       }
 #endif
 
-      // Set w to the next value to probe. This uses last_.
+      // Set w to the next value to probe. This uses chain_.last().
       handle_single_sample(w);
 
       ASSERT(state_ == IterationState::next_sample);
@@ -60,11 +61,35 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
 
     case IterationState::next_sample:
     {
-      last_ = std::move(current);
-      w -= 1.0;
+      // Find the point where to insert the new sample. We do this by looking for the
+      // first SampleNode (target) that has a w value that is greater than that of the
+      // new sample and then inserting current in front of that.
+      auto new_node = chain_.insert(std::move(current));
+      auto larger = std::next(new_node);
+
+      if (larger != chain_.end())
+      {
+        math::CubicPolynomial cubic;
+        cubic.initialize(new_node->w(), new_node->Lw(), new_node->dLdw(), larger->w(), larger->Lw(), larger->dLdw());
+#ifdef CWDEBUG
+        event_server_.trigger(AlgorithmEventType{cubic_polynomial_event, cubic, HorizontalDirection::right});
+#endif
+      }
+      if (new_node != chain_.begin())
+      {
+        auto smaller = std::prev(new_node);
+        math::CubicPolynomial cubic;
+        cubic.initialize(new_node->w(), new_node->Lw(), new_node->dLdw(), smaller->w(), smaller->Lw(), smaller->dLdw());
+#ifdef CWDEBUG
+        event_server_.trigger(AlgorithmEventType{cubic_polynomial_event, cubic, HorizontalDirection::left});
+#endif
+      }
+
+      w += bogus_;
+      bogus_ = std::copysign(std::abs(bogus_) - 10.0, -bogus_);
       expected_Lw_ = 1800.0;
       have_expected_Lw_ = true;
-      Debug(set_algorithm_str(w, "minus one!"));
+      Debug(set_algorithm_str(w, "bogus"));
       break;
     }
 
@@ -73,6 +98,7 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
       ASSERT(false);
   }
 
+  // Ask for a new sample at `w` if not already finished.
   return state_ != IterationState::success;
 }
 
@@ -80,6 +106,7 @@ void Algorithm::handle_single_sample(double& w)
 {
   DoutEntering(dc::notice, "Algorithm::handle_single_sample(" << w << ")");
 
+  Sample const& sample = chain_.last();
   double step;
 #ifdef CWDEBUG
   char const* algorithm_str;
@@ -87,7 +114,7 @@ void Algorithm::handle_single_sample(double& w)
 
   if (small_step_ == 0.0)       // Not defined yet?
   {
-    step = learning_rate_ * -last_->dLdw();
+    step = -learning_rate_ * sample.dLdw();
 
     // Did we drop on a (local) extreme as a starting point?!
     if (Scale::almost_zero(w, step))
@@ -128,7 +155,7 @@ void Algorithm::handle_single_sample(double& w)
   {
     // small_step_ should only be set once next_extreme_type_ has been set.
     ASSERT(next_extreme_type_ != ExtremeType::unknown);
-    step = ((next_extreme_type_ == ExtremeType::minimum) == (last_->dLdw() > 0.0) ? -small_step_ : small_step_);
+    step = ((next_extreme_type_ == ExtremeType::minimum) == (sample.dLdw() > 0.0) ? -small_step_ : small_step_);
 #ifdef CWDEBUG
     algorithm_str = "small step";
 #endif
@@ -136,11 +163,11 @@ void Algorithm::handle_single_sample(double& w)
 
 #if 0 // FIXME: add scale back
   // This step could still be too small.
-  if (last_->scale().negligible(step))
+  if (...->scale().negligible(step))
   {
     // This wouldn't be good because then the new sample will replace
     // the current one and we'd still have just one sample.
-    step = last_->scale().make_significant(step);
+    step = ...->scale().make_significant(step);
 #ifdef CWDEBUG
     algorithm_str = "avoiding replacement";
 #endif
@@ -156,7 +183,7 @@ void Algorithm::handle_single_sample(double& w)
 void Algorithm::set_algorithm_str(double new_w, char const* algorithm_str)
 {
   algorithm_str_ = algorithm_str;
-  Dout(dc::notice|continued_cf, std::setprecision(12) << last_->w() << " --> " << last_->label() << ": " <<
+  Dout(dc::notice|continued_cf, std::setprecision(12) << chain_.last().w() << " --> " << chain_.last().label() << ": " <<
       new_w << " [" << algorithm_str_ << "]");
   if (have_expected_Lw_)
     Dout(dc::finish, " [expected_Lw: " << expected_Lw_ << "]");

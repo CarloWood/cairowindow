@@ -24,7 +24,7 @@ namespace cairowindow::draw {
 struct BezierCurveStyleParamsDefault : LineStyleParamsDefault
 {
   // Override defaults from LineStyleParamsDefault.
-  static constexpr Color line_color = color::dark_gray;
+  static constexpr Color line_color = color::darkgray;
 };
 
 // Declare BezierCurveStyle, derived from LineStyle.

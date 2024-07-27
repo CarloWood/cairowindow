@@ -191,7 +191,7 @@ int main()
     Window window("Parabolic scale test", 1200, 900);
 
     // Create a new layer with a white background.
-    auto background_layer = window.create_background_layer<Layer>(color::light_gray COMMA_DEBUG_ONLY("background_layer"));
+    auto background_layer = window.create_background_layer<Layer>(color::lightgray COMMA_DEBUG_ONLY("background_layer"));
 
     // Create another layer.
     auto second_layer = window.create_layer<Layer>({} COMMA_DEBUG_ONLY("second_layer"));

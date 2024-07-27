@@ -227,7 +227,7 @@ class AlgorithmEvent
         auto const& old_cubic = data.old_cubic();
         // Draw the old cubic.
         plot_old_cubic_.solve([&old_cubic](double w) -> Point { return {w, old_cubic(w)}; }, plot_.viewport());
-        plot_.add_bezier_fitter(layer_, {{.line_color = color::light_red, .line_width = 1.0}}, plot_old_cubic_);
+        plot_.add_bezier_fitter(layer_, {{.line_color = color::lightred, .line_width = 1.0}}, plot_old_cubic_);
       }
     }
     else if (event.is_a<ScaleEraseEventData>())

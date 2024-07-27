@@ -22,13 +22,12 @@ class Sample
   double Lw_;           // The corresponding function value L(w).
   double dLdw_;         // The corresponding derivative value dL/dw at w.
 #ifdef CWDEBUG
-  static utils::UniqueIDContext<int> s_label_context_;
   utils::UniqueID<int> label_;
 #endif
 
  public:
-  Sample(double w, double Lw, double dLdw) : w_(w), Lw_(Lw), dLdw_(dLdw)
-      COMMA_CWDEBUG_ONLY(label_(s_label_context_.get_id())) { }
+  Sample(double w, double Lw, double dLdw COMMA_CWDEBUG_ONLY(utils::UniqueIDContext<int>& label_context)) :
+    w_(w), Lw_(Lw), dLdw_(dLdw) COMMA_CWDEBUG_ONLY(label_(label_context.get_id())) { }
 
   // Accessors.
   double w() const { return w_; }

@@ -1,9 +1,10 @@
 #pragma once
 
-#include "SampleNode.h"
+#include "ExtremeChain.h"
 #include "IterationState.h"
 #include "AlgorithmEventType.h"
 #include "KineticEnergy.h"
+#include "utils/UniqueID.h"
 
 namespace gradient_descent {
 
@@ -13,16 +14,18 @@ class Algorithm
   double learning_rate_;                // In unit_of(w)^2 / unit_of(L).
   double small_step_{};                 // This will replace learning_rate_ as soon as we have an idea of the scale of changes.
   IterationState state_;
-  std::unique_ptr<SampleNode> last_;    // Points to the last sample that was added.
+  ExtremeChain chain_;                  // A doubly linked list of SampleNode's, sorted by w value.
   ExtremeType next_extreme_type_;       // The extreme type (minimum or maximum) that we're looking for (next).
-  HorizontalDirection hdirection_;      // The direction relative to last_ that we want to find the next extreme in.
+  HorizontalDirection hdirection_;      // The direction relative to chain_.last_ that we want to find the next extreme in.
   KineticEnergy energy_;
   bool have_expected_Lw_{false};        // True if expected_Lw_ was set.
   double expected_Lw_;                  // Whenever w is changed, this is set to what Lw value the approximation is expecting there.
 
 #ifdef CWDEBUG
+  double bogus_{60.0};
   events::Server<AlgorithmEventType> event_server_;
   char const* algorithm_str_;
+  utils::UniqueIDContext<int> label_context_;
 #endif
 
  public:

@@ -188,9 +188,9 @@ int main()
       auto plot_vertex_line = plot.create_line(second_layer, line_style, Point{parabola_a.vertex_x(), 0.0}, Direction::up);
 
       // Draw lines tangent to parabola_a.
-      auto plot_tangent_P0 = plot.create_line(second_layer, solid_line_style({.line_color = color::light_gray}),
+      auto plot_tangent_P0 = plot.create_line(second_layer, solid_line_style({.line_color = color::lightgray}),
           plot_P0, Direction{std::atan(parabola_a.derivative(w0))});
-      auto plot_tangent_P1 = plot.create_line(second_layer, solid_line_style({.line_color = color::light_gray}),
+      auto plot_tangent_P1 = plot.create_line(second_layer, solid_line_style({.line_color = color::lightgray}),
           plot_P1, Direction{std::atan(parabola_a.derivative(w1))});
 
       // Calculate the relative error of the derivative at w₀.

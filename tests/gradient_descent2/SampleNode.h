@@ -22,30 +22,17 @@ using utils::has_print_on::operator<<;
 class SampleNode : public Sample
 {
  private:
-  CubicToNextSampleType type_;          // The type of cubic that fits this and the next Sample.
-
-  std::unique_ptr<SampleNode> prev_;    // Points to the previous SampleNode in the list, if any.
-  std::unique_ptr<SampleNode> next_;    // Points to the next SampleNode in the list, if any.
+  mutable CubicToNextSampleType type_;          // The type of cubic that fits this and the next Sample.
 
  public:
-  SampleNode(double w, double Lw, double dLdw) : Sample(w, Lw, dLdw), type_(CubicToNextSampleType::unknown) { }
+  SampleNode(Sample&& sample) : Sample(std::move(sample)), type_(CubicToNextSampleType::unknown) { }
 
 #ifdef CWDEBUG
   void print_on(std::ostream& os) const
   {
     os << "{";
     Sample::print_on(os);
-    os << ", type:" << type_ << ", prev:";
-    if (prev_)
-      prev_->Sample::print_on(os);
-    else
-      os << "null";
-    os << ", next:";
-    if (next_)
-      next_->Sample::print_on(os);
-    else
-      os << "null";
-    os << "}";
+    os << ", type:" << type_ << "}";
   }
 #endif
 };

@@ -106,11 +106,14 @@ class CubicPolynomialEventData
 {
  private:
   math::CubicPolynomial const& cubic_polynomial_;
+  int index_;
 
  public:
-  CubicPolynomialEventData(math::CubicPolynomial const& cubic_polynomial) : cubic_polynomial_(cubic_polynomial) { }
+  CubicPolynomialEventData(math::CubicPolynomial const& cubic_polynomial, HorizontalDirectionToInt index) :
+    cubic_polynomial_(cubic_polynomial), index_(index.as_index()) { }
 
   math::CubicPolynomial const& cubic_polynomial() const { return cubic_polynomial_; }
+  int index() const { return index_; }
 
   void print_on(std::ostream& os) const;
 };
@@ -260,10 +263,10 @@ class AlgorithmEventData
     event_data_.emplace<QuadraticPolynomialEventData>(polynomial);
   }
 
-  AlgorithmEventData(event_type type, math::CubicPolynomial const& polynomial)
+  AlgorithmEventData(event_type type, math::CubicPolynomial const& polynomial, HorizontalDirection index)
   {
     ASSERT(type == cubic_polynomial_event);
-    event_data_.emplace<CubicPolynomialEventData>(polynomial);
+    event_data_.emplace<CubicPolynomialEventData>(polynomial, index);
   }
 
   AlgorithmEventData(event_type type, double max_Lw)
