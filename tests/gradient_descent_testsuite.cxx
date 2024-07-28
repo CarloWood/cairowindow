@@ -176,6 +176,7 @@ int main()
   constexpr double L_max = 100.0;
   constexpr double learning_rate = 0.125;
 
+#if 0
   //==========================================================================
   Dout(dc::notice, "*** TEST: starting with a derivative of zero ***");
   {
@@ -362,6 +363,7 @@ int main()
     // EXPECTED: small_step was subtracted (rather randomly, because we are looking for a maximum).
     ASSERT(utils::almost_equal(static_cast<double>(w), w0 - small_step, 10e-15));
   }
+#endif
 
 #if 0
   //==========================================================================

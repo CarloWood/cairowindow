@@ -11,6 +11,7 @@ std::string to_string(IterationState state)
   switch (state)
   {
     AI_CASE_RETURN(initialization);
+    AI_CASE_RETURN(first_cubic);
     AI_CASE_RETURN(next_sample);
     AI_CASE_RETURN(success);
   }

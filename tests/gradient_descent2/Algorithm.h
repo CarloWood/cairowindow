@@ -22,7 +22,7 @@ class Algorithm
   double expected_Lw_;                  // Whenever w is changed, this is set to what Lw value the approximation is expecting there.
 
 #ifdef CWDEBUG
-  double bogus_{60.0};
+  double bogus_{-60.0};
   events::Server<AlgorithmEventType> event_server_;
   char const* algorithm_str_;
   utils::UniqueIDContext<int> label_context_;

@@ -10,6 +10,7 @@ namespace gradient_descent {
 enum class IterationState
 {
   initialization,
+  first_cubic,
   next_sample,
   success
 };

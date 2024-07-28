@@ -40,7 +40,7 @@ class Sample
 #ifdef CWDEBUG
   void print_on(std::ostream& os) const
   {
-    os << "{w:" << w_ << ", Lw:" << Lw_ << ", dLdw:" << dLdw_ << "}";
+    os << "{w:" << w_ << ", Lw:" << Lw_ << ", dLdw:" << dLdw_ << " [" << label_ << "]}";
   }
 #endif
 };

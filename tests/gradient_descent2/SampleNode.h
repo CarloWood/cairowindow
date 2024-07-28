@@ -2,15 +2,18 @@
 
 #include "Sample.h"
 #include "CubicToNextSampleType.h"
+#include "../CubicPolynomial.h"
 #include <memory>
 #ifdef CWDEBUG
 #include "utils/has_print_on.h"
+#include "events/Events.h"
 #include <iostream>
 #endif
 
 namespace gradient_descent {
 #ifdef CWDEBUG
 using utils::has_print_on::operator<<;
+struct AlgorithmEventType;
 #endif
 
 // SampleNode's form a linked list, stored in Algorithm, of all Sample's done
@@ -22,10 +25,14 @@ using utils::has_print_on::operator<<;
 class SampleNode : public Sample
 {
  private:
-  mutable CubicToNextSampleType type_;          // The type of cubic that fits this and the next Sample.
+  mutable math::CubicPolynomial cubic_;         // The cubic that fits this and the next Sample.
+  mutable CubicToNextSampleType type_;          // The type of this cubic.
 
  public:
   SampleNode(Sample&& sample) : Sample(std::move(sample)), type_(CubicToNextSampleType::unknown) { }
+
+  void initialize_cubic(SampleNode const& next
+      COMMA_CWDEBUG_ONLY(events::Server<AlgorithmEventType>& event_server, bool this_is_last)) const;
 
 #ifdef CWDEBUG
   void print_on(std::ostream& os) const

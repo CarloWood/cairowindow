@@ -363,7 +363,7 @@ int main()
   //==========================================================================
   Dout(dc::notice, "*** TEST: parabola connected to dampened sin ***");
   {
-    constexpr double w0 = -75.0;
+    constexpr double w0 = -10.0;
     constexpr double learning_rate = 0.1;
     constexpr double L_max = 2649;
 

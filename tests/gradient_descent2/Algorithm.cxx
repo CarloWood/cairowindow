@@ -55,11 +55,11 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
       // Set w to the next value to probe. This uses chain_.last().
       handle_single_sample(w);
 
-      ASSERT(state_ == IterationState::next_sample);
+      state_ = IterationState::first_cubic;
       break;
     }
 
-    case IterationState::next_sample:
+    case IterationState::first_cubic:
     {
       // Find the point where to insert the new sample. We do this by looking for the
       // first SampleNode (target) that has a w value that is greater than that of the
@@ -68,23 +68,18 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
       auto larger = std::next(new_node);
 
       if (larger != chain_.end())
-      {
-        math::CubicPolynomial cubic;
-        cubic.initialize(new_node->w(), new_node->Lw(), new_node->dLdw(), larger->w(), larger->Lw(), larger->dLdw());
-#ifdef CWDEBUG
-        event_server_.trigger(AlgorithmEventType{cubic_polynomial_event, cubic, HorizontalDirection::right});
-#endif
-      }
+        new_node->initialize_cubic(*larger COMMA_CWDEBUG_ONLY(event_server_, true));    // true: calling this on new_node.
       if (new_node != chain_.begin())
       {
         auto smaller = std::prev(new_node);
-        math::CubicPolynomial cubic;
-        cubic.initialize(new_node->w(), new_node->Lw(), new_node->dLdw(), smaller->w(), smaller->Lw(), smaller->dLdw());
-#ifdef CWDEBUG
-        event_server_.trigger(AlgorithmEventType{cubic_polynomial_event, cubic, HorizontalDirection::left});
-#endif
+        smaller->initialize_cubic(*new_node COMMA_CWDEBUG_ONLY(event_server_, false));  // false: passing new_node.
       }
 
+      break;
+    }
+
+    case IterationState::next_sample:
+    {
       w += bogus_;
       bogus_ = std::copysign(std::abs(bogus_) - 10.0, -bogus_);
       expected_Lw_ = 1800.0;
@@ -176,7 +171,6 @@ void Algorithm::handle_single_sample(double& w)
   w += step;
   have_expected_Lw_ = false;
   Debug(set_algorithm_str(w, algorithm_str));
-  state_ = IterationState::next_sample;
 }
 
 #ifdef CWDEBUG

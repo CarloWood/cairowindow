@@ -11,6 +11,7 @@ std::string to_string(CubicToNextSampleType state)
   switch (state)
   {
     AI_CASE_RETURN(unknown);
+    AI_CASE_RETURN(flat);
     AI_CASE_RETURN(up);
     AI_CASE_RETURN(down);
     AI_CASE_RETURN(right_stop);
@@ -19,6 +20,8 @@ std::string to_string(CubicToNextSampleType state)
     AI_CASE_RETURN(left_min);
     AI_CASE_RETURN(right_max);
     AI_CASE_RETURN(left_max);
+    AI_CASE_RETURN(right_max_left_min);
+    AI_CASE_RETURN(right_min_left_max);
     AI_CASE_RETURN(min);
     AI_CASE_RETURN(max);
     AI_CASE_RETURN(min_max);

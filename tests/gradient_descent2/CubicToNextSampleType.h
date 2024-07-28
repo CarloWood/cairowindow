@@ -12,6 +12,7 @@ enum class CubicToNextSampleType : int
 {
   unknown = 0,  // ?? Used when SampleNode::next_ is nullptr.
   // These types have no minimum or maximum:
+  flat,         // __ This and the next sample have a derivative of zero and the cubic is a straight horizontal line.
   up,           // /  This and the next sample have a positive derivative and the cubic has no extremes in between.
   down,         // \  This and the next sample have a negative derivative and the cubic has no extremes in between.
   right_stop,   // /^ This has a positive derivative and no extremes could be found at all on the right (up till the max. energy).
@@ -20,6 +21,8 @@ enum class CubicToNextSampleType : int
   left_min,     // \_ The next sample is a local minimum; this sample has a negative derivative.
   right_max,    // ‾\ This sample is a local maximum; the next sample has a negative derivative.
   left_max,     // /‾ The next sample is a local maxmimum; this sample has a positive derivative.
+  right_max_left_min,   // ‾\_
+  right_min_left_max,   // _/‾
   // These types have a minimum:
   min,          // \/ This sample has negative derivative and the next sample has a positive derivative.
                 //    The cubic has a minimum in between, but no maximum.
