@@ -34,12 +34,16 @@ class SampleNode : public Sample
   void initialize_cubic(SampleNode const& next
       COMMA_CWDEBUG_ONLY(events::Server<AlgorithmEventType>& event_server, bool this_is_last)) const;
 
+  // Accessors.
+  math::CubicPolynomial const& cubic() const { return cubic_; }
+  CubicToNextSampleType type() const { return type_; }
+
 #ifdef CWDEBUG
   void print_on(std::ostream& os) const
   {
     os << "{";
     Sample::print_on(os);
-    os << ", type:" << type_ << "}";
+    os << ", cubic:" << cubic_ << ", type:" << type_ << "}";
   }
 #endif
 };

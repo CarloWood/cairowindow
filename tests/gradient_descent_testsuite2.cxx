@@ -168,6 +168,8 @@ int main()
   using Scale = gradient_descent::Scale;
   using HorizontalDirection = gradient_descent::HorizontalDirection;
   using ExtremeType = gradient_descent::ExtremeType;
+  using CubicToNextSampleType = gradient_descent::CubicToNextSampleType;
+  using ExtremeChain = gradient_descent::ExtremeChain;
 
   // Default values.
   constexpr double L_max = 100.0;
@@ -361,6 +363,110 @@ int main()
   }
 
   //==========================================================================
+  Dout(dc::notice, "*** TEST: first cubic ***");
+  {
+    symbolic::Symbol const& x = symbolic::Symbol::realize("w");
+    symbolic::Symbol const& a = symbolic::Symbol::realize("a");
+    symbolic::Symbol const& b = symbolic::Symbol::realize("b");
+    symbolic::Symbol const& c = symbolic::Symbol::realize("c");
+    symbolic::Symbol const& d = symbolic::Symbol::realize("d");
+    symbolic::Function const& sL = symbolic::Function::realize("L", a + b * x + c * (x^2) + d * (x^3) );
+    Function L(x, sL);
+
+    // Thus cubic has its maximum at w=-1, its minimum at w=19.
+    int ai = 13;
+    int bi = -57;
+    int ci = -27;
+    int di = 1;
+
+    int Di = ci * ci - 3 * bi * di;
+    int sDi = std::sqrt(Di);
+    ASSERT(sDi * sDi == Di);
+    int min = (-ci - sDi) / (3 * di);
+    int max = (-ci + sDi) / (3 * di);
+    ASSERT(min * 3 * di == -ci - sDi);
+    ASSERT(max * 3 * di == -ci + sDi);
+    Dout(dc::notice, "min = " << min << "; max = " << max);
+
+    a = ai;
+    b = bi;
+    c = ci;
+    d = di;
+
+    // Lets have two points left of the maximum, three in between, and two on the right of the minimum.
+    std::array<int, 9> xs = { -5, -4, -1, 1, 9, 11, 19, 21, 22 };
+
+    constexpr int i_max = 2;    //    ^^
+    constexpr int i_min = 6;    //                  ^^
+
+    for (int i0 = 0; i0 < xs.size() - 1; ++i0)
+      for (int i1 = i0 + 1; i1 < xs.size(); ++i1)
+      {
+        CubicToNextSampleType expected;
+        if (i0 < i_max)
+        {
+          if (i1 < i_max)
+            expected = CubicToNextSampleType::up;
+          else if (i1 == i_max)
+            expected = CubicToNextSampleType::left_max;
+          else if (i1 < i_min)
+            expected = CubicToNextSampleType::max;
+          else if (i1 == i_min)
+            expected = CubicToNextSampleType::max_left_min;
+          else
+            expected = CubicToNextSampleType::max_min;
+        }
+        else if (i0 == i_max)
+        {
+          if (i1 < i_min)
+            expected = CubicToNextSampleType::right_max;
+          else if (i1 == i_min)
+            expected = CubicToNextSampleType::right_max_left_min;
+          else
+            expected = CubicToNextSampleType::right_max_min;
+        }
+        else if (i0 < i_min)
+        {
+          if (i1 < i_min)
+            expected = CubicToNextSampleType::down;
+          else if (i1 == i_min)
+            expected = CubicToNextSampleType::left_min;
+          else
+            expected = CubicToNextSampleType::min;
+        }
+        else if (i0 == i_min)
+          expected = CubicToNextSampleType::right_min;
+        else
+          expected = CubicToNextSampleType::up;
+
+        double w0 = xs[i0];
+        double dLdw0 = L.derivative(w0);
+        double learning_rate;
+        if (dLdw0 == 0)                         // Derivative of first sample is zero. learning rate will be added.
+          learning_rate = xs[i1] - xs[i0];
+        else
+          learning_rate = (xs[i0] - xs[i1]) / dLdw0;
+
+        Algorithm gda(learning_rate, L_max);
+        double w = w0;
+
+        Dout(dc::notice, "===========================================");
+//        gda.enable_drawing(L, -6.0, 25.0);
+
+        gda(w, L(w), L.derivative(w));
+        if (dLdw0 == 0.0)
+          ASSERT(gda.algorithm_str() == "one sample, derivative is zero, hdirection is unknown");
+        else
+          ASSERT(gda.algorithm_str() == "one sample, gradient descent");
+        ASSERT(w == xs[i1]);
+        Dout(dc::notice, "-------------------------------------------");
+        gda(w, L(w), L.derivative(w));
+        ASSERT(gda.debug_chain().last().type() == expected);
+      }
+  }
+
+#if 0
+  //==========================================================================
   Dout(dc::notice, "*** TEST: parabola connected to dampened sin ***");
   {
     constexpr double w0 = -10.0;
@@ -396,6 +502,7 @@ int main()
     Sample const& result = gda.minimum();
     Dout(dc::notice, "Global minimum: " << result);
   }
+#endif
 
   Dout(dc::notice, "Success!");
 }

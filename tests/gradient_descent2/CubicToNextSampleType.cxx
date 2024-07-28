@@ -23,8 +23,13 @@ std::string to_string(CubicToNextSampleType state)
     AI_CASE_RETURN(right_max_left_min);
     AI_CASE_RETURN(right_min_left_max);
     AI_CASE_RETURN(min);
-    AI_CASE_RETURN(max);
+    AI_CASE_RETURN(right_max_min);
+    AI_CASE_RETURN(min_left_max);
     AI_CASE_RETURN(min_max);
+    AI_CASE_RETURN(max_min);
+    AI_CASE_RETURN(max);
+    AI_CASE_RETURN(max_left_min);
+    AI_CASE_RETURN(right_min_max);
   }
   AI_NEVER_REACHED
 }

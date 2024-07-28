@@ -24,6 +24,7 @@ void SampleNode::initialize_cubic(SampleNode const& next
   // Get the sign of the derivatives.
   int const sign_dLdw_0 = dLdw() < 0.0 ? -1 : dLdw() > 0.0 ? 1 : 0;
   int const sign_dLdw_1 = next.dLdw() < 0.0 ? -1 : next.dLdw() > 0.0 ? 1 : 0;
+  bool const neither_derivative_is_zero = (sign_dLdw_0 & sign_dLdw_1) != 0;
 
   using enum CubicToNextSampleType;
 
@@ -31,43 +32,53 @@ void SampleNode::initialize_cubic(SampleNode const& next
   if (sign_dLdw_0 != sign_dLdw_1)
   {
     // This must be /\, \/ -- or, very unlikely, one of the derivatives is zero.
-    if (AI_UNLIKELY((sign_dLdw_0 & sign_dLdw_1) == 0))
-    {
-      // One of the derivatives is zero!
-      if (sign_dLdw_0 == 0)             // The right part of an extreme.
-      {
-        type_ = (sign_dLdw_1 == 1)
-            ? right_min                 // _/
-            : right_max;                // ‾\.
-      }
-      else                              // The left part of an extreme.
-      {
-        type_ = (sign_dLdw_0 == 1)
-            ? left_max                  // /‾
-            : left_min;                 // \_
-      }
-    }
-    else
+    if (AI_LIKELY(neither_derivative_is_zero))
     {
       type_ = (sign_dLdw_0 == 1)
           ? max                         // /\.
           : min;                        // \/
     }
+    else
+    {
+      // One of the derivatives is zero!
+      if (sign_dLdw_0 == 0)             // The right part of an extreme.
+      {
+        double d2Ldw2 = cubic_.second_derivative(w());
+        if (sign_dLdw_1 == 1)
+        {
+          type_ = (d2Ldw2 > 0.0)
+              ? right_min               // _/
+              : right_max_min;          // ‾\/
+        }
+        else
+        {
+          type_ = (d2Ldw2 > 0.0)
+              ? right_min_max           // _/\.
+              : right_max;              // ‾\.
+        }
+      }
+      else                              // The left part of an extreme.
+      {
+        double d2Ldw2 = cubic_.second_derivative(next.w());
+        if (sign_dLdw_0 == 1)
+        {
+          type_ = (d2Ldw2 > 0.0)
+              ? max_left_min          // /\_
+              : left_max;             // /‾
+        }
+        else
+        {
+          type_ = (d2Ldw2 > 0.0)
+              ? left_min              // \_
+              : min_left_max;         // \/‾
+        }
+      }
+    }
   }
   else
   {
     // The signs are equal, so this must be /, \, /\/, \/\ -- or, very unlikely, both derivatives are zero.
-    if (AI_UNLIKELY((sign_dLdw_0 & sign_dLdw_1) == 0))
-    {
-      // Both derivatives are zero!
-      if (Lw() > next.Lw())             // ‾\_
-        type_ = right_max_left_min;
-      else if (Lw() < next.Lw())        // _/‾
-        type_ = right_min_left_max;
-      else
-        type_ = flat;                   // __
-    }
-    else
+    if (AI_LIKELY(neither_derivative_is_zero))
     {
       // The signs are equal (and non-zero). Now we have to calculate the extremes of the cubic.
       // Put the minimum (or inflection point) in index 0.
@@ -91,6 +102,16 @@ void SampleNode::initialize_cubic(SampleNode const& next
             ? max_min                   // /\/
             : min_max;                  // \/\.
       }
+    }
+    else
+    {
+      // Both derivatives are zero!
+      if (Lw() > next.Lw())             // ‾\_
+        type_ = right_max_left_min;
+      else if (Lw() < next.Lw())        // _/‾
+        type_ = right_min_left_max;
+      else
+        type_ = flat;                   // __
     }
   }
 

@@ -68,6 +68,7 @@ class Algorithm
   HorizontalDirection debug_hdirection() const { return hdirection_; }
   ExtremeType debug_next_extreme_type() const { return next_extreme_type_; }
   std::string algorithm_str() const { return algorithm_str_; }
+  ExtremeChain const& debug_chain() const { return chain_; }
 
   // Manipulators for the testsuite.
   void set_algorithm_str(double new_w, char const* algorithm_str);
