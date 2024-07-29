@@ -118,4 +118,118 @@ void SampleNode::initialize_cubic(SampleNode const& next
   Dout(dc::notice, "Result: " << *this);
 }
 
+// find_extreme
+//
+// Return an extreme, if any, of the cubic approximation.
+//
+// Let `*this` be the left-most sample and `next` the right-most sample.
+//
+// Input:
+//  next:
+//      The right-most sample that this cubic is based on.
+//
+//  extreme_type:
+//      maximum: looking for a maximum.
+//      minimum: looking for a minimum.
+//      unknown: looking for any extreme; the prefered extreme is the one nearest to the center.
+//
+// Output:
+//  region_out:
+//         left: the requested extreme is left of `*this`.
+//        right: the requested extreme is right of `next`.
+//    inbetween: the requested extreme is in between `*this` and `next`.
+//  extreme_type:
+//      maximum: the extreme is a maximum.
+//      minimum: the extreme is a minimum.
+//      unknown: there is no extreme (of the requested `extreme_type`),
+//               region_out is set to point in the direction where we go downhill,
+//               or - if extreme_type was maximum - uphill.
+double SampleNode::find_extreme(Sample const& next, Region& region_out, ExtremeType& extreme_type) const
+{
+  DoutEntering(dc::notice, "SampleNode::find_extreme(" << next << ", region_out, " << extreme_type << ") [" << *this << "]");
+
+  // Next must be the right-most sample.
+  ASSERT(next.w() > w());
+  // The cubic must be based on this sample and next.
+  ASSERT(utils::almost_equal(cubic_(w()), Lw(), 1e-12) && utils::almost_equal(cubic_.derivative(w()), dLdw(), 1e-12));
+  ASSERT(utils::almost_equal(cubic_(next.w()), next.Lw(), 1e-12) && utils::almost_equal(cubic_.derivative(next.w()), next.dLdw(), 1e-12));
+
+  double a = cubic_[0];
+  double b = cubic_[1];
+  double c = cubic_[2];
+  double d = cubic_[3];
+
+  double D = utils::square(c) - 3.0 * b * d;
+
+  // If D is equal to zero we have a point where the derivative is zero, but that isn't a maximum or minimum.
+  if (D <= 0.0)
+  {
+    region_out = (d > 0.0 || (d == 0.0 && b > 0.0)) != (extreme_type == ExtremeType::maximum) ? Region::left : Region::right;
+    Dout(dc::notice, "Returning " << region_out << " because that is " << (extreme_type == ExtremeType::maximum ? "uphill" : "downhill") << ".");
+    extreme_type = ExtremeType::unknown;
+    Dout(dc::notice, "Returning ExtremeType::unknown because D <= 0.");
+#if CW_DEBUG
+    return uninitialized_magic;
+#else
+    return {};  // Not used.
+#endif
+  }
+
+  double sqrt_D = std::sqrt(D);
+  double minimum = (-c + sqrt_D) / (3.0 * d);
+  double maximum = (-c - sqrt_D) / (3.0 * d);
+
+  double wl = w();
+  double wr = next.w();
+
+  if (std::isnan(minimum) || std::isnan(maximum) || utils::almost_equal(sqrt_D, std::abs(c), 1e-9))
+  {
+    Dout(dc::notice, "cubic_ = " << cubic_ << "; using parabolic approximation.");
+    // The cubic is, almost, a parabola. Use a parabolic approximation.
+    double vertex = -0.5 * cubic_[1] / cubic_[2];
+    ExtremeType const extreme_type_found = cubic_[2] < 0.0 ? ExtremeType::maximum : ExtremeType::minimum;
+    if (extreme_type != ExtremeType::unknown && extreme_type_found != extreme_type)
+    {
+      Dout(dc::notice, "Returning ExtremeType::unknown because the cubic looks like a parabola with an extreme type (" <<
+          extreme_type_found << ") different from what is requested (" << extreme_type << ").");
+      extreme_type = ExtremeType::unknown;
+#if CW_DEBUG
+      return uninitialized_magic;
+#else
+      return {};  // Not used.
+#endif
+    }
+    region_out =
+      (vertex < wl) ? Region::left : (vertex > wr) ? Region::right : Region::inbetween;
+    extreme_type = extreme_type_found;
+    Dout(dc::notice, "Returning " << region_out << " because the cubic looks like a parabola and that's where the vertex is.");
+    return vertex;
+  }
+
+  if (extreme_type == ExtremeType::unknown)
+  {
+    //      unknown: looking for any extreme; the prefered extreme is the one nearest to the center.
+    double center = 0.5 * (wl + wr);
+    extreme_type = (std::abs(minimum - center) > std::abs(maximum - center)) ? ExtremeType::maximum : ExtremeType::minimum;
+    Dout(dc::notice, "Returning " << extreme_type << " because that extreme is closest to the center of the two given samples.");
+  }
+
+  double result = (extreme_type == ExtremeType::maximum) ? maximum : minimum;
+
+  //         left: the requested extreme is left of `left`.
+  //        right: the requested extreme is right of `right`.
+  //    inbetween: the requested extreme is in between `left` and `right`.
+  if (result < wl)
+    region_out = Region::left;
+  else if (result > wr)
+    region_out = Region::right;
+  else
+    region_out = Region::inbetween;
+  Dout(dc::notice, "Returning " << region_out << " because this is where the required extreme (" << extreme_type << ") is.");
+
+  // An extreme_type of unknown means that the returned value should be ignored.
+  ASSERT(extreme_type != ExtremeType::unknown);
+  return result;
+}
+
 } // namespace gradient_descent

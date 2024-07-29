@@ -67,13 +67,25 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
       auto new_node = chain_.insert(std::move(current));
       auto larger = std::next(new_node);
 
+      // This can't be an inserted sample: we only have two samples.
+      ASSERT(new_node == chain_.begin() || larger == chain_.end());
+
+      Region region;
       if (larger != chain_.end())
+      {
         new_node->initialize_cubic(*larger COMMA_CWDEBUG_ONLY(event_server_, true));    // true: calling this on new_node.
-      if (new_node != chain_.begin())
+        w = new_node->find_extreme(*larger, region, next_extreme_type_);
+      }
+      else if (new_node != chain_.begin())
       {
         auto smaller = std::prev(new_node);
         smaller->initialize_cubic(*new_node COMMA_CWDEBUG_ONLY(event_server_, false));  // false: passing new_node.
+        w = smaller->find_extreme(*new_node, region, next_extreme_type_);
       }
+      // This should always be set the first time.
+      ASSERT(next_extreme_type_ != ExtremeType::unknown);
+      // This should be set if next_extreme_type_ was set.
+      ASSERT(w != SampleNode::uninitialized_magic);
 
       break;
     }

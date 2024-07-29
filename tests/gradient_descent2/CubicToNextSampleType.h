@@ -12,30 +12,28 @@ enum class CubicToNextSampleType : int
 {
   unknown = 0,  // ?? Used when SampleNode::next_ is nullptr.
   // These types have no minimum or maximum:
-  flat,         // __ This and the next sample have a derivative of zero and the cubic is a straight horizontal line.
-  up,           // /  This and the next sample have a positive derivative and the cubic has no extremes in between.
-  down,         // \  This and the next sample have a negative derivative and the cubic has no extremes in between.
-  right_stop,   // /^ This has a positive derivative and no extremes could be found at all on the right (up till the max. energy).
-  left_stop,    // ^\ The next sample has a negative derivative and no extremes could be found at all on the left (up till the max. energy).
-  right_min,    // _/ This sample is a local minimum; the next sample has a positive derivative.
-  left_min,     // \_ The next sample is a local minimum; this sample has a negative derivative.
-  right_max,    // ‾\ This sample is a local maximum; the next sample has a negative derivative.
-  left_max,     // /‾ The next sample is a local maxmimum; this sample has a positive derivative.
-  right_max_left_min,   // ‾\_
-  right_min_left_max,   // _/‾
+  flat,         // __  This and the next sample have a derivative of zero and the cubic is a straight horizontal line.
+  up,           // /   This and the next sample have a positive derivative and the cubic has no extremes in between.
+  down,         // \   This and the next sample have a negative derivative and the cubic has no extremes in between.
+  right_stop,   // /^  This has a positive derivative and no extremes could be found at all on the right (up till the max. energy).
+  left_stop,    // ^\  The next sample has a negative derivative and no extremes could be found at all on the left (up till the max. energy).
+  right_min,    // _/  This sample is a local minimum; the next sample has a positive derivative.
+  left_min,     // \_  The next sample is a local minimum; this sample has a negative derivative.
+  right_max,    // ‾\  This sample is a local maximum; the next sample has a negative derivative.
+  left_max,     // /‾  The next sample is a local maxmimum; this sample has a positive derivative.
+  right_max_left_min,  // ‾\_ This sample is a local maximum; the next sample is a local minimum.
+  right_min_left_max,  // _/‾ This sample is a local minimum; the next sample is a local maximum.
   // These types have a minimum:
-  min,          // \/ This sample has negative derivative and the next sample has a positive derivative.
-                //    The cubic has a minimum in between, but no maximum.
-  right_max_min,// ‾\/
-  min_left_max, // \/‾
+  min,          // \/  This sample has negative derivative and the next sample has a positive derivative.
+  right_max_min,// ‾\/ This sample is a local maximum and the next sample has a positive derivative.
+  min_left_max, // \/‾ The next sample is a local maximum and this sample has a negative derivative.
   // These types have a maximum (too):
   min_max,      // \/\ This and the next sample have a negative derivative and the cubic has both derivative in between.
   max_min,      // /\/ This and the next sample have a positive derivative and the cubic has both derivative in between.
   // This type doesn't have a minimum, only a maximum:
-  max,          // /\ This sample has a positive derivative and the next sample has a negative derivative.
-                // The cubic has a maximum in between, but no minimum.
-  max_left_min, // /\_
-  right_min_max,// _/\.
+  max,          // /\  This sample has a positive derivative and the next sample has a negative derivative.
+  max_left_min, // /\_ The next sample is a local minimum and this sample has a positive derivative.
+  right_min_max,// _/\ This sample is a local minimum and the next sample has a negative derivative.
 };
 
 inline bool has_minimum(CubicToNextSampleType type)

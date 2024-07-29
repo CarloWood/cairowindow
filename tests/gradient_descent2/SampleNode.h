@@ -2,6 +2,8 @@
 
 #include "Sample.h"
 #include "CubicToNextSampleType.h"
+#include "HorizontalDirection.h"
+#include "ExtremeType.h"
 #include "../CubicPolynomial.h"
 #include <memory>
 #ifdef CWDEBUG
@@ -24,6 +26,12 @@ struct AlgorithmEventType;
 // through this Sample and the next_ Sample.
 class SampleNode : public Sample
 {
+#if CW_DEBUG
+ public:
+  // Return value of find_extreme when no extreme is available.
+  static constexpr double uninitialized_magic = 12345678.876543211;
+#endif
+
  private:
   mutable math::CubicPolynomial cubic_;         // The cubic that fits this and the next Sample.
   mutable CubicToNextSampleType type_;          // The type of this cubic.
@@ -33,6 +41,8 @@ class SampleNode : public Sample
 
   void initialize_cubic(SampleNode const& next
       COMMA_CWDEBUG_ONLY(events::Server<AlgorithmEventType>& event_server, bool this_is_last)) const;
+
+  double find_extreme(Sample const& next, Region& region_out, ExtremeType& extreme_type) const;
 
   // Accessors.
   math::CubicPolynomial const& cubic() const { return cubic_; }
