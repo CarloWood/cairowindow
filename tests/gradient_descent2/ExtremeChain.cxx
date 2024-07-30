@@ -8,7 +8,7 @@ void ExtremeChain::initialize(Sample&& first_sample)
   last_ = sample_node_list_.emplace(sample_node_list_.begin(), std::move(first_sample));
 }
 
-ExtremeChain::const_iterator ExtremeChain::insert(Sample&& new_sample)
+SampleNode::const_iterator ExtremeChain::insert(Sample&& new_sample)
 {
   // Use initialize() for the first sample.
   ASSERT(!empty());
@@ -21,7 +21,7 @@ ExtremeChain::const_iterator ExtremeChain::insert(Sample&& new_sample)
   // right next to it, or at least in the neighborhood.
 
   // This is going to point to the first element that is larger than new_w (or end() if none such exists).
-  const_iterator larger = last_;
+  SampleNode::const_iterator larger = last_;
 
   if (larger->w() > new_w)
   {

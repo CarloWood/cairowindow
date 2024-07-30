@@ -1,9 +1,11 @@
 #pragma once
 
 #include "Sample.h"
+#include "Scale.h"
 #include "CubicToNextSampleType.h"
 #include "HorizontalDirection.h"
 #include "ExtremeType.h"
+#include "CriticalPointType.h"
 #include "../CubicPolynomial.h"
 #include <memory>
 #ifdef CWDEBUG
@@ -26,6 +28,11 @@ struct AlgorithmEventType;
 // through this Sample and the next_ Sample.
 class SampleNode : public Sample
 {
+ public:
+  using list_type = std::list<SampleNode>;              // The actual list is member of ExtremeChain.
+  using iterator = list_type::iterator;
+  using const_iterator = list_type::const_iterator;
+
 #if CW_DEBUG
  public:
   // Return value of find_extreme when no extreme is available.
@@ -35,6 +42,7 @@ class SampleNode : public Sample
  private:
   mutable math::CubicPolynomial cubic_;         // The cubic that fits this and the next Sample.
   mutable CubicToNextSampleType type_;          // The type of this cubic.
+  mutable Scale scale_;                         // The scale that belongs to this cubic.
 
  public:
   SampleNode(Sample&& sample) : Sample(std::move(sample)), type_(CubicToNextSampleType::unknown) { }
@@ -42,11 +50,17 @@ class SampleNode : public Sample
   void initialize_cubic(SampleNode const& next
       COMMA_CWDEBUG_ONLY(events::Server<AlgorithmEventType>& event_server, bool this_is_last)) const;
 
+ public:
   double find_extreme(Sample const& next, Region& region_out, ExtremeType& extreme_type) const;
+  void set_scale(CriticalPointType type, double critical_point_w, Sample const* left_edge, Sample const* right_edge) const
+  {
+    scale_.set(type, critical_point_w, left_edge, right_edge, cubic_.inflection_point());
+  }
 
   // Accessors.
   math::CubicPolynomial const& cubic() const { return cubic_; }
   CubicToNextSampleType type() const { return type_; }
+  Scale const& scale() const { return scale_; }
 
 #ifdef CWDEBUG
   void print_on(std::ostream& os) const

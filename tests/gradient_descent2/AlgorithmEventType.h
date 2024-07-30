@@ -1,7 +1,9 @@
 #pragma once
 
 #ifdef CWDEBUG
-#include "Scale.h"
+#include "HorizontalDirection.h"
+#include "ScaleUpdate.h"
+#include "SampleNode.h"
 #include "../Polynomial.h"
 #include "../QuadraticPolynomial.h"
 #include "../CubicPolynomial.h"
@@ -138,20 +140,20 @@ class ScaleDrawEventData
 {
  protected:
   ScaleUpdate result_;
-  Scale const& scale_;
+  SampleNode const& sample_node_;
   math::CubicPolynomial const& old_cubic_;
 
  public:
-  ScaleDrawEventData(ScaleUpdate result, Scale const& scale, math::CubicPolynomial const& old_cubic) :
-    result_(result), scale_(scale), old_cubic_(old_cubic) { }
+  ScaleDrawEventData(ScaleUpdate result, SampleNode const& sample_node, math::CubicPolynomial const& old_cubic) :
+    result_(result), sample_node_(sample_node), old_cubic_(old_cubic) { }
 
   ScaleUpdate result() const { return result_; }
-  Scale const& scale() const { return scale_; }
+  SampleNode const& sample_node() const { return sample_node_; }
   math::CubicPolynomial const& old_cubic() const { return old_cubic_; }
 
   void print_on(std::ostream& os) const
   {
-    os << "ScaleDrawEventData:{" << result_ << ", " << scale_ << ", " << old_cubic_ << "}";
+    os << "ScaleDrawEventData:{" << result_ << ", " << sample_node_ << ", " << old_cubic_ << "}";
   }
 };
 
@@ -275,10 +277,10 @@ class AlgorithmEventData
     event_data_.emplace<KineticEnergyEventData>(max_Lw);
   }
 
-  AlgorithmEventData(event_type type, ScaleUpdate result, Scale const& scale, math::CubicPolynomial const& old_cubic)
+  AlgorithmEventData(event_type type, ScaleUpdate result, SampleNode const& sample_node, math::CubicPolynomial const& old_cubic)
   {
     ASSERT(type == scale_draw_event);
-    event_data_.emplace<ScaleDrawEventData>(result, scale, old_cubic);
+    event_data_.emplace<ScaleDrawEventData>(result, sample_node, old_cubic);
   }
 
   AlgorithmEventData(event_type type, Sample const& current)

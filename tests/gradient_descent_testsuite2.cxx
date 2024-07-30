@@ -217,7 +217,7 @@ int main()
     Algorithm gda(learning_rate, L_max);
     // Drop in with an almost zero derivative.
     double w = w0;
-    gda(w, 50.0, 0.999 * Scale::epsilon);
+    gda(w, 50.0, 0.999 * Algorithm::epsilon);
     ASSERT(gda.algorithm_str() == "one sample, derivative is zero, hdirection is unknown");
 
     // EXPECTED: learning_rate was added.
@@ -307,7 +307,7 @@ int main()
 
     // Drop in with an almost zero derivative.
     double w = w0;
-    gda(w, 50.0, 0.999 * Scale::epsilon);
+    gda(w, 50.0, 0.999 * Algorithm::epsilon);
     ASSERT(gda.algorithm_str() == "one sample, derivative is zero");
 
     // EXPECTED: hdirection * learning_rate was added.
@@ -393,96 +393,103 @@ int main()
     // The inflection point is at
     constexpr double inflection_point = 0.5 * (si + ti);
 
-    for (int maximum_last = 0; maximum_last <= 1; ++ maximum_last)
+    for (int no_extremes = 0; no_extremes <= 1; ++no_extremes)
     {
-      bool inverted = maximum_last;     // True if ti is the maximum.
-      int di = inverted ? -2 : 2;
-      int bi = 3 * di * si * ti;
-      int two_ci = -3 * di * (si + ti);
+      bool has_extremes = !no_extremes;
+      for (int maximum_last = 0; maximum_last <= 1; ++ maximum_last)
+      {
+        bool inverted = maximum_last;                           // True if ti is the maximum.
+        int di = inverted ? -2 : 2;
+        int bi = (has_extremes ? 3 : -3) * di * si * ti;
+        int two_ci = -3 * di * (si + ti);
 
-      a = ai;
-      b = bi;
-      c = 0.5 * two_ci;
-      d = di;
+        a = ai;
+        b = bi;
+        c = 0.5 * two_ci;
+        d = di;
 
-      for (int i0 = 0; i0 < xs.size() - 1; ++i0)
-        for (int i1 = i0 + 1; i1 < xs.size(); ++i1)
-        {
-          CubicToNextSampleType expected;
-          if (i0 < i_max)
+        for (int i0 = 0; i0 < xs.size() - 1; ++i0)
+          for (int i1 = i0 + 1; i1 < xs.size(); ++i1)
           {
-            if (i1 < i_max)
+            CubicToNextSampleType expected;
+            if (i0 < i_max || !has_extremes)
+            {
+              if (i1 < i_max || !has_extremes)
+                expected = inverted ? CubicToNextSampleType::down : CubicToNextSampleType::up;
+              else if (i1 == i_max)
+                expected = inverted ? CubicToNextSampleType::left_min : CubicToNextSampleType::left_max;
+              else if (i1 < i_min)
+                expected = inverted ? CubicToNextSampleType::min : CubicToNextSampleType::max;
+              else if (i1 == i_min)
+                expected = inverted ? CubicToNextSampleType::min_left_max : CubicToNextSampleType::max_left_min;
+              else
+                expected = inverted ? CubicToNextSampleType::min_max : CubicToNextSampleType::max_min;
+            }
+            else if (i0 == i_max)
+            {
+              if (i1 < i_min)
+                expected = inverted ? CubicToNextSampleType::right_min : CubicToNextSampleType::right_max;
+              else if (i1 == i_min)
+                expected = inverted ? CubicToNextSampleType::right_min_left_max : CubicToNextSampleType::right_max_left_min;
+              else
+                expected = inverted ? CubicToNextSampleType::right_min_max : CubicToNextSampleType::right_max_min;
+            }
+            else if (i0 < i_min)
+            {
+              if (i1 < i_min)
+                expected = inverted ? CubicToNextSampleType::up : CubicToNextSampleType::down;
+              else if (i1 == i_min)
+                expected = inverted ? CubicToNextSampleType::left_max : CubicToNextSampleType::left_min;
+              else
+                expected = inverted ? CubicToNextSampleType::max : CubicToNextSampleType::min;
+            }
+            else if (i0 == i_min)
+              expected = inverted ? CubicToNextSampleType::right_max : CubicToNextSampleType::right_min;
+            else
               expected = inverted ? CubicToNextSampleType::down : CubicToNextSampleType::up;
-            else if (i1 == i_max)
-              expected = inverted ? CubicToNextSampleType::left_min : CubicToNextSampleType::left_max;
-            else if (i1 < i_min)
-              expected = inverted ? CubicToNextSampleType::min : CubicToNextSampleType::max;
-            else if (i1 == i_min)
-              expected = inverted ? CubicToNextSampleType::min_left_max : CubicToNextSampleType::max_left_min;
+
+            double w0 = xs[i0];
+            double dLdw0 = L.derivative(w0);
+            double learning_rate;
+            if (dLdw0 == 0)                         // Derivative of first sample is zero. learning rate will be added.
+              learning_rate = xs[i1] - xs[i0];
             else
-              expected = inverted ? CubicToNextSampleType::min_max : CubicToNextSampleType::max_min;
-          }
-          else if (i0 == i_max)
-          {
-            if (i1 < i_min)
-              expected = inverted ? CubicToNextSampleType::right_min : CubicToNextSampleType::right_max;
-            else if (i1 == i_min)
-              expected = inverted ? CubicToNextSampleType::right_min_left_max : CubicToNextSampleType::right_max_left_min;
+              learning_rate = (xs[i0] - xs[i1]) / dLdw0;
+
+            Algorithm gda(learning_rate, L_max);
+            double w = w0;
+
+            Dout(dc::notice, "===========================================");
+            //gda.enable_drawing(L, -6.0, 25.0);
+
+            gda(w, L(w), L.derivative(w));
+            ASSERT(gda.algorithm_str() ==
+                (dLdw0 == 0.0 ? "one sample, derivative is zero, hdirection is unknown" : "one sample, gradient descent"));
+            // Fix floating-point round-off error related to learning_rate step.
+            ASSERT(utils::almost_equal(w, (double)xs[i1], 1e-9));
+            w = xs[i1];
+            ASSERT(gda.debug_hdirection() == HorizontalDirection::undecided);
+            ASSERT(gda.debug_next_extreme_type() == ExtremeType::unknown);
+
+            // The center between the two samples is
+            double center = 0.5 * (w0 + w);
+            // The expected "next extreme" should be set to minimum if the cubic has no extremes,
+            // otherwise the extreme that is closest to the center of the two samples.
+            ExtremeType expected_next_extreme_type;
+            if (!has_extremes)
+              expected_next_extreme_type = ExtremeType::minimum;
+            else if (inverted)
+              expected_next_extreme_type = center > inflection_point ? ExtremeType::maximum : ExtremeType::minimum;
             else
-              expected = inverted ? CubicToNextSampleType::right_min_max : CubicToNextSampleType::right_max_min;
+              expected_next_extreme_type = center < inflection_point ? ExtremeType::maximum : ExtremeType::minimum;
+
+            Dout(dc::notice, "-------------------------------------------");
+            gda(w, L(w), L.derivative(w));
+            ASSERT(gda.debug_hdirection() == HorizontalDirection::undecided);
+            ASSERT(gda.debug_chain().last().type() == expected);
+            ASSERT(gda.debug_next_extreme_type() == expected_next_extreme_type);
           }
-          else if (i0 < i_min)
-          {
-            if (i1 < i_min)
-              expected = inverted ? CubicToNextSampleType::up : CubicToNextSampleType::down;
-            else if (i1 == i_min)
-              expected = inverted ? CubicToNextSampleType::left_max : CubicToNextSampleType::left_min;
-            else
-              expected = inverted ? CubicToNextSampleType::max : CubicToNextSampleType::min;
-          }
-          else if (i0 == i_min)
-            expected = inverted ? CubicToNextSampleType::right_max : CubicToNextSampleType::right_min;
-          else
-            expected = inverted ? CubicToNextSampleType::down : CubicToNextSampleType::up;
-
-          double w0 = xs[i0];
-          double dLdw0 = L.derivative(w0);
-          double learning_rate;
-          if (dLdw0 == 0)                         // Derivative of first sample is zero. learning rate will be added.
-            learning_rate = xs[i1] - xs[i0];
-          else
-            learning_rate = (xs[i0] - xs[i1]) / dLdw0;
-
-          Algorithm gda(learning_rate, L_max);
-          double w = w0;
-
-          Dout(dc::notice, "===========================================");
-          //gda.enable_drawing(L, -6.0, 25.0);
-
-          gda(w, L(w), L.derivative(w));
-          ASSERT(gda.algorithm_str() ==
-              (dLdw0 == 0.0 ? "one sample, derivative is zero, hdirection is unknown" : "one sample, gradient descent"));
-          // Fix floating-point round-off error related to learning_rate step.
-          ASSERT(utils::almost_equal(w, (double)xs[i1], 1e-9));
-          w = xs[i1];
-          ASSERT(gda.debug_hdirection() == HorizontalDirection::undecided);
-          ASSERT(gda.debug_next_extreme_type() == ExtremeType::unknown);
-
-          // The center between the two samples is
-          double center = 0.5 * (w0 + w);
-          // The expected "next extreme" is the one that is closest to the center of the two samples.
-          ExtremeType expected_next_extreme_type;
-          if (inverted)
-            expected_next_extreme_type = center > inflection_point ? ExtremeType::maximum : ExtremeType::minimum;
-          else
-            expected_next_extreme_type = center < inflection_point ? ExtremeType::maximum : ExtremeType::minimum;
-
-          Dout(dc::notice, "-------------------------------------------");
-          gda(w, L(w), L.derivative(w));
-          ASSERT(gda.debug_chain().last().type() == expected);
-          ASSERT(gda.debug_hdirection() == HorizontalDirection::undecided);
-          ASSERT(gda.debug_next_extreme_type() == expected_next_extreme_type);
-        }
+      }
     }
   }
 

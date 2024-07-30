@@ -150,11 +150,12 @@ class AlgorithmEvent
           data.result() == ScaleUpdate::towards_cp ||
           data.result() == ScaleUpdate::away_from_cp)
       {
-        Scale const& scale = data.scale();
-        double const I = scale.inflection_point_w();
+        SampleNode const& sample_node = data.sample_node();
+        Scale const& scale = sample_node.scale();
+        double const I = sample_node.cubic().inflection_point();
         double const cp = scale.critical_point_w();
-        double const l = scale.left_edge_sample_w();
-        double const r = scale.right_edge_sample_w();
+        double const l = scale.left_edge_w();
+        double const r = scale.right_edge_w();
         double prev_x2;
         double const y = plot_.yrange().min() + 0.75 * plot_.yrange().size();
         double scale_y = y;

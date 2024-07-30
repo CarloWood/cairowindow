@@ -10,6 +10,10 @@ namespace gradient_descent {
 
 class Algorithm
 {
+ public:
+  // This value is assumed to be much smaller than any change in w over which L(w) changes significantly.
+  static constexpr double epsilon = 1e-30;
+
  private:
   double learning_rate_;                // In unit_of(w)^2 / unit_of(L).
   double small_step_{};                 // This will replace learning_rate_ as soon as we have an idea of the scale of changes.

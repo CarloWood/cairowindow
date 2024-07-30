@@ -71,21 +71,44 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
       ASSERT(new_node == chain_.begin() || larger == chain_.end());
 
       Region region;
+      SampleNode const* left_edge;
+      Sample const* right_edge;
       if (larger != chain_.end())
       {
         new_node->initialize_cubic(*larger COMMA_CWDEBUG_ONLY(event_server_, true));    // true: calling this on new_node.
         w = new_node->find_extreme(*larger, region, next_extreme_type_);
+        left_edge = &*new_node;
+        right_edge = &*larger;
       }
       else if (new_node != chain_.begin())
       {
         auto smaller = std::prev(new_node);
         smaller->initialize_cubic(*new_node COMMA_CWDEBUG_ONLY(event_server_, false));  // false: passing new_node.
         w = smaller->find_extreme(*new_node, region, next_extreme_type_);
+        left_edge = &*smaller;
+        right_edge = &*new_node;
       }
-      // This should always be set the first time.
-      ASSERT(next_extreme_type_ != ExtremeType::unknown);
-      // This should be set if next_extreme_type_ was set.
-      ASSERT(w != SampleNode::uninitialized_magic);
+      // w should be set if next_extreme_type_ was set.
+      ASSERT(next_extreme_type_ == ExtremeType::unknown || w != SampleNode::uninitialized_magic);
+
+      // Initialize the scale.
+
+      CriticalPointType scale_cp_type =
+        next_extreme_type_ == ExtremeType::unknown ? CriticalPointType::inflection_point
+                                                   : next_extreme_type_ == ExtremeType::minimum ? CriticalPointType::minimum
+                                                                                                : CriticalPointType::maximum;
+      double critical_point_w =
+        next_extreme_type_ == ExtremeType::unknown ? left_edge->cubic().inflection_point()
+                                                   : w;
+
+      left_edge->set_scale(scale_cp_type, critical_point_w, left_edge, right_edge);
+#ifdef CWDEBUG
+      event_server_.trigger(AlgorithmEventType{scale_draw_event, ScaleUpdate::initialized, *left_edge, {}});
+#endif
+
+      // If next_extreme_type_ was not set then this cubic has no extremes. In that case go for a minimum.
+      if (next_extreme_type_ == ExtremeType::unknown)
+        next_extreme_type_ = ExtremeType::minimum;
 
       break;
     }
@@ -124,7 +147,7 @@ void Algorithm::handle_single_sample(double& w)
     step = -learning_rate_ * sample.dLdw();
 
     // Did we drop on a (local) extreme as a starting point?!
-    if (Scale::almost_zero(w, step))
+    if (std::abs(step) < epsilon || std::abs(step) < 1e-6 * std::abs(w))
     {
       if (hdirection_ == HorizontalDirection::undecided)
       {
