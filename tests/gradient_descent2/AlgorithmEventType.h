@@ -26,6 +26,7 @@ enum event_type
   cubic_polynomial_event,
   kinetic_energy_event,
   scale_draw_event,
+  left_of_right_of_event,
   scale_erase_event,
   new_sample_event,
   new_local_extreme_event,
@@ -157,6 +158,33 @@ class ScaleDrawEventData
   }
 };
 
+class LeftOfRightOfEventData
+{
+ protected:
+  SampleNode const* left_of_;
+  SampleNode const* right_of_;
+  ExtremeType next_extreme_type_;
+  double critical_point_w_;
+  double critical_point_Lw_;
+
+ public:
+  LeftOfRightOfEventData(SampleNode const* left_of, SampleNode const* right_of, ExtremeType next_extreme_type,
+      double critical_point_w, double critical_point_Lw) :
+    left_of_(left_of), right_of_(right_of), next_extreme_type_(next_extreme_type),
+    critical_point_w_(critical_point_w), critical_point_Lw_(critical_point_Lw) { }
+
+  SampleNode const* left_of() const { return left_of_; }
+  SampleNode const* right_of() const { return right_of_; }
+  ExtremeType next_extreme_type() const { return next_extreme_type_; }
+  double critical_point_w() const { return critical_point_w_; }
+  double critical_point_Lw() const { return critical_point_Lw_; }
+
+  void print_on(std::ostream& os) const
+  {
+    os << "LeftOfRightOfEventData:{[" << left_of_->label() << "], [" << right_of_->label() << "]}";
+  }
+};
+
 class ScaleEraseEventData
 {
  public:
@@ -225,7 +253,7 @@ class AlgorithmEventData
 {
  private:
   std::variant<ResetEventData, DifferenceEventData, FourthDegreeApproximationEventData, QuotientEventData, DerivativeEventData,
-    QuadraticPolynomialEventData, KineticEnergyEventData, ScaleDrawEventData, ScaleEraseEventData, NewSampleEventData,
+    QuadraticPolynomialEventData, KineticEnergyEventData, ScaleDrawEventData, LeftOfRightOfEventData, ScaleEraseEventData, NewSampleEventData,
     CubicPolynomialEventData, NewLocalExtremeEventData, HDirectionKnownEventData> event_data_;
 
  public:
@@ -281,6 +309,13 @@ class AlgorithmEventData
   {
     ASSERT(type == scale_draw_event);
     event_data_.emplace<ScaleDrawEventData>(result, sample_node, old_cubic);
+  }
+
+  AlgorithmEventData(event_type type, SampleNode const* left_of, SampleNode const* right_of, ExtremeType next_extreme_type,
+      double critical_point_w, double critical_point_Lw)
+  {
+    ASSERT(type == left_of_right_of_event);
+    event_data_.emplace<LeftOfRightOfEventData>(left_of, right_of, next_extreme_type, critical_point_w, critical_point_Lw);
   }
 
   AlgorithmEventData(event_type type, Sample const& current)

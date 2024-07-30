@@ -20,7 +20,9 @@ class Algorithm
   IterationState state_;
   ExtremeChain chain_;                  // A doubly linked list of SampleNode's, sorted by w value.
   ExtremeType next_extreme_type_;       // The extreme type (minimum or maximum) that we're looking for (next).
-  HorizontalDirection hdirection_;      // The direction relative to chain_.last_ that we want to find the next extreme in.
+  SampleNode const* left_of_{nullptr};  // If non-null then the next extreme (of next_extreme_type_) must found left of this sample.
+  SampleNode const* right_of_{nullptr}; // If non-null then the next extreme (of next_extreme_type_) must found right of this sample.
+  HorizontalDirection hdirection_;      // The direction relative to FIXME that we want to find the next extreme in.
   KineticEnergy energy_;
   bool have_expected_Lw_{false};        // True if expected_Lw_ was set.
   double expected_Lw_;                  // Whenever w is changed, this is set to what Lw value the approximation is expecting there.

@@ -52,9 +52,9 @@ class SampleNode : public Sample
 
  public:
   double find_extreme(Sample const& next, Region& region_out, ExtremeType& extreme_type) const;
-  void set_scale(CriticalPointType type, double critical_point_w, Sample const* left_edge, Sample const* right_edge) const
+  void set_scale(CriticalPointType type, double critical_point_w, const_iterator const& left_edge, const_iterator const& right_edge) const
   {
-    scale_.set(type, critical_point_w, left_edge, right_edge, cubic_.inflection_point());
+    scale_.set(type, critical_point_w, &*left_edge, &*right_edge, cubic_.inflection_point());
   }
 
   // Accessors.

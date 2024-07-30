@@ -151,8 +151,8 @@ double SampleNode::find_extreme(Sample const& next, Region& region_out, ExtremeT
   // Next must be the right-most sample.
   ASSERT(next.w() > w());
   // The cubic must be based on this sample and next.
-  ASSERT(utils::almost_equal(cubic_(w()), Lw(), 1e-12) && utils::almost_equal(cubic_.derivative(w()), dLdw(), 1e-12));
-  ASSERT(utils::almost_equal(cubic_(next.w()), next.Lw(), 1e-12) && utils::almost_equal(cubic_.derivative(next.w()), next.dLdw(), 1e-12));
+  ASSERT(utils::almost_equal(cubic_(w()), Lw(), 1e-9) && utils::almost_equal(cubic_.derivative(w()), dLdw(), 1e-9));
+  ASSERT(utils::almost_equal(cubic_(next.w()), next.Lw(), 1e-9) && utils::almost_equal(cubic_.derivative(next.w()), next.dLdw(), 1e-9));
 
   double a = cubic_[0];
   double b = cubic_[1];

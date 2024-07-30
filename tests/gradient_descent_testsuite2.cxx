@@ -493,12 +493,12 @@ int main()
     }
   }
 
-#if 0
+#if 1
   //==========================================================================
   Dout(dc::notice, "*** TEST: parabola connected to dampened sin ***");
   {
-    constexpr double w0 = -10.0;
-    constexpr double learning_rate = 0.1;
+    constexpr double w0 = -50;//-10.0;
+    constexpr double learning_rate = 0.2;
     constexpr double L_max = 2649;
 
     Algorithm gda(learning_rate, L_max);

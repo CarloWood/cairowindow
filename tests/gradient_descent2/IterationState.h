@@ -11,6 +11,7 @@ enum class IterationState
 {
   initialization,
   first_cubic,
+  find_extreme,
   next_sample,
   success
 };

@@ -64,52 +64,90 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
       // Find the point where to insert the new sample. We do this by looking for the
       // first SampleNode (target) that has a w value that is greater than that of the
       // new sample and then inserting current in front of that.
-      auto new_node = chain_.insert(std::move(current));
-      auto larger = std::next(new_node);
+      auto left_node = chain_.insert(std::move(current));
+      auto right_node = std::next(left_node);
+      // Fix the order.
+      bool current_is_left = right_node != chain_.end();
+      if (!current_is_left)
+      {
+        // In this case the iterator returned by insert is actually the right_node of the two.
+        right_node = left_node;
+        left_node = std::prev(right_node);
+      }
 
-      // This can't be an inserted sample: we only have two samples.
-      ASSERT(new_node == chain_.begin() || larger == chain_.end());
+      // The cubic is part of the left_node.
+      left_node->initialize_cubic(*right_node COMMA_CWDEBUG_ONLY(event_server_, current_is_left));
 
       Region region;
-      SampleNode const* left_edge;
-      Sample const* right_edge;
-      if (larger != chain_.end())
-      {
-        new_node->initialize_cubic(*larger COMMA_CWDEBUG_ONLY(event_server_, true));    // true: calling this on new_node.
-        w = new_node->find_extreme(*larger, region, next_extreme_type_);
-        left_edge = &*new_node;
-        right_edge = &*larger;
-      }
-      else if (new_node != chain_.begin())
-      {
-        auto smaller = std::prev(new_node);
-        smaller->initialize_cubic(*new_node COMMA_CWDEBUG_ONLY(event_server_, false));  // false: passing new_node.
-        w = smaller->find_extreme(*new_node, region, next_extreme_type_);
-        left_edge = &*smaller;
-        right_edge = &*new_node;
-      }
+      w = left_node->find_extreme(*right_node, region, next_extreme_type_);
       // w should be set if next_extreme_type_ was set.
       ASSERT(next_extreme_type_ == ExtremeType::unknown || w != SampleNode::uninitialized_magic);
 
-      // Initialize the scale.
-
-      CriticalPointType scale_cp_type =
-        next_extreme_type_ == ExtremeType::unknown ? CriticalPointType::inflection_point
-                                                   : next_extreme_type_ == ExtremeType::minimum ? CriticalPointType::minimum
-                                                                                                : CriticalPointType::maximum;
-      double critical_point_w =
-        next_extreme_type_ == ExtremeType::unknown ? left_edge->cubic().inflection_point()
-                                                   : w;
-
-      left_edge->set_scale(scale_cp_type, critical_point_w, left_edge, right_edge);
+      if (next_extreme_type_ == ExtremeType::unknown)
+      {
+        // We're going to look for a minimum.
+        if (left_node->dLdw() > 0.0)
+          left_of_ = &*left_node;
+        else
+          right_of_ = &*right_node;
+      }
+      else
+      {
+        if (w < left_node->w())
+          left_of_ = &*left_node;
+        else if (w <= right_node->w())
+        {
+          right_of_ = &*left_node;
+          left_of_ = &*right_node;
+        }
+        else
+          right_of_ = &*right_node;
+      }
 #ifdef CWDEBUG
-      event_server_.trigger(AlgorithmEventType{scale_draw_event, ScaleUpdate::initialized, *left_edge, {}});
+      event_server_.trigger(AlgorithmEventType{left_of_right_of_event, left_of_, right_of_,
+          next_extreme_type_, w, left_node->cubic()(w)});
 #endif
+
+      // Initialize the scale.
+      {
+        CriticalPointType scale_cp_type =
+          next_extreme_type_ == ExtremeType::unknown ? CriticalPointType::inflection_point
+                                                     : next_extreme_type_ == ExtremeType::minimum ? CriticalPointType::minimum
+                                                                                                  : CriticalPointType::maximum;
+        double critical_point_w =
+          next_extreme_type_ == ExtremeType::unknown ? left_node->cubic().inflection_point()
+                                                     : w;
+
+        left_node->set_scale(scale_cp_type, critical_point_w, left_node, right_node);
+#ifdef CWDEBUG
+        event_server_.trigger(AlgorithmEventType{scale_draw_event, ScaleUpdate::initialized, *left_node, {}});
+#endif
+      }
 
       // If next_extreme_type_ was not set then this cubic has no extremes. In that case go for a minimum.
       if (next_extreme_type_ == ExtremeType::unknown)
         next_extreme_type_ = ExtremeType::minimum;
 
+      state_ = IterationState::find_extreme;
+      break;
+    }
+
+    case IterationState::find_extreme:
+    {
+      auto new_node = chain_.insert(std::move(current));
+      auto right_node = std::next(new_node);
+
+      if (right_node != chain_.end())
+      {
+        new_node->initialize_cubic(*right_node COMMA_CWDEBUG_ONLY(event_server_, true));        // true: called on new_node.
+      }
+      if (new_node != chain_.begin())
+      {
+        auto left_node = std::prev(new_node);
+        left_node->initialize_cubic(*new_node COMMA_CWDEBUG_ONLY(event_server_, false));        // false: new_node is passed.
+      }
+
+      state_ = IterationState::next_sample;
       break;
     }
 
@@ -129,6 +167,7 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
   }
 
   // Ask for a new sample at `w` if not already finished.
+  Dout(dc::notice, "Next probe: " << w);
   return state_ != IterationState::success;
 }
 

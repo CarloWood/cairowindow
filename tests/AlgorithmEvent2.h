@@ -70,6 +70,9 @@ class AlgorithmEvent
   int current_{};                                                       // Index into plot_samples_.
   std::vector<PlotSample> plot_local_extremes_;
   cairowindow::plot::Connector plot_current_hdirection_;
+  cairowindow::plot::Connector plot_current_left_of_direction_;
+  cairowindow::plot::Connector plot_current_right_of_direction_;
+  cairowindow::plot::Connector plot_next_jump_point_;
 
  public:
   AlgorithmEvent(cairowindow::plot::Plot& plot, boost::intrusive_ptr<cairowindow::Layer> const& layer) :
@@ -140,6 +143,49 @@ class AlgorithmEvent
 
       plot_energy_text_ = plot_.create_text(layer_, {{.position = draw::centered_above, .offset = 2.0}},
           Point{0.5 * (plot_.xrange().min() + plot_.xrange().max()), data.max_Lw()}, "energy");
+    }
+    else if (event.is_a<LeftOfRightOfEventData>())
+    {
+      auto const& data = event.get<LeftOfRightOfEventData>();
+
+      if (data.left_of())
+      {
+        double x = data.left_of()->w();
+        double y = data.left_of()->Lw();
+
+        plot_current_left_of_direction_ = plot::Connector{{x, y},
+          {x - plot_.convert_horizontal_offset_from_pixel(25.0), y},
+          Connector::no_arrow, Connector::open_arrow};
+        plot_.add_connector(layer_, s_indicator_style({.line_color = color::red}), plot_current_left_of_direction_);
+      }
+      else
+        plot_current_left_of_direction_.reset();
+
+      if (data.right_of())
+      {
+        double x = data.right_of()->w();
+        double y = data.right_of()->Lw();
+
+        plot_current_right_of_direction_ = plot::Connector{{x, y},
+          {x + plot_.convert_horizontal_offset_from_pixel(25.0), y},
+          Connector::no_arrow, Connector::open_arrow};
+        plot_.add_connector(layer_, s_indicator_style({.line_color = color::red}), plot_current_right_of_direction_);
+      }
+      else
+        plot_current_right_of_direction_.reset();
+
+      if (data.next_extreme_type() != ExtremeType::unknown)
+      {
+        double x = data.critical_point_w();
+        double y = data.critical_point_Lw();
+
+        plot_next_jump_point_ = plot::Connector{{x, y},
+          {x, y + plot_.convert_vertical_offset_from_pixel(25.0)},
+          Connector::open_arrow, Connector::no_arrow};
+        plot_.add_connector(layer_, s_indicator_style({.line_color = color::green}), plot_next_jump_point_);
+      }
+      else
+        plot_next_jump_point_.reset();
     }
     else if (event.is_a<ScaleDrawEventData>())
     {
