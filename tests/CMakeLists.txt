@@ -74,5 +74,5 @@ add_executable(gradient_descent_testsuite2 gradient_descent_testsuite2.cxx Algor
   gradient_descent2/AlgorithmEventType.cxx gradient_descent2/CubicToNextSampleType.cxx
   gradient_descent2/ExtremeChain.cxx gradient_descent2/SampleNode.cxx
   gradient_descent2/ScaleUpdate.cxx gradient_descent2/CriticalPointType.cxx
-  gradient_descent2/Scale.cxx)
+  gradient_descent2/Scale.cxx gradient_descent2/AnalyzedCubic.cxx)
 target_link_libraries(gradient_descent_testsuite2 AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST})

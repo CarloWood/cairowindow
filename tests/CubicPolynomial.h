@@ -15,7 +15,7 @@ using utils::has_print_on::operator<<;
 
 class CubicPolynomial
 {
- private:
+ protected:
   std::array<double, 4> coefficients_{};
 
  public:
@@ -26,18 +26,13 @@ class CubicPolynomial
 
   void initialize(double x0, double y0, double dxdy0, double x1, double y1, double dxdy1)
   {
-    double delta_x = x0 - x1;
-    double delta_x_squared = utils::square(delta_x);
-    double delta_y = y0 - y1;
-    double delta_dxdy = dxdy0 - dxdy1;
-    double sum_x = x0 + x1;
-    double sum_dxdy = dxdy0 + dxdy1;
+    double delta_x_inverse = 1.0 / (x0 - x1);
 
     // The theory of this approach is described here:
     // https://math.stackexchange.com/a/4926903/489074
-    double d = (-2.0 * delta_y + delta_x * sum_dxdy) / (delta_x_squared * delta_x);
-    double c = delta_dxdy / (2.0 * delta_x) - 1.5 * sum_x * d;
-    double b = (x0 * dxdy1 - x1 * dxdy0) / delta_x + 3.0 * x0 * x1 * d;
+    double d = (dxdy0 + dxdy1 - 2.0 * (y0 - y1) * delta_x_inverse) * (delta_x_inverse * delta_x_inverse);
+    double c = 0.5 * ((dxdy0 - dxdy1) * delta_x_inverse - 3.0 * d * (x0 + x1));
+    double b = (x0 * dxdy1 - x1 * dxdy0) * delta_x_inverse + 3.0 * d * x0 * x1;
 
     coefficients_[3] = d;
     coefficients_[2] = c;

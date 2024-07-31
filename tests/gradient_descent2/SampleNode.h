@@ -51,10 +51,15 @@ class SampleNode : public Sample
       COMMA_CWDEBUG_ONLY(events::Server<AlgorithmEventType>& event_server, bool this_is_last)) const;
 
  public:
-  double find_extreme(Sample const& next, Region& region_out, ExtremeType& extreme_type) const;
+  double find_extreme(Sample const& next, ExtremeType& extreme_type) const;
   void set_scale(CriticalPointType type, double critical_point_w, const_iterator const& left_edge, const_iterator const& right_edge) const
   {
     scale_.set(type, critical_point_w, &*left_edge, &*right_edge, cubic_.inflection_point());
+  }
+  bool has_extreme(ExtremeType extreme_type) const
+  {
+    ASSERT(extreme_type != ExtremeType::unknown);
+    return extreme_type == ExtremeType::minimum ? has_minimum(type_) : has_maximum(type_);
   }
 
   // Accessors.

@@ -1,4 +1,5 @@
 #include "sys.h"
+#include "AnalyzedCubic.h"
 #include "SampleNode.h"
 #include "Algorithm.h"
 #include "IterationState.h"
@@ -78,8 +79,7 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
       // The cubic is part of the left_node.
       left_node->initialize_cubic(*right_node COMMA_CWDEBUG_ONLY(event_server_, current_is_left));
 
-      Region region;
-      w = left_node->find_extreme(*right_node, region, next_extreme_type_);
+      w = left_node->find_extreme(*right_node, next_extreme_type_);
       // w should be set if next_extreme_type_ was set.
       ASSERT(next_extreme_type_ == ExtremeType::unknown || w != SampleNode::uninitialized_magic);
 
@@ -137,17 +137,108 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
       auto new_node = chain_.insert(std::move(current));
       auto right_node = std::next(new_node);
 
+      bool right_has_extreme = false;
+      double right_extreme_w;
+      double right_dist;
       if (right_node != chain_.end())
       {
         new_node->initialize_cubic(*right_node COMMA_CWDEBUG_ONLY(event_server_, true));        // true: called on new_node.
+        AnalyzedCubic acubic{new_node->cubic()};
+        if (acubic.has_extremes())
+        {
+          right_extreme_w = acubic.get_extreme(next_extreme_type_);
+          right_has_extreme =
+            (!left_of_ || right_extreme_w < left_of_->w()) &&
+            (!right_of_ || right_of_->w() < right_extreme_w);
+          right_dist = std::abs(right_extreme_w - new_node->w()) + std::abs(right_extreme_w - right_node->w());
+        }
       }
+      bool left_has_extreme = false;
+      double left_extreme_w;
+      double left_dist;
       if (new_node != chain_.begin())
       {
         auto left_node = std::prev(new_node);
         left_node->initialize_cubic(*new_node COMMA_CWDEBUG_ONLY(event_server_, false));        // false: new_node is passed.
+        AnalyzedCubic acubic{left_node->cubic()};
+        if (acubic.has_extremes())
+        {
+          left_extreme_w = acubic.get_extreme(next_extreme_type_);
+          left_has_extreme =
+            (!left_of_ || left_extreme_w < left_of_->w()) &&
+            (!right_of_ || right_of_->w() < left_extreme_w);
+          left_dist = std::abs(left_extreme_w - left_node->w()) + std::abs(left_extreme_w - new_node->w());
+        }
       }
 
-      state_ = IterationState::next_sample;
+#ifdef CWDEBUG
+      double Lw;
+#endif
+      if (right_has_extreme)
+      {
+        // If both cubics have the required extreme in the required region, then
+        // use the cubic whose sample points lay closest to their extreme.
+        if (!left_has_extreme || right_dist < left_dist)
+        {
+          Dout(dc::notice|continued_cf, "Choosing " << next_extreme_type_ << " of right cubic because ");
+#ifdef CWDEBUG
+          if (left_has_extreme)
+            Dout(dc::finish, "that extreme (" << right_extreme_w << ") is closer to the center of [" <<
+                new_node->label() << "]<--->[" << right_node->label() << "], than the left cubic extreme (" <<
+                left_extreme_w << ") is from the center of [" << std::prev(new_node)->label() << "]<--->[" << new_node->label() <<
+                "]; (" << right_dist << " < " << left_dist << ").");
+          else
+            Dout(dc::finish, "the left one does not have that extreme between " <<
+                (right_of_ ? right_of_->w() : -std::numeric_limits<double>::infinity()) << " and " <<
+                (left_of_ ? left_of_->w() : std::numeric_limits<double>::infinity()));
+#endif
+          w = right_extreme_w;
+          Debug(Lw = new_node->cubic()(w));
+        }
+        else
+        {
+          Dout(dc::notice|continued_cf, "Choosing " << next_extreme_type_ << " of left cubic because ");
+#ifdef CWDEBUG
+          if (left_has_extreme)
+            Dout(dc::finish, "that extreme (" << left_extreme_w << ") is closer to the center of [" <<
+                std::prev(new_node)->label() << "]<--->[" << new_node->label() << "], than the right cubic extreme (" <<
+                right_extreme_w << ") is from the center of " << new_node->label() << "]<--->[" << right_node->label() <<
+                "; (" << left_dist << " < " << right_dist << ").");
+          else
+            Dout(dc::finish, "the right one does not have that extreme between " <<
+                (right_of_ ? right_of_->w() : -std::numeric_limits<double>::infinity()) << " and " <<
+                (left_of_ ? left_of_->w() : std::numeric_limits<double>::infinity()));
+#endif
+          w = left_extreme_w;
+          Debug(Lw = std::prev(new_node)->cubic()(w));
+        }
+      }
+      else
+      {
+        if (left_has_extreme)
+        {
+          Dout(dc::notice, "Choosing " << next_extreme_type_ << " of left cubic because the right one does not have that extreme between " <<
+              (right_of_ ? right_of_->w() : -std::numeric_limits<double>::infinity()) << " and " <<
+              (left_of_ ? left_of_->w() : std::numeric_limits<double>::infinity()));
+          w = left_extreme_w;
+          Debug(Lw = std::prev(new_node)->cubic()(w));
+        }
+        else
+        {
+          ASSERT(false);
+        }
+      }
+      if (w < new_node->w())
+        left_of_ = &*new_node;
+      else
+        right_of_ = &*new_node;
+
+#ifdef CWDEBUG
+      event_server_.trigger(AlgorithmEventType{left_of_right_of_event, left_of_, right_of_,
+          next_extreme_type_, w, Lw});
+#endif
+
+//      state_ = IterationState::next_sample;
       break;
     }
 

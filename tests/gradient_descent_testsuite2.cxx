@@ -498,7 +498,7 @@ int main()
   Dout(dc::notice, "*** TEST: parabola connected to dampened sin ***");
   {
     constexpr double w0 = -50;//-10.0;
-    constexpr double learning_rate = 0.2;
+    constexpr double learning_rate = 0.05;
     constexpr double L_max = 2649;
 
     Algorithm gda(learning_rate, L_max);
@@ -518,8 +518,8 @@ int main()
         (1.0 - sigmoid) * (a + b * x + c * (x^2)) + (sigmoid * (amplitude * exp((tp - x) / 10) * sin(d * x + phase) + level)));
     Function L(x, sL, sigmoid);
 
-    //gda.enable_drawing(L, -12.0, -8.0);
-    gda.enable_drawing(L, -80.0, 20.0);
+    gda.enable_drawing(L, -50.0, -42.0);
+    //gda.enable_drawing(L, -80.0, 20.0);
 
     while (gda(w, L(w), L.derivative(w)))
     {

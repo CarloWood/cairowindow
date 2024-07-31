@@ -134,25 +134,27 @@ void SampleNode::initialize_cubic(SampleNode const& next
 //      unknown: looking for any extreme; the prefered extreme is the one nearest to the center.
 //
 // Output:
-//  region_out:
-//         left: the requested extreme is left of `*this`.
-//        right: the requested extreme is right of `next`.
-//    inbetween: the requested extreme is in between `*this` and `next`.
 //  extreme_type:
 //      maximum: the extreme is a maximum.
 //      minimum: the extreme is a minimum.
-//      unknown: there is no extreme (of the requested `extreme_type`),
-//               region_out is set to point in the direction where we go downhill,
-//               or - if extreme_type was maximum - uphill.
-double SampleNode::find_extreme(Sample const& next, Region& region_out, ExtremeType& extreme_type) const
+//      unknown: there is no extreme (of the requested `extreme_type`).
+double SampleNode::find_extreme(Sample const& next, ExtremeType& extreme_type) const
 {
-  DoutEntering(dc::notice, "SampleNode::find_extreme(" << next << ", region_out, " << extreme_type << ") [" << *this << "]");
+  DoutEntering(dc::notice, "SampleNode::find_extreme(" << next << ", " << extreme_type << ") [" << *this << "]");
 
   // Next must be the right-most sample.
   ASSERT(next.w() > w());
+
+#ifdef CWDEBUG
   // The cubic must be based on this sample and next.
-  ASSERT(utils::almost_equal(cubic_(w()), Lw(), 1e-9) && utils::almost_equal(cubic_.derivative(w()), dLdw(), 1e-9));
-  ASSERT(utils::almost_equal(cubic_(next.w()), next.Lw(), 1e-9) && utils::almost_equal(cubic_.derivative(next.w()), next.dLdw(), 1e-9));
+  {
+    double const Lw_epsilon = std::abs(next.Lw() - Lw()) * 1e-6;
+    double const dLdw_epsilon =
+      std::max(std::abs((next.Lw() - Lw()) / (next.w() - w())), std::max(std::abs(next.dLdw()), std::abs(dLdw()))) * 1e-6;
+    ASSERT(std::abs(cubic_(w()) - Lw()) < Lw_epsilon && std::abs(cubic_.derivative(w()) - dLdw()) < dLdw_epsilon);
+    ASSERT(std::abs(cubic_(next.w()) - next.Lw()) < Lw_epsilon && std::abs(cubic_.derivative(next.w()) - next.dLdw()) < dLdw_epsilon);
+  }
+#endif
 
   double a = cubic_[0];
   double b = cubic_[1];
@@ -164,8 +166,6 @@ double SampleNode::find_extreme(Sample const& next, Region& region_out, ExtremeT
   // If D is equal to zero we have a point where the derivative is zero, but that isn't a maximum or minimum.
   if (D <= 0.0)
   {
-    region_out = (d > 0.0 || (d == 0.0 && b > 0.0)) != (extreme_type == ExtremeType::maximum) ? Region::left : Region::right;
-    Dout(dc::notice, "Returning " << region_out << " because that is " << (extreme_type == ExtremeType::maximum ? "uphill" : "downhill") << ".");
     extreme_type = ExtremeType::unknown;
     Dout(dc::notice, "Returning ExtremeType::unknown because D <= 0.");
 #if CW_DEBUG
@@ -199,10 +199,7 @@ double SampleNode::find_extreme(Sample const& next, Region& region_out, ExtremeT
       return {};  // Not used.
 #endif
     }
-    region_out =
-      (vertex < wl) ? Region::left : (vertex > wr) ? Region::right : Region::inbetween;
     extreme_type = extreme_type_found;
-    Dout(dc::notice, "Returning " << region_out << " because the cubic looks like a parabola and that's where the vertex is.");
     return vertex;
   }
 
@@ -215,17 +212,6 @@ double SampleNode::find_extreme(Sample const& next, Region& region_out, ExtremeT
   }
 
   double result = (extreme_type == ExtremeType::maximum) ? maximum : minimum;
-
-  //         left: the requested extreme is left of `left`.
-  //        right: the requested extreme is right of `right`.
-  //    inbetween: the requested extreme is in between `left` and `right`.
-  if (result < wl)
-    region_out = Region::left;
-  else if (result > wr)
-    region_out = Region::right;
-  else
-    region_out = Region::inbetween;
-  Dout(dc::notice, "Returning " << region_out << " because this is where the required extreme (" << extreme_type << ") is.");
 
   // An extreme_type of unknown means that the returned value should be ignored.
   ASSERT(extreme_type != ExtremeType::unknown);
