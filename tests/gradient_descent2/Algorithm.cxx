@@ -82,6 +82,7 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
       w = left_node->find_extreme(*right_node, next_extreme_type_);
       // w should be set if next_extreme_type_ was set.
       ASSERT(next_extreme_type_ == ExtremeType::unknown || w != SampleNode::uninitialized_magic);
+      cubic_used_ = left_node;
 
       if (next_extreme_type_ == ExtremeType::unknown)
       {
@@ -118,7 +119,7 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
           next_extreme_type_ == ExtremeType::unknown ? left_node->cubic().inflection_point()
                                                      : w;
 
-        left_node->set_scale(scale_cp_type, critical_point_w, left_node, right_node);
+        left_node->set_scale(scale_cp_type, critical_point_w, left_node->w(), right_node->w());
 #ifdef CWDEBUG
         event_server_.trigger(AlgorithmEventType{scale_draw_event, ScaleUpdate::initialized, *left_node, {}});
 #endif
@@ -134,25 +135,30 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
 
     case IterationState::find_extreme:
     {
+#ifdef CWDEBUG
+      math::CubicPolynomial old_cubic = cubic_used_ != chain_.end() ? cubic_used_->cubic() : math::CubicPolynomial{};
+#endif
       auto new_node = chain_.insert(std::move(current));
       auto right_node = std::next(new_node);
 
+      AnalyzedCubic right_acubic;       // If right_node != chain_.end() is true then this corresponds to the cubic of std::next(new_node).
       bool right_has_extreme = false;
       double right_extreme_w;
       double right_dist;
       if (right_node != chain_.end())
       {
         new_node->initialize_cubic(*right_node COMMA_CWDEBUG_ONLY(event_server_, true));        // true: called on new_node.
-        AnalyzedCubic acubic{new_node->cubic()};
-        if (acubic.has_extremes())
+        right_acubic.initialize(new_node->cubic(), next_extreme_type_);
+        if (right_acubic.has_extremes())
         {
-          right_extreme_w = acubic.get_extreme(next_extreme_type_);
+          right_extreme_w = right_acubic.get_extreme();
           right_has_extreme =
             (!left_of_ || right_extreme_w < left_of_->w()) &&
             (!right_of_ || right_of_->w() < right_extreme_w);
           right_dist = std::abs(right_extreme_w - new_node->w()) + std::abs(right_extreme_w - right_node->w());
         }
       }
+      AnalyzedCubic left_acubic;        // If new_node != chain_.begin() is true then this corresponds to the cubic of std::prev(new_node).
       bool left_has_extreme = false;
       double left_extreme_w;
       double left_dist;
@@ -160,10 +166,10 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
       {
         auto left_node = std::prev(new_node);
         left_node->initialize_cubic(*new_node COMMA_CWDEBUG_ONLY(event_server_, false));        // false: new_node is passed.
-        AnalyzedCubic acubic{left_node->cubic()};
-        if (acubic.has_extremes())
+        left_acubic.initialize(left_node->cubic(), next_extreme_type_);
+        if (left_acubic.has_extremes())
         {
-          left_extreme_w = acubic.get_extreme(next_extreme_type_);
+          left_extreme_w = left_acubic.get_extreme();
           left_has_extreme =
             (!left_of_ || left_extreme_w < left_of_->w()) &&
             (!right_of_ || right_of_->w() < left_extreme_w);
@@ -171,9 +177,8 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
         }
       }
 
-#ifdef CWDEBUG
-      double Lw;
-#endif
+      cubic_used_ = chain_.end();
+      AnalyzedCubic const* used_acubic = nullptr;
       if (right_has_extreme)
       {
         // If both cubics have the required extreme in the required region, then
@@ -187,13 +192,16 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
                 new_node->label() << "]<--->[" << right_node->label() << "], than the left cubic extreme (" <<
                 left_extreme_w << ") is from the center of [" << std::prev(new_node)->label() << "]<--->[" << new_node->label() <<
                 "]; (" << right_dist << " < " << left_dist << ").");
-          else
+          else if (new_node != chain_.begin())
             Dout(dc::finish, "the left one does not have that extreme between " <<
                 (right_of_ ? right_of_->w() : -std::numeric_limits<double>::infinity()) << " and " <<
                 (left_of_ ? left_of_->w() : std::numeric_limits<double>::infinity()));
+          else
+            Dout(dc::finish, "the left one does not exists.");
 #endif
           w = right_extreme_w;
-          Debug(Lw = new_node->cubic()(w));
+          cubic_used_ = new_node;
+          used_acubic = &right_acubic;
         }
         else
         {
@@ -210,22 +218,31 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
                 (left_of_ ? left_of_->w() : std::numeric_limits<double>::infinity()));
 #endif
           w = left_extreme_w;
-          Debug(Lw = std::prev(new_node)->cubic()(w));
+          cubic_used_ = std::prev(new_node);
+          used_acubic = &left_acubic;
         }
       }
       else
       {
         if (left_has_extreme)
         {
-          Dout(dc::notice, "Choosing " << next_extreme_type_ << " of left cubic because the right one does not have that extreme between " <<
+#ifdef CWDEBUG
+          Dout(dc::notice|continued_cf, "Choosing " << next_extreme_type_ << " of left cubic because the right one does not ");
+          if (right_node != chain_.end())
+            Dout(dc::finish, "have that extreme between " <<
               (right_of_ ? right_of_->w() : -std::numeric_limits<double>::infinity()) << " and " <<
               (left_of_ ? left_of_->w() : std::numeric_limits<double>::infinity()));
+          else
+            Dout(dc::finish, "exists.");
+#endif
           w = left_extreme_w;
-          Debug(Lw = std::prev(new_node)->cubic()(w));
+          cubic_used_ = std::prev(new_node);
+          used_acubic = &left_acubic;
         }
         else
         {
           ASSERT(false);
+          break;
         }
       }
       if (w < new_node->w())
@@ -235,10 +252,98 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
 
 #ifdef CWDEBUG
       event_server_.trigger(AlgorithmEventType{left_of_right_of_event, left_of_, right_of_,
-          next_extreme_type_, w, Lw});
+          next_extreme_type_, w, cubic_used_->cubic()(w)});
 #endif
 
-//      state_ = IterationState::next_sample;
+      // Update scale.
+      if (cubic_used_ != chain_.end())
+      {
+        CriticalPointType scale_cp_type = next_extreme_type_ == ExtremeType::minimum ? CriticalPointType::minimum
+                                                                                     : CriticalPointType::maximum;
+        math::CubicPolynomial const& cubic = cubic_used_->cubic();
+
+        // Find the left/right edge sample as far away from the samples used to fit the current cubic, that still matches that cubic.
+        //
+        // Start with setting left_edge to cubic_used_ and right_edge to the next sample:
+        // respectively left and right sample that were used to fit the cubic.
+        //
+        //        \      /
+        //         \    🞄
+        //          `-🞄´^
+        //            ^ right
+        //         left
+        SampleNode::const_iterator left_edge = cubic_used_;
+        SampleNode::const_iterator right_edge = std::next(cubic_used_);
+
+#ifdef CWDEBUG
+        // Because these points were used to generate the cubic, they should perfectly fit it.
+        if (!Scale::matches(left_edge->w(), left_edge->Lw(), cubic, *used_acubic))
+        {
+          Dout(dc::warning, "left_edge, " << *left_edge << " is not matching " << cubic << " / " << *used_acubic);
+        }
+        if (!Scale::matches(right_edge->w(), right_edge->Lw(), cubic, *used_acubic))
+        {
+          Dout(dc::warning, "right_edge, " << *right_edge << " is not matching " << cubic << " / " << *used_acubic);
+        }
+#endif
+        // Now advance left_edge to the left as far as possible, but not
+        // so far that it points to a sample that does not match.
+        while (left_edge != chain_.begin())
+        {
+          --left_edge;
+          if (!Scale::matches(left_edge->w(), left_edge->Lw(), cubic, *used_acubic))
+          {
+            ++left_edge;
+            break;
+          }
+        }
+        // Same with right_edge, but as far as possible to the right.
+        while (++right_edge != chain_.end() && Scale::matches(right_edge->w(), right_edge->Lw(), cubic, *used_acubic))
+          ;
+        // In this case we did overshoot by one, so move right_edge one back.
+        auto next_right_edge = right_edge--;
+
+        // Thus, left_edge and right_edge as the last "good" (matching) samples.
+        double left_edge_w_good = left_edge->w();
+        double right_edge_w_good = right_edge->w();
+
+        // Is there a bad left sample?
+        if (left_edge != chain_.begin())
+        {
+          auto left_bad_sample = std::prev(left_edge);
+          double left_edge_w = left_bad_sample->w();
+          double left_edge_Lw;
+          do
+          {
+            // Half the distance to left_edge_w until it matches again.
+            left_edge_w = 0.5 * (left_edge_w_good + left_edge_w);
+            left_edge_Lw = left_bad_sample->cubic()(left_edge_w);
+          }
+          while (!Scale::matches(left_edge_w, left_edge_Lw, cubic, *used_acubic));
+          // Use this as the left edge.
+          left_edge_w_good = left_edge_w;
+        }
+        // Is there a bad right sample?
+        if (next_right_edge != chain_.end())
+        {
+          double right_edge_w = next_right_edge->w();   // next_right_edge is the bad sample.
+          double right_edge_Lw;
+          do
+          {
+            right_edge_w = 0.5 * (right_edge_w_good + right_edge_w);
+            right_edge_Lw = right_edge->cubic()(right_edge_w);
+          }
+          while (!Scale::matches(right_edge_w, right_edge_Lw, cubic, *used_acubic));
+          // Use this as the right edge.
+          right_edge_w_good = right_edge_w;
+        }
+
+        cubic_used_->set_scale(scale_cp_type, w, left_edge_w_good, right_edge_w_good);
+#ifdef CWDEBUG
+        event_server_.trigger(AlgorithmEventType{scale_draw_event, ScaleUpdate::towards_cp, *cubic_used_, old_cubic});
+#endif
+      }
+
       break;
     }
 

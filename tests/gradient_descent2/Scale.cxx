@@ -71,7 +71,7 @@ double Scale::calculate_value(double const inflection_point_w) const
   //                                                             \/    \         /    \/
   //                                                             C      \       /
   //
-  // Let the left_edge_ sample be l and the right_edge_ sample be r.
+  // Let the left_edge_w_ be l and the right_edge_w_ sample be r.
   // Placing l and r in each of the above cases we have the possibilities:
   //
   //                                      Class (value returned by classify(l, I, C, r)).
@@ -98,13 +98,13 @@ double Scale::calculate_value(double const inflection_point_w) const
   // in the case of Class 3) and then call weighted_average with that altered array.
 
   DoutEntering(dc::notice, "SampleNode::calculate_value()");
-  Dout(dc::notice, "left_edge_w = " << left_edge_->w() <<
+  Dout(dc::notice, "left_edge_w = " << left_edge_w_ <<
       "; critical_point_w = " << critical_point_w_ <<
-      "; right_edge_w = " << right_edge_->w() <<
+      "; right_edge_w = " << right_edge_w_ <<
       "; inflection_point_w = " << inflection_point_w);
   // critical_point_w_ should be initialized.
   ASSERT(type_ != CriticalPointType::none);
-  LCRI_type LCRI = {left_edge_->w(), critical_point_w_, right_edge_->w(), inflection_point_w};
+  LCRI_type LCRI = {left_edge_w_, critical_point_w_, right_edge_w_, inflection_point_w};
   int Class = classify(LCRI);
   double result;
   if (Class == 4)

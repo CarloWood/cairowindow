@@ -76,3 +76,11 @@ add_executable(gradient_descent_testsuite2 gradient_descent_testsuite2.cxx Algor
   gradient_descent2/ScaleUpdate.cxx gradient_descent2/CriticalPointType.cxx
   gradient_descent2/Scale.cxx gradient_descent2/AnalyzedCubic.cxx)
 target_link_libraries(gradient_descent_testsuite2 AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST})
+
+add_executable(height_test height_test.cxx
+  gradient_descent2/ExtremeType.cxx gradient_descent2/AnalyzedCubic.cxx)
+target_link_libraries(height_test ${AICXX_OBJECTS_LIST})
+
+add_executable(scale_test scale_test.cxx
+  gradient_descent2/ExtremeType.cxx gradient_descent2/AnalyzedCubic.cxx)
+target_link_libraries(scale_test AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST})

@@ -2,6 +2,8 @@
 
 #include "CriticalPointType.h"
 #include "Sample.h"
+#include "AnalyzedCubic.h"
+#include "../CubicPolynomial.h"
 #include "utils/square.h"
 #include "debug.h"
 
@@ -16,8 +18,8 @@ class Scale
                                         // the inflection point (if the cubic has no extremes).
   double critical_point_w_;             // Cached value of the x-coordinate of the critical point.
 
-  Sample const* left_edge_;             // Pointer to left-most Sample that is known to still match this cubic (within 10%).
-  Sample const* right_edge_;            // Pointer to right-most Sample that is known to still match this cubic (within 10%).
+  double left_edge_w_;                  // The w value of left-most Sample that is known to still match this cubic (within 10%).
+  double right_edge_w_;                 // The w value of right-most Sample that is known to still match this cubic (within 10%).
 
  public:
   static constexpr int Li = 0;
@@ -47,24 +49,32 @@ class Scale
  public:
   Scale() = default;
   Scale(Scale const&) = default;
-  Scale(double value, CriticalPointType type, double critical_point_w, Sample const* left_edge, Sample const* right_edge) :
-    value_(value), type_(type), critical_point_w_(critical_point_w), left_edge_(left_edge), right_edge_(right_edge) { }
+  Scale(double value, CriticalPointType type, double critical_point_w, double left_edge_w, double right_edge_w) :
+    value_(value), type_(type), critical_point_w_(critical_point_w), left_edge_w_(left_edge_w), right_edge_w_(right_edge_w) { }
   Scale& operator=(Scale const&) = default;
 
   // Accessors.
   double value() const { return value_; }
   CriticalPointType type() const { return type_; }
   double critical_point_w() const { return critical_point_w_; }
-  double left_edge_w() const { return left_edge_->w(); }
-  double right_edge_w() const { return right_edge_->w(); }
+  double left_edge_w() const { return left_edge_w_; }
+  double right_edge_w() const { return right_edge_w_; }
 
-  void set(CriticalPointType type, double critical_point_w, Sample const* left_edge, Sample const* right_edge, double inflection_point_w)
+  void set(CriticalPointType type, double critical_point_w, double left_edge_w, double right_edge_w, double inflection_point_w)
   {
     type_ = type;
     critical_point_w_ = critical_point_w;
-    left_edge_ = left_edge;
-    right_edge_ = right_edge;
+    left_edge_w_ = left_edge_w;
+    right_edge_w_ = right_edge_w;
     value_ = calculate_value(inflection_point_w);
+  }
+
+  static bool matches(double w, double Lw, math::CubicPolynomial const& g, AnalyzedCubic const& acubic)
+  {
+    // We want to return true if the point (w, Lw), deviates from the value according to the cubic g(w)
+    // less than 10% of the (vertical) distance to the extreme: |g(w) - g(e)|.
+    // In other words: |Lw - g(w)| <= 0.1 |g(w) - g(e)|
+    return std::abs(Lw - g(w)) <= 0.1 * acubic.height(w, g[3]);
   }
 };
 

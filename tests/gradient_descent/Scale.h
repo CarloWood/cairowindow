@@ -450,7 +450,7 @@ class Scale
     }
     else
     {
-      // Support w = 2, and we have samples [-1, 1, 3, 4]
+      // Suppose w = 2, and we have samples [-1, 1, 3, 4]
       // then iter will point to                    ^--   the first element larger than w.
       // We then insert before that element to get:
       // [-1, 1, 2, 3, 4] - keeping the vector sorted.
