@@ -20,7 +20,10 @@ class Algorithm
   IterationState state_;
   ExtremeChain chain_;                  // A doubly linked list of SampleNode's, sorted by w value.
   ExtremeType next_extreme_type_;       // The extreme type (minimum or maximum) that we're looking for (next).
-  SampleNode const* left_of_{nullptr};  // If non-null then the next extreme (of next_extreme_type_) must found left of this sample.
+  union {
+    SampleNode const* left_of_{nullptr};  // If non-null then the next extreme (of next_extreme_type_) must found left of this sample.
+    SampleNode const* global_minimum_;
+  };
   SampleNode const* right_of_{nullptr}; // If non-null then the next extreme (of next_extreme_type_) must found right of this sample.
   SampleNode::const_iterator cubic_used_{chain_.end()}; // The node containing the last cubic that was used to jump one of its extremes.
   HorizontalDirection hdirection_;      // The direction relative to FIXME that we want to find the next extreme in.
@@ -56,11 +59,21 @@ class Algorithm
     return state_ == IterationState::success;
   }
 
+  void finish()
+  {
+    // Get one more sample, then call set_global_minimum.
+    state_ = IterationState::finish;
+  }
+
+  void set_global_minimum(SampleNode const* global_minimum)
+  {
+    global_minimum_ = global_minimum;
+    state_ = IterationState::success;
+  }
+
   Sample const& minimum() const
   {
-    //FIXME: implement
-    ASSERT(false);
-    AI_NEVER_REACHED
+    return *global_minimum_;
   }
 
 #ifdef CWDEBUG

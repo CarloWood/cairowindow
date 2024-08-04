@@ -13,6 +13,7 @@ enum class IterationState
   first_cubic,
   find_extreme,
   next_sample,
+  finish,
   success
 };
 

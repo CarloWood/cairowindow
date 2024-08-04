@@ -374,10 +374,17 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
       // If the last step is significantly smaller than the scale, then we found a local extreme.
       double step = std::abs(chain_.last()->w() - w);
       Dout(dc::notice, "step = " << step);
-      if (step < 0.01 * cubic_used_->scale().value())
-        state_ = IterationState::next_sample;
+      if (step < (next_extreme_type_ == ExtremeType::minimum ? 0.01 : 0.05) * cubic_used_->scale().value())
+        finish();
 
       break;
+    }
+
+    case IterationState::finish:
+    {
+      // Store the last sample and set the state to success.
+      set_global_minimum(&*chain_.insert(std::move(current)));
+      return false;
     }
 
     case IterationState::next_sample:
@@ -397,7 +404,7 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
 
   // Ask for a new sample at `w` if not already finished.
   Dout(dc::notice, "Next probe: " << w);
-  return state_ != IterationState::success;
+  return true;
 }
 
 void Algorithm::handle_single_sample(double& w)
