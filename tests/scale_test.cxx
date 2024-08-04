@@ -89,7 +89,7 @@ int main()
     // Create a point P.
     auto plot_P3 = plot.create_point(second_layer, point_style, {s4.w(), s4.Lw()});
 
-    double const circle_radius = 0.1 * std::abs(s2.w() - s1.w());
+    double const circle_radius = 0.1 * (w_max - w_min);
     // Create a point Q0 on a circle.
     double phi0 = std::atan(s1.dLdw());
     auto plot_Q0 = plot.create_point(second_layer, point_style({.color_index = 2}), plot_P0 + circle_radius * Direction{phi0});
@@ -183,7 +183,7 @@ int main()
       window.set_send_expose_events(false);
 
       // Draw a circle around P₀.
-      auto plot_circle0 = plot.create_circle(second_layer, solid_line_style({.line_color = color::gray}), plot_P0, circle_radius);
+      auto plot_circle0 = plot.create_circle(second_layer, solid_line_style({.line_color = color::gainsboro}), plot_P0, circle_radius);
 
       // Draw a label for P₀.
       auto P0_label = plot.create_text(second_layer, label_style({.position = draw::centered_right_of}), plot_P0, "P₀");
@@ -195,7 +195,7 @@ int main()
       Direction const D0 = (plot_Q0 - plot_P0).direction();
 
       // Draw a circle around P₁.
-      auto plot_circle1 = plot.create_circle(second_layer, solid_line_style({.line_color = color::gray}), plot_P1, circle_radius);
+      auto plot_circle1 = plot.create_circle(second_layer, solid_line_style({.line_color = color::gainsboro}), plot_P1, circle_radius);
 
       // Draw a label for P₁.
       auto P1_label = plot.create_text(second_layer, label_style({.position = draw::centered_right_of}), plot_P1, "P₁");
@@ -207,7 +207,7 @@ int main()
       Direction const D1 = (plot_Q1 - plot_P1).direction();
 
       // Draw a circle around P₂.
-      auto plot_circle2 = plot.create_circle(second_layer, solid_line_style({.line_color = color::gray}), plot_P2, circle_radius);
+      auto plot_circle2 = plot.create_circle(second_layer, solid_line_style({.line_color = color::gainsboro}), plot_P2, circle_radius);
 
       // Draw a label for P₂.
       auto P2_label = plot.create_text(second_layer, label_style({.position = draw::centered_right_of}), plot_P2, "P₂");
@@ -219,7 +219,7 @@ int main()
       Direction const D2 = (plot_Q2 - plot_P2).direction();
 
       // Draw a circle around P₃.
-      auto plot_circle3 = plot.create_circle(second_layer, solid_line_style({.line_color = color::gray}), plot_P3, circle_radius);
+      auto plot_circle3 = plot.create_circle(second_layer, solid_line_style({.line_color = color::gainsboro}), plot_P3, circle_radius);
 
       // Draw a label for P₃.
       auto P3_label = plot.create_text(second_layer, label_style({.position = draw::centered_right_of}), plot_P3, "P₃");
@@ -261,7 +261,7 @@ int main()
 
       // Plot the cubic.
       BezierFitter fitter1([&](double w) -> Point{ return {w, h(w)}; }, plot.viewport());
-      auto plot_h = plot.create_bezier_fitter(second_layer, curve_line_style, std::move(fitter1));
+      auto plot_h = plot.create_bezier_fitter(second_layer, curve_line_style({.line_color = color::blue}), std::move(fitter1));
 
       using namespace gradient_descent;
 
