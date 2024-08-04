@@ -47,7 +47,8 @@ SampleNode::const_iterator ExtremeChain::insert(Sample&& new_sample)
   ASSERT(larger == sample_node_list_.begin() || std::prev(larger)->w() <= new_w);
 
   // Insert the new sample before `larger`.
-  return sample_node_list_.insert(larger, std::move(new_sample));
+  last_ = sample_node_list_.insert(larger, std::move(new_sample));
+  return last_;
 }
 
 } // namespace gradient_descent

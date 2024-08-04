@@ -7,7 +7,8 @@ namespace gradient_descent {
 void SampleNode::initialize_cubic(SampleNode const& next
     COMMA_CWDEBUG_ONLY(events::Server<AlgorithmEventType>& event_server, bool this_is_last)) const
 {
-  DoutEntering(dc::notice, "SampleNode::initialize_cubic(" << next << "..., " << std::boolalpha << this_is_last << ")");
+  DoutEntering(dc::notice, "SampleNode::initialize_cubic(" << next << ", event_server, " <<
+      std::boolalpha << this_is_last << ") [" << static_cast<Sample const&>(*this) << "]");
 
   // next must always be on the right.
   ASSERT(w() < next.w());
@@ -81,14 +82,14 @@ void SampleNode::initialize_cubic(SampleNode const& next
     if (AI_LIKELY(neither_derivative_is_zero))
     {
       // The signs are equal (and non-zero). Now we have to calculate the extremes of the cubic.
-      // Put the minimum (or inflection point) in index 0.
-      std::array<double, 2> extremes;
-      int number_of_extremes = cubic_.get_extremes(extremes);
+      // Put the minimum in acubic.
+      AnalyzedCubic acubic;
+      acubic.initialize(cubic_, ExtremeType::minimum);
 
-      if (number_of_extremes < 2 || extremes[0] < w() || next.w() < extremes[0])
+      if (!acubic.has_extremes() || acubic.get_extreme() < w() || next.w() < acubic.get_extreme())
       {
         // If only one extreme would fall in between the samples, then the derivatives can't have the same sign.
-        ASSERT(number_of_extremes < 2 || extremes[1] < w() || next.w() < extremes[1]);
+        ASSERT(!acubic.has_extremes() || acubic.get_other_extreme() < w() || next.w() < acubic.get_other_extreme());
         // There are no extremes in between the samples.
         type_ = (sign_dLdw_0 == 1)
             ? up                        // /
@@ -97,7 +98,7 @@ void SampleNode::initialize_cubic(SampleNode const& next
       else
       {
         // Both extremes are between the two samples.
-        ASSERT(w() < extremes[1] && extremes[1] < next.w());
+        ASSERT(w() < acubic.get_other_extreme() && acubic.get_other_extreme() < next.w());
         type_ = (sign_dLdw_0 == 1)
             ? max_min                   // /\/
             : min_max;                  // \/\.

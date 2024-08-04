@@ -37,6 +37,13 @@ class AnalyzedCubic
     return critical_point_w_;
   }
 
+#ifdef CWDEBUG
+  double get_other_extreme() const
+  {
+    return 2.0 * inflection_point_ - critical_point_w_;
+  }
+#endif
+
   double height(double w, double d) const
   {
     // Let g(w) = y = a + bw + cw^2 + dw^3.

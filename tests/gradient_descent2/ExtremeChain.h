@@ -16,7 +16,7 @@ class ExtremeChain
   SampleNode::const_iterator insert(Sample&& new_sample);
 
   bool empty() const { return sample_node_list_.empty(); }
-  SampleNode const& last() const { return *last_; }
+  SampleNode::const_iterator last() const { return last_; }
   SampleNode::const_iterator begin() const { return sample_node_list_.begin(); }
   SampleNode::const_iterator end() const { return sample_node_list_.end(); }
 };

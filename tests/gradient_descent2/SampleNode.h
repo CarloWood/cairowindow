@@ -72,7 +72,12 @@ class SampleNode : public Sample
   {
     os << "{";
     Sample::print_on(os);
-    os << ", cubic:" << cubic_ << ", type:" << type_ << "}";
+    os << ", cubic:";
+    if (type_ == CubicToNextSampleType::unknown)
+      os << "<none>";
+    else
+      os << cubic_ << ", type:" << type_;
+    os << "}";
   }
 #endif
 };

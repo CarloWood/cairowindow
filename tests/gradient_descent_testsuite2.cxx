@@ -486,7 +486,8 @@ int main()
             Dout(dc::notice, "-------------------------------------------");
             gda(w, L(w), L.derivative(w));
             ASSERT(gda.debug_hdirection() == HorizontalDirection::undecided);
-            ASSERT(gda.debug_chain().last().type() == expected);
+            // Because w > w0, the cubic through both is stored in the SampleNode of w0 (last() returns the one of w).
+            ASSERT(std::prev(gda.debug_chain().last())->type() == expected);
             ASSERT(gda.debug_next_extreme_type() == expected_next_extreme_type);
           }
       }
