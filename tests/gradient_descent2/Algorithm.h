@@ -13,6 +13,8 @@ class Algorithm
  public:
   // This value is assumed to be much smaller than any change in w over which L(w) changes significantly.
   static constexpr double epsilon = 1e-30;
+  static constexpr double negligible_scale_fraction = ExtremeChain::negligible_scale_fraction;
+  static constexpr double significant_scale_fraction = ExtremeChain::significant_scale_fraction;
 
  private:
   double learning_rate_;                // In unit_of(w)^2 / unit_of(L).
@@ -20,11 +22,10 @@ class Algorithm
   IterationState state_;
   ExtremeChain chain_;                  // A doubly linked list of SampleNode's, sorted by w value.
   ExtremeType next_extreme_type_;       // The extreme type (minimum or maximum) that we're looking for (next).
-  union {
-    SampleNode const* left_of_{nullptr};  // If non-null then the next extreme (of next_extreme_type_) must found left of this sample.
-    SampleNode const* global_minimum_;
-  };
-  SampleNode const* right_of_{nullptr}; // If non-null then the next extreme (of next_extreme_type_) must found right of this sample.
+  SampleNode::const_iterator left_of_{chain_.end()};    // If not end, then the next extreme (of next_extreme_type_)
+                                                        // must found left of this sample.
+  SampleNode::const_iterator right_of_{chain_.end()};   // If not end, then the next extreme (of next_extreme_type_)
+                                                        // must found right of this sample.
   SampleNode::const_iterator cubic_used_{chain_.end()}; // The node containing the last cubic that was used to jump one of its extremes.
   HorizontalDirection hdirection_;      // The direction relative to FIXME that we want to find the next extreme in.
   KineticEnergy energy_;
@@ -51,8 +52,9 @@ class Algorithm
 
   bool operator()(double& w, double Lw, double dLdw);
   void handle_single_sample(double& w);
-  bool update_energy(double Lw);
-  bool handle_abort_hdirection(double& w);
+  [[nodiscard]] bool update_energy(double Lw);
+  [[nodiscard]] bool handle_abort_hdirection(double& w);
+  [[nodiscard]] bool handle_local_extreme(double& w);
 
   bool success() const
   {
@@ -65,15 +67,16 @@ class Algorithm
     state_ = IterationState::finish;
   }
 
-  void set_global_minimum(SampleNode const* global_minimum)
+  void set_global_minimum(SampleNode::const_iterator global_minimum)
   {
-    global_minimum_ = global_minimum;
+    cubic_used_ = global_minimum;       // Abuse cubic_used_.
     state_ = IterationState::success;
   }
 
   Sample const& minimum() const
   {
-    return *global_minimum_;
+    ASSERT(state_ == IterationState::success);
+    return *cubic_used_;
   }
 
 #ifdef CWDEBUG
@@ -89,6 +92,7 @@ class Algorithm
   ExtremeType debug_next_extreme_type() const { return next_extreme_type_; }
   std::string algorithm_str() const { return algorithm_str_; }
   ExtremeChain const& debug_chain() const { return chain_; }
+  ExtremeChain& debug_chain() { return chain_; }
 
   // Manipulators for the testsuite.
   void set_algorithm_str(double new_w, char const* algorithm_str);

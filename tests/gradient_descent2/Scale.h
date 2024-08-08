@@ -62,19 +62,12 @@ class Scale
 
   void set(CriticalPointType type, double critical_point_w, double left_edge_w, double right_edge_w, double inflection_point_w)
   {
+    ASSERT((type == CriticalPointType::inflection_point) == (critical_point_w == inflection_point_w));
     type_ = type;
     critical_point_w_ = critical_point_w;
     left_edge_w_ = left_edge_w;
     right_edge_w_ = right_edge_w;
     value_ = calculate_value(inflection_point_w);
-  }
-
-  static bool matches(double w, double Lw, math::CubicPolynomial const& g, AnalyzedCubic const& acubic)
-  {
-    // We want to return true if the point (w, Lw), deviates from the value according to the cubic g(w)
-    // less than 10% of the (vertical) distance to the extreme: |g(w) - g(e)|.
-    // In other words: |Lw - g(w)| <= 0.1 |g(w) - g(e)|
-    return std::abs(Lw - g(w)) <= 0.1 * acubic.height(w, g[3]);
   }
 };
 

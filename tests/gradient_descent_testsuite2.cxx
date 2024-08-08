@@ -362,7 +362,6 @@ int main()
     // EXPECTED: small_step was subtracted (rather randomly, because we are looking for a maximum).
     ASSERT(utils::almost_equal(static_cast<double>(w), w0 - small_step, 10e-15));
   }
-#endif
 
   //==========================================================================
   Dout(dc::notice, "*** TEST: first cubic ***");
@@ -468,6 +467,7 @@ int main()
             // Fix floating-point round-off error related to learning_rate step.
             ASSERT(utils::almost_equal(w, (double)xs[i1], 1e-9));
             w = xs[i1];
+            gda.debug_chain().find_larger(w);   // Must be called when w was changed.
             ASSERT(gda.debug_hdirection() == HorizontalDirection::undecided);
             ASSERT(gda.debug_next_extreme_type() == ExtremeType::unknown);
 
@@ -487,8 +487,94 @@ int main()
             gda(w, L(w), L.derivative(w));
             ASSERT(gda.debug_hdirection() == HorizontalDirection::undecided);
             // Because w > w0, the cubic through both is stored in the SampleNode of w0 (last() returns the one of w).
-            ASSERT(std::prev(gda.debug_chain().last())->type() == expected);
+            auto cubic_node = gda.debug_chain().begin();        // There is only one cubic, so it must be the first node.
+            ASSERT(cubic_node->type() == expected);
             ASSERT(gda.debug_next_extreme_type() == expected_next_extreme_type);
+          }
+      }
+    }
+  }
+#endif
+
+  //==========================================================================
+  Dout(dc::notice, "*** TEST: first local extreme ***");
+  {
+    constexpr double learning_rate = 0.001;
+
+    symbolic::Symbol const& x = symbolic::Symbol::realize("w");
+    symbolic::Symbol const& a = symbolic::Symbol::realize("a");
+    symbolic::Symbol const& b = symbolic::Symbol::realize("b");
+    symbolic::Symbol const& c = symbolic::Symbol::realize("c");
+    symbolic::Symbol const& d = symbolic::Symbol::realize("d");
+    symbolic::Function const& sL = symbolic::Function::realize("L", a + b * x + c * (x^2) + d * (x^3) );
+    Function L(x, sL);
+
+    // Generate a cubic that has its extremes at -3 and 14.
+    constexpr int si = -3;
+    constexpr int ti = 14;
+    int const ai = 42;
+
+    // By default assume si is the maximum.
+    // Lets have two points left of the maximum, three in between, and two on the right of the minimum.
+    static_assert(ti > si, "ti must be larger than si");
+    static_assert((si + ti) / 2 > si + 1, "ti - si is too small");
+    static_assert((si + ti) / 2 < ti - 2, "ti - si is too small");
+    std::array<int, 9> xs = { si - 2, si - 1, si, si + 1, (si + ti) / 2, ti - 2, ti, ti + 2, ti + 3 };
+
+    constexpr int i_max = 2;    //    ^^
+    constexpr int i_min = 6;    //                                               ^^
+
+    // The inflection point is at
+    constexpr double inflection_point = 0.5 * (si + ti);
+
+    for (int no_extremes = 0; no_extremes <= 1; ++no_extremes)
+    {
+      bool has_extremes = !no_extremes;
+      for (int maximum_last = 0; maximum_last <= 1; ++ maximum_last)
+      {
+        bool inverted = maximum_last;                           // True if ti is the maximum.
+        int di = inverted ? -2 : 2;
+        int bi = (has_extremes ? 3 : -3) * di * si * ti;
+        int two_ci = -3 * di * (si + ti);
+
+        a = ai;
+        b = bi;
+        c = 0.5 * two_ci;
+        d = di;
+
+        for (int i0 = 0; i0 < xs.size() - 1; ++i0)
+          for (int i1 = i0 + 1; i1 < xs.size(); ++i1)
+          {
+            double w0 = xs[i0];
+
+            Algorithm gda(learning_rate, L_max);
+
+            Dout(dc::notice, "===========================================");
+            //gda.enable_drawing(L, -25.0, 25.0);
+
+            double w = w0;
+            gda(w, L(w), L.derivative(w));
+
+            w = xs[i1];
+            gda.debug_chain().find_larger(w);
+            Dout(dc::notice, "-------------------------------------------");
+
+            int count = 0;
+            while (gda(w, L(w), L.derivative(w)))
+            {
+              if (no_extremes)
+              {
+                Dout(dc::notice, maximum_last << ", " << i0 << ", " << i1 << ", w = " << w);
+                if (++count == 2)
+                  break;
+              }
+              else
+              {
+                // Did we find the right extreme?
+                ASSERT(utils::almost_equal(w, double(si), 1e-9) || utils::almost_equal(w, double(ti), 1e-9));
+                ASSERT(utils::almost_equal(w, double(si), 1e-9) == (2 * (xs[i0] + xs[i1]) - maximum_last < 22));
+              }
+            }
           }
       }
     }
@@ -519,8 +605,8 @@ int main()
         (1.0 - sigmoid) * (a + b * x + c * (x^2)) + (sigmoid * (amplitude * exp((tp - x) / 10) * sin(d * x + phase) + level)));
     Function L(x, sL, sigmoid);
 
-    gda.enable_drawing(L, -50.0, -42.0);
-    //gda.enable_drawing(L, -80.0, 20.0);
+    //gda.enable_drawing(L, -50.0, -42.0);
+    gda.enable_drawing(L, -80.0, 20.0);
 
     while (gda(w, L(w), L.derivative(w)))
     {

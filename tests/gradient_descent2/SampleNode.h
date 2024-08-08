@@ -43,11 +43,12 @@ class SampleNode : public Sample
   mutable math::CubicPolynomial cubic_;         // The cubic that fits this and the next Sample.
   mutable CubicToNextSampleType type_;          // The type of this cubic.
   mutable Scale scale_;                         // The scale that belongs to this cubic.
+  mutable const_iterator next_sample_;          // The right-sample used for cubic_, copy of what was passed to initialize_cubic.
 
  public:
   SampleNode(Sample&& sample) : Sample(std::move(sample)), type_(CubicToNextSampleType::unknown) { }
 
-  void initialize_cubic(SampleNode const& next
+  void initialize_cubic(const_iterator next
       COMMA_CWDEBUG_ONLY(events::Server<AlgorithmEventType>& event_server, bool this_is_last)) const;
 
  public:
@@ -66,6 +67,21 @@ class SampleNode : public Sample
   math::CubicPolynomial const& cubic() const { return cubic_; }
   CubicToNextSampleType type() const { return type_; }
   Scale const& scale() const { return scale_; }
+  bool is_rising() const
+  {
+    ASSERT(type_ != CubicToNextSampleType::unknown);
+    return (static_cast<int>(type_) & rising_bit) != 0 ||
+      ((static_cast<int>(type_) & (minimum_bit|maximum_bit)) != 0 && next_sample_->Lw() > Lw());
+  }
+  bool is_falling() const
+  {
+    ASSERT(type_ != CubicToNextSampleType::unknown);
+    return (static_cast<int>(type_) & falling_bit) != 0 ||
+      ((static_cast<int>(type_) & (minimum_bit|maximum_bit)) != 0 && next_sample_->Lw() < Lw());
+  }
+  double w_scale_estimate() const { ASSERT(next_sample_->w() > w()); return next_sample_->w() - w(); }
+  double Lw_scale_estimate() const { return std::abs(next_sample_->Lw() - Lw()); }
+  double dLdw_scale_estimate() const { return std::abs((next_sample_->Lw() - Lw()) / (next_sample_->w() - w())); }
 
 #ifdef CWDEBUG
   void print_on(std::ostream& os) const

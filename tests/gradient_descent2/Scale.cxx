@@ -97,15 +97,14 @@ double Scale::calculate_value(double const inflection_point_w) const
   // in the LCRI array with the inflection point, replacing respectively l, C or r (or I with itself
   // in the case of Class 3) and then call weighted_average with that altered array.
 
-  DoutEntering(dc::notice, "SampleNode::calculate_value()");
-  Dout(dc::notice, "left_edge_w = " << left_edge_w_ <<
-      "; critical_point_w = " << critical_point_w_ <<
-      "; right_edge_w = " << right_edge_w_ <<
-      "; inflection_point_w = " << inflection_point_w);
+  DoutEntering(dc::notice, "SampleNode::calculate_value(" << inflection_point_w << ")");
+  Dout(dc::notice, "type = " << type_ << "; critical_point_w = " << critical_point_w_ <<
+      "; left_edge_w = " << left_edge_w_ << "; right_edge_w = " << right_edge_w_);
   // critical_point_w_ should be initialized.
   ASSERT(type_ != CriticalPointType::none);
   LCRI_type LCRI = {left_edge_w_, critical_point_w_, right_edge_w_, inflection_point_w};
   int Class = classify(LCRI);
+  Dout(dc::notice, "Class = " << Class);
   double result;
   if (Class == 4)
     result = LCRI[Ri] - LCRI[Li];

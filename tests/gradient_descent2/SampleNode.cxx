@@ -1,19 +1,21 @@
 #include "sys.h"
 #include "SampleNode.h"
+#include "ExtremeChain.h"
 #include "AlgorithmEventType.h"
 
 namespace gradient_descent {
 
-void SampleNode::initialize_cubic(SampleNode const& next
+void SampleNode::initialize_cubic(const_iterator next
     COMMA_CWDEBUG_ONLY(events::Server<AlgorithmEventType>& event_server, bool this_is_last)) const
 {
-  DoutEntering(dc::notice, "SampleNode::initialize_cubic(" << next << ", event_server, " <<
+  DoutEntering(dc::notice, "SampleNode::initialize_cubic(" << *next << ", event_server, " <<
       std::boolalpha << this_is_last << ") [" << static_cast<Sample const&>(*this) << "]");
 
   // next must always be on the right.
-  ASSERT(w() < next.w());
+  ASSERT(w() < next->w());
 
-  cubic_.initialize(w(), Lw(), dLdw(), next.w(), next.Lw(), next.dLdw());
+  cubic_.initialize(w(), Lw(), dLdw(), next->w(), next->Lw(), next->dLdw());
+  next_sample_ = next;
 
 #ifdef CWDEBUG
   // If the current object (this) was the last sample that was added, then the cubic is on the right
@@ -23,8 +25,9 @@ void SampleNode::initialize_cubic(SampleNode const& next
 #endif
 
   // Get the sign of the derivatives.
-  int const sign_dLdw_0 = dLdw() < 0.0 ? -1 : dLdw() > 0.0 ? 1 : 0;
-  int const sign_dLdw_1 = next.dLdw() < 0.0 ? -1 : next.dLdw() > 0.0 ? 1 : 0;
+  double const significant_derivative = ExtremeChain::significant_scale_fraction * dLdw_scale_estimate();
+  int const sign_dLdw_0 = std::abs(dLdw()) < significant_derivative ? 0 : dLdw() < 0.0 ? -1 : 1;
+  int const sign_dLdw_1 = std::abs(next->dLdw()) < significant_derivative ? 0 : next->dLdw() < 0.0 ? -1 : 1;
   bool const neither_derivative_is_zero = (sign_dLdw_0 & sign_dLdw_1) != 0;
 
   using enum CubicToNextSampleType;
@@ -60,7 +63,7 @@ void SampleNode::initialize_cubic(SampleNode const& next
       }
       else                              // The left part of an extreme.
       {
-        double d2Ldw2 = cubic_.second_derivative(next.w());
+        double d2Ldw2 = cubic_.second_derivative(next->w());
         if (sign_dLdw_0 == 1)
         {
           type_ = (d2Ldw2 > 0.0)
@@ -86,10 +89,11 @@ void SampleNode::initialize_cubic(SampleNode const& next
       AnalyzedCubic acubic;
       acubic.initialize(cubic_, ExtremeType::minimum);
 
-      if (!acubic.has_extremes() || acubic.get_extreme() < w() || next.w() < acubic.get_extreme())
+      // Comparing w with the extreme should be well-defined, because both derivatives are significantly non-zero.
+      if (!acubic.has_extremes() || acubic.get_extreme() < w() || next->w() < acubic.get_extreme())
       {
         // If only one extreme would fall in between the samples, then the derivatives can't have the same sign.
-        ASSERT(!acubic.has_extremes() || acubic.get_other_extreme() < w() || next.w() < acubic.get_other_extreme());
+        ASSERT(!acubic.has_extremes() || acubic.get_other_extreme() < w() || next->w() < acubic.get_other_extreme());
         // There are no extremes in between the samples.
         type_ = (sign_dLdw_0 == 1)
             ? up                        // /
@@ -98,7 +102,7 @@ void SampleNode::initialize_cubic(SampleNode const& next
       else
       {
         // Both extremes are between the two samples.
-        ASSERT(w() < acubic.get_other_extreme() && acubic.get_other_extreme() < next.w());
+        ASSERT(w() < acubic.get_other_extreme() && acubic.get_other_extreme() < next->w());
         type_ = (sign_dLdw_0 == 1)
             ? max_min                   // /\/
             : min_max;                  // \/\.
@@ -107,12 +111,13 @@ void SampleNode::initialize_cubic(SampleNode const& next
     else
     {
       // Both derivatives are zero!
-      if (Lw() > next.Lw())             // ‾\_
+      double const significant_difference = ExtremeChain::significant_scale_fraction * Lw_scale_estimate();
+      if (next->Lw() - Lw() < significant_difference)           // ‾\_
         type_ = right_max_left_min;
-      else if (Lw() < next.Lw())        // _/‾
+      else if (Lw() - next->Lw() < significant_difference)      // _/‾
         type_ = right_min_left_max;
       else
-        type_ = flat;                   // __
+        type_ = flat;                                           // __
     }
   }
 

@@ -12,20 +12,32 @@ using utils::has_print_on::operator<<;
 
 static_assert(std::numeric_limits<double>::has_quiet_NaN, "Sorry, you need a quiet NaN.");
 
+class SampleNode;
+
 class AnalyzedCubic
 {
  private:
   double inflection_point_;
-  double signed_sqrt_D_{std::numeric_limits<double>::quiet_NaN()};
+  union {
+    double signed_sqrt_D_{std::numeric_limits<double>::quiet_NaN()};
+    double vertical_scale_;
+  };
   double critical_point_w_;             // If extreme, then the one passed to initialize.
+  bool detached_from_extreme_{false};   // Set if matches shouldn't use height. Only valid after calling initialize_matches.
+#if CW_DEBUG
+  math::CubicPolynomial const* initialize_matches_called_{nullptr};
+#endif
 
  public:
   AnalyzedCubic() = default;
 
   void initialize(math::CubicPolynomial const& cubic, ExtremeType extreme_type_);
+  void initialize_matches(SampleNode const& left_sample, SampleNode const& right_sample);
 
   bool has_extremes() const
   {
+    // If this is set then signed_sqrt_D_ can't be used anymore (vertical_scale_ has been set).
+    ASSERT(!detached_from_extreme_);
     // signed_sqrt_D_ is left as NaN when it is zero.
     return !std::isnan(signed_sqrt_D_);
   }
@@ -37,6 +49,11 @@ class AnalyzedCubic
     return critical_point_w_;
   }
 
+  double inflection_point() const
+  {
+    return inflection_point_;
+  }
+
 #ifdef CWDEBUG
   double get_other_extreme() const
   {
@@ -46,6 +63,8 @@ class AnalyzedCubic
 
   double height(double w, double d) const
   {
+    // Only call this function if has_extremes() returned true.
+    ASSERT(has_extremes());
     // Let g(w) = y = a + bw + cw^2 + dw^3.
     // Then dy/dw = b + 2cw + 3dw^2.
     // Let e be a root of the derivate: g'(e) = 0 (aka, g has an extreme in e).
@@ -65,6 +84,17 @@ class AnalyzedCubic
     double w_prime = w - critical_point_w_;
     double h = (d * w_prime + signed_sqrt_D_) * utils::square(w_prime);
     return std::abs(h);
+  }
+
+  bool matches(double w, double Lw, math::CubicPolynomial const& g)
+  {
+    // Call initialize_matches before calling matches.
+    ASSERT(initialize_matches_called_ == &g);
+    double const vertical_scale = detached_from_extreme_ ? vertical_scale_ : height(w, g[3]);
+    // We want to return true if the point (w, Lw), deviates from the value according to the cubic g(w)
+    // less than 10% of the (vertical) distance to the extreme: |g(w) - g(e)|.
+    // In other words: |Lw - g(w)| <= 0.1 |g(w) - g(e)|
+    return std::abs(Lw - g(w)) <= 0.1 * vertical_scale;
   }
 
 #ifdef CWDEBUG

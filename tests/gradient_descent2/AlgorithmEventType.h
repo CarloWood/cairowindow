@@ -181,7 +181,16 @@ class LeftOfRightOfEventData
 
   void print_on(std::ostream& os) const
   {
-    os << "LeftOfRightOfEventData:{[" << left_of_->label() << "], [" << right_of_->label() << "]}";
+    os << "LeftOfRightOfEventData:{";
+    if (right_of_)
+      os << "[" << right_of_->label() << "], ";
+    else
+      os << "-inf, ";
+    if (left_of_)
+      os << "[" << left_of_->label() << "], ";
+    else
+      os << "+inf, ";
+    os << next_extreme_type_ << ", " << critical_point_w_ << ", " << critical_point_Lw_ << "}";
   }
 };
 
