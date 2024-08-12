@@ -370,9 +370,9 @@ void Algorithm::mark_explored(int w, HorizontalDirection hdirection)
 //   having been explored in this direction and try the other
 //   side (if that wasn't already explored) or abort (return false).
 //
-// The reasoning here is as follows: if jump return -1 or 1 we jump
+// The reasoning here is as follows: if jump returns -1 or 1 we jump
 // to the immediate neighbor, therefore we can never go in that
-// direction again. And if it return 0 we can already never go into
+// direction again. And if it returns 0 we can already never go into
 // that direction, so don't try again in the future.
 //
 bool Algorithm::do_step(Weight& w)

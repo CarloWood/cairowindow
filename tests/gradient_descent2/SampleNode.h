@@ -44,12 +44,18 @@ class SampleNode : public Sample
   mutable CubicToNextSampleType type_;          // The type of this cubic.
   mutable Scale scale_;                         // The scale that belongs to this cubic.
   mutable const_iterator next_sample_;          // The right-sample used for cubic_, copy of what was passed to initialize_cubic.
+  mutable bool fake_{false};                    // Set if this "Sample" was generated rather than measured.
 
  public:
   SampleNode(Sample&& sample) : Sample(std::move(sample)), type_(CubicToNextSampleType::unknown) { }
 
   void initialize_cubic(const_iterator next
       COMMA_CWDEBUG_ONLY(events::Server<AlgorithmEventType>& event_server, bool this_is_last)) const;
+
+  void set_fake(bool fake = true) const
+  {
+    fake_ = fake;
+  }
 
  public:
   double find_extreme(Sample const& next, ExtremeType& extreme_type) const;
@@ -67,6 +73,7 @@ class SampleNode : public Sample
   math::CubicPolynomial const& cubic() const { return cubic_; }
   CubicToNextSampleType type() const { return type_; }
   Scale const& scale() const { return scale_; }
+  bool is_fake() const { return fake_; }
   bool is_rising() const
   {
     ASSERT(type_ != CubicToNextSampleType::unknown);
@@ -84,10 +91,18 @@ class SampleNode : public Sample
   double dLdw_scale_estimate() const { return std::abs((next_sample_->Lw() - Lw()) / (next_sample_->w() - w())); }
 
 #ifdef CWDEBUG
+  double step() const
+  {
+    ASSERT(type_ != CubicToNextSampleType::unknown);
+    return next_sample_->w() - w();
+  }
+
   void print_on(std::ostream& os) const
   {
     os << "{";
     Sample::print_on(os);
+    if (fake_)
+      os << " [FAKE]";
     os << ", cubic:";
     if (type_ == CubicToNextSampleType::unknown)
       os << "<none>";

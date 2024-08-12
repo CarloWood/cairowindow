@@ -8,7 +8,7 @@ void ExtremeChain::initialize(Sample&& first_sample)
   last_ = sample_node_list_.emplace(sample_node_list_.begin(), std::move(first_sample));
 }
 
-bool ExtremeChain::find_larger(double const new_w)
+void ExtremeChain::find_larger(double const new_w)
 {
   DoutEntering(dc::notice, "ExtremeChain::find_larger(" << new_w << ")");
 
@@ -37,7 +37,7 @@ bool ExtremeChain::find_larger(double const new_w)
   }
   else
   {
-    // If the initial value is smaller then step to the right until we find a sample that is larger.
+    // If the initial value is smaller (or equal) then step to the right until we find a sample that is larger.
     while (++larger_ != sample_node_list_.end() && larger_->w() <= new_w)
       ;
   }
@@ -49,12 +49,10 @@ bool ExtremeChain::find_larger(double const new_w)
 
 #ifdef CWDEBUG
   if (larger_ == sample_node_list_.end())
-    Dout(dc::notice, "All samples in the list are smaller than " << new_w);
+    Dout(dc::notice, "None of the samples in the list are larger than " << new_w);
   else
     Dout(dc::notice, "Found larger = " << *larger_);
 #endif
-
-  return true;
 }
 
 std::pair<SampleNode::const_iterator, bool> ExtremeChain::duplicate(double scale) const
@@ -77,5 +75,22 @@ SampleNode::const_iterator ExtremeChain::insert(Sample&& new_sample)
   last_ = sample_node_list_.insert(larger_, std::move(new_sample));
   return last_;
 }
+
+#ifdef CWDEBUG
+void ExtremeChain::dump() const
+{
+  Dout(dc::notice, "Current chain:");
+  NAMESPACE_DEBUG::Indent indent(2);
+  for (SampleNode const& node : sample_node_list_)
+  {
+    Dout(dc::notice, "[" << node.label() << "] " << node.w() << (node.is_fake() ? " [FAKE]" : ""));
+    if (node.type() != CubicToNextSampleType::unknown)
+    {
+      NAMESPACE_DEBUG::Indent indent(2);
+      Dout(dc::notice, std::left << std::setw(5) << to_utf8_art(node.type()) << '+' << std::setw(10) << node.step() << node.cubic());
+    }
+  }
+}
+#endif
 
 } // namespace gradient_descent

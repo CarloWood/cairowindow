@@ -4,6 +4,9 @@
 #include "Algorithm.h"
 #include "IterationState.h"
 #include "debug.h"
+#ifdef CWDEBUG
+#include "utils/at_scope_end.h"
+#endif
 
 namespace gradient_descent {
 
@@ -23,6 +26,9 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
     event_server_.trigger(AlgorithmEventType{difference_event, w, expected_Lw_, Lw});
     have_expected_Lw_ = false;
   }
+
+  // Print the chain_ to debug output just before leaving this function.
+  auto&& dump_chain = at_scope_end([this]{ chain_.dump(); });
 #endif
 
   // Create a new Sample for this sample.
@@ -117,6 +123,7 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
 #endif
           }
 
+          // If cubic_used_ didn't have a usable extreme, then next_extreme_type_ was set to unknown.
           if (next_extreme_type_ == ExtremeType::unknown)
           {
             // We're going to look for a minimum.
@@ -126,11 +133,12 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
               w = left_node->w() - cubic_used_->scale().value();
               left_of_ = left_node;
             }
-            else if (cubic_used_->is_falling())
+            else // cubic_used_->is_falling() or the cubic is flat.
             {
               // Keep going to the right.
               w = right_node->w() + cubic_used_->scale().value();
-              right_of_ = right_node;
+              if (cubic_used_->is_falling())
+                right_of_ = right_node;
             }
           }
           else
@@ -560,7 +568,7 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
 
     // Check if this is a duplicate (closer than 0.00001 * scale) to an existing sample.
     auto ibp = chain_.duplicate(cubic_used_->scale().value());
-    if (AI_LIKELY(!ibp.second))
+    if (AI_LIKELY(!ibp.second) || (state_ == IterationState::finish && ibp.first->is_fake()))
     {
       // Ask for a new sample at `w` if not already finished.
       Dout(dc::notice, "Next probe: " << std::setprecision(std::numeric_limits<long double>::max_digits10) << w);
@@ -708,7 +716,46 @@ bool Algorithm::handle_abort_hdirection(double& w)
 bool Algorithm::handle_local_extreme(double& w)
 {
   DoutEntering(dc::notice, "Algorithm::handle_local_extreme(" << w << ")");
-  //FIXME
+
+  // Set chain_.larger_ to point to the first SampleNode that is larger than w, if any.
+  chain_.find_larger(w);
+
+  // Find out if a new (fake) SampleNode should inserted.
+  SampleNode::const_iterator right = chain_.larger();
+  SampleNode::const_iterator left = right == chain_.begin() ? chain_.end() : std::prev(right);
+
+  double const negligible_offset = negligible_scale_fraction * cubic_used_->scale().value();
+
+  SampleNode::const_iterator local_extreme;
+  if (right != chain_.end() && std::abs(right->w() - w) <= negligible_offset)
+  {
+    Dout(dc::notice, "Using existing sample on the right at " << right->w());
+    local_extreme = right;
+  }
+  else if (left != chain_.end() && std::abs(left->w() - w) <= negligible_offset)
+  {
+    Dout(dc::notice, "Using existing sample on the left at " << left->w());
+    local_extreme = left;
+  }
+  else
+  {
+    // Create a new Sample for this sample.
+    Sample fake_sample{w, cubic_used_->cubic()(w), 0.0 COMMA_CWDEBUG_ONLY(label_context_)};
+    Dout(dc::notice, "Using fake sample = " << fake_sample);
+    local_extreme = chain_.insert(std::move(fake_sample));
+    local_extreme->set_fake(true);
+    auto next = std::next(local_extreme);
+    if (next != chain_.end())
+      local_extreme->initialize_cubic(next, event_server_, true);
+    if (local_extreme != chain_.begin())
+      std::prev(local_extreme)->initialize_cubic(local_extreme COMMA_CWDEBUG_ONLY(event_server_, false));
+  }
+
+#ifdef CWDEBUG
+  // Draw the new sample.
+  event_server_.trigger(AlgorithmEventType{new_local_extreme_event, *local_extreme, std::to_string(local_extreme->label())});
+#endif
+
   finish();
   return true;
 }

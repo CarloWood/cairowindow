@@ -98,12 +98,13 @@ inline bool has_maximum(CubicToNextSampleType type)
   return static_cast<int>(type) & maximum_bit;
 }
 
-std::string to_string(CubicToNextSampleType state);
+std::string to_string(CubicToNextSampleType type);
+char const* to_utf8_art(CubicToNextSampleType type);
 
 #ifdef CWDEBUG
-inline std::ostream& operator<<(std::ostream& os, CubicToNextSampleType state)
+inline std::ostream& operator<<(std::ostream& os, CubicToNextSampleType type)
 {
-  return os << to_string(state);
+  return os << to_string(type);
 }
 #endif
 

@@ -21,15 +21,20 @@ class ExtremeChain
 
  public:
   void initialize(Sample&& first_sample);
-  bool find_larger(double new_w);
+  void find_larger(double new_w);
   SampleNode::const_iterator insert(Sample&& new_sample);
   void reuse(SampleNode::const_iterator const& sample_node) { last_ = sample_node; }
 
   bool empty() const { return sample_node_list_.empty(); }
   std::pair<SampleNode::const_iterator, bool> duplicate(double scale) const;
   SampleNode::const_iterator last() const { return last_; }
+  SampleNode::const_iterator larger() const { return larger_; }
   SampleNode::const_iterator begin() const { return sample_node_list_.begin(); }
   SampleNode::const_iterator end() const { return sample_node_list_.end(); }
+
+#ifdef CWDEBUG
+  void dump() const;
+#endif
 };
 
 } // namespace gradient_descent

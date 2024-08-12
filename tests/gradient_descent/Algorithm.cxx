@@ -193,7 +193,7 @@ bool Algorithm::handle_local_extreme(Weight& w)
 
   if (state_ == IterationState::local_extreme)
   {
-    // At the moment we find a new local extreme, we want out own Approximation,
+    // At the moment we find a new local extreme, we want our own Approximation,
     // not the Approximation that is part of the previous LocalExtreme!
     if (approximation_ptr_ != &current_approximation_)
     {
