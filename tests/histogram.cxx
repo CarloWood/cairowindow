@@ -442,8 +442,8 @@ bool Algorithm::handle_local_extreme(Weight& w)
   extremes_[w] = LocalExtreme{w};
   extremes_type::iterator new_extreme = &extremes_[w];
 
-  // If this is an extreme that we found by exploring hdirection_ from a previous exterme,
-  // then mark that last extreme as being explored in the hdirection_.
+  // If this is an extreme that we found by exploring hdirection_ from a previous extreme,
+  // then mark that last extreme as being explored in that hdirection_.
   if (std::abs(last_step_) == 1)
   {
     mark_explored(last_w_, hdirection_);
@@ -457,7 +457,7 @@ bool Algorithm::handle_local_extreme(Weight& w)
     }
   }
 
-  // Keep track of the best minimum so far; or abort if this minimum isn't better then one found before.
+  // Keep track of the best minimum so far; or abort if this minimum isn't better than one found before.
   if (Histogram::is_minimum(w))
   {
     saw_minimum_ = true;

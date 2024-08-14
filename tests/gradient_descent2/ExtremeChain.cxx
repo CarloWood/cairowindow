@@ -1,5 +1,8 @@
 #include "sys.h"
 #include "ExtremeChain.h"
+#ifdef CWDEBUG
+#include "Algorithm.h"
+#endif
 
 namespace gradient_descent {
 
@@ -77,17 +80,30 @@ SampleNode::const_iterator ExtremeChain::insert(Sample&& new_sample)
 }
 
 #ifdef CWDEBUG
-void ExtremeChain::dump() const
+void ExtremeChain::dump(Algorithm const* algorithm) const
 {
   Dout(dc::notice, "Current chain:");
   NAMESPACE_DEBUG::Indent indent(2);
-  for (SampleNode const& node : sample_node_list_)
+
+  for (SampleNode::const_iterator node = sample_node_list_.begin(); node != sample_node_list_.end(); ++node)
   {
-    Dout(dc::notice, "[" << node.label() << "] " << node.w() << (node.is_fake() ? " [FAKE]" : ""));
-    if (node.type() != CubicToNextSampleType::unknown)
+    Dout(dc::notice|continued_cf, '[' << node->label() << "] " << node->w());
+    if (node->is_fake())
+      Dout(dc::continued, " [FAKE]");
+    if (node->is_local_extreme())
+      Dout(dc::continued, " [" << node->get_extreme_type() << ']');
+    Dout(dc::finish, " " << node->scale());
+    if (node->type() != CubicToNextSampleType::unknown)
     {
       NAMESPACE_DEBUG::Indent indent(2);
-      Dout(dc::notice, std::left << std::setw(5) << to_utf8_art(node.type()) << '+' << std::setw(10) << node.step() << node.cubic());
+      Dout(dc::notice|continued_cf, std::left << std::setw(5) << to_utf8_art(node->type()) << '+' << std::setw(10) << node->step() << node->cubic());
+      if (node == algorithm->debug_cubic_used())
+        Dout(dc::continued, " [cubic_used_]");
+      if (node == algorithm->debug_left_of())
+        Dout(dc::continued, " [left_of]");
+      if (node == algorithm->debug_right_of())
+        Dout(dc::continued, " [right_of]");
+      Dout(dc::finish, "");
     }
   }
 }

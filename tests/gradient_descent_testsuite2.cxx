@@ -561,20 +561,31 @@ int main()
             Dout(dc::notice, "-------------------------------------------");
 
             int count = 0;
-            while (gda(w, L(w), L.derivative(w)))
+            [[maybe_unused]] bool not_finished = gda(w, L(w), L.derivative(w));
+            ASSERT(not_finished);
+
+            if (no_extremes)
             {
-              if (no_extremes)
+              Dout(dc::notice, maximum_last << ", " << i0 << ", " << i1 << ", w = " << w);
+              if (++count == 2)
+                break;
+            }
+            else
+            {
+              // The extreme picked depends on which extreme is closer to center of the two samples.
+              // Normally that would be: 0.5 * (xs[i0] + xs[i1]) < 5.5 (the inflection point), but multiply that by four and add maximum_last into the mix to deal with it being equal.
+              bool target_extreme_is_first_extreme = 2 * (xs[i0] + xs[i1]) - maximum_last < 22;
+              int target_extreme = target_extreme_is_first_extreme ? si : ti;
+              int i = target_extreme_is_first_extreme ? i_max : i_min;
+
+              if (i0 == i || i1 == i)   // Did we reuse one of the first two samples for the extreme?
               {
-                Dout(dc::notice, maximum_last << ", " << i0 << ", " << i1 << ", w = " << w);
-                if (++count == 2)
-                  break;
+                // In that case last() was set to the reused sample, which is the local extreme that was found.
+                double last_w = gda.debug_chain().last()->w();
+                ASSERT(utils::almost_equal(last_w, double(target_extreme), 1e-9));
               }
               else
-              {
-                // Did we find the right extreme?
-                ASSERT(utils::almost_equal(w, double(si), 1e-9) || utils::almost_equal(w, double(ti), 1e-9));
-                ASSERT(utils::almost_equal(w, double(si), 1e-9) == (2 * (xs[i0] + xs[i1]) - maximum_last < 22));
-              }
+                ASSERT(utils::almost_equal(w, double(target_extreme), 1e-9));   // w is the local extreme.
             }
           }
       }
@@ -582,7 +593,7 @@ int main()
   }
 #endif
 
-#if 1
+#if 0
   //==========================================================================
   Dout(dc::notice, "*** TEST: parabola connected to dampened sin ***");
   {

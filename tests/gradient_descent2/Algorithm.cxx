@@ -28,7 +28,7 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
   }
 
   // Print the chain_ to debug output just before leaving this function.
-  auto&& dump_chain = at_scope_end([this]{ chain_.dump(); });
+  auto&& dump_chain = at_scope_end([this]{ chain_.dump(this); });
 #endif
 
   // Create a new Sample for this sample.
@@ -81,7 +81,7 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
     }
     else
     {
-      Dout(dc::notice, "Running " << state_);
+      Dout(dc::notice, "⁂  Running \"" << state_ << '"');
       switch (state_)
       {
         case IterationState::first_cubic:
@@ -171,8 +171,11 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
 
           // This means we already found a local extreme.
           if (std::abs(w - new_node->w()) <= 1e-3 * left_node->scale().value())     // Too close to the last sample?
-            if (!handle_local_extreme(w))
-              return false;
+          {
+            [[maybe_unused]] bool success = handle_local_extreme(w);
+            // We only added two samples, so handle_local_extreme is just going to ask for a another sample.
+            ASSERT(success);
+          }
 
           break;
         }
@@ -530,11 +533,15 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
           // If the last step is significantly smaller than the scale, then we found a local extreme.
           double step = std::abs(chain_.last()->w() - w);
           Dout(dc::notice, "step = " << step);
-          if (step < (next_extreme_type_ == ExtremeType::minimum ? 0.01 : 0.05) * cubic_used_->scale().value())
-            if (!handle_local_extreme(w))
-              return false;
+          if (step < (next_extreme_type_ == ExtremeType::minimum ? 0.01 : 0.05) * cubic_used_->scale().value() && !handle_local_extreme(w) && !handle_abort_hdirection(w))
+            return false;
 
           break;
+        }
+
+        case IterationState::need_extra_sample:
+        {
+          return false;
         }
 
         case IterationState::finish:
@@ -542,16 +549,6 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
           // Store the last sample and set the state to success.
           set_global_minimum(new_node);
           return false;
-        }
-
-        case IterationState::next_sample:
-        {
-          w += bogus_;
-          bogus_ = std::copysign(std::abs(bogus_) - 10.0, -bogus_);
-          expected_Lw_ = 1800.0;
-          have_expected_Lw_ = true;
-          Debug(set_algorithm_str(w, "bogus"));
-          break;
         }
 
         default:
@@ -724,7 +721,8 @@ bool Algorithm::handle_local_extreme(double& w)
   SampleNode::const_iterator right = chain_.larger();
   SampleNode::const_iterator left = right == chain_.begin() ? chain_.end() : std::prev(right);
 
-  double const negligible_offset = negligible_scale_fraction * cubic_used_->scale().value();
+  double const scale_value = cubic_used_->scale().value();
+  double const negligible_offset = negligible_scale_fraction * scale_value;
 
   SampleNode::const_iterator local_extreme;
   if (right != chain_.end() && std::abs(right->w() - w) <= negligible_offset)
@@ -751,9 +749,166 @@ bool Algorithm::handle_local_extreme(double& w)
       std::prev(local_extreme)->initialize_cubic(local_extreme COMMA_CWDEBUG_ONLY(event_server_, false));
   }
 
+  // Mark this sample as local extreme.
+  local_extreme->set_local_extreme(next_extreme_type_);
+
 #ifdef CWDEBUG
   // Draw the new sample.
   event_server_.trigger(AlgorithmEventType{new_local_extreme_event, *local_extreme, std::to_string(local_extreme->label())});
+  event_server_.trigger(AlgorithmEventType{scale_erase_event});
+
+  // Do some sanity checks.
+  if (next_extreme_type_ == ExtremeType::minimum)
+  {
+    // This is a local minimum.
+    ASSERT(local_extreme->type() == CubicToNextSampleType::unknown || local_extreme->has_right_min());
+    ASSERT(local_extreme == chain_.begin() || std::prev(local_extreme)->has_left_min());
+  }
+  else
+  {
+    // This is a local maximum.
+    ASSERT(next_extreme_type_ == ExtremeType::maximum);
+    ASSERT(local_extreme->type() == CubicToNextSampleType::unknown || local_extreme->has_right_max());
+    ASSERT(local_extreme == chain_.begin() || std::prev(local_extreme)->has_left_max());
+  }
+#endif
+
+  // Find all samples around local_extreme that are within scale.
+  SampleNode::const_iterator left_edge = local_extreme;
+  SampleNode::const_iterator right_edge = local_extreme;
+  double const extreme_w = local_extreme->w();
+
+  static int constexpr max_samples_per_side = 3;
+  std::array<SampleNode::const_iterator, 2 * max_samples_per_side + 1> usable_samples;
+  int max_size = 2 * max_samples_per_side;
+
+  // Always add the found local extreme, unless it is a fake point.
+  int one_passed_extreme_index = max_samples_per_side;          // Or max_samples_per_side if the local_extreme isn't stored because it is fake.
+  if (!local_extreme->is_fake())
+  {
+    usable_samples[one_passed_extreme_index++] = local_extreme;
+    ++max_size;
+  }
+
+  // Now advance left_edge to the left as far as possible, but not
+  // so far that it points to a sample that does not match.
+  int left_i = max_samples_per_side;
+  while (left_edge != chain_.begin())
+  {
+    --left_edge;
+    if (extreme_w - left_edge->w() > 1.1 * scale_value)
+    {
+      ++left_edge;
+      break;
+    }
+    // Calculate the distance to the previous sample, if any.
+    double dist = left_i == max_samples_per_side ? scale_value /*large enough*/ :  std::abs(left_edge->w() - usable_samples[left_i]->w());
+    // If the current sample is fake or too close to the previous sample, then skip this sample.
+    if (!left_edge->is_fake() && dist >= 0.001 * scale_value)
+    {
+      if (left_i == 0)
+        break;          // Overflow
+      usable_samples[--left_i] = left_edge;
+    }
+  }
+  // Same with right_edge, but as far as possible to the right.
+  int right_i = one_passed_extreme_index;
+  while (++right_edge != chain_.end() && right_edge->w() - extreme_w <= 1.1 * scale_value)
+  {
+    // Calculate the distance to the previous sample, if any.
+    double dist = (right_i == one_passed_extreme_index && left_i == max_samples_per_side) ?
+      scale_value /*large enough*/ : std::abs(right_edge->w() - usable_samples[right_i - 1]->w());
+    // If the current sample is fake or too close to the previous sample, then skip this sample.
+    if (!right_edge->is_fake() && dist >= 0.001 * scale_value)
+    {
+      if (right_i == max_size)
+        break;          // Overflow
+      usable_samples[right_i++] = right_edge;
+    }
+  }
+  // In this case we did overshoot by one, so right_edge points passed the last useable sample.
+
+  int number_of_usable_samples = right_i - left_i;
+#ifdef CWDEBUG
+  Dout(dc::notice, "Number of samples within scale range: " << number_of_usable_samples);
+  for (int i = left_i; i < right_i; ++i)
+    Dout(dc::notice, *usable_samples[i]);
+#endif
+
+  // There must be at least one usable (real) sample: one of the samples used to fit cubic_used_ may lay further away than 1.1 times the scale, but not both.
+  ASSERT(number_of_usable_samples > 0);
+
+  // After already asking for one extra sample we should have enough.
+  ASSERT(state_ != IterationState::need_extra_sample || number_of_usable_samples >= 3);
+
+  if (number_of_usable_samples == 1)
+  {
+    // In this case we didn't add both samples used to fit cubic_used_. We only want to ask for one extra sample, so lets just use the other sample from cubic_used_ too.
+    // That should be the one that is the furthest away from the local extreme of course.
+    bool other_sample_is_next = std::abs(cubic_used_->w() - extreme_w) < std::abs(cubic_used_->next_sample()->w() - extreme_w);
+
+    // This extra sample is expected to be further away than (1.1 times) the scale.
+    ASSERT((!other_sample_is_next && 1.09 * scale_value < extreme_w - cubic_used_->w()) ||
+            (other_sample_is_next && 1.09 * scale_value < cubic_used_->next_sample()->w()));
+
+    auto other_sample = other_sample_is_next ? cubic_used_->next_sample() : cubic_used_;
+    if (other_sample_is_next)
+      usable_samples[right_i++] = other_sample;
+    else
+      usable_samples[--left_i] = other_sample;
+    number_of_usable_samples = 2;
+
+    Dout(dc::notice, "Added sample " << *other_sample << " to that list.");
+  }
+
+  // If we do not already have at least three relevant samples then get another one.
+  if (number_of_usable_samples < 3)
+  {
+    ASSERT(number_of_usable_samples == 2);
+
+    // Find the sample with the greatest distant to the local extreme.
+    double max_offset = 0.0;
+    for (int i = left_i; i < right_i; ++i)
+    {
+      double offset = usable_samples[i]->w() - extreme_w;
+      if (std::abs(offset) > std::abs(max_offset))
+        max_offset = offset;
+    }
+
+    // Request an extra sample on the other side of the critical point than that we already have.
+    HorizontalDirection direction = max_offset > 0.0 ? HorizontalDirection::left : HorizontalDirection::right;
+    w = extreme_w + cubic_used_->scale().step(direction);
+
+    state_ = IterationState::need_extra_sample;
+    return true;
+  }
+
+
+#if 0 //FIXME: add this functionality (copied from histgram.cxx)
+  // If this is an extreme that we found by exploring hdirection_ from a previous extreme,
+  // then mark that last extreme as being explored in that hdirection_.
+  if (std::abs(last_step_) == 1)
+  {
+    mark_explored(last_w_, hdirection_);
+
+    // If the current extreme is a maximum, then it can be marked as having been explored to the opposite direction (in that case the previous extreme is a minimum).
+    // Or if the current extreme is a minimum and we came from another minimum (with steps of size 1), then mark it as having been explored into the opposite direction.
+    if (saw_minimum_)
+    {
+      // Mark that the current extreme is being explored in the opposite hdirection_.
+      mark_explored(w, opposite(hdirection_));
+    }
+  }
+
+  // Keep track of the best minimum so far; or abort if this minimum isn't better than one found before.
+  if (Histogram::is_minimum(w))
+  {
+    saw_minimum_ = true;
+    if (best_minimum_ == extremes_.end() || histogram_[best_minimum_->w()] > histogram_[new_extreme->w()])
+      best_minimum_ = new_extreme;
+    if (new_extreme != best_minimum_)
+      return false;
+  }
 #endif
 
   finish();

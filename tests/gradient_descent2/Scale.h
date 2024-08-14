@@ -3,11 +3,15 @@
 #include "CriticalPointType.h"
 #include "Sample.h"
 #include "AnalyzedCubic.h"
+#include "HorizontalDirection.h"
 #include "../CubicPolynomial.h"
 #include "utils/square.h"
 #include "debug.h"
 
 namespace gradient_descent {
+#ifdef CWDEBUG
+using utils::has_print_on::operator<<;
+#endif
 
 class Scale
 {
@@ -69,6 +73,34 @@ class Scale
     right_edge_w_ = right_edge_w;
     value_ = calculate_value(inflection_point_w);
   }
+
+  // Return a directional scale: minus the scale if direction is `left` and plus the scale if direction is `right`.
+  double step(HorizontalDirectionToInt direction) const
+  {
+    DoutEntering(dc::notice, "Scale::step(" << direction << ")");
+    ASSERT(type_ != CriticalPointType::none);
+    // Must pass a valid direction.
+    ASSERT(direction != 0);
+    return direction * value_;
+  }
+
+#ifdef CWDEBUG
+  void print_on(std::ostream& os) const
+  {
+    os << '{';
+    if (type_ != CriticalPointType::none)
+    {
+      os << "value:" << value_ <<
+          ", type:" << type_ <<
+          ", cp:" << critical_point_w_ <<
+          ", left_edge_w:" << left_edge_w_ <<
+          ", right_edge_w:" << right_edge_w_;
+    }
+    else
+      os << "<no scale>";
+    os << '}';
+  }
+#endif
 };
 
 } // namespace gradient_descent

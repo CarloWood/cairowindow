@@ -33,7 +33,6 @@ class Algorithm
   double expected_Lw_;                  // Whenever w is changed, this is set to what Lw value the approximation is expecting there.
 
 #ifdef CWDEBUG
-  double bogus_{-60.0};
   events::Server<AlgorithmEventType> event_server_;
   char const* algorithm_str_;
   utils::UniqueIDContext<int> label_context_;
@@ -102,6 +101,10 @@ class Algorithm
     next_extreme_type_ = next_extreme_type;
     small_step_ = small_step;
   }
+
+  SampleNode::const_iterator debug_left_of() const { return left_of_; }
+  SampleNode::const_iterator debug_right_of() const { return right_of_; }
+  SampleNode::const_iterator debug_cubic_used() const { return cubic_used_; }
 #endif
 };
 
