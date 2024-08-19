@@ -149,7 +149,7 @@ class SampleNode : public Sample
   bool is_local_extreme() const { return local_extreme_ != ExtremeType::unknown; }
   ExtremeType get_extreme_type() const { ASSERT(local_extreme_ != ExtremeType::unknown); return local_extreme_; }
 
-  void explored(HorizontalDirection hdirection)
+  void explored(HorizontalDirection hdirection) const
   {
     ASSERT(hdirection != HorizontalDirection::undecided);
     int explore_flag = hdirection == HorizontalDirection::left ? explored_left : explored_right;

@@ -17,20 +17,22 @@ class Algorithm
   static constexpr double significant_scale_fraction = ExtremeChain::significant_scale_fraction;
 
  private:
-  double learning_rate_;                // In unit_of(w)^2 / unit_of(L).
-  double small_step_{};                 // This will replace learning_rate_ as soon as we have an idea of the scale of changes.
+  double learning_rate_;                                // In unit_of(w)^2 / unit_of(L).
+  double small_step_{};                                 // This will replace learning_rate_ as soon as we have an idea of the scale of changes.
   IterationState state_;
-  ExtremeChain chain_;                  // A doubly linked list of SampleNode's, sorted by w value.
-  ExtremeType next_extreme_type_;       // The extreme type (minimum or maximum) that we're looking for (next).
+  ExtremeChain chain_;                                  // A doubly linked list of SampleNode's, sorted by w value.
+  ExtremeType next_extreme_type_;                       // The extreme type (minimum or maximum) that we're looking for (next).
   SampleNode::const_iterator left_of_{chain_.end()};    // If not end, then the next extreme (of next_extreme_type_)
                                                         // must found left of this sample.
   SampleNode::const_iterator right_of_{chain_.end()};   // If not end, then the next extreme (of next_extreme_type_)
                                                         // must found right of this sample.
-  SampleNode::const_iterator cubic_used_{chain_.end()}; // The node containing the last cubic that was used to jump one of its extremes.
-  HorizontalDirection hdirection_;      // The direction relative to FIXME that we want to find the next extreme in.
+  SampleNode::const_iterator cubic_used_{chain_.end()}; // The node containing the last cubic that was used to jump to one of its extremes.
+  HorizontalDirection hdirection_;                      // The direction relative to FIXME that we want to find the next extreme in.
   KineticEnergy energy_;
-  bool have_expected_Lw_{false};        // True if expected_Lw_ was set.
-  double expected_Lw_;                  // Whenever w is changed, this is set to what Lw value the approximation is expecting there.
+  bool have_expected_Lw_{false};                        // True if expected_Lw_ was set.
+  double expected_Lw_;                                  // Whenever w is changed, this is set to what Lw value the approximation is expecting there.
+  SampleNode::const_iterator last_extreme_;             // Used for handle_local_extreme; points to the new local extreme upon return.
+  SampleNode::const_iterator best_minimum_{chain_.end()};
 
 #ifdef CWDEBUG
   events::Server<AlgorithmEventType> event_server_;

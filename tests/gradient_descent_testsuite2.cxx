@@ -9,6 +9,9 @@
 #include "cairowindow/symbolic/symbolic.h"
 #include <thread>
 #include "debug.h"
+#ifdef CWDEBUG
+#include "cwds/Restart.h"
+#endif
 
 using namespace cairowindow;
 
@@ -154,7 +157,7 @@ class Algorithm : public gradient_descent::Algorithm
   bool operator()(double& w, double Lw, double dLdw)
   {
     bool result = gradient_descent::Algorithm::operator()(w, Lw, dLdw);
-    if (enable_drawing_)
+    if (enable_drawing_ && !debug::Restart<0>::s_restarting)
       enable_drawing_->wait();
     return result;
   }
@@ -175,7 +178,7 @@ int main()
   constexpr double L_max = 100.0;
   constexpr double learning_rate = 0.125;
 
-#if 1
+#if 0
   //==========================================================================
   Dout(dc::notice, "*** TEST: starting with a derivative of zero ***");
   {
@@ -485,7 +488,14 @@ int main()
 
             Dout(dc::notice, "-------------------------------------------");
             gda(w, L(w), L.derivative(w));
-            ASSERT(gda.debug_hdirection() == HorizontalDirection::undecided);
+
+            bool target_extreme_is_first_extreme = 2 * (xs[i0] + xs[i1]) - maximum_last < 22;
+            int target_extreme = target_extreme_is_first_extreme ? si : ti;
+            int i = target_extreme_is_first_extreme ? i_max : i_min;
+            if (no_extremes || (i0 != i && i1 != i))
+              ASSERT(gda.debug_hdirection() == HorizontalDirection::undecided);
+            else
+              ASSERT(gda.debug_hdirection() == (i0 == i ? HorizontalDirection::left : HorizontalDirection::right));
             // Because w > w0, the cubic through both is stored in the SampleNode of w0 (last() returns the one of w).
             auto cubic_node = gda.debug_chain().begin();        // There is only one cubic, so it must be the first node.
             ASSERT(cubic_node->type() == expected);
@@ -496,7 +506,7 @@ int main()
   }
 #endif
 
-#if 1
+#if 0
   //==========================================================================
   Dout(dc::notice, "*** TEST: first local extreme ***");
   {
@@ -551,7 +561,7 @@ int main()
             Algorithm gda(learning_rate, L_max);
 
             Dout(dc::notice, "===========================================");
-            //gda.enable_drawing(L, -25.0, 25.0);
+            //gda.enable_drawing(L, -15.0, 20.0);
 
             double w = w0;
             gda(w, L(w), L.derivative(w));
@@ -593,7 +603,7 @@ int main()
   }
 #endif
 
-#if 0
+#if 1
   //==========================================================================
   Dout(dc::notice, "*** TEST: parabola connected to dampened sin ***");
   {

@@ -2,6 +2,7 @@
 
 #include "utils/almost_equal.h"
 #include "utils/square.h"
+#include "utils/macros.h"
 #include <vector>
 #include <array>
 #include <ranges>
@@ -84,26 +85,40 @@ class Polynomial
     return result;
   }
 
-  int get_zeroes(std::array<double, 2>& zeroes_out) const
+  int get_roots(std::array<double, 2>& roots_out) const
   {
     // This can be at most a parabola.
     ASSERT(1 <= coefficients_.size() && coefficients_.size() <= 3);
-    if (coefficients_.size() < 3)
+    if (coefficients_.size() < 3 || coefficients_[2] == 0.0)
     {
       if (coefficients_.size() < 2)
         return 0;
-      zeroes_out[0] = -coefficients_[0] / coefficients_[1];
+      roots_out[0] = -coefficients_[0] / coefficients_[1];
+      return std::isnormal(roots_out[0]) ? 1 : 0;
+    }
+
+    double const D = utils::square(coefficients_[1]) - 4.0 * coefficients_[2] * coefficients_[0];
+    if (D < 0.0)
+      return 0;
+    // Use a sqrt with the same sign as coefficients_[1];
+    double const signed_sqrt_D = std::copysign(std::sqrt(D), coefficients_[1]);
+
+    // Calculate the smaller root.
+    roots_out[0] = -2.0 * coefficients_[0] / (coefficients_[1] + signed_sqrt_D);
+
+    if (AI_UNLIKELY(std::isnan(roots_out[0])))
+    {
+      // This means we must have divided by zero, which means that both, coefficients_[1] as well as sqrtD, must be zero.
+      // The latter means that coefficients_[0] is zero (coefficients_[2] was already checked not to be zero).
+      // Therefore we have: f(x) = c x^2 with one root at x=0.
+      roots_out[0] = 0.0;
       return 1;
     }
 
-    double D = utils::square(coefficients_[1]) - 4.0 * coefficients_[2] * coefficients_[0];
-    if (D < 0.0)
-      return 0;
-    double delta = std::sqrt(D) / std::abs(2.0 * coefficients_[2]);
-    double avg = -coefficients_[1] / (2.0 * coefficients_[2]);
-    zeroes_out[0] = avg - delta;
-    zeroes_out[1] = avg + delta;
-    return utils::almost_equal(zeroes_out[0], zeroes_out[1], 1e-6) ? 1 : 2;
+    // Calculate the larger root.
+    roots_out[1] = -0.5 * (coefficients_[1] + signed_sqrt_D) / coefficients_[2];
+
+    return 2;
   }
 
 #ifdef CWDEBUG

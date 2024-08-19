@@ -91,6 +91,8 @@ class AlgorithmEvent
       plot_derivative_curve_.reset();
       plot_quotient_curve_.reset();
       plot_fourth_degree_approximation_curve_.reset();
+      plot_current_left_of_direction_.reset();
+      plot_current_right_of_direction_.reset();
     }
     else if (event.is_a<DifferenceEventData>())
     {
@@ -317,7 +319,7 @@ class AlgorithmEvent
       plot_current_hdirection_ = plot::Connector{{x, y},
         {x + static_cast<int>(data.hdirection()) * plot_.convert_horizontal_offset_from_pixel(25.0), y},
         Connector::no_arrow, Connector::open_arrow};
-      plot_.add_connector(layer_, s_indicator_style({.line_color = color::red}), plot_current_hdirection_);
+      plot_.add_connector(layer_, s_indicator_style({.line_color = color::aquamarine}), plot_current_hdirection_);
     }
     else
       // Missing implementation.

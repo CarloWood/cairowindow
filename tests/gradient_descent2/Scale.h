@@ -75,13 +75,19 @@ class Scale
   }
 
   // Return a directional scale: minus the scale if direction is `left` and plus the scale if direction is `right`.
-  double step(HorizontalDirectionToInt direction) const
+  double step(HorizontalDirection& hdirection) const
   {
-    DoutEntering(dc::notice, "Scale::step(" << direction << ")");
+    DoutEntering(dc::notice, "Scale::step(" << hdirection << ")");
     ASSERT(type_ != CriticalPointType::none);
-    // Must pass a valid direction.
-    ASSERT(direction != 0);
-    return direction * value_;
+    // If hdirection is undecided at this point then make a step in the direction from the sample (part of scale)
+    // that is the furthest away from the critical point, towards the critical point.
+    if (hdirection == HorizontalDirection::undecided)
+    {
+      double far_edge_w =
+        std::abs(left_edge_w_ - critical_point_w_) > std::abs(right_edge_w_ - critical_point_w_) ? left_edge_w_ : right_edge_w_;
+      hdirection = critical_point_w_ < far_edge_w ? HorizontalDirection::left : HorizontalDirection::right;
+    }
+    return static_cast<int>(hdirection) * value_;
   }
 
 #ifdef CWDEBUG

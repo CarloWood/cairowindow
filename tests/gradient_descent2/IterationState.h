@@ -12,7 +12,7 @@ enum class IterationState
   initialization,
   first_cubic,
   find_extreme,
-  need_extra_sample,
+  extra_sample,
   finish,
   success
 };

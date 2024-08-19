@@ -232,7 +232,7 @@ bool Algorithm::handle_local_extreme(Weight& w)
     small_step_ = approximation_ptr_->scale().value();
     Dout(dc::notice, "small_step_ set to " << small_step_);
 
-    // Keep track of the best minimum so far; or abort if this minimum isn't better then one found before.
+    // Keep track of the best minimum so far; or abort if this minimum isn't better than one found before.
     if (next_extreme_type_ == ExtremeType::minimum)
     {
       Dout(dc::notice, "new extreme = " << *last_extreme_);
@@ -431,7 +431,7 @@ bool Algorithm::handle_local_extreme(Weight& w)
 #endif
 
   std::array<double, 2> zeroes;
-  int number_of_zeroes = quotient.get_zeroes(zeroes);
+  int number_of_zeroes = quotient.get_roots(zeroes);
 
   // It is possible that the zeroes are not usable because they are on the wrong side.
   if (hdirection_ != HorizontalDirection::undecided)
