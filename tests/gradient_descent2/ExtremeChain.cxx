@@ -87,7 +87,7 @@ void ExtremeChain::dump(Algorithm const* algorithm) const
 
   for (SampleNode::const_iterator node = sample_node_list_.begin(); node != sample_node_list_.end(); ++node)
   {
-    Dout(dc::notice|continued_cf, '[' << node->label() << "] " << node->w());
+    Dout(dc::notice|continued_cf, '[' << node->label() << "] " << std::setprecision(12) << node->w());
     if (node->is_fake())
       Dout(dc::continued, " [FAKE]");
     if (node->is_local_extreme())
@@ -105,6 +105,96 @@ void ExtremeChain::dump(Algorithm const* algorithm) const
         Dout(dc::continued, " [right_of]");
       Dout(dc::finish, "");
     }
+  }
+}
+
+namespace {
+
+enum CubicEndShape
+{
+  flat_high,
+  flat_low,
+  downhill,
+  uphill,
+  plus_inf
+};
+
+CubicEndShape get_end(CubicToNextSampleType type, bool left)
+{
+  using enum CubicToNextSampleType;
+  switch (type)
+  {
+    case flat:
+      return flat_low;
+    case up:
+      return uphill;
+    case down:
+      return downhill;
+    case right_stop:
+      return left ? uphill : plus_inf;
+    case left_stop:
+      return left ? plus_inf : downhill;
+    case right_min:
+      return left ? flat_low : uphill;
+    case left_min:
+      return left ? downhill : flat_low;
+    case right_max:
+      return left ? flat_high : downhill;
+    case left_max:
+      return left ? uphill : flat_high;
+    case right_max_left_min:
+      return left ? flat_high : flat_low;
+    case right_min_left_max:
+      return left ? flat_low : flat_high;
+    case min:
+      return left ? downhill : uphill;
+    case right_max_min:
+      return left ? flat_high : uphill;
+    case min_left_max:
+      return left ? downhill : flat_high;
+    case min_max:
+      return downhill;
+    case max_min:
+      return uphill;
+    case max:
+      return left ? uphill : downhill;
+    case max_left_min:
+      return left ? uphill : flat_low;
+    case right_min_max:
+      return left ? flat_low : downhill;
+    default:
+      ASSERT(false);
+  }
+  AI_NEVER_REACHED
+}
+
+} // namespace
+
+void ExtremeChain::sanity_check(Algorithm const* algorithm) const
+{
+  SampleNode::const_iterator node = sample_node_list_.begin();
+  if (node == sample_node_list_.end())
+    return;
+  CubicToNextSampleType prev_type = CubicToNextSampleType::unknown;
+  for (SampleNode::const_iterator next = std::next(node); next != sample_node_list_.end(); prev_type = node->type(), node = next++)
+  {
+    // The type of the cubic between every two samples in the chain must be known.
+    ASSERT(node->type() != CubicToNextSampleType::unknown);
+
+    bool is_first = prev_type == CubicToNextSampleType::unknown;
+    bool is_last = std::next(next) == sample_node_list_.end();
+
+    // Only the very first one may be a left_stop.
+    ASSERT(!is_first || node->type() != CubicToNextSampleType::left_stop);
+    // Only the last one may be a right_stop.
+    ASSERT(!is_last || node->type() != CubicToNextSampleType::right_stop);
+
+    // If this is the first cubic then we're done.
+    if (is_first)
+      continue;
+
+    // The types must match.
+    ASSERT(get_end(prev_type, false) == get_end(node->type(), true));
   }
 }
 #endif

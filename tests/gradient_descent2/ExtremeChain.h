@@ -38,6 +38,7 @@ class ExtremeChain
 
 #ifdef CWDEBUG
   void dump(Algorithm const* algorithm) const;
+  void sanity_check(Algorithm const* algorithm) const;
 #endif
 };
 

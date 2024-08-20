@@ -30,8 +30,8 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
     have_expected_Lw_ = false;
   }
 
-  // Print the chain_ to debug output just before leaving this function.
-  auto&& dump_chain = at_scope_end([this]{ chain_.dump(this); });
+  // Print the chain_ to debug output and do a sanity check just before leaving this function.
+  auto&& dump_chain = at_scope_end([this]{ chain_.dump(this); chain_.sanity_check(this); });
 #endif
 
   // Create a new Sample for this sample.
@@ -74,6 +74,17 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
   // Insert the new sample.
   auto new_node = chain_.insert(std::move(current));
 
+  // Initialize the cubic(s).
+  SampleNode::const_iterator right_node = std::next(new_node);  // The node right of the new node.
+  SampleNode::const_iterator left_node;                         // The node left of the new node (only valid if new_node != chain_.begin()).
+  if (new_node != chain_.begin())
+  {
+    left_node = std::prev(new_node);
+    left_node->initialize_cubic(new_node COMMA_CWDEBUG_ONLY(event_server_, false));        // false: new_node is passed.
+  }
+  if (right_node != chain_.end())
+    new_node->initialize_cubic(right_node COMMA_CWDEBUG_ONLY(event_server_, true));        // true: called on new_node.
+
   for (;;)
   {
     // Update kinetic energy. Returns false if too much energy was used.
@@ -89,23 +100,11 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
       {
         case IterationState::first_cubic:
         {
-          auto left_node = new_node;
-          auto right_node = std::next(left_node);
-          // Fix the order.
-          bool current_is_left = right_node != chain_.end();
-          if (!current_is_left)
-          {
-            // In this case the iterator returned by insert is actually the right_node of the two.
-            right_node = left_node;
-            left_node = std::prev(right_node);
-          }
-
-          // The cubic is part of the left_node.
-          left_node->initialize_cubic(right_node COMMA_CWDEBUG_ONLY(event_server_, current_is_left));
+          auto cubic_used_ = right_node == chain_.end() ? left_node : new_node;
+          auto next = std::next(cubic_used_);
 
           // Jump to extreme of the first cubic.
-          w = left_node->find_extreme(*right_node, next_extreme_type_);
-          cubic_used_ = left_node;
+          w = cubic_used_->find_extreme(*next, next_extreme_type_);
 
           // w should be set if next_extreme_type_ was set.
           ASSERT(next_extreme_type_ == ExtremeType::unknown || w != SampleNode::uninitialized_magic);
@@ -120,9 +119,9 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
               next_extreme_type_ == ExtremeType::unknown ? cubic_used_->cubic().inflection_point()
                                                          : w;
 
-            cubic_used_->set_scale(scale_cp_type, critical_point_w, left_node->w(), right_node->w());
+            cubic_used_->set_scale(scale_cp_type, critical_point_w, cubic_used_->w(), next->w());
 #ifdef CWDEBUG
-            event_server_.trigger(AlgorithmEventType{scale_draw_event, ScaleUpdate::initialized, *left_node, {}});
+            event_server_.trigger(AlgorithmEventType{scale_draw_event, ScaleUpdate::initialized, *cubic_used_, {}});
 #endif
           }
 
@@ -133,31 +132,31 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
             if (cubic_used_->is_rising())
             {
               // Keep going to the left.
-              w = left_node->w() - cubic_used_->scale().value();
-              left_of_ = left_node;
+              w = cubic_used_->w() - cubic_used_->scale().value();
+              left_of_ = cubic_used_;
             }
             else // cubic_used_->is_falling() or the cubic is flat.
             {
               // Keep going to the right.
-              w = right_node->w() + cubic_used_->scale().value();
+              w = next->w() + cubic_used_->scale().value();
               if (cubic_used_->is_falling())
-                right_of_ = right_node;
+                right_of_ = next;
             }
           }
           else
           {
             ASSERT(w != SampleNode::uninitialized_magic);
             double const negligible_offset = negligible_scale_fraction * cubic_used_->scale().value();
-            if (left_node->w() - w > negligible_offset)
-              left_of_ = left_node;
-            else if (right_node->w() - w > negligible_offset)
+            if (cubic_used_->w() - w > negligible_offset)
+              left_of_ = cubic_used_;
+            else if (next->w() - w > negligible_offset)
             {
-              left_of_ = right_node;
-              if (w - left_node->w() > negligible_offset)
-                right_of_ = left_node;
+              left_of_ = next;
+              if (w - cubic_used_->w() > negligible_offset)
+                right_of_ = cubic_used_;
             }
-            else if (w - right_node->w() > negligible_offset)
-              right_of_ = right_node;
+            else if (w - next->w() > negligible_offset)
+              right_of_ = next;
           }
 #ifdef CWDEBUG
           event_server_.trigger(AlgorithmEventType{left_of_right_of_event,
@@ -173,7 +172,7 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
           state_ = IterationState::find_extreme;
 
           // This means we already found a local extreme.
-          if (std::abs(w - new_node->w()) <= 1e-3 * left_node->scale().value())     // Too close to the last sample?
+          if (std::abs(w - new_node->w()) <= 1e-3 * cubic_used_->scale().value())     // Too close to the last sample?
           {
             [[maybe_unused]] bool success = handle_local_extreme(w);
             // We only added two samples, so handle_local_extreme is just going to ask for a another sample.
@@ -188,15 +187,12 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
 #ifdef CWDEBUG
           math::CubicPolynomial old_cubic = cubic_used_ != chain_.end() ? cubic_used_->cubic() : math::CubicPolynomial{};
 #endif
-          auto right_node = std::next(new_node);
-
           AnalyzedCubic right_acubic;       // If right_node != chain_.end() is true then this corresponds to the cubic of std::next(new_node).
           bool right_has_extreme = false;
           double right_extreme_w;
           double right_dist;
           if (right_node != chain_.end())
           {
-            new_node->initialize_cubic(right_node COMMA_CWDEBUG_ONLY(event_server_, true));        // true: called on new_node.
             right_acubic.initialize(new_node->cubic(), next_extreme_type_);
             if (right_acubic.has_extremes())
             {
@@ -215,8 +211,6 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
           double left_dist;
           if (new_node != chain_.begin())
           {
-            auto left_node = std::prev(new_node);
-            left_node->initialize_cubic(new_node COMMA_CWDEBUG_ONLY(event_server_, false));        // false: new_node is passed.
             left_acubic.initialize(left_node->cubic(), next_extreme_type_);
             if (left_acubic.has_extremes())
             {
@@ -751,7 +745,7 @@ bool Algorithm::handle_abort_hdirection(double& w)
 
 bool Algorithm::handle_local_extreme(double& w)
 {
-  DoutEntering(dc::notice, "Algorithm::handle_local_extreme(" << w << ")" << (state_ == IterationState::extra_sample ? " [Extra Sampe]" : ""));
+  DoutEntering(dc::notice, "Algorithm::handle_local_extreme(" << w << ")" << (state_ == IterationState::extra_sample ? " [Extra Sample]" : ""));
   RESTART
 
   double const scale_value = cubic_used_->scale().value();
