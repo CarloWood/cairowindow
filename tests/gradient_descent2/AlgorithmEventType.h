@@ -223,38 +223,38 @@ class NewSampleEventData
 class NewLocalExtremeEventData
 {
  protected:
-  Sample const& local_extreme_;
+  SampleNode const& extreme_cubic_;
   std::string label_;
 
  public:
-  NewLocalExtremeEventData(Sample const& local_extreme, std::string const& label) :
-    local_extreme_(local_extreme), label_(label) { }
+  NewLocalExtremeEventData(SampleNode const& extreme_cubic, std::string const& label) :
+    extreme_cubic_(extreme_cubic), label_(label) { }
 
-  Sample const& local_extreme() const { return local_extreme_; }
+  SampleNode const& extreme_cubic() const { return extreme_cubic_; }
   std::string const& label() const { return label_; }
 
   void print_on(std::ostream& os) const
   {
-    os << "NewLocalExtremeEventData:{" << local_extreme_ << ", \"" << label_ << "\"}";
+    os << "NewLocalExtremeEventData:{" << extreme_cubic_ << ", \"" << label_ << "\"}";
   }
 };
 
 class HDirectionKnownEventData
 {
  protected:
-  Sample const& local_extreme_;
+  SampleNode const& extreme_cubic_;
   HorizontalDirection hdirection_;
 
  public:
-  HDirectionKnownEventData(Sample const& local_extreme, HorizontalDirection hdirection) :
-    local_extreme_(local_extreme), hdirection_(hdirection) { }
+  HDirectionKnownEventData(SampleNode const& extreme_cubic, HorizontalDirection hdirection) :
+    extreme_cubic_(extreme_cubic), hdirection_(hdirection) { }
 
-  Sample const& local_extreme() const { return local_extreme_; }
+  SampleNode const& extreme_cubic() const { return extreme_cubic_; }
   HorizontalDirection hdirection() const { return hdirection_; }
 
   void print_on(std::ostream& os) const
   {
-    os << "HDirectionKnownEventData:{" << local_extreme_ << ", " << hdirection_ << "}";
+    os << "HDirectionKnownEventData:{" << extreme_cubic_ << ", " << hdirection_ << "}";
   }
 };
 
@@ -333,13 +333,13 @@ class AlgorithmEventData
     event_data_.emplace<NewSampleEventData>(current);
   }
 
-  AlgorithmEventData(event_type type, Sample const& current, std::string const& label)
+  AlgorithmEventData(event_type type, SampleNode const& current, std::string const& label)
   {
     ASSERT(type == new_local_extreme_event);
     event_data_.emplace<NewLocalExtremeEventData>(current, label);
   }
 
-  AlgorithmEventData(event_type type, Sample const& current, HorizontalDirection hdirection)
+  AlgorithmEventData(event_type type, SampleNode const& current, HorizontalDirection hdirection)
   {
     ASSERT(type == hdirection_known_event);
     event_data_.emplace<HDirectionKnownEventData>(current, hdirection);

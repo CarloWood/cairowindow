@@ -88,8 +88,6 @@ void ExtremeChain::dump(Algorithm const* algorithm) const
   for (SampleNode::const_iterator node = sample_node_list_.begin(); node != sample_node_list_.end(); ++node)
   {
     Dout(dc::notice|continued_cf, '[' << node->label() << "] " << std::setprecision(12) << node->w());
-    if (node->is_fake())
-      Dout(dc::continued, " [FAKE]");
     if (node->is_local_extreme())
       Dout(dc::continued, " [" << node->get_extreme_type() << ']');
     Dout(dc::finish, " " << node->scale());

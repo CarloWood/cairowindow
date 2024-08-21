@@ -14,6 +14,10 @@ void SampleNode::initialize_cubic(const_iterator next
   // next must always be on the right.
   ASSERT(w() < next->w());
 
+  // Once a cubic is used to define a local extreme, it really shouldn't happen that we
+  // add a new Sample in the middle of it!
+  ASSERT(local_extreme_ == ExtremeType::unknown);
+
   cubic_.initialize(w(), Lw(), dLdw(), next->w(), next->Lw(), next->dLdw());
   next_sample_ = next;
 

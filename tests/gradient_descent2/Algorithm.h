@@ -31,8 +31,9 @@ class Algorithm
   KineticEnergy energy_;
   bool have_expected_Lw_{false};                        // True if expected_Lw_ was set.
   double expected_Lw_;                                  // Whenever w is changed, this is set to what Lw value the approximation is expecting there.
-  SampleNode::const_iterator last_extreme_;             // Used for handle_local_extreme; points to the new local extreme upon return.
-  SampleNode::const_iterator best_minimum_{chain_.end()};
+  SampleNode::const_iterator last_extreme_cubic_;       // Used for handle_local_extreme; upon return, points to the SampleNode containing the
+                                                        // cubic whose critical point is considered to be the local extreme.
+  SampleNode::const_iterator best_minimum_cubic_{chain_.end()}; // Copy of the best last_extreme_cubic_ that was a minimum, so far.
 
 #ifdef CWDEBUG
   events::Server<AlgorithmEventType> event_server_;

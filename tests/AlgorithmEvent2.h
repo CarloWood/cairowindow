@@ -31,6 +31,11 @@ class PlotSample
     P_label_ = label;
   }
 
+  void replace(cairowindow::plot::Point const& point)
+  {
+    P_ = point;
+  }
+
   cairowindow::Point const& P() const { return P_; }
   cairowindow::Text const& label() const { return P_label_; }
 
@@ -304,17 +309,32 @@ class AlgorithmEvent
     else if (event.is_a<NewLocalExtremeEventData>())
     {
       auto const& data = event.get<NewLocalExtremeEventData>();
+      SampleNode const& node = data.extreme_cubic();
+      double x = node.extreme_w();
+      double y = node.extreme_Lw();
 
       plot_local_extremes_.emplace_back(
-          plot_.create_point(layer_, point_style_({.color_index = 2}), {data.local_extreme().w(), data.local_extreme().Lw()}),
+          plot_.create_point(layer_, point_style_({.color_index = 2}), {x, y}),
           plot_.create_text(layer_, s_label_style({.position = cairowindow::draw::centered_above}),
-            cairowindow::Point{data.local_extreme().w(), data.local_extreme().Lw()}, data.label()));
+            cairowindow::Point{x, y}, data.label()));
+
+      SampleNode const& next = *node.next_sample();
+      std::string left_node = std::to_string(node.label());
+      std::string right_node = std::to_string(next.label());
+      for (PlotSample& plot_sample : plot_samples_)
+      {
+        if (plot_sample.debug_label() == left_node)
+          plot_sample.replace(plot_.create_point(layer_, point_style_({.color_index = 2}), {node.w(), node.Lw()}));
+        else if (plot_sample.debug_label() == right_node)
+          plot_sample.replace(plot_.create_point(layer_, point_style_({.color_index = 2}), {next.w(), next.Lw()}));
+      }
     }
     else if (event.is_a<HDirectionKnownEventData>())
     {
       auto const& data = event.get<HDirectionKnownEventData>();
-      double x = data.local_extreme().w();
-      double y = data.local_extreme().Lw();
+      SampleNode const& node = data.extreme_cubic();
+      double x = node.extreme_w();
+      double y = node.extreme_Lw();
 
       plot_current_hdirection_ = plot::Connector{{x, y},
         {x + static_cast<int>(data.hdirection()) * plot_.convert_horizontal_offset_from_pixel(25.0), y},

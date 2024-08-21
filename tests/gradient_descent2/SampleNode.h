@@ -47,8 +47,8 @@ class SampleNode : public Sample
   mutable CubicToNextSampleType type_;                          // The type of this cubic.
   mutable Scale scale_;                                         // The scale that belongs to this cubic.
   mutable const_iterator next_sample_;                          // The right-sample used for cubic_, copy of what was passed to initialize_cubic.
-  mutable bool fake_{false};                                    // Set if this "Sample" was generated rather than measured.
   mutable ExtremeType local_extreme_{ExtremeType::unknown};     // Set to minimum or maximum if this is a local extreme. Otherwise set to unknown.
+  mutable double extreme_Lw_;                                   // The Lw coordinate of the local extreme (w is stored in the scale_).
   mutable int explored_{0};                                     // Bit mask 1: exploration to the left of this extreme has started.
                                                                 // Bit mask 2: same, on the right.
                                                                 // Only valid if this is a local extreme.
@@ -66,10 +66,6 @@ class SampleNode : public Sample
   {
     scale_.set(type, critical_point_w, left_edge_w, right_edge_w, cubic_.inflection_point());
   }
-
-  // This is called when this Sample is generated, not measured.
-  void set_fake(bool fake = true) const { fake_ = fake; }
-  bool is_fake() const { return fake_; }
 
   const_iterator next_sample() const
   {
@@ -89,6 +85,16 @@ class SampleNode : public Sample
 
   // Returns the type of the cubic that was fitted between this and the next sample.
   CubicToNextSampleType type() const { return type_; }
+
+  // Returns the w value of the underlying extreme.
+  double extreme_w() const
+  {
+    // Call initialize_cubic before using this member function.
+    ASSERT(type_ != CubicToNextSampleType::unknown);
+    // Call set_local_extreme before calling this function.
+    ASSERT(local_extreme_ != ExtremeType::unknown);
+    return scale_.critical_point_w();
+  }
 
   // Returns true if this type falls in the 'rising' class.
   bool is_rising() const
@@ -141,13 +147,15 @@ class SampleNode : public Sample
   //---------------------------------------------------------------------------
   // Local extreme functions.
 
-  void set_local_extreme(ExtremeType local_extreme) const
+  void set_local_extreme(ExtremeType local_extreme, double extreme_Lw) const
   {
     local_extreme_ = local_extreme;
+    extreme_Lw_ = extreme_Lw;
   }
 
   bool is_local_extreme() const { return local_extreme_ != ExtremeType::unknown; }
   ExtremeType get_extreme_type() const { ASSERT(local_extreme_ != ExtremeType::unknown); return local_extreme_; }
+  double extreme_Lw() const { ASSERT(local_extreme_ != ExtremeType::unknown); return extreme_Lw_; }
 
   void explored(HorizontalDirection hdirection) const
   {
@@ -180,8 +188,6 @@ class SampleNode : public Sample
   {
     os << "{";
     Sample::print_on(os);
-    if (fake_)
-      os << " [FAKE]";
     if (explored_)
     {
       os << " E:";
