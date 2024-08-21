@@ -52,6 +52,8 @@ class SampleNode : public Sample
   mutable int explored_{0};                                     // Bit mask 1: exploration to the left of this extreme has started.
                                                                 // Bit mask 2: same, on the right.
                                                                 // Only valid if this is a local extreme.
+  mutable double opposite_direction_w_;                         // The direction to explore if we jump back here as best minimum, only valid if
+                                                                // local_extreme_ isn't unknown.
 
  public:
   SampleNode(Sample&& sample) : Sample(std::move(sample)), type_(CubicToNextSampleType::unknown) { }
@@ -147,15 +149,18 @@ class SampleNode : public Sample
   //---------------------------------------------------------------------------
   // Local extreme functions.
 
-  void set_local_extreme(ExtremeType local_extreme, double extreme_Lw) const
+  void set_local_extreme(ExtremeType local_extreme) const
   {
+    ASSERT(scale_.type() != CriticalPointType::none);
+    extreme_Lw_ = cubic_(scale_.critical_point_w());
     local_extreme_ = local_extreme;
-    extreme_Lw_ = extreme_Lw;
   }
 
   bool is_local_extreme() const { return local_extreme_ != ExtremeType::unknown; }
   ExtremeType get_extreme_type() const { ASSERT(local_extreme_ != ExtremeType::unknown); return local_extreme_; }
   double extreme_Lw() const { ASSERT(local_extreme_ != ExtremeType::unknown); return extreme_Lw_; }
+  void set_opposite_direction_w(double opposite_direction_w) const { opposite_direction_w_ = opposite_direction_w; }
+  double opposite_direction_w() const { ASSERT(local_extreme_ != ExtremeType::unknown); return opposite_direction_w_; }
 
   void explored(HorizontalDirection hdirection) const
   {

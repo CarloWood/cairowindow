@@ -53,7 +53,7 @@ If an extreme that is found is "immediately" next to the previous one
 or not depends on whether or not a "reset" found place in between.
 An algorithm is used to make it very unlikely that we jump over an
 existing extreme (if that happens, then it is lost; we don't know it
-exists). Normally we alternating find minima and maxima that are
+exists). Normally we alternate between minima and maxima that are
 all adjacent. However, if we find a sample that tells us that we
 (might have) jumped too far, but it is lower than the lowest point
 found so far, then a "reset" happens, and we continue at that point
@@ -74,11 +74,11 @@ I) Looking for a maximum right of two given samples.
 The Algorithm has a member hdirection_ that contains the
 direction that we want to go in after finding the next
 local extreme: this value is set at the moment an extreme
-is found, because then it is decided if want to go look
+is found, because then it is decided if we want to go look
 for the next extreme left or right of that one. This direction
-is reset to "undecided" whenever a jump takes place: either
-one where we jumped over extremes (but to a lower point)
-or when we jumped back to the best minimum so far.
+is reset to "undecided" if we jumped over extremes (but to
+a lower point). If we jump back to the best local minimum,
+hdirection_ is simply toggled.
 
 Below we use the fact that if hdirection_ means 'left' then
 its value is -1, and if it means 'right' its value is 1.

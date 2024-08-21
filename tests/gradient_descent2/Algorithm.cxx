@@ -757,7 +757,6 @@ bool Algorithm::handle_local_extreme(double& w)
     // We should get here with a w value that was already set to the critical point of the latest cubic approximation.
     ASSERT(w == cubic_used_->scale().critical_point_w());
     double const extreme_w = w;
-    double const extreme_Lw = cubic_used_->cubic()(w);
 
 #if 0
     // Set chain_.larger_ to point to the first SampleNode that is larger than w, if any.
@@ -770,9 +769,8 @@ bool Algorithm::handle_local_extreme(double& w)
 
     // Remember the node containing the cubic that found this extreme.
     last_extreme_cubic_ = cubic_used_;
-
     // Mark this sample as local extreme "cubic".
-    last_extreme_cubic_->set_local_extreme(next_extreme_type_, extreme_Lw);
+    last_extreme_cubic_->set_local_extreme(next_extreme_type_);
 
 #ifdef CWDEBUG
     // Draw the local extreme sample.
@@ -783,7 +781,7 @@ bool Algorithm::handle_local_extreme(double& w)
     // Keep track of the best minimum so far; or abort if this minimum isn't better than one found before.
     if (next_extreme_type_ == ExtremeType::minimum)
     {
-      Dout(dc::notice, "new minimum = {" << extreme_w << ", " << extreme_Lw << "}");
+      Dout(dc::notice, "new minimum = {" << extreme_w << ", " << last_extreme_cubic_->extreme_Lw() << "}");
       // We were looking for a minimum.
       ASSERT(last_extreme_cubic_->get_extreme_type() == ExtremeType::minimum);
       if (best_minimum_cubic_ == chain_.end() || best_minimum_cubic_->extreme_Lw() > last_extreme_cubic_->extreme_Lw())
@@ -1052,14 +1050,17 @@ bool Algorithm::handle_local_extreme(double& w)
 
   std::array<double, 2> zeroes;
   int number_of_zeroes = quotient.get_roots(zeroes);
+  ASSERT(number_of_zeroes == 0 || number_of_zeroes == 2);
 
   // It is possible that the zeroes are not usable because they are on the wrong side.
+  double opposite_direction_w;
   if (hdirection_ != HorizontalDirection::undecided)
   {
     auto wrong_side = [this, w](double zero) { return (hdirection_ == HorizontalDirection::left) != (zero < w); };
     for (int zero = 0; zero < number_of_zeroes;)
       if (wrong_side(zeroes[zero]))
       {
+        opposite_direction_w = zeroes[zero];            // Note: if after this loop number_of_zeroes == 1 then we only got here once.
         if (--number_of_zeroes == 1 && zero == 0)
           zeroes[0] = zeroes[1];
       }
@@ -1070,9 +1071,9 @@ bool Algorithm::handle_local_extreme(double& w)
   if (number_of_zeroes > 1)
     Dout(dc::notice, "with other local extremes at " << zeroes[0] << " and " << zeroes[1]);
   else if (number_of_zeroes == 1)
-    Dout(dc::notice, "with one other local extreme at " << zeroes[0]);
+    Dout(dc::notice, "with one other usable local extreme at " << zeroes[0] << "; opposite_direction_w = " << opposite_direction_w);
   else
-    Dout(dc::notice, "with no other local extremes!");
+    Dout(dc::notice, "with no other usable local extremes!");
 
   if (number_of_zeroes > 0)
   {
@@ -1094,16 +1095,21 @@ bool Algorithm::handle_local_extreme(double& w)
              (hdirection_ == HorizontalDirection::undecided &&
               expected_Lw[1] < expected_Lw[0]))) ? 1 : 0;
       }
+      opposite_direction_w = zeroes[1 - best_zero];
     }
     else
     {
-      ASSERT(number_of_zeroes == 1);    // Huh?
       // There is only one usable zero.
       expected_Lw[0] = fourth_degree_approximation(zeroes[0]);
+      // Note: opposite_direction_w was already initialized.
     }
     w = zeroes[best_zero];
     expected_Lw_ = expected_Lw[best_zero];
     have_expected_Lw_ = true;
+
+    // Also remember the opposite direction (in case we jump back here).
+    last_extreme_cubic_->set_opposite_direction_w(opposite_direction_w);
+
 //    reset_history();
     left_of_ = chain_.end();
     right_of_ = chain_.end();
@@ -1129,11 +1135,16 @@ bool Algorithm::handle_local_extreme(double& w)
     // from the critical point of the approximation, towards that critical point
     // and updates hdirection_ accordingly.
     w = extreme_w + last_extreme_cubic_->scale().step(hdirection_);
+    Dout(dc::notice(hdirection_is_undecided), "Initialized hdirection_ to " << hdirection_ << ".");
+
     expected_Lw_ = last_extreme_cubic_->cubic()(w);
     have_expected_Lw_ = true;
 
-    Dout(dc::notice(hdirection_is_undecided), "Initialized hdirection_ to " << hdirection_ << ".");
+    opposite_direction_w = 2.0 * extreme_w - w;
   }
+
+  // Also remember the opposite direction (in case we jump back here).
+  last_extreme_cubic_->set_opposite_direction_w(opposite_direction_w);
 
   if (hdirection_ == HorizontalDirection::undecided)
   {
