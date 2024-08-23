@@ -81,6 +81,8 @@ class Algorithm
     return *cubic_used_;
   }
 
+  void initialize_range(double extreme_w);
+
 #ifdef CWDEBUG
   // Accessors for the event servers.
   events::Server<AlgorithmEventType>& event_server()

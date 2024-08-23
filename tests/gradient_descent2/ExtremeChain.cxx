@@ -174,6 +174,9 @@ void ExtremeChain::sanity_check(Algorithm const* algorithm) const
   if (node == sample_node_list_.end())
     return;
   CubicToNextSampleType prev_type = CubicToNextSampleType::unknown;
+  SampleNode::const_iterator last_extreme;
+  ExtremeType last_extreme_type = ExtremeType::unknown;     // Extreme type of the last extreme;
+  // Run over all node pairs {node, next} that make up cubics.
   for (SampleNode::const_iterator next = std::next(node); next != sample_node_list_.end(); prev_type = node->type(), node = next++)
   {
     // The type of the cubic between every two samples in the chain must be known.
@@ -186,6 +189,20 @@ void ExtremeChain::sanity_check(Algorithm const* algorithm) const
     ASSERT(!is_first || node->type() != CubicToNextSampleType::left_stop);
     // Only the last one may be a right_stop.
     ASSERT(!is_last || node->type() != CubicToNextSampleType::right_stop);
+
+    // Does this cubic contain an extreme?
+    if (node->is_local_extreme())
+    {
+      // Can't have two extremes of the same type on a row.
+      if (last_extreme_type == node->get_extreme_type())
+      {
+        // This should never happen and probably means that we're trying to detect a local extreme that was already found before.
+        DoutFatal(dc::core, "The node at " << static_cast<Sample const&>(*last_extreme) << " has the same type as the node at " <<
+            static_cast<Sample const&>(*node) << " (" << last_extreme_type << ")!");
+      }
+      last_extreme_type = node->get_extreme_type();
+      last_extreme = node;
+    }
 
     // If this is the first cubic then we're done.
     if (is_first)

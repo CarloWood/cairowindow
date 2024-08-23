@@ -359,7 +359,7 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
               // Move current in the given direction until we find a cubic with the sought for local extreme, or reach the end of the chain.
               if (direction == HorizontalDirection::right)
               {
-                while (current->type() != CubicToNextSampleType::unknown && !current->has_extreme(next_extreme_type_))
+                while (current->type() != CubicToNextSampleType::unknown && !current->has_unfound_extreme(next_extreme_type_))
                   current = std::next(current);
                 if (current->type() == CubicToNextSampleType::unknown)
                 {
@@ -381,7 +381,7 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
               }
               else
               {
-                while (current != chain_.begin() && !std::prev(current)->has_extreme(next_extreme_type_))
+                while (current != chain_.begin() && !std::prev(current)->has_unfound_extreme(next_extreme_type_))
                   current = std::prev(current);
                 if (current == chain_.begin())
                 {
@@ -723,20 +723,22 @@ bool Algorithm::handle_abort_hdirection(double& w)
 
   // Change hdirection.
   hdirection_ = opposite(hdirection_);
+  w = best_minimum_cubic_->opposite_direction_w();
+  expected_Lw_ = best_minimum_cubic_->opposite_direction_Lw();
+  have_expected_Lw_ = true;
   Dout(dc::notice, "Changed horizontal direction to " << hdirection_);
   last_extreme_cubic_ = best_minimum_cubic_;
   cubic_used_ = chain_.end();
-  left_of_ = chain_.end();
-  right_of_ = chain_.end();
   // Next we'll be looking for a maximum.
   next_extreme_type_ = ExtremeType::maximum;
-  //small_step_ = 
+  small_step_ = best_minimum_cubic_->scale().value();
+  initialize_range(best_minimum_cubic_->extreme_w());
 
 #ifdef CWDEBUG
   event_server_.trigger(AlgorithmEventType{left_of_right_of_event,
       left_of_ == chain_.end() ? nullptr : &*left_of_,
       right_of_ == chain_.end() ? nullptr : &*right_of_,
-      next_extreme_type_, w, cubic_used_->cubic()(w)});
+      next_extreme_type_, w, expected_Lw_});
   event_server_.trigger(AlgorithmEventType{hdirection_known_event, *last_extreme_cubic_, hdirection_});
 #endif
 
@@ -1052,15 +1054,23 @@ bool Algorithm::handle_local_extreme(double& w)
   int number_of_zeroes = quotient.get_roots(zeroes);
   ASSERT(number_of_zeroes == 0 || number_of_zeroes == 2);
 
-  // It is possible that the zeroes are not usable because they are on the wrong side.
-  double opposite_direction_w;
+  // Initialize the range for the next extreme as soon as hdirection_ is known, but only once.
+  bool initialize_range_called = false;
+
+  // It is possible that the zeroes are not usable because they are on the wrong side, or out of range.
+  double opposite_direction_w, opposite_direction_Lw;
   if (hdirection_ != HorizontalDirection::undecided)
   {
-    auto wrong_side = [this, w](double zero) { return (hdirection_ == HorizontalDirection::left) != (zero < w); };
+    initialize_range(extreme_w);
+    initialize_range_called = true;
+    auto out_of_range = [this](double zero)
+        { return (left_of_ != chain_.end() && left_of_->w() < zero) ||
+                (right_of_ != chain_.end() && zero < right_of_->w()); };
     for (int zero = 0; zero < number_of_zeroes;)
-      if (wrong_side(zeroes[zero]))
+      if (out_of_range(zeroes[zero]))
       {
         opposite_direction_w = zeroes[zero];            // Note: if after this loop number_of_zeroes == 1 then we only got here once.
+        opposite_direction_Lw = fourth_degree_approximation(opposite_direction_w);
         if (--number_of_zeroes == 1 && zero == 0)
           zeroes[0] = zeroes[1];
       }
@@ -1085,6 +1095,8 @@ bool Algorithm::handle_local_extreme(double& w)
       {
         // If both zeroes are on the same side of the found local extreme, pick the nearest one.
         best_zero = std::abs(extreme_w - zeroes[0]) < std::abs(extreme_w - zeroes[1]) ? 0 : 1;
+        // Initialize the opposite direction to be a step with size scale into the direction opposite of hdirection.
+        opposite_direction_w = extreme_w - last_extreme_cubic_->scale().step(hdirection_);
       }
       else
       {
@@ -1094,8 +1106,9 @@ bool Algorithm::handle_local_extreme(double& w)
             (hdirection_ == HorizontalDirection::right ||
              (hdirection_ == HorizontalDirection::undecided &&
               expected_Lw[1] < expected_Lw[0]))) ? 1 : 0;
+        opposite_direction_w = zeroes[1 - best_zero];
       }
-      opposite_direction_w = zeroes[1 - best_zero];
+      opposite_direction_Lw = fourth_degree_approximation(opposite_direction_w);
     }
     else
     {
@@ -1106,17 +1119,6 @@ bool Algorithm::handle_local_extreme(double& w)
     w = zeroes[best_zero];
     expected_Lw_ = expected_Lw[best_zero];
     have_expected_Lw_ = true;
-
-    // Also remember the opposite direction (in case we jump back here).
-    last_extreme_cubic_->set_opposite_direction_w(opposite_direction_w);
-
-//    reset_history();
-    left_of_ = chain_.end();
-    right_of_ = chain_.end();
-#ifdef CWDEBUG
-    event_server_.trigger(AlgorithmEventType{left_of_right_of_event,
-        nullptr, nullptr, next_extreme_type_, w, last_extreme_cubic_->cubic()(w)});
-#endif
 
     Dout(dc::notice(hdirection_ == HorizontalDirection::undecided && number_of_zeroes == 2),
         "Best other local extreme was " << zeroes[best_zero] << " with A(" << zeroes[best_zero] << ") = " <<
@@ -1141,10 +1143,11 @@ bool Algorithm::handle_local_extreme(double& w)
     have_expected_Lw_ = true;
 
     opposite_direction_w = 2.0 * extreme_w - w;
+    opposite_direction_Lw = last_extreme_cubic_->cubic()(opposite_direction_w);
   }
 
   // Also remember the opposite direction (in case we jump back here).
-  last_extreme_cubic_->set_opposite_direction_w(opposite_direction_w);
+  last_extreme_cubic_->set_opposite_direction(opposite_direction_w, opposite_direction_Lw);
 
   if (hdirection_ == HorizontalDirection::undecided)
   {
@@ -1153,8 +1156,17 @@ bool Algorithm::handle_local_extreme(double& w)
     Dout(dc::notice, "Initialized hdirection_ to " << hdirection_ << ".");
   }
 
+  if (!initialize_range_called)
+    initialize_range(extreme_w);
+
+#ifdef CWDEBUG
+  event_server_.trigger(AlgorithmEventType{left_of_right_of_event,
+      left_of_ == chain_.end() ? nullptr : &*left_of_,
+      right_of_ == chain_.end() ? nullptr : &*right_of_,
+      next_extreme_type_, w, expected_Lw_});
   // Move hdirection arrow to new extreme.
   Debug(event_server_.trigger(AlgorithmEventType{hdirection_known_event, *last_extreme_cubic_, hdirection_}));
+#endif
 
 #if 0 //FIXME: add this functionality (copied from histogram.cxx)
   // If this is an extreme that we found by exploring hdirection_ from a previous extreme,
@@ -1185,6 +1197,116 @@ bool Algorithm::handle_local_extreme(double& w)
 
   state_ = IterationState::find_extreme;
   return true;
+}
+
+void Algorithm::initialize_range(double extreme_w)
+{
+  DoutEntering(dc::notice, "Algorithm::initialize_range(" << extreme_w << ")");
+
+  // hdirection_ must be set before calling this function.
+  ASSERT(hdirection_ != HorizontalDirection::undecided);
+
+  using enum CubicToNextSampleType;
+
+  // Determine the correct range, by setting left_of_ and right_of_, given that
+  // we will be looking for next_extreme_type_ in the direction hdirection_.
+  left_of_ = chain_.end();
+  right_of_ = chain_.end();
+
+  // Get the node immediately on the left and right of extreme_w.
+  chain_.find_larger(extreme_w);
+  SampleNode::const_iterator right_node = chain_.larger();
+  SampleNode::const_iterator left_node = right_node == chain_.begin() ? chain_.end() : std::prev(right_node);
+
+  // Note that extreme_w is an extreme of the opposite type of next_extreme_type_.
+  if (next_extreme_type_ == ExtremeType::maximum)
+  {
+    // This means that extreme_w is a minimum.
+    ASSERT(right_node == chain_.end() || has_minimum(left_node->type()));
+    // Aka, the type is _/, \_, ‾\_, _/‾, \/, ‾\/, \/‾, \/\, /\/, /\_ or _/\.
+
+    // If the first cubic also contains a maximum, then it must be of the type
+    // ‾\_, _/‾, ‾\/, \/‾, \/\, /\/, /\_ or _/\.
+
+    if (hdirection_ == HorizontalDirection::right)
+    {
+      if (right_node == chain_.end() || has_extreme_order(left_node->type(), ExtremeType::maximum, HorizontalDirection::right))
+      {
+        // A possible maximum can only be on the right of the minimum for the following types: _/‾, \/‾, \/\ and _/\.
+        // In all of those cases it is safe to set right_of_ to the left_node.
+        right_of_ = left_node;
+      }
+      else
+      {
+        // Here the type can be one of ‾\_, ‾\/, /\/ or /\_ --in which case we must set
+        // right_of_ to right_node to avoid finding the maximum on the left of this minimum--
+        // or the type is one that doesn't have a maximum, aka _/, \_ or \/, in which case
+        // it is safe to also set right_of_ to right_node.
+        right_of_ = right_node;
+      }
+    }
+    else
+    {
+      if (left_node == chain_.end() || has_extreme_order(left_node->type(), ExtremeType::maximum, HorizontalDirection::left))
+      {
+        // A possible maximum can only be on the left of the minimum for the following types: ‾\_, ‾\/, /\/ or /\_.
+        // In all of those cases it is safe to set left_of_ to right_node.
+        left_of_ = right_node;
+      }
+      else
+      {
+        // Here the type can be one of _/‾, \/‾, \/\ or _/\ --in which case we must set
+        // left_of_ to left_node to avoid finding the maximum on the right of this minimum--
+        // or the type is one that doesn't have a maximum, aka _/, \_ or \/, in which case
+        // it is safe to also set left_of_ to left_node.
+        left_of_ = left_node;
+      }
+    }
+  }
+  else
+  {
+    // This means that extreme_w is a maximum.
+    ASSERT(right_node == chain_.end() || has_maximum(left_node->type()));
+    // Aka, the type is ‾\, /‾, _/‾, ‾\_, /\, _/\, /\_, /\/, \/\, \/‾ or ‾\/.
+
+    // If the first cubic also contains a minimum, then it must be of the type
+    // _/‾, ‾\_, _/\, /\_, /\/, \/\ or ‾\/.
+
+    if (hdirection_ == HorizontalDirection::right)
+    {
+      if (right_node == chain_.end() || has_extreme_order(left_node->type(), ExtremeType::minimum, HorizontalDirection::right))
+      {
+        // A possible minimum can only be on the right of the maximum for the following types: ‾\_, /\_, /\/, or ‾\/.
+        // In all of those cases, it is safe to set right_of_ to left_node.
+        right_of_ = left_node;
+      }
+      else
+      {
+        // Here the type can be one of _/‾, \/‾, \/\, or _/\ --in which case we must set
+        // right_of_ to right_node to avoid finding the minimum on the left of this maximum--
+        // or the type is one that doesn't have a minimum, aka ‾\, /‾, or /\, in which case
+        // it is safe to also set right_of_ to right_node.
+        right_of_ = right_node;
+      }
+    }
+    else
+    {
+      if (left_node == chain_.end() || has_extreme_order(left_node->type(), ExtremeType::minimum, HorizontalDirection::left))
+      {
+        // A possible minimum can only be on the left of the maximum for the following types: _/‾, \/‾, \/\, or _/\.
+        // In all of those cases, it is safe to set left_of_ to right_node.
+        left_of_ = right_node;
+      }
+      else
+      {
+        // Here the type can be one of ‾\_, /\_, /\/, or ‾\/ --in which case we must set
+        // left_of_ to left_node to avoid finding the minimum on the right of this maximum--
+        // or the type is one that doesn't have a minimum, aka ‾\, /‾, or /\, in which case
+        // it is safe to also set left_of_ to left_node.
+        left_of_ = left_node;
+      }
+    }
+  }
 }
 
 } // namespace gradient_descent

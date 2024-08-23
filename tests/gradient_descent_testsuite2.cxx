@@ -628,8 +628,10 @@ int main()
         (1.0 - sigmoid) * (a + b * x + c * (x^2)) + (sigmoid * (amplitude * exp((tp - x) / 10) * sin(d * x + phase) + level)));
     Function L(x, sL, sigmoid);
 
-    //gda.enable_drawing(L, -35.0, -20.0);
-    gda.enable_drawing(L, -80.0, 20.0);
+    double zoom = 5.0;
+    //gda.enable_drawing(L, -51.3629 - zoom, -51.3629 + zoom);
+    //gda.enable_drawing(L, -39.4719 - zoom, -39.4719 + zoom);
+    gda.enable_drawing(L, -60.0, 0.0);
 
     while (gda(w, L(w), L.derivative(w)))
     {

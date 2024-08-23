@@ -52,8 +52,9 @@ class SampleNode : public Sample
   mutable int explored_{0};                                     // Bit mask 1: exploration to the left of this extreme has started.
                                                                 // Bit mask 2: same, on the right.
                                                                 // Only valid if this is a local extreme.
-  mutable double opposite_direction_w_;                         // The direction to explore if we jump back here as best minimum, only valid if
-                                                                // local_extreme_ isn't unknown.
+  mutable double opposite_direction_w_;                         // The w value of the opposite direction to explore if we jump back here
+                                                                // as best minimum, only valid if local_extreme_ isn't unknown.
+  mutable double opposite_direction_Lw_;                        // Same but Lw coordinate.
 
  public:
   SampleNode(Sample&& sample) : Sample(std::move(sample)), type_(CubicToNextSampleType::unknown) { }
@@ -114,11 +115,11 @@ class SampleNode : public Sample
       ((static_cast<int>(type_) & (minimum_bit|maximum_bit)) != 0 && next_sample_->Lw() < Lw());
   }
 
-  // Returns true if the cubic fitted between this and the next sample has an extreme.
-  bool has_extreme(ExtremeType extreme_type) const
+  // Returns true if the cubic fitted between this and the next sample has the given extreme in between the two samples.
+  bool has_unfound_extreme(ExtremeType extreme_type) const
   {
     ASSERT(extreme_type != ExtremeType::unknown);
-    return extreme_type == ExtremeType::minimum ? has_minimum(type_) : has_maximum(type_);
+    return extreme_type == ExtremeType::minimum ? has_unfound_minimum(type_) : has_unfound_maximum(type_);
   }
 
   // Scale estimates that can be used when scale is not available yet.
@@ -159,8 +160,13 @@ class SampleNode : public Sample
   bool is_local_extreme() const { return local_extreme_ != ExtremeType::unknown; }
   ExtremeType get_extreme_type() const { ASSERT(local_extreme_ != ExtremeType::unknown); return local_extreme_; }
   double extreme_Lw() const { ASSERT(local_extreme_ != ExtremeType::unknown); return extreme_Lw_; }
-  void set_opposite_direction_w(double opposite_direction_w) const { opposite_direction_w_ = opposite_direction_w; }
+  void set_opposite_direction(double opposite_direction_w, double opposite_direction_Lw) const
+  {
+    opposite_direction_w_ = opposite_direction_w;
+    opposite_direction_Lw_ = opposite_direction_Lw;
+  }
   double opposite_direction_w() const { ASSERT(local_extreme_ != ExtremeType::unknown); return opposite_direction_w_; }
+  double opposite_direction_Lw() const { ASSERT(local_extreme_ != ExtremeType::unknown); return opposite_direction_Lw_; }
 
   void explored(HorizontalDirection hdirection) const
   {
