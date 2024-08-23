@@ -1218,94 +1218,46 @@ void Algorithm::initialize_range(double extreme_w)
   SampleNode::const_iterator right_node = chain_.larger();
   SampleNode::const_iterator left_node = right_node == chain_.begin() ? chain_.end() : std::prev(right_node);
 
+#ifdef CWDEBUG
   // Note that extreme_w is an extreme of the opposite type of next_extreme_type_.
-  if (next_extreme_type_ == ExtremeType::maximum)
+  if (right_node != chain_.end())       // Can't check the cubic type if it doesn't exist.
   {
-    // This means that extreme_w is a minimum.
-    ASSERT(right_node == chain_.end() || has_minimum(left_node->type()));
-    // Aka, the type is _/, \_, ‾\_, _/‾, \/, ‾\/, \/‾, \/\, /\/, /\_ or _/\.
-
-    // If the first cubic also contains a maximum, then it must be of the type
-    // ‾\_, _/‾, ‾\/, \/‾, \/\, /\/, /\_ or _/\.
-
-    if (hdirection_ == HorizontalDirection::right)
+    if (next_extreme_type_ == ExtremeType::maximum)
     {
-      if (right_node == chain_.end() || has_extreme_order(left_node->type(), ExtremeType::maximum, HorizontalDirection::right))
-      {
-        // A possible maximum can only be on the right of the minimum for the following types: _/‾, \/‾, \/\ and _/\.
-        // In all of those cases it is safe to set right_of_ to the left_node.
-        right_of_ = left_node;
-      }
-      else
-      {
-        // Here the type can be one of ‾\_, ‾\/, /\/ or /\_ --in which case we must set
-        // right_of_ to right_node to avoid finding the maximum on the left of this minimum--
-        // or the type is one that doesn't have a maximum, aka _/, \_ or \/, in which case
-        // it is safe to also set right_of_ to right_node.
-        right_of_ = right_node;
-      }
+      // This means that extreme_w is a minimum.
+      ASSERT(has_minimum(left_node->type()));
+      // Aka, the type is _/, \_, ‾\_, _/‾, \/, ‾\/, \/‾, \/\, /\/, /\_ or _/\.
+
+      // If the first cubic also contains a maximum, then it must be of the type
+      // ‾\_, _/‾, ‾\/, \/‾, \/\, /\/, /\_ or _/\.
     }
     else
     {
-      if (left_node == chain_.end() || has_extreme_order(left_node->type(), ExtremeType::maximum, HorizontalDirection::left))
-      {
-        // A possible maximum can only be on the left of the minimum for the following types: ‾\_, ‾\/, /\/ or /\_.
-        // In all of those cases it is safe to set left_of_ to right_node.
-        left_of_ = right_node;
-      }
-      else
-      {
-        // Here the type can be one of _/‾, \/‾, \/\ or _/\ --in which case we must set
-        // left_of_ to left_node to avoid finding the maximum on the right of this minimum--
-        // or the type is one that doesn't have a maximum, aka _/, \_ or \/, in which case
-        // it is safe to also set left_of_ to left_node.
-        left_of_ = left_node;
-      }
+      // This means that extreme_w is a maximum.
+      ASSERT(has_maximum(left_node->type()));
+      // Aka, the type is ‾\, /‾, _/‾, ‾\_, /\, _/\, /\_, /\/, \/\, \/‾ or ‾\/.
+
+      // If the first cubic also contains a minimum, then it must be of the type
+      // _/‾, ‾\_, _/\, /\_, /\/, \/\ or ‾\/.
     }
+  }
+#endif
+
+  if (hdirection_ == HorizontalDirection::right)
+  {
+    right_of_ =
+      (right_node == chain_.end() || has_extreme_order(left_node->type(), next_extreme_type_, HorizontalDirection::right)) ? left_node
+                                                                                                                            : right_node;
+    while (right_of_->type() != CubicToNextSampleType::unknown && !right_of_->has_extreme(next_extreme_type_))
+      ++right_of_;
   }
   else
   {
-    // This means that extreme_w is a maximum.
-    ASSERT(right_node == chain_.end() || has_maximum(left_node->type()));
-    // Aka, the type is ‾\, /‾, _/‾, ‾\_, /\, _/\, /\_, /\/, \/\, \/‾ or ‾\/.
-
-    // If the first cubic also contains a minimum, then it must be of the type
-    // _/‾, ‾\_, _/\, /\_, /\/, \/\ or ‾\/.
-
-    if (hdirection_ == HorizontalDirection::right)
-    {
-      if (right_node == chain_.end() || has_extreme_order(left_node->type(), ExtremeType::minimum, HorizontalDirection::right))
-      {
-        // A possible minimum can only be on the right of the maximum for the following types: ‾\_, /\_, /\/, or ‾\/.
-        // In all of those cases, it is safe to set right_of_ to left_node.
-        right_of_ = left_node;
-      }
-      else
-      {
-        // Here the type can be one of _/‾, \/‾, \/\, or _/\ --in which case we must set
-        // right_of_ to right_node to avoid finding the minimum on the left of this maximum--
-        // or the type is one that doesn't have a minimum, aka ‾\, /‾, or /\, in which case
-        // it is safe to also set right_of_ to right_node.
-        right_of_ = right_node;
-      }
-    }
-    else
-    {
-      if (left_node == chain_.end() || has_extreme_order(left_node->type(), ExtremeType::minimum, HorizontalDirection::left))
-      {
-        // A possible minimum can only be on the left of the maximum for the following types: _/‾, \/‾, \/\, or _/\.
-        // In all of those cases, it is safe to set left_of_ to right_node.
-        left_of_ = right_node;
-      }
-      else
-      {
-        // Here the type can be one of ‾\_, /\_, /\/, or ‾\/ --in which case we must set
-        // left_of_ to left_node to avoid finding the minimum on the right of this maximum--
-        // or the type is one that doesn't have a minimum, aka ‾\, /‾, or /\, in which case
-        // it is safe to also set left_of_ to left_node.
-        left_of_ = left_node;
-      }
-    }
+    left_of_ =
+      (left_node == chain_.end() || has_extreme_order(left_node->type(), next_extreme_type_, HorizontalDirection::left)) ? right_node
+                                                                                                                         : left_node;
+    while (left_of_ != chain_.begin() && !std::prev(left_of_)->has_extreme(next_extreme_type_))
+      --left_of_;
   }
 }
 

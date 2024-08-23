@@ -122,6 +122,12 @@ class SampleNode : public Sample
     return extreme_type == ExtremeType::minimum ? has_unfound_minimum(type_) : has_unfound_maximum(type_);
   }
 
+  bool has_extreme(ExtremeType extreme_type) const
+  {
+    ASSERT(extreme_type != ExtremeType::unknown);
+    return extreme_type == ExtremeType::minimum ? has_minimum(type_) : has_maximum(type_);
+  }
+
   // Scale estimates that can be used when scale is not available yet.
   double w_scale_estimate() const { ASSERT(type_ != CubicToNextSampleType::unknown); ASSERT(next_sample_->w() > w()); return next_sample_->w() - w(); }
   double Lw_scale_estimate() const { return std::abs(next_sample_->Lw() - Lw()); }
