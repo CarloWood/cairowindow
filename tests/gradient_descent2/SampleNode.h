@@ -46,7 +46,7 @@ class SampleNode : public Sample
   mutable math::CubicPolynomial cubic_;                         // The cubic that fits this and the next Sample.
   mutable CubicToNextSampleType type_;                          // The type of this cubic.
   mutable Scale scale_;                                         // The scale that belongs to this cubic.
-  mutable const_iterator next_sample_;                          // The right-sample used for cubic_, copy of what was passed to initialize_cubic.
+  mutable const_iterator next_node_;                            // The right-sample used for cubic_, copy of what was passed to initialize_cubic.
   mutable ExtremeType local_extreme_{ExtremeType::unknown};     // Set to minimum or maximum if this is a local extreme. Otherwise set to unknown.
   mutable double extreme_Lw_;                                   // The Lw coordinate of the local extreme (w is stored in the scale_).
   mutable int explored_{0};                                     // Bit mask 1: exploration to the left of this extreme has started.
@@ -70,11 +70,11 @@ class SampleNode : public Sample
     scale_.set(type, critical_point_w, left_edge_w, right_edge_w, cubic_.inflection_point());
   }
 
-  const_iterator next_sample() const
+  const_iterator next_node() const
   {
     // Call initialize_cubic before using this member function.
     ASSERT(type_ != CubicToNextSampleType::unknown);
-    return next_sample_;
+    return next_node_;
   }
 
   //---------------------------------------------------------------------------
@@ -104,7 +104,7 @@ class SampleNode : public Sample
   {
     ASSERT(type_ != CubicToNextSampleType::unknown);
     return (static_cast<int>(type_) & rising_bit) != 0 ||
-      ((static_cast<int>(type_) & (minimum_bit|maximum_bit)) != 0 && next_sample_->Lw() > Lw());
+      ((static_cast<int>(type_) & (minimum_bit|maximum_bit)) != 0 && next_node_->Lw() > Lw());
   }
 
   // Returns true if this type falls in the 'falling' class.
@@ -112,7 +112,7 @@ class SampleNode : public Sample
   {
     ASSERT(type_ != CubicToNextSampleType::unknown);
     return (static_cast<int>(type_) & falling_bit) != 0 ||
-      ((static_cast<int>(type_) & (minimum_bit|maximum_bit)) != 0 && next_sample_->Lw() < Lw());
+      ((static_cast<int>(type_) & (minimum_bit|maximum_bit)) != 0 && next_node_->Lw() < Lw());
   }
 
   // Returns true if the cubic fitted between this and the next sample has the given extreme in between the two samples.
@@ -129,9 +129,9 @@ class SampleNode : public Sample
   }
 
   // Scale estimates that can be used when scale is not available yet.
-  double w_scale_estimate() const { ASSERT(type_ != CubicToNextSampleType::unknown); ASSERT(next_sample_->w() > w()); return next_sample_->w() - w(); }
-  double Lw_scale_estimate() const { return std::abs(next_sample_->Lw() - Lw()); }
-  double dLdw_scale_estimate() const { return std::abs((next_sample_->Lw() - Lw()) / (next_sample_->w() - w())); }
+  double w_scale_estimate() const { ASSERT(type_ != CubicToNextSampleType::unknown); ASSERT(next_node_->w() > w()); return next_node_->w() - w(); }
+  double Lw_scale_estimate() const { return std::abs(next_node_->Lw() - Lw()); }
+  double dLdw_scale_estimate() const { return std::abs((next_node_->Lw() - Lw()) / (next_node_->w() - w())); }
 
   bool has_left_min() const
   {
@@ -198,7 +198,7 @@ class SampleNode : public Sample
   double step() const
   {
     ASSERT(type_ != CubicToNextSampleType::unknown);
-    return next_sample_->w() - w();
+    return next_node_->w() - w();
   }
 
   void print_on(std::ostream& os) const

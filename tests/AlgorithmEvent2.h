@@ -318,7 +318,7 @@ class AlgorithmEvent
           plot_.create_text(layer_, s_label_style({.position = cairowindow::draw::centered_above}),
             cairowindow::Point{x, y}, data.label()));
 
-      SampleNode const& next = *node.next_sample();
+      SampleNode const& next = *node.next_node();
       std::string left_node = std::to_string(node.label());
       std::string right_node = std::to_string(next.label());
       for (PlotSample& plot_sample : plot_samples_)

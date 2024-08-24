@@ -19,7 +19,7 @@ void SampleNode::initialize_cubic(const_iterator next
   ASSERT(local_extreme_ == ExtremeType::unknown);
 
   cubic_.initialize(w(), Lw(), dLdw(), next->w(), next->Lw(), next->dLdw());
-  next_sample_ = next;
+  next_node_ = next;
 
 #ifdef CWDEBUG
   // If the current object (this) was the last sample that was added, then the cubic is on the right

@@ -15,6 +15,7 @@ class Algorithm
   static constexpr double epsilon = 1e-30;
   static constexpr double negligible_scale_fraction = ExtremeChain::negligible_scale_fraction;
   static constexpr double significant_scale_fraction = ExtremeChain::significant_scale_fraction;
+  static constexpr double humongous_step_scale_factor = 20.0;
 
  private:
   double learning_rate_;                                // In unit_of(w)^2 / unit_of(L).
@@ -29,6 +30,7 @@ class Algorithm
   SampleNode::const_iterator cubic_used_{chain_.end()}; // The node containing the last cubic that was used to jump to one of its extremes.
   HorizontalDirection hdirection_;                      // The direction relative to FIXME that we want to find the next extreme in.
   KineticEnergy energy_;
+  bool check_energy_{false};                            // Set to true iff the last probe is a "keep going" step.
   bool have_expected_Lw_{false};                        // True if expected_Lw_ was set.
   double expected_Lw_;                                  // Whenever w is changed, this is set to what Lw value the approximation is expecting there.
   SampleNode::const_iterator last_extreme_cubic_;       // Used for handle_local_extreme; upon return, points to the SampleNode containing the
@@ -110,6 +112,11 @@ class Algorithm
   SampleNode::const_iterator debug_left_of() const { return left_of_; }
   SampleNode::const_iterator debug_right_of() const { return right_of_; }
   SampleNode::const_iterator debug_cubic_used() const { return cubic_used_; }
+
+  bool debug_within_range(double w) const
+  {
+    return (left_of_ == chain_.end() || w < left_of_->w()) && (right_of_ == chain_.end() || right_of_->w() < w);
+  }
 #endif
 };
 

@@ -96,6 +96,7 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
     else
     {
       Dout(dc::notice, "⁂  Running \"" << state_ << '"');
+      RESTART
       switch (state_)
       {
         case IterationState::first_cubic:
@@ -142,6 +143,10 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
               if (cubic_used_->is_falling())
                 right_of_ = next;
             }
+            // Abort this hdirection if we used too much energy due to this step.
+            check_energy_ = true;
+            Dout(dc::notice, "Set check_energy_ to true because " << *cubic_used_ <<
+                " doesn't have a usable extreme and we just added the scale.");
           }
           else
           {
@@ -199,10 +204,12 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
               //FIXME: initialize scale immediately after an initialize_cubic? And then use the real scale here.
               double const significant_offset = significant_scale_fraction * new_node->w_scale_estimate();
               right_extreme_w = right_acubic.get_extreme();
+              right_dist = std::abs(right_extreme_w - new_node->w()) + std::abs(right_extreme_w - right_node->w());
+              double const humongous_offset = humongous_step_scale_factor * new_node->w_scale_estimate();
               right_has_extreme =
+                right_dist < humongous_offset &&
                 (left_of_ == chain_.end() || right_extreme_w - left_of_->w() < significant_offset) &&
                 (right_of_ == chain_.end() || right_of_->w() - right_extreme_w < significant_offset);
-              right_dist = std::abs(right_extreme_w - new_node->w()) + std::abs(right_extreme_w - right_node->w());
             }
           }
           AnalyzedCubic left_acubic;        // If new_node != chain_.begin() is true then this corresponds to the cubic of std::prev(new_node).
@@ -217,10 +224,12 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
               //FIXME: initialize scale immediately after an initialize_cubic? And then use the real scale here.
               double const significant_offset = significant_scale_fraction * left_node->w_scale_estimate();
               left_extreme_w = left_acubic.get_extreme();
+              left_dist = std::abs(left_extreme_w - left_node->w()) + std::abs(left_extreme_w - new_node->w());
+              double const humongous_offset = humongous_step_scale_factor * left_node->w_scale_estimate();
               left_has_extreme =
+                left_dist < humongous_offset &&
                 (left_of_ == chain_.end() || left_extreme_w - left_of_->w() < significant_offset) &&
                 (right_of_ == chain_.end() || right_of_->w() - left_extreme_w < significant_offset);
-              left_dist = std::abs(left_extreme_w - left_node->w()) + std::abs(left_extreme_w - new_node->w());
             }
           }
 
@@ -270,136 +279,133 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
               used_acubic = &left_acubic;
             }
           }
+          else if (left_has_extreme)
+          {
+#ifdef CWDEBUG
+            Dout(dc::notice|continued_cf, "Choosing " << next_extreme_type_ << " of left cubic because the right one does not ");
+            if (right_node != chain_.end())
+              Dout(dc::finish, "have that extreme between " <<
+                (right_of_ != chain_.end() ? right_of_->w() : -std::numeric_limits<double>::infinity()) << " and " <<
+                (left_of_ != chain_.end() ? left_of_->w() : std::numeric_limits<double>::infinity()));
+            else
+              Dout(dc::finish, "exists.");
+#endif
+            w = left_extreme_w;
+            cubic_used_ = std::prev(new_node);
+            used_acubic = &left_acubic;
+          }
           else
           {
-            if (left_has_extreme)
-            {
 #ifdef CWDEBUG
-              Dout(dc::notice|continued_cf, "Choosing " << next_extreme_type_ << " of left cubic because the right one does not ");
-              if (right_node != chain_.end())
-                Dout(dc::finish, "have that extreme between " <<
-                  (right_of_ != chain_.end() ? right_of_->w() : -std::numeric_limits<double>::infinity()) << " and " <<
-                  (left_of_ != chain_.end() ? left_of_->w() : std::numeric_limits<double>::infinity()));
-              else
-                Dout(dc::finish, "exists.");
+            if (new_node == chain_.begin())
+            {
+              ASSERT(right_node != chain_.end());
+              Dout(dc::notice|continued_cf, "There is no left cubic, and the right cubic has no extreme between ");
+            }
+            else if (right_node == chain_.end())
+              Dout(dc::notice|continued_cf, "There is no right cubic, and the left cubic has no extreme between ");
+            else
+              Dout(dc::notice|continued_cf, "Neither the left nor the right cubic has an extreme between ");
+            Dout(dc::finish, (right_of_ != chain_.end() ? right_of_->w() : -std::numeric_limits<double>::infinity()) <<
+                " and " << (left_of_ != chain_.end() ? left_of_->w() : std::numeric_limits<double>::infinity()));
 #endif
-              w = left_extreme_w;
-              cubic_used_ = std::prev(new_node);
-              used_acubic = &left_acubic;
+            auto current = new_node;
+            // If we are on the wrong side of 'foo_of_', jump to foo_of_.
+            //
+            //                           |==>           <==|
+            //           ------x------right_of-----x-----left_of------x-------
+            //                 |--jump-->|       stay      |<---jump--|
+            if (right_of_ != chain_.end() && current->w() < right_of_->w())
+              current = right_of_;
+            else if (left_of_ != chain_.end() && current->w() > left_of_->w())
+              current = left_of_;
+
+            // Determine the direction that we must go in. This must rely on the type_ of the cubics
+            // rather than the sign of the derivative because the latter can't be trusted to be consistent
+            // (for example, it could be -1e-14; which is close enough to zero that it might have ended up
+            // less than zero dure to floating-point round-off errors).
+
+            HorizontalDirection direction;
+            if (left_of_ == chain_.end() && right_of_ == chain_.end())
+            {
+              // If no region boundaries are set, then the cubics don't have an extreme at all; aka,
+              // we are in the middle of a monotonic rising or falling area: in that case just
+              // move the current point to the highest/lowest point left/right of the current sample,
+              // depending on whether we're looking for a minimum or maximum.
+              bool at_right_edge = current->type() == CubicToNextSampleType::unknown;
+              if (at_right_edge)
+                current = std::prev(current);
+              ASSERT(current->type() != CubicToNextSampleType::unknown);
+              direction =
+                (next_extreme_type_ == ExtremeType::minimum && current->is_falling()) ||
+                (next_extreme_type_ == ExtremeType::maximum && current->is_rising()) ?
+                HorizontalDirection::right : HorizontalDirection::left;
+              if (at_right_edge)
+                current = std::next(current);
             }
             else
             {
-#ifdef CWDEBUG
-              if (new_node == chain_.begin())
-              {
-                ASSERT(right_node != chain_.end());
-                Dout(dc::notice|continued_cf, "There is no left cubic, and the right cubic has no extreme between ");
-              }
-              else if (right_node == chain_.end())
-                Dout(dc::notice|continued_cf, "There is no right cubic, and the left cubic has no extreme between ");
-              else
-                Dout(dc::notice|continued_cf, "Neither the left nor the right cubic has an extreme between ");
-              Dout(dc::finish, (right_of_ != chain_.end() ? right_of_->w() : -std::numeric_limits<double>::infinity()) <<
-                  " and " << (left_of_ != chain_.end() ? left_of_->w() : std::numeric_limits<double>::infinity()));
-#endif
-              auto current = new_node;
-              // If we are on the wrong side of 'foo_of_', jump to foo_of_.
-              //
-              //                           |==>           <==|
-              //           ------x------right_of-----x-----left_of------x-------
-              //                 |--jump-->|       stay      |<---jump--|
-              if (right_of_ != chain_.end() && current->w() < right_of_->w())
+              // If there is one region boundary, then we should start from that boundary and move
+              // away from it until we find a cubic with the sought for local extreme, or reach the
+              // edge on the other side - in which case we'll have to "keep going" again by adding
+              // the scale (and return to probe the next sample).
+              if (left_of_ == chain_.end())
                 current = right_of_;
-              else if (left_of_ != chain_.end() && current->w() > left_of_->w())
+              else if (right_of_ == chain_.end())
                 current = left_of_;
 
-              // Determine the direction that we must go in. This must rely on the type_ of the cubics
-              // rather than the sign of the derivative because the latter can't be trusted to be consistent
-              // (for example, it could be -1e-14; which is close enough to zero that it might have ended up
-              // less than zero dure to floating-point round-off errors).
+              // It should never happen that both left_of_ and right_of_ are set,
+              // while we're not already on one of those boundaries.
+              ASSERT(current == left_of_ || current == right_of_);
 
-              HorizontalDirection direction;
-              if (left_of_ == chain_.end() && right_of_ == chain_.end())
+              // In this case we just want to move away from the boundary that we're on.
+              direction = current == right_of_ ? HorizontalDirection::right : HorizontalDirection::left;
+            }
+            Dout(dc::notice, "direction = " << direction);
+
+            // Move current in the given direction until we find a cubic with the sought for local extreme, or reach the end of the chain.
+            if (direction == HorizontalDirection::right)
+            {
+              while (current->type() != CubicToNextSampleType::unknown && !current->has_unfound_extreme(next_extreme_type_))
+                current = std::next(current);
+              if (current->type() == CubicToNextSampleType::unknown)
               {
-                // If no region boundaries are set, then the cubics don't have an extreme at all; aka,
-                // we are in the middle of a monotonic rising or falling area: in that case just
-                // move the current point to the highest/lowest point left/right of the current sample,
-                // depending on whether we're looking for a minimum or maximum.
-                bool at_right_edge = current->type() == CubicToNextSampleType::unknown;
-                if (at_right_edge)
-                  current = std::prev(current);
-                ASSERT(current->type() != CubicToNextSampleType::unknown);
-                direction =
-                  (next_extreme_type_ == ExtremeType::minimum && current->is_falling()) ||
-                  (next_extreme_type_ == ExtremeType::maximum && current->is_rising()) ?
-                  HorizontalDirection::right : HorizontalDirection::left;
-                if (at_right_edge)
-                  current = std::next(current);
+                right_of_ = current;
+                // Set cubic_used_ in order to set the scale on it: if we keep going again,
+                // we want to use the scale of this cubic.
+                cubic_used_ = std::prev(current);
+                right_acubic.initialize(cubic_used_->cubic(), next_extreme_type_);
+                used_acubic = &right_acubic;
+                // Keep going to the right.
+                w = right_of_->w();
+                keep_going = HorizontalDirection::right;      // cubic_used_->scale().value() needs to be added to w.
               }
               else
               {
-                // If there is one region boundary, then we should start from that boundary and move
-                // away from it until we find a cubic with the sought for local extreme, or reach the
-                // edge on the other side - in which case we'll have to "keep going" again by adding
-                // the scale (and return to probe the next sample).
-                if (left_of_ == chain_.end())
-                  current = right_of_;
-                else if (right_of_ == chain_.end())
-                  current = left_of_;
-
-                // It should never happen that both left_of_ and right_of_ are set,
-                // while we're not already on one of those boundaries.
-                ASSERT(current == left_of_ || current == right_of_);
-
-                // In this case we just want to move away from the boundary that we're on.
-                direction = current == right_of_ ? HorizontalDirection::right : HorizontalDirection::left;
+                // implement
+                ASSERT(false);
               }
-              Dout(dc::notice, "direction = " << direction);
-
-              // Move current in the given direction until we find a cubic with the sought for local extreme, or reach the end of the chain.
-              if (direction == HorizontalDirection::right)
+            }
+            else
+            {
+              while (current != chain_.begin() && !std::prev(current)->has_unfound_extreme(next_extreme_type_))
+                current = std::prev(current);
+              if (current == chain_.begin())
               {
-                while (current->type() != CubicToNextSampleType::unknown && !current->has_unfound_extreme(next_extreme_type_))
-                  current = std::next(current);
-                if (current->type() == CubicToNextSampleType::unknown)
-                {
-                  right_of_ = current;
-                  // Set cubic_used_ in order to set the scale on it: if we keep going again,
-                  // we want to use the scale of this cubic.
-                  cubic_used_ = std::prev(current);
-                  right_acubic.initialize(cubic_used_->cubic(), next_extreme_type_);
-                  used_acubic = &right_acubic;
-                  // Keep going to the right.
-                  w = right_of_->w();
-                  keep_going = HorizontalDirection::right;      // cubic_used_->scale().value() needs to be added to w.
-                }
-                else
-                {
-                  // implement
-                  ASSERT(false);
-                }
+                left_of_ = current;
+                // Set cubic_used_ in order to set the scale on it: if we keep going again,
+                // we want to use the scale of this cubic.
+                cubic_used_ = current;
+                left_acubic.initialize(cubic_used_->cubic(), next_extreme_type_);
+                used_acubic = &left_acubic;
+                // Keep going to the left.
+                w = left_of_->w();
+                keep_going = HorizontalDirection::left;       // cubic_used_->scale().value() needs to be subtracted from w.
               }
               else
               {
-                while (current != chain_.begin() && !std::prev(current)->has_unfound_extreme(next_extreme_type_))
-                  current = std::prev(current);
-                if (current == chain_.begin())
-                {
-                  left_of_ = current;
-                  // Set cubic_used_ in order to set the scale on it: if we keep going again,
-                  // we want to use the scale of this cubic.
-                  cubic_used_ = current;
-                  left_acubic.initialize(cubic_used_->cubic(), next_extreme_type_);
-                  used_acubic = &left_acubic;
-                  // Keep going to the left.
-                  w = left_of_->w();
-                  keep_going = HorizontalDirection::left;       // cubic_used_->scale().value() needs to be subtracted from w.
-                }
-                else
-                {
-                  // implement
-                  ASSERT(false);
-                }
+                // implement
+                ASSERT(false);
               }
             }
           }
@@ -510,8 +516,13 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
           event_server_.trigger(AlgorithmEventType{scale_draw_event, ScaleUpdate::towards_cp, *cubic_used_, old_cubic});
 #endif
 
-          // Add scale if must "keep going" (there was no extreme to jump to).
+          Dout(dc::debug, "w = " << w << "; cubic_used_->scale().value() = " << cubic_used_->scale().value());
+          // Add scale if must "keep going" (there was no extreme to jump to; w was already set to left_of_ or right_of_).
           w += static_cast<int>(keep_going) * cubic_used_->scale().value();
+
+          //FIXME: what to do in the case where this fails?
+          ASSERT(left_of_ == chain_.end() || w < left_of_->w());
+          ASSERT(right_of_ == chain_.end() || right_of_->w() < w);
 
           // Adjust left_of_/right_of_.
           double const negligible_offset = negligible_scale_fraction * cubic_used_->scale().value();
@@ -530,8 +541,18 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
           // If the last step is significantly smaller than the scale, then we found a local extreme.
           double step = std::abs(chain_.last()->w() - w);
           Dout(dc::notice, "step = " << step);
-          if (step < (next_extreme_type_ == ExtremeType::minimum ? 0.01 : 0.05) * cubic_used_->scale().value() && !handle_local_extreme(w) && !handle_abort_hdirection(w))
-            return false;
+          if (step < (next_extreme_type_ == ExtremeType::minimum ? 0.01 : 0.05) * cubic_used_->scale().value())
+          {
+            if (!handle_local_extreme(w) && !handle_abort_hdirection(w))
+              return false;
+          }
+          else
+          {
+            // Abort this hdirection if we used too much energy due to this step.
+            check_energy_ = keep_going != HorizontalDirection::undecided;
+            Dout(dc::notice(check_energy_), "Set check_energy_ to true because " <<
+                *cubic_used_ << " had no extreme to jump to and we just added the scale.");
+          }
 
           break;
         }
@@ -651,7 +672,7 @@ void Algorithm::handle_single_sample(double& w)
 #endif
   }
 #endif
-  w += step;
+  w += step;    // Single sample step.
   have_expected_Lw_ = false;
   Debug(set_algorithm_str(w, algorithm_str));
 }
@@ -671,9 +692,10 @@ void Algorithm::set_algorithm_str(double new_w, char const* algorithm_str)
 
 bool Algorithm::update_energy(double Lw)
 {
-  Dout(dc::warning, "Algorithm::update_energy: need to know if we need to check the energy");
-  if (false/*state_ == IterationState::check_energy*/)
+  if (check_energy_)
   {
+    check_energy_ = false;
+
     // Update the current kinetic energy. If this is an overshoot, abort this horizontal direction.
     //
     // This state is set when locally the curve looks like a cubic with its critical points
@@ -815,7 +837,7 @@ bool Algorithm::handle_local_extreme(double& w)
 
   // Find all samples around last_extreme_ that are within scale.
   SampleNode::const_iterator left_edge = last_extreme_cubic_;
-  SampleNode::const_iterator right_edge = left_edge->next_sample();
+  SampleNode::const_iterator right_edge = left_edge->next_node();
 
   constexpr int max_samples_per_side = 3;
   std::array<SampleNode::const_iterator, 2 * max_samples_per_side + 1> usable_samples;
@@ -927,6 +949,7 @@ bool Algorithm::handle_local_extreme(double& w)
     // Request an extra sample on the other side of the critical point than that we already have.
     HorizontalDirection direction = max_offset > 0.0 ? HorizontalDirection::left : HorizontalDirection::right;
     w = extreme_w + last_extreme_cubic_->scale().step(direction);
+    ASSERT(debug_within_range(w));
 
     // Remember this direction in hdirection_. This is used when we can't find any local minimum in the fourth degree polynomial.
     if (hdirection_ == HorizontalDirection::undecided)
@@ -1159,6 +1182,28 @@ bool Algorithm::handle_local_extreme(double& w)
   if (!initialize_range_called)
     initialize_range(extreme_w);
 
+  if (left_of_ != chain_.end() && left_of_->w() < w)
+  {
+    // If only left_of_ is set then we should be going to the left.
+    // right_of_ can't be set too because then we would be jumping to an extreme in between the two.
+    ASSERT(hdirection_ == HorizontalDirection::left);
+    w = left_of_->w();
+    cubic_used_ = left_of_;
+    w += cubic_used_->scale().step(hdirection_);
+  }
+  else if (right_of_ != chain_.end() && w < right_of_->w())
+  {
+    // If only right_of_ is set then we should be going to the right.
+    ASSERT(hdirection_ == HorizontalDirection::right);
+    w = right_of_->w();
+    // I don't think this can ever fail.
+    ASSERT(right_of_ != chain_.begin());
+    cubic_used_ = std::prev(right_of_);
+    w += cubic_used_->scale().step(hdirection_);
+  }
+
+  ASSERT(debug_within_range(w));
+
 #ifdef CWDEBUG
   event_server_.trigger(AlgorithmEventType{left_of_right_of_event,
       left_of_ == chain_.end() ? nullptr : &*left_of_,
@@ -1250,6 +1295,9 @@ void Algorithm::initialize_range(double extreme_w)
                                                                                                                             : right_node;
     while (right_of_->type() != CubicToNextSampleType::unknown && !right_of_->has_extreme(next_extreme_type_))
       ++right_of_;
+
+    if (right_of_->type() != CubicToNextSampleType::unknown)
+      left_of_ = right_of_->next_node();
   }
   else
   {
@@ -1258,6 +1306,9 @@ void Algorithm::initialize_range(double extreme_w)
                                                                                                                          : left_node;
     while (left_of_ != chain_.begin() && !std::prev(left_of_)->has_extreme(next_extreme_type_))
       --left_of_;
+
+    if (left_of_ != chain_.begin())
+      right_of_ = std::prev(left_of_);
   }
 }
 
