@@ -101,7 +101,7 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
       {
         case IterationState::first_cubic:
         {
-          auto cubic_used_ = right_node == chain_.end() ? left_node : new_node;
+          cubic_used_ = right_node == chain_.end() ? left_node : new_node;
           auto next = std::next(cubic_used_);
 
           // Jump to extreme of the first cubic.
@@ -150,7 +150,6 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
           }
           else
           {
-            ASSERT(w != SampleNode::uninitialized_magic);
             double const negligible_offset = negligible_scale_fraction * cubic_used_->scale().value();
             if (cubic_used_->w() - w > negligible_offset)
               left_of_ = cubic_used_;
@@ -596,6 +595,11 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
     Dout(dc::notice, "New probe (" << w << ") is too close to an existing sample (" << *ibp.first << "), reusing that.");
     new_node = ibp.first;
     chain_.reuse(new_node);
+
+    // Re-initialize right_node and left_node.
+    right_node = std::next(new_node);           // The node right of the new node.
+    if (new_node != chain_.begin())
+      left_node = std::prev(new_node);
   }
 
   return true;
@@ -1230,6 +1234,7 @@ bool Algorithm::handle_local_extreme(double& w)
   }
 #endif
 
+#if 0
   // Keep track of the best minimum so far; or abort if this minimum isn't better than one found before.
   if (last_extreme_cubic_->get_extreme_type() == ExtremeType::minimum)
   {
@@ -1239,6 +1244,7 @@ bool Algorithm::handle_local_extreme(double& w)
     if (last_extreme_cubic_ != best_minimum_cubic_)
       return false;
   }
+#endif
 
   state_ = IterationState::find_extreme;
   return true;

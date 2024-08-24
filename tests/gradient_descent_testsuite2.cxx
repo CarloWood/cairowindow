@@ -178,7 +178,7 @@ int main()
   constexpr double L_max = 100.0;
   constexpr double learning_rate = 0.125;
 
-#if 0
+#if 1
   //==========================================================================
   Dout(dc::notice, "*** TEST: starting with a derivative of zero ***");
   {
@@ -487,6 +487,7 @@ int main()
               expected_next_extreme_type = center < inflection_point ? ExtremeType::maximum : ExtremeType::minimum;
 
             Dout(dc::notice, "-------------------------------------------");
+            RESTART
             gda(w, L(w), L.derivative(w));
 
             bool target_extreme_is_first_extreme = 2 * (xs[i0] + xs[i1]) - maximum_last < 22;
@@ -506,7 +507,7 @@ int main()
   }
 #endif
 
-#if 0
+#if 1
   //==========================================================================
   Dout(dc::notice, "*** TEST: first local extreme ***");
   {
