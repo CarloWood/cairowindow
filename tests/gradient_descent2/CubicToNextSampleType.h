@@ -30,16 +30,16 @@ enum class CubicToNextSampleType : int
   // __  This and the next sample have a derivative of zero and the cubic is a straight horizontal line.
   flat                  =  1 << id_shift,
 
-  // /   This and the next sample have a positive derivative and the cubic has no extremes in between.
+  // /   This and the next sample have a positive derivative and the cubic has no extrema in between.
   up                    =  2 << id_shift | rising_bit,
 
-  // \   This and the next sample have a negative derivative and the cubic has no extremes in between.
+  // \   This and the next sample have a negative derivative and the cubic has no extrema in between.
   down                  =  3 << id_shift | falling_bit,
 
-  // /^  This has a positive derivative and no extremes could be found at all on the right (up till the max. energy).
+  // /^  This has a positive derivative and no extrema could be found at all on the right (up till the max. energy).
   right_stop            =  4 << id_shift | rising_bit,
 
-  // ^\  The next sample has a negative derivative and no extremes could be found at all on the left (up till the max. energy).
+  // ^\  The next sample has a negative derivative and no extrema could be found at all on the left (up till the max. energy).
   left_stop             =  5 << id_shift | falling_bit,
 
   // _/  This sample is a local minimum; the next sample has a positive derivative.

@@ -88,24 +88,24 @@ void SampleNode::initialize_cubic(const_iterator next
     // The signs are equal, so this must be /, \, /\/, \/\ -- or, very unlikely, both derivatives are zero.
     if (AI_LIKELY(neither_derivative_is_zero))
     {
-      // The signs are equal (and non-zero). Now we have to calculate the extremes of the cubic.
+      // The signs are equal (and non-zero). Now we have to calculate the extrema of the cubic.
       // Put the minimum in acubic.
       AnalyzedCubic acubic;
       acubic.initialize(cubic_, ExtremeType::minimum);
 
       // Comparing w with the extreme should be well-defined, because both derivatives are significantly non-zero.
-      if (!acubic.has_extremes() || acubic.get_extreme() < w() || next->w() < acubic.get_extreme())
+      if (!acubic.has_extrema() || acubic.get_extreme() < w() || next->w() < acubic.get_extreme())
       {
         // If only one extreme would fall in between the samples, then the derivatives can't have the same sign.
-        ASSERT(!acubic.has_extremes() || acubic.get_other_extreme() < w() || next->w() < acubic.get_other_extreme());
-        // There are no extremes in between the samples.
+        ASSERT(!acubic.has_extrema() || acubic.get_other_extreme() < w() || next->w() < acubic.get_other_extreme());
+        // There are no extrema in between the samples.
         type_ = (sign_dLdw_0 == 1)
             ? up                        // /
             : down;                     // \.
       }
       else
       {
-        // Both extremes are between the two samples.
+        // Both extrema are between the two samples.
         ASSERT(w() < acubic.get_other_extreme() && acubic.get_other_extreme() < next->w());
         type_ = (sign_dLdw_0 == 1)
             ? max_min                   // /\/

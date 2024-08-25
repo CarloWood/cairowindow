@@ -19,7 +19,7 @@ class Scale
   double value_{};                      // Cache of value(). An indication of what changes to w are significant,
                                         // relative to the critical point. This value is always larger than zero.
   CriticalPointType type_{CriticalPointType::none};     // Whether distances are measured relative to the minimum, maximum or
-                                        // the inflection point (if the cubic has no extremes).
+                                        // the inflection point (if the cubic has no extrema).
   double critical_point_w_;             // Cached value of the x-coordinate of the critical point.
 
   double left_edge_w_;                  // The w value of left-most Sample that is known to still match this cubic (within 10%).

@@ -27,7 +27,7 @@ class Algorithm
                                                         // must found left of this sample.
   SampleNode::const_iterator right_of_{chain_.end()};   // If not end, then the next extreme (of next_extreme_type_)
                                                         // must found right of this sample.
-  SampleNode::const_iterator cubic_used_{chain_.end()}; // The node containing the last cubic that was used to jump to one of its extremes.
+  SampleNode::const_iterator cubic_used_{chain_.end()}; // The node containing the last cubic that was used to jump to one of its extrema.
   HorizontalDirection hdirection_;                      // The direction, relative to the last extreme, that we want to find the next extreme in.
   KineticEnergy energy_;
   bool check_energy_{false};                            // Set to true iff the last probe is a "keep going" step.

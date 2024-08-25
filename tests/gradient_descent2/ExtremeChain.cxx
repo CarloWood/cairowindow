@@ -193,7 +193,7 @@ void ExtremeChain::sanity_check(Algorithm const* algorithm) const
     // Does this cubic contain an extreme?
     if (node->is_local_extreme())
     {
-      // Can't have two extremes of the same type on a row.
+      // Can't have two extrema of the same type on a row.
       if (last_extreme_type == node->get_extreme_type())
       {
         // This should never happen and probably means that we're trying to detect a local extreme that was already found before.

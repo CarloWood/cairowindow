@@ -10,7 +10,7 @@ void AnalyzedCubic::initialize(math::CubicPolynomial const& cubic, ExtremeType e
   double D = utils::square(cubic[2]) - 3.0 * cubic[3] * cubic[1];
 
   // Deliberately leave signed_sqrt_D_ at NaN instead of setting it to zero:
-  // in that case we still don't have local extremes anyway.
+  // in that case we still don't have local extrema anyway.
   if (D > 0.0)
   {
     // Don't ask about the minus sign.
@@ -27,8 +27,8 @@ void AnalyzedCubic::initialize_matches(SampleNode const& left_sample, SampleNode
   // Remember for which cubic this function was called.
   initialize_matches_called_ = &left_sample.cubic();
 #endif
-  // Do not measure a "height" of the cubic relative to its extreme if the cubic doesn't have any extremes...
-  detached_from_extreme_ = !has_extremes();
+  // Do not measure a "height" of the cubic relative to its extreme if the cubic doesn't have any extrema...
+  detached_from_extreme_ = !has_extrema();
   if (detached_from_extreme_)
     vertical_scale_ = std::abs(left_sample.Lw() - right_sample.Lw());
   else

@@ -169,7 +169,7 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
               next_extreme_type_, w, cubic_used_->cubic()(w)});
 #endif
 
-          // If next_extreme_type_ was not set then this cubic has no extremes. In that case go for a minimum.
+          // If next_extreme_type_ was not set then this cubic has no extrema. In that case go for a minimum.
           if (next_extreme_type_ == ExtremeType::unknown)
             next_extreme_type_ = ExtremeType::minimum;
 
@@ -198,7 +198,7 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
           if (right_node != chain_.end())
           {
             right_acubic.initialize(new_node->cubic(), next_extreme_type_);
-            if (right_acubic.has_extremes())
+            if (right_acubic.has_extrema())
             {
               //FIXME: initialize scale immediately after an initialize_cubic? And then use the real scale here.
               double const significant_offset = significant_scale_fraction * new_node->w_scale_estimate();
@@ -218,7 +218,7 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
           if (new_node != chain_.begin())
           {
             left_acubic.initialize(left_node->cubic(), next_extreme_type_);
-            if (left_acubic.has_extremes())
+            if (left_acubic.has_extrema())
             {
               //FIXME: initialize scale immediately after an initialize_cubic? And then use the real scale here.
               double const significant_offset = significant_scale_fraction * left_node->w_scale_estimate();
@@ -414,12 +414,12 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
 
           // Update scale.
           CriticalPointType const scale_cp_type =
-            used_acubic->has_extremes() ? (next_extreme_type_ == ExtremeType::minimum ? CriticalPointType::minimum
+            used_acubic->has_extrema() ? (next_extreme_type_ == ExtremeType::minimum ? CriticalPointType::minimum
                                                                                       : CriticalPointType::maximum)
                                         : CriticalPointType::inflection_point;
 
           double const critical_point_w =
-            used_acubic->has_extremes() ? used_acubic->get_extreme()
+            used_acubic->has_extrema() ? used_acubic->get_extreme()
                                         : used_acubic->inflection_point();
 
           math::CubicPolynomial const& cubic = cubic_used_->cubic();
@@ -1101,11 +1101,11 @@ bool Algorithm::handle_local_extreme(double& w)
   }
 
   if (number_of_quotient_roots > 1)
-    Dout(dc::notice, "with other local extremes at " << quotient_roots[0] << " and " << quotient_roots[1]);
+    Dout(dc::notice, "with other local extrema at " << quotient_roots[0] << " and " << quotient_roots[1]);
   else if (number_of_quotient_roots == 1)
     Dout(dc::notice, "with one other usable local extreme at " << quotient_roots[0] << "; opposite_direction_w = " << opposite_direction_w);
   else
-    Dout(dc::notice, "with no other usable local extremes!");
+    Dout(dc::notice, "with no other usable local extrema!");
 
   if (number_of_quotient_roots > 0)
   {

@@ -56,7 +56,7 @@ double Scale::calculate_value(double const inflection_point_w) const
   // Then the following situations are possible:
   //
   //                 C/I                                    : C and I on top of eachother (C is the inflection point)
-  //                                                          this happens when the cubic has no local extremes.
+  //                                                          this happens when the cubic has no local extrema.
   //
   //           I     C                                      : The inflection point is on the left of the critical point.
   //                                                          \      C                    /
