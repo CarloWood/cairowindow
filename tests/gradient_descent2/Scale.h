@@ -79,15 +79,17 @@ class Scale
   {
     DoutEntering(dc::notice, "Scale::step(" << hdirection << ")");
     ASSERT(type_ != CriticalPointType::none);
-    // If hdirection is undecided at this point then make a step in the direction from the sample (part of scale)
-    // that is the furthest away from the critical point, towards the critical point.
-    if (hdirection == HorizontalDirection::undecided)
-    {
-      double far_edge_w =
-        std::abs(left_edge_w_ - critical_point_w_) > std::abs(right_edge_w_ - critical_point_w_) ? left_edge_w_ : right_edge_w_;
-      hdirection = critical_point_w_ < far_edge_w ? HorizontalDirection::left : HorizontalDirection::right;
-    }
+    // Don't call this function with an undecided direction.
+    ASSERT(hdirection != HorizontalDirection::undecided);
     return static_cast<int>(hdirection) * value_;
+  }
+
+  HorizontalDirection direction_trend() const
+  {
+    // The direction from the sample (part of scale) that is the furthest away from the critical point, towards the critical point.
+    double far_edge_w =
+      std::abs(left_edge_w_ - critical_point_w_) > std::abs(right_edge_w_ - critical_point_w_) ? left_edge_w_ : right_edge_w_;
+    return critical_point_w_ < far_edge_w ? HorizontalDirection::left : HorizontalDirection::right;
   }
 
 #ifdef CWDEBUG

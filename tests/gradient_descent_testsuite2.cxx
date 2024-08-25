@@ -178,7 +178,7 @@ int main()
   constexpr double L_max = 100.0;
   constexpr double learning_rate = 0.125;
 
-#if 1
+#if 0
   //==========================================================================
   Dout(dc::notice, "*** TEST: starting with a derivative of zero ***");
   {
@@ -507,7 +507,7 @@ int main()
   }
 #endif
 
-#if 1
+#if 0
   //==========================================================================
   Dout(dc::notice, "*** TEST: first local extreme ***");
   {
@@ -608,7 +608,7 @@ int main()
   //==========================================================================
   Dout(dc::notice, "*** TEST: parabola connected to dampened sin ***");
   {
-    constexpr double w0 = -48.5;//-10.0;
+    constexpr double w0 = -80.0; //-48.5;//-10.0;
     constexpr double learning_rate = 0.001;
     constexpr double L_max = 2649;
 
@@ -631,8 +631,8 @@ int main()
 
     double zoom = 10.0;
     //gda.enable_drawing(L, -51.3629 - zoom, -51.3629 + zoom);
-    gda.enable_drawing(L, -55.7732647023600875968 - zoom, -55.7732647023600875968 + zoom);
-    //gda.enable_drawing(L, -60.0, 0.0);
+    //gda.enable_drawing(L, -55.7732647023600875968 - zoom, -55.7732647023600875968 + zoom);
+    gda.enable_drawing(L, -80.0, 0.0);
 
     while (gda(w, L(w), L.derivative(w)))
     {

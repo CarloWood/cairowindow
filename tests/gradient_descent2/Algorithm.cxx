@@ -322,7 +322,7 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
             // Determine the direction that we must go in. This must rely on the type_ of the cubics
             // rather than the sign of the derivative because the latter can't be trusted to be consistent
             // (for example, it could be -1e-14; which is close enough to zero that it might have ended up
-            // less than zero dure to floating-point round-off errors).
+            // less than zero due to floating-point round-off errors).
 
             HorizontalDirection direction;
             if (left_of_ == chain_.end() && right_of_ == chain_.end())
@@ -747,13 +747,13 @@ bool Algorithm::handle_abort_hdirection(double& w)
 
   ASSERT(hdirection_ != HorizontalDirection::undecided);
 
+  last_extreme_cubic_ = best_minimum_cubic_;
+
   // Change hdirection.
-  hdirection_ = opposite(hdirection_);
+  set_hdirection(opposite(hdirection_));
   w = best_minimum_cubic_->opposite_direction_w();
   expected_Lw_ = best_minimum_cubic_->opposite_direction_Lw();
   have_expected_Lw_ = true;
-  Dout(dc::notice, "Changed horizontal direction to " << hdirection_);
-  last_extreme_cubic_ = best_minimum_cubic_;
   cubic_used_ = chain_.end();
   // Next we'll be looking for a maximum.
   next_extreme_type_ = ExtremeType::maximum;
@@ -765,7 +765,6 @@ bool Algorithm::handle_abort_hdirection(double& w)
       left_of_ == chain_.end() ? nullptr : &*left_of_,
       right_of_ == chain_.end() ? nullptr : &*right_of_,
       next_extreme_type_, w, expected_Lw_});
-  event_server_.trigger(AlgorithmEventType{hdirection_known_event, *last_extreme_cubic_, hdirection_});
 #endif
 
   return true;
@@ -957,11 +956,7 @@ bool Algorithm::handle_local_extreme(double& w)
 
     // Remember this direction in hdirection_. This is used when we can't find any local minimum in the fourth degree polynomial.
     if (hdirection_ == HorizontalDirection::undecided)
-    {
-      hdirection_ = direction;
-      Dout(dc::notice, "Set hdirection_ to " << hdirection_ << ".");
-      Debug(event_server_.trigger(AlgorithmEventType{hdirection_known_event, *last_extreme_cubic_, hdirection_}));
-    }
+      set_hdirection(direction);
 
     Dout(dc::notice, "Not enough samples to fit a fourth degree polynomial: asking for another samples at w = " << w);
     state_ = IterationState::extra_sample;
@@ -1077,95 +1072,90 @@ bool Algorithm::handle_local_extreme(double& w)
   event_server_.trigger(AlgorithmEventType{quotient_event, quotient});
 #endif
 
-  std::array<double, 2> zeroes;
-  int number_of_zeroes = quotient.get_roots(zeroes);
-  ASSERT(number_of_zeroes == 0 || number_of_zeroes == 2);
+  std::array<double, 2> quotient_roots;
+  int number_of_quotient_roots = quotient.get_roots(quotient_roots);
+  ASSERT(number_of_quotient_roots == 0 || number_of_quotient_roots == 2);
 
   // Initialize the range for the next extreme as soon as hdirection_ is known, but only once.
   bool initialize_range_called = false;
 
-  // It is possible that the zeroes are not usable because they are on the wrong side, or out of range.
+  // It is possible that the quotient_roots are not usable because they are on the wrong side, or out of range.
   double opposite_direction_w, opposite_direction_Lw;
   if (hdirection_ != HorizontalDirection::undecided)
   {
     initialize_range(extreme_w);
     initialize_range_called = true;
-    auto out_of_range = [this](double zero)
-        { return (left_of_ != chain_.end() && left_of_->w() < zero) ||
-                (right_of_ != chain_.end() && zero < right_of_->w()); };
-    for (int zero = 0; zero < number_of_zeroes;)
-      if (out_of_range(zeroes[zero]))
+    auto out_of_range = [this](double root)
+        { return (left_of_ != chain_.end() && left_of_->w() < root) ||
+                (right_of_ != chain_.end() && root < right_of_->w()); };
+    for (int quotient_root_index = 0; quotient_root_index < number_of_quotient_roots;)
+      if (out_of_range(quotient_roots[quotient_root_index]))
       {
-        opposite_direction_w = zeroes[zero];            // Note: if after this loop number_of_zeroes == 1 then we only got here once.
+        opposite_direction_w = quotient_roots[quotient_root_index];            // Note: if after this loop number_of_quotient_roots == 1 then we only got here once.
         opposite_direction_Lw = fourth_degree_approximation(opposite_direction_w);
-        if (--number_of_zeroes == 1 && zero == 0)
-          zeroes[0] = zeroes[1];
+        if (--number_of_quotient_roots == 1 && quotient_root_index == 0)
+          quotient_roots[0] = quotient_roots[1];
       }
       else
-        ++zero;
+        ++quotient_root_index;
   }
 
-  if (number_of_zeroes > 1)
-    Dout(dc::notice, "with other local extremes at " << zeroes[0] << " and " << zeroes[1]);
-  else if (number_of_zeroes == 1)
-    Dout(dc::notice, "with one other usable local extreme at " << zeroes[0] << "; opposite_direction_w = " << opposite_direction_w);
+  if (number_of_quotient_roots > 1)
+    Dout(dc::notice, "with other local extremes at " << quotient_roots[0] << " and " << quotient_roots[1]);
+  else if (number_of_quotient_roots == 1)
+    Dout(dc::notice, "with one other usable local extreme at " << quotient_roots[0] << "; opposite_direction_w = " << opposite_direction_w);
   else
     Dout(dc::notice, "with no other usable local extremes!");
 
-  if (number_of_zeroes > 0)
+  if (number_of_quotient_roots > 0)
   {
     std::array<double, 2> expected_Lw;
-    int best_zero = 0;
-    if (number_of_zeroes == 2)
+    int best_extremum = 0;
+    if (number_of_quotient_roots == 2)
     {
-      if (extreme_w > zeroes[0] == extreme_w > zeroes[1])
+      if (extreme_w > quotient_roots[0] == extreme_w > quotient_roots[1])
       {
-        // If both zeroes are on the same side of the found local extreme, pick the nearest one.
-        best_zero = std::abs(extreme_w - zeroes[0]) < std::abs(extreme_w - zeroes[1]) ? 0 : 1;
-        // Initialize the opposite direction to be a step with size scale into the direction opposite of hdirection.
-        opposite_direction_w = extreme_w - last_extreme_cubic_->scale().step(hdirection_);
+        // The direction from where are to where we go to.
+        HorizontalDirection direction = extreme_w > quotient_roots[0] ? HorizontalDirection::left : HorizontalDirection::right;
+        // If both quotient_roots are on the same side of the found local extreme, then the nearest one will be the one of opposite type.
+        best_extremum = std::abs(extreme_w - quotient_roots[0]) < std::abs(extreme_w - quotient_roots[1]) ? 0 : 1;
+        // Initialize the opposite direction to be a step with size scale into the opposite direction.
+        opposite_direction_w = extreme_w - last_extreme_cubic_->scale().step(direction);
       }
       else
       {
-        for (int zero = 0; zero < number_of_zeroes; ++zero)
-          expected_Lw[zero] = fourth_degree_approximation(zeroes[zero]);
-        best_zero = (number_of_zeroes == 2 &&
+        for (int quotient_root_index = 0; quotient_root_index < number_of_quotient_roots; ++quotient_root_index)
+          expected_Lw[quotient_root_index] = fourth_degree_approximation(quotient_roots[quotient_root_index]);
+        best_extremum = (number_of_quotient_roots == 2 &&
             (hdirection_ == HorizontalDirection::right ||
              (hdirection_ == HorizontalDirection::undecided &&
               expected_Lw[1] < expected_Lw[0]))) ? 1 : 0;
-        opposite_direction_w = zeroes[1 - best_zero];
+        opposite_direction_w = quotient_roots[1 - best_extremum];
       }
       opposite_direction_Lw = fourth_degree_approximation(opposite_direction_w);
     }
     else
     {
-      // There is only one usable zero.
-      expected_Lw[0] = fourth_degree_approximation(zeroes[0]);
+      // There is only one usable root.
+      expected_Lw[0] = fourth_degree_approximation(quotient_roots[0]);
       // Note: opposite_direction_w was already initialized.
     }
-    w = zeroes[best_zero];
-    expected_Lw_ = expected_Lw[best_zero];
+    w = quotient_roots[best_extremum];
+    expected_Lw_ = expected_Lw[best_extremum];
     have_expected_Lw_ = true;
 
-    Dout(dc::notice(hdirection_ == HorizontalDirection::undecided && number_of_zeroes == 2),
-        "Best other local extreme was " << zeroes[best_zero] << " with A(" << zeroes[best_zero] << ") = " <<
-        fourth_degree_approximation(zeroes[best_zero]) <<
-        " (the other has value " << fourth_degree_approximation(zeroes[1 - best_zero]) << ")");
+    Dout(dc::notice(hdirection_ == HorizontalDirection::undecided && number_of_quotient_roots == 2),
+        "Best other local extreme was " << quotient_roots[best_extremum] << " with A(" << quotient_roots[best_extremum] << ") = " <<
+        fourth_degree_approximation(quotient_roots[best_extremum]) <<
+        " (the other has value " << fourth_degree_approximation(quotient_roots[1 - best_extremum]) << ")");
   }
   else
   {
     // Keep going in the same hdirection.
-#ifdef CWDEBUG
-    bool hdirection_is_undecided = hdirection_ == HorizontalDirection::undecided;
-#endif
-
-    // Note: if hdirection_ is still undecided at this point then this will make a
-    // step in the direction from the sample (part of scale) that is the furthest away
-    // from the critical point of the approximation, towards that critical point
-    // and updates hdirection_ accordingly.
-    w = extreme_w + last_extreme_cubic_->scale().step(hdirection_);
-    Dout(dc::notice(hdirection_is_undecided), "Initialized hdirection_ to " << hdirection_ << ".");
-
+    auto& scale = last_extreme_cubic_->scale();
+    if (hdirection_ == HorizontalDirection::undecided)
+      set_hdirection(scale.direction_trend());
+    w = extreme_w + scale.step(hdirection_);
     expected_Lw_ = last_extreme_cubic_->cubic()(w);
     have_expected_Lw_ = true;
 
@@ -1179,8 +1169,7 @@ bool Algorithm::handle_local_extreme(double& w)
   if (hdirection_ == HorizontalDirection::undecided)
   {
     // Now that the decision on which hdirection_ we explore is taken, store that decision.
-    hdirection_ = w < w2_1 ? HorizontalDirection::left : HorizontalDirection::right;
-    Dout(dc::notice, "Initialized hdirection_ to " << hdirection_ << ".");
+    set_hdirection(w < w2_1 ? HorizontalDirection::left : HorizontalDirection::right);
   }
 
   if (!initialize_range_called)
@@ -1213,8 +1202,6 @@ bool Algorithm::handle_local_extreme(double& w)
       left_of_ == chain_.end() ? nullptr : &*left_of_,
       right_of_ == chain_.end() ? nullptr : &*right_of_,
       next_extreme_type_, w, expected_Lw_});
-  // Move hdirection arrow to new extreme.
-  Debug(event_server_.trigger(AlgorithmEventType{hdirection_known_event, *last_extreme_cubic_, hdirection_}));
 #endif
 
 #if 0 //FIXME: add this functionality (copied from histogram.cxx)

@@ -43,6 +43,16 @@ class Algorithm
   utils::UniqueIDContext<int> label_context_;
 #endif
 
+ private:
+  void set_hdirection(HorizontalDirection hdirection)
+  {
+    hdirection_ = hdirection;
+#ifdef CWDEBUG
+    Dout(dc::notice, "Set hdirection_ to " << hdirection_ << ".");
+    event_server_.trigger(AlgorithmEventType{hdirection_known_event, *last_extreme_cubic_, hdirection_});
+#endif
+  }
+
  public:
   Algorithm(double learning_rate, double L_max) :
     learning_rate_(learning_rate),

@@ -124,7 +124,7 @@ inline bool has_extreme_order(CubicToNextSampleType type, ExtremeType extreme_ty
 {
   ASSERT(extreme_type != ExtremeType::unknown);
 
-  int b = (static_cast<int>(type) & max_before_min_bit) ? 2 : 0;        // 0: max_min, 2: min_max.
+  int b = (static_cast<int>(type) & max_before_min_bit) ? 0 : 2;        // 0: max_min, 2: min_max.
   int e = static_cast<int>(extreme_type) + 1;                           // 0: minimum, 2: maximum.
   int d = static_cast<int>(direction) + 1;                              // 0: left,    2: right.
   bool correct_order = b ^ d ^ e;
