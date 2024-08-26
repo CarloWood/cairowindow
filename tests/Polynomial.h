@@ -103,7 +103,7 @@ class Polynomial
     // Use a sqrt with the same sign as coefficients_[1];
     double const signed_sqrt_D = std::copysign(std::sqrt(D), coefficients_[1]);
 
-    // Calculate the smaller root.
+    // Calculate the root closest to zero.
     roots_out[0] = -2.0 * coefficients_[0] / (coefficients_[1] + signed_sqrt_D);
 
     if (AI_UNLIKELY(std::isnan(roots_out[0])))
@@ -115,8 +115,11 @@ class Polynomial
       return 1;
     }
 
-    // Calculate the larger root.
+    // Calculate the root further away from zero.
     roots_out[1] = -0.5 * (coefficients_[1] + signed_sqrt_D) / coefficients_[2];
+
+    // The second one is larger in absolute value.
+    ASSERT(std::abs(roots_out[1]) > std::abs(roots_out[0]));
 
     return 2;
   }

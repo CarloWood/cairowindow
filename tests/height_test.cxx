@@ -13,7 +13,7 @@ int main()
 
   using namespace gradient_descent;
 
-  // Generate a cubic that has its extremes at -3 and 14.
+  // Generate a cubic that has its extrema at -3 and 14.
   constexpr int si = -3;
   constexpr int ti = 14;
   int const ai = 42;
@@ -47,18 +47,18 @@ int main()
 
     Dout(dc::notice, "g(x) = " << g);
 
-    std::array<double, 2> extremes;
+    std::array<double, 2> extrema;
     Debug(dc::notice.off());
-    int number_of_extremes = g.get_extremes(extremes, false);
+    int number_of_extrema = g.get_extrema(extrema, false);
     Debug(dc::notice.on());
-    ASSERT(number_of_extremes == 2);
-    ASSERT(g(extremes[0]) < g(extremes[1]));
+    ASSERT(number_of_extrema == 2);
+    ASSERT(g(extrema[0]) < g(extrema[1]));
 
     std::array<ExtremeType, 2> extreme_type = { ExtremeType::minimum, ExtremeType::maximum };
 
     for (int i = 0; i <= 1; ++i)
     {
-      Dout(dc::notice, "  " << extreme_type[i] << " at " << extremes[i] << ": " << g(extremes[i]));
+      Dout(dc::notice, "  " << extreme_type[i] << " at " << extrema[i] << ": " << g(extrema[i]));
       AnalyzedCubic acubic;
       acubic.initialize(g, extreme_type[i]);
 

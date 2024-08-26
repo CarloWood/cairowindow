@@ -94,7 +94,7 @@ class Scale
 
   math::CubicPolynomial cubic_;         // The last (previous) third degree polynomial fit (passed to update).
   CriticalPointType type_{CriticalPointType::none};     // Whether distances are measured relative to the minimum, maximum or
-                                        // the inflection point (if the cubic has no extremes).
+                                        // the inflection point (if the cubic has no extrema).
   double critical_point_w_;             // Cached value of the x-coordinate of the critical point.
   utils::DEVector<Sample> samples_;     // All samples previously passed to add.
 
@@ -270,7 +270,7 @@ class Scale
     // Then the following situations are possible:
     //
     //                 C/I                                    : C and I on top of eachother (C is the inflection point)
-    //                                                          this happens when the cubic has no local extremes.
+    //                                                          this happens when the cubic has no local extrema.
     //
     //           I     C                                      : The inflection point is on the left of the critical point.
     //                                                          \      C                    /
@@ -385,10 +385,10 @@ class Scale
     if (!local_extreme)
     {
       // Get the w coordinate of the critical point of the new cubic.
-      std::array<double, 2> extremes;
-      int number_of_extremes = new_cubic.get_extremes(extremes, false);
+      std::array<double, 2> extrema;
+      int number_of_extrema = new_cubic.get_extrema(extrema, false);
       cubic_ = new_cubic;
-      new_cp_w = (number_of_extremes == 2 && type_ == CriticalPointType::maximum) ? extremes[1] : extremes[0];
+      new_cp_w = (number_of_extrema == 2 && type_ == CriticalPointType::maximum) ? extrema[1] : extrema[0];
       Dout(dc::notice, "new_cp_w = " << new_cp_w);
     }
     else

@@ -53,6 +53,21 @@ class Algorithm
 #endif
   }
 
+  void initialize_range(double extreme_w);
+
+  bool out_of_range(double root)
+  {
+    // initialize_range should be called before calling this function, and that didn't happen if hdirection_ is still undecided!
+    ASSERT(hdirection_ != HorizontalDirection::undecided);
+    return (left_of_ != chain_.end() && left_of_->w() < root) || (right_of_ != chain_.end() && root < right_of_->w());
+  }
+
+  bool wrong_direction(double step)
+  {
+    ASSERT(hdirection_ != HorizontalDirection::undecided);
+    return (step > 0.0) == (hdirection_ == HorizontalDirection::left);
+  }
+
  public:
   Algorithm(double learning_rate, double L_max) :
     learning_rate_(learning_rate),
@@ -92,8 +107,6 @@ class Algorithm
     ASSERT(state_ == IterationState::success);
     return *cubic_used_;
   }
-
-  void initialize_range(double extreme_w);
 
 #ifdef CWDEBUG
   // Accessors for the event servers.

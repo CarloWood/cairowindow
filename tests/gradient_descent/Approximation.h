@@ -111,18 +111,18 @@ class Approximation
         ", scale:" << scale_;
     if (number_of_relevant_samples_ > 1)
     {
-      std::array<double, 2> extremes;
+      std::array<double, 2> extrema;
       Debug(libcw_do.off());
-      int n = cubic_.get_extremes(extremes);
+      int n = cubic_.get_extrema(extrema);
       Debug(libcw_do.on());
       if (n == 0)
-        os << " [no extremes]";
+        os << " [no extrema]";
       else if (n == 1)
-        os << " [derivative root = " << extremes[0] << "]";
+        os << " [derivative root = " << extrema[0] << "]";
       else
       {
         int index_minimum = (cubic_[3] > 0.0) ? 1 : 0;
-        os << " [x_minimum = " << extremes[index_minimum] << ", x_maximum = " << extremes[1 - index_minimum] << "]";
+        os << " [x_minimum = " << extrema[index_minimum] << ", x_maximum = " << extrema[1 - index_minimum] << "]";
       }
     }
     os << "}";

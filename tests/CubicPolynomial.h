@@ -41,9 +41,9 @@ class CubicPolynomial
     coefficients_[0] = y0 - operator()(x0);
   }
 
-  int get_extremes(std::array<double, 2>& extremes_out, bool left_most_first = true) const
+  int get_extrema(std::array<double, 2>& extrema_out, bool left_most_first = true) const
   {
-    DoutEntering(dc::notice, "CubicPolynomial::get_extremes()");
+    DoutEntering(dc::notice, "CubicPolynomial::get_extrema()");
 
     double D = utils::square(coefficients_[2]) - 3.0 * coefficients_[1] * coefficients_[3];
     Dout(dc::notice, "D = " << D);
@@ -51,7 +51,7 @@ class CubicPolynomial
     if (D < 0.0)
     {
       // Write the inflection point to index 0.
-      extremes_out[0] = -coefficients_[2] / (3.0 * coefficients_[3]);
+      extrema_out[0] = -coefficients_[2] / (3.0 * coefficients_[3]);
       return 0;
     }
 
@@ -60,10 +60,10 @@ class CubicPolynomial
     int index_minimum = (left_most_first && coefficients_[3] > 0.0) ? 1 : 0;
 
     double sqrt_D = std::sqrt(D);
-    extremes_out[index_minimum] = (-coefficients_[2] + sqrt_D) / (3.0 * coefficients_[3]);
-    extremes_out[1 - index_minimum] = (-coefficients_[2] - sqrt_D) / (3.0 * coefficients_[3]);
+    extrema_out[index_minimum] = (-coefficients_[2] + sqrt_D) / (3.0 * coefficients_[3]);
+    extrema_out[1 - index_minimum] = (-coefficients_[2] - sqrt_D) / (3.0 * coefficients_[3]);
 
-    Dout(dc::notice, "extremes_out = " << std::setprecision(std::numeric_limits<double>::digits10) << extremes_out);
+    Dout(dc::notice, "extrema_out = " << std::setprecision(std::numeric_limits<double>::digits10) << extrema_out);
 
     return (D == 0.0) ? 1 : 2;
   }

@@ -34,7 +34,7 @@ class AnalyzedCubic
   void initialize(math::CubicPolynomial const& cubic, ExtremeType extreme_type_);
   void initialize_matches(SampleNode const& left_sample, SampleNode const& right_sample);
 
-  bool has_extremes() const
+  bool has_extrema() const
   {
     // If this is set then signed_sqrt_D_ can't be used anymore (vertical_scale_ has been set).
     ASSERT(!detached_from_extreme_);
@@ -44,8 +44,8 @@ class AnalyzedCubic
 
   double get_extreme() const
   {
-    // Only call this function if has_extremes() returns true.
-    ASSERT(has_extremes());
+    // Only call this function if has_extrema() returns true.
+    ASSERT(has_extrema());
     return critical_point_w_;
   }
 
@@ -63,8 +63,8 @@ class AnalyzedCubic
 
   double height(double w, double d) const
   {
-    // Only call this function if has_extremes() returned true.
-    ASSERT(has_extremes());
+    // Only call this function if has_extrema() returned true.
+    ASSERT(has_extrema());
     // Let g(w) = y = a + bw + cw^2 + dw^3.
     // Then dy/dw = b + 2cw + 3dw^2.
     // Let e be a root of the derivate: g'(e) = 0 (aka, g has an extreme in e).

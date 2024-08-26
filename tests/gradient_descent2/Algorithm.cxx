@@ -1068,6 +1068,9 @@ bool Algorithm::handle_local_extreme(double& w)
   auto quotient = derivative.long_division(extreme_w, remainder);
   Dout(dc::notice, "quotient = " << quotient << " with remainder " << remainder);
 
+  auto second_derivative = quotient.derivative();
+  Dout(dc::notice, "second_derivative = " << second_derivative);
+
 #ifdef CWDEBUG
   event_server_.trigger(AlgorithmEventType{quotient_event, quotient});
 #endif
@@ -1076,81 +1079,28 @@ bool Algorithm::handle_local_extreme(double& w)
   int number_of_quotient_roots = quotient.get_roots(quotient_roots);
   ASSERT(number_of_quotient_roots == 0 || number_of_quotient_roots == 2);
 
-  // Initialize the range for the next extreme as soon as hdirection_ is known, but only once.
-  bool initialize_range_called = false;
+  // The following five possibilities exist:
+  //
+  // 1) There are no roots:
+  //        We need to do a step in the right direction, and set opposite_direction_w to a step in the opposite direction.
+  // 2) There are two roots, one of which is of the wrong type.
+  //    This can only happen if the found extreme is on the edge, for example: <minimum> <maximum> <irrelevant minimum>:
+  //    Then, either                                                     extreme_w-^         ^-the two roots-^
+  //    2a) the relevant root is on the wrong side (hdirection_ is already set to left or right):
+  //        We need to do a step in the direction of hdirection_, and set opposite_direction_w to the "relevant" root.
+  //    2b) the relevant root is on the correct side (possibly because hdirection_ is still undecided):
+  //        We need to jump to the relevant root, and set opposite_direction_w to a step in the opposite direction.
+  // 3) There are two roots that both are usable (hdirection_ is undecided).
+  //        We need to jump to the lowest root, and set opposite_direction_w to the other root.
+  // 4) There are two roots, one of which is on the wrong side (hdirection_ is already set to left or right).
+  //        We need to jump to the root that is on the correct side, and set opposite_direction_w to the other root.
 
-  // It is possible that the quotient_roots are not usable because they are on the wrong side, or out of range.
   double opposite_direction_w, opposite_direction_Lw;
-  if (hdirection_ != HorizontalDirection::undecided)
+  if (number_of_quotient_roots == 0)
   {
-    initialize_range(extreme_w);
-    initialize_range_called = true;
-    auto out_of_range = [this](double root)
-        { return (left_of_ != chain_.end() && left_of_->w() < root) ||
-                (right_of_ != chain_.end() && root < right_of_->w()); };
-    for (int quotient_root_index = 0; quotient_root_index < number_of_quotient_roots;)
-      if (out_of_range(quotient_roots[quotient_root_index]))
-      {
-        opposite_direction_w = quotient_roots[quotient_root_index];            // Note: if after this loop number_of_quotient_roots == 1 then we only got here once.
-        opposite_direction_Lw = fourth_degree_approximation(opposite_direction_w);
-        if (--number_of_quotient_roots == 1 && quotient_root_index == 0)
-          quotient_roots[0] = quotient_roots[1];
-      }
-      else
-        ++quotient_root_index;
-  }
+    // Case 1.
+    //   We need to do a step in the right direction, and set opposite_direction_w to a step in the opposite direction.
 
-  if (number_of_quotient_roots > 1)
-    Dout(dc::notice, "with other local extrema at " << quotient_roots[0] << " and " << quotient_roots[1]);
-  else if (number_of_quotient_roots == 1)
-    Dout(dc::notice, "with one other usable local extreme at " << quotient_roots[0] << "; opposite_direction_w = " << opposite_direction_w);
-  else
-    Dout(dc::notice, "with no other usable local extrema!");
-
-  if (number_of_quotient_roots > 0)
-  {
-    std::array<double, 2> expected_Lw;
-    int best_extremum = 0;
-    if (number_of_quotient_roots == 2)
-    {
-      if (extreme_w > quotient_roots[0] == extreme_w > quotient_roots[1])
-      {
-        // The direction from where are to where we go to.
-        HorizontalDirection direction = extreme_w > quotient_roots[0] ? HorizontalDirection::left : HorizontalDirection::right;
-        // If both quotient_roots are on the same side of the found local extreme, then the nearest one will be the one of opposite type.
-        best_extremum = std::abs(extreme_w - quotient_roots[0]) < std::abs(extreme_w - quotient_roots[1]) ? 0 : 1;
-        // Initialize the opposite direction to be a step with size scale into the opposite direction.
-        opposite_direction_w = extreme_w - last_extreme_cubic_->scale().step(direction);
-      }
-      else
-      {
-        for (int quotient_root_index = 0; quotient_root_index < number_of_quotient_roots; ++quotient_root_index)
-          expected_Lw[quotient_root_index] = fourth_degree_approximation(quotient_roots[quotient_root_index]);
-        best_extremum = (number_of_quotient_roots == 2 &&
-            (hdirection_ == HorizontalDirection::right ||
-             (hdirection_ == HorizontalDirection::undecided &&
-              expected_Lw[1] < expected_Lw[0]))) ? 1 : 0;
-        opposite_direction_w = quotient_roots[1 - best_extremum];
-      }
-      opposite_direction_Lw = fourth_degree_approximation(opposite_direction_w);
-    }
-    else
-    {
-      // There is only one usable root.
-      expected_Lw[0] = fourth_degree_approximation(quotient_roots[0]);
-      // Note: opposite_direction_w was already initialized.
-    }
-    w = quotient_roots[best_extremum];
-    expected_Lw_ = expected_Lw[best_extremum];
-    have_expected_Lw_ = true;
-
-    Dout(dc::notice(hdirection_ == HorizontalDirection::undecided && number_of_quotient_roots == 2),
-        "Best other local extreme was " << quotient_roots[best_extremum] << " with A(" << quotient_roots[best_extremum] << ") = " <<
-        fourth_degree_approximation(quotient_roots[best_extremum]) <<
-        " (the other has value " << fourth_degree_approximation(quotient_roots[1 - best_extremum]) << ")");
-  }
-  else
-  {
     // Keep going in the same hdirection.
     auto& scale = last_extreme_cubic_->scale();
     if (hdirection_ == HorizontalDirection::undecided)
@@ -1161,6 +1111,79 @@ bool Algorithm::handle_local_extreme(double& w)
 
     opposite_direction_w = 2.0 * extreme_w - w;
     opposite_direction_Lw = last_extreme_cubic_->cubic()(opposite_direction_w);
+
+    Dout(dc::notice, "with no other usable local extrema! Using step in both directions"
+        " -- set opposite_direction_w to " << opposite_direction_w);
+  }
+  else if (extreme_w > quotient_roots[0] == extreme_w > quotient_roots[1])      // Both roots are on the same side as the found extreme?
+  {
+    // Case 2.
+    // The root closest to extreme_w has the correct type (opposite of the one we just found).
+    int relevant_root = std::abs(extreme_w - quotient_roots[0]) < std::abs(extreme_w - quotient_roots[1]) ? 0 : 1;
+    if (hdirection_ != HorizontalDirection::undecided && wrong_direction(quotient_roots[relevant_root] - extreme_w))
+    {
+      // Case 2a.
+      //   We need to do a step in the direction of hdirection_, and set opposite_direction_w to the "relevant" root.
+      auto& scale = last_extreme_cubic_->scale();
+      w = extreme_w + scale.step(hdirection_);
+      expected_Lw_ = last_extreme_cubic_->cubic()(w);
+      have_expected_Lw_ = true;
+
+      opposite_direction_w = quotient_roots[relevant_root];
+      opposite_direction_Lw = fourth_degree_approximation(opposite_direction_w);
+
+      Dout(dc::notice, "with one other usable local extreme, but on the wrong side; using a step into " << hdirection_ <<
+          " -- while using that root for opposite_direction_w: " << opposite_direction_w);
+    }
+    else
+    {
+      // Case 2b.
+      //   We need to jump to the relevant root, and set opposite_direction_w to a step in the opposite direction.
+      w = quotient_roots[relevant_root];
+      expected_Lw_ = fourth_degree_approximation(w);
+      have_expected_Lw_ = true;
+
+      if (hdirection_ == HorizontalDirection::undecided)
+        set_hdirection(w < w2_1 ? HorizontalDirection::left : HorizontalDirection::right);
+
+      auto& scale = last_extreme_cubic_->scale();
+      opposite_direction_w = extreme_w - scale.step(hdirection_);
+      opposite_direction_Lw = last_extreme_cubic_->cubic()(opposite_direction_w);
+
+      Dout(dc::notice, "with one other usable local extreme at " << w << ", which is in the correct direction (" << hdirection_ << ")" <<
+          " -- set opposite_direction_w to " << opposite_direction_w);
+    }
+  }
+  else
+  {
+    std::array<double, 2> expected_Lw;
+    for (int quotient_root_index = 0; quotient_root_index < 2; ++quotient_root_index)
+      expected_Lw[quotient_root_index] = fourth_degree_approximation(quotient_roots[quotient_root_index]);
+    int best_root;
+    if (hdirection_ == HorizontalDirection::undecided)
+    {
+      // Case 3.
+      //   We need to jump to the lowest root, and set opposite_direction_w to the other root.
+      best_root = expected_Lw[0] < expected_Lw[1] ? 0 : 1;
+
+      Dout(dc::notice, "with two other usable local extrema; the lowest one being at " << quotient_roots[best_root] <<
+          " -- and using the other one for opposite_direction_w: " << quotient_roots[1 - best_root]);
+    }
+    else
+    {
+      // Case 4.
+      //   We need to jump to the root that is on the correct side, and set opposite_direction_w to the other root.
+      best_root = wrong_direction(quotient_roots[1] - extreme_w) ? 0 : 1;
+
+      Dout(dc::notice, "with two other usable local extrema; one in hdirection (" << hdirection_ << ") at " << quotient_roots[best_root] <<
+          " -- and using the other one for opposite_direction_w: " << quotient_roots[1 - best_root]);
+    }
+    w = quotient_roots[best_root];
+    expected_Lw_ = expected_Lw[best_root];
+    have_expected_Lw_ = true;
+
+    opposite_direction_w = quotient_roots[1 - best_root];
+    opposite_direction_Lw = expected_Lw[1 - best_root];
   }
 
   // Also remember the opposite direction (in case we jump back here).
@@ -1172,8 +1195,7 @@ bool Algorithm::handle_local_extreme(double& w)
     set_hdirection(w < w2_1 ? HorizontalDirection::left : HorizontalDirection::right);
   }
 
-  if (!initialize_range_called)
-    initialize_range(extreme_w);
+  initialize_range(extreme_w);
 
   if (left_of_ != chain_.end() && left_of_->w() < w)
   {

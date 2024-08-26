@@ -61,14 +61,14 @@ class Function
 
     cubic_.initialize(w_min_, Lle, dle, w_max_, Lre, dre);
 
-    std::array<double, 2> extremes;
-    int number_of_extremes = cubic_.get_extremes(extremes);
+    std::array<double, 2> extrema;
+    int number_of_extrema = cubic_.get_extrema(extrema);
 
-    if (number_of_extremes == 2)
+    if (number_of_extrema == 2)
     {
-      double width = std::max(w_max_, extremes[1]) - std::min(w_min_, extremes[0]);
-      w_min_ = std::min(w_min_, extremes[0] - 0.1 * width);
-      w_max_ = std::max(w_max_, extremes[1] + 0.1 * width);
+      double width = std::max(w_max_, extrema[1]) - std::min(w_min_, extrema[0]);
+      w_min_ = std::min(w_min_, extrema[0] - 0.1 * width);
+      w_max_ = std::max(w_max_, extrema[1] + 0.1 * width);
     }
 
     std::uniform_real_distribution<double> w0_dist(w_min_, w_max_);
