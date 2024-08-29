@@ -9,6 +9,9 @@ void AnalyzedCubic::initialize(math::CubicPolynomial const& cubic, ExtremeType e
   double half_sqrt_D;
   if (AI_UNLIKELY(cubic[3] == 0.0))
   {
+    // We don't really have an inflection point.
+    inflection_point_ = std::numeric_limits<double>::infinity();
+
     // In this case the cubic is a parabola:
     //
     //   A(w) = b w^2 + c w + d
@@ -24,15 +27,20 @@ void AnalyzedCubic::initialize(math::CubicPolynomial const& cubic, ExtremeType e
     // Hence whether or not r is a minimum or maximum depends on the sign of b.
     // If b < 0 then it is a maximum.
 
-    if ((extreme_type == ExtremeType::minimum) == (cubic[2] < 0.0))
-      return;   // The only extreme that we have is not the one we want.
-
-    // The derivative has one root at -c / 2b.
-    critical_point_w_ = -0.5 * cubic[1] / cubic[2];
-    // We don't really have an inflection point.
-    inflection_point_ = std::numeric_limits<double>::infinity();
-    // See below, assuming cubic[3] = 0.
-    half_sqrt_D = std::abs(cubic[2]);
+    if ((extreme_type == ExtremeType::maximum) == (cubic[2] < 0.0))
+    {
+      // The derivative has one root at -c / 2b.
+      critical_point_w_ = -0.5 * cubic[1] / cubic[2];
+      // See below, assuming cubic[3] = 0.
+      half_sqrt_D = std::abs(cubic[2]);
+    }
+    else
+    {
+      // Pretend the critical_point_w_ is at plus infinity.
+      critical_point_w_ = std::numeric_limits<double>::infinity();
+      // We should never be using this to calculate a height...
+      half_sqrt_D = std::numeric_limits<double>::infinity();
+    }
   }
   else
   {

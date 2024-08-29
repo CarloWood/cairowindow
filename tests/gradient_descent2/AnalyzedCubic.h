@@ -65,6 +65,8 @@ class AnalyzedCubic
   {
     // Only call this function if has_extrema() returned true.
     ASSERT(has_extrema());
+    // Don't call height in this case.
+    ASSERT(std::isnormal(signed_sqrt_D_));
     // Let g(w) = y = a + bw + cw^2 + dw^3.
     // Then dy/dw = b + 2cw + 3dw^2.
     // Let e be a root of the derivate: g'(e) = 0 (aka, g has an extreme in e).
@@ -88,6 +90,9 @@ class AnalyzedCubic
 
   bool matches(double w, double Lw, math::CubicPolynomial const& g)
   {
+    // If the vertical_scale_ is +inf then (w, Lw) always matches.
+    if (!std::isfinite(vertical_scale_))
+      return true;
     // Call initialize_matches before calling matches.
     ASSERT(initialize_matches_called_ == &g);
     double const vertical_scale = detached_from_extreme_ ? vertical_scale_ : height(w, g[3]);

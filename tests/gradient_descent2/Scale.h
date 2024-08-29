@@ -66,7 +66,8 @@ class Scale
 
   void set(CriticalPointType type, double critical_point_w, double left_edge_w, double right_edge_w, double inflection_point_w)
   {
-    ASSERT((type == CriticalPointType::inflection_point) == (critical_point_w == inflection_point_w));
+    // Note +inf does not compare equal to +inf in this case.
+    ASSERT((type == CriticalPointType::inflection_point) == (critical_point_w == inflection_point_w && std::isfinite(inflection_point_w)));
     type_ = type;
     critical_point_w_ = critical_point_w;
     left_edge_w_ = left_edge_w;

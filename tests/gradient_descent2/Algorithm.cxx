@@ -45,10 +45,13 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
   // Do not re-enter this function after it returned false!
   ASSERT(state_ != IterationState::success);
 
+  // If the function is uncalculatable.
+  bool must_abort = !std::isnormal(Lw) || !std::isnormal(dLdw);
+
 #ifdef CWDEBUG
   // Erase all previous curves (if they exist).
   event_server_.trigger(AlgorithmEventType{reset_event});
-  if (have_expected_Lw_)
+  if (!must_abort && have_expected_Lw_)
   {
     // Draw an arrow from where expected to end up, based on the approximation, and the actual value of L(w).
     event_server_.trigger(AlgorithmEventType{difference_event, w, expected_Lw_, Lw});
@@ -59,61 +62,67 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
   auto&& dump_chain = at_scope_end([this]{ chain_.dump(this); chain_.sanity_check(this); });
 #endif
 
-  // Create a new Sample for this sample.
-  Sample current{w, Lw, dLdw COMMA_CWDEBUG_ONLY(label_context_)};
-  Dout(dc::notice, "current = " << current);
+  SampleNode::const_iterator new_node;
+  SampleNode::const_iterator right_node;        // The node right of the new node.
+  SampleNode::const_iterator left_node;         // The node left of the new node (only valid if new_node != chain_.begin()).
+
+  if (!must_abort)
+  {
+    // Create a new Sample for this sample.
+    Sample current{w, Lw, dLdw COMMA_CWDEBUG_ONLY(label_context_)};
+    Dout(dc::notice, "current = " << current);
 
 #ifdef CWDEBUG
-  // Draw the new sample.
-  event_server_.trigger(AlgorithmEventType{new_sample_event, current});
+    // Draw the new sample.
+    event_server_.trigger(AlgorithmEventType{new_sample_event, current});
 #endif
 
-  if (state_ == IterationState::initialization)
-  {
-    // We should only get here the first time.
-    ASSERT(chain_.empty());
-
-    DEBUG_ONLY(bool success =) update_energy(Lw);
-    // Can never want to abort on energy when still initializing.
-    ASSERT(success);
-
-    // Add the first sample.
-    chain_.initialize(std::move(current));
-
-#ifdef CWDEBUG
+    if (state_ == IterationState::initialization)
     {
-      // Draw a line through this sample.
-      math::QuadraticPolynomial line{Lw - dLdw * w, dLdw, 0.0};
-      event_server_.trigger(AlgorithmEventType{quadratic_polynomial_event, line});
-    }
+      // We should only get here the first time.
+      ASSERT(chain_.empty());
+
+      DEBUG_ONLY(bool success =) update_energy(Lw);
+      // Can never want to abort on energy when still initializing.
+      ASSERT(success);
+
+      // Add the first sample.
+      chain_.initialize(std::move(current));
+
+#ifdef CWDEBUG
+      {
+        // Draw a line through this sample.
+        math::QuadraticPolynomial line{Lw - dLdw * w, dLdw, 0.0};
+        event_server_.trigger(AlgorithmEventType{quadratic_polynomial_event, line});
+      }
 #endif
 
-    // Set w to the next value to probe. This uses chain_.last().
-    handle_single_sample(w);
-    chain_.find_larger(w);
+      // Set w to the next value to probe. This uses chain_.last().
+      handle_single_sample(w);
+      chain_.find_larger(w);
 
-    state_ = IterationState::first_cubic;
-    return true;
+      state_ = IterationState::first_cubic;
+      return true;
+    }
+
+    // Insert the new sample.
+    new_node = chain_.insert(std::move(current));
+
+    // Initialize the cubic(s).
+    right_node = std::next(new_node);
+    if (new_node != chain_.begin())
+    {
+      left_node = std::prev(new_node);
+      initialize_node(left_node, new_node COMMA_CWDEBUG_ONLY(false));                     // false: new_node is passed as second argument.
+    }
+    if (right_node != chain_.end())
+      initialize_node(new_node, right_node COMMA_CWDEBUG_ONLY(true));                     // true: new_node is passed as first argument.
   }
-
-  // Insert the new sample.
-  auto new_node = chain_.insert(std::move(current));
-
-  // Initialize the cubic(s).
-  SampleNode::const_iterator right_node = std::next(new_node);  // The node right of the new node.
-  SampleNode::const_iterator left_node;                         // The node left of the new node (only valid if new_node != chain_.begin()).
-  if (new_node != chain_.begin())
-  {
-    left_node = std::prev(new_node);
-    initialize_node(left_node, new_node COMMA_CWDEBUG_ONLY(false));                     // false: new_node is passed as second argument.
-  }
-  if (right_node != chain_.end())
-    initialize_node(new_node, right_node COMMA_CWDEBUG_ONLY(true));                     // true: new_node is passed as first argument.
 
   for (;;)
   {
     // Update kinetic energy. Returns false if too much energy was used.
-    if (!update_energy(Lw))
+    if (must_abort || !update_energy(Lw))
     {
       if (!handle_abort_hdirection(w))
         return false;
@@ -627,6 +636,8 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
     right_node = std::next(new_node);           // The node right of the new node.
     if (new_node != chain_.begin())
       left_node = std::prev(new_node);
+
+    must_abort = false;
   }
 
   return true;

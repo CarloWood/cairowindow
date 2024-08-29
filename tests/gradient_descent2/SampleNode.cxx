@@ -155,7 +155,9 @@ void SampleNode::initialize_cubic(const_iterator next
       if (!acubic.has_extrema() || acubic.get_extreme() < w() || next->w() < acubic.get_extreme())
       {
         // If only one extreme would fall in between the samples, then the derivatives can't have the same sign.
-        ASSERT(!acubic.has_extrema() || acubic.get_other_extreme() < w() || next->w() < acubic.get_other_extreme());
+        // The debug function get_other_extreme() fails if acubic.get_extreme() is at +inf.
+        ASSERT(!acubic.has_extrema() || std::isnan(acubic.get_other_extreme()) ||
+            acubic.get_other_extreme() < w() || next->w() < acubic.get_other_extreme());
         // There are no extrema in between the samples.
         type_ = (sign_dLdw_0 == 1)
             ? up                        // /

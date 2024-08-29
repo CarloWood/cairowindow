@@ -637,7 +637,7 @@ int main()
     double zoom = 10.0;
     //gda.enable_drawing(L, -51.3629 - zoom, -51.3629 + zoom);
     //gda.enable_drawing(L, -55.7732647023600875968 - zoom, -55.7732647023600875968 + zoom);
-    gda.enable_drawing(L, -80.0, 0.0);
+    gda.enable_drawing(L, -90.0, 0.0);
 
     gda(w, L(w), L.derivative(w));
     gda(w, L(w), L.derivative(w));
