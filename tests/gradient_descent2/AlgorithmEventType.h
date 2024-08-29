@@ -27,6 +27,7 @@ enum event_type
   kinetic_energy_event,
   scale_draw_event,
   left_of_right_of_event,
+  jump_point_event,
   scale_erase_event,
   new_sample_event,
   new_local_extreme_event,
@@ -163,21 +164,13 @@ class LeftOfRightOfEventData
  protected:
   SampleNode const* left_of_;
   SampleNode const* right_of_;
-  ExtremeType next_extreme_type_;
-  double critical_point_w_;
-  double critical_point_Lw_;
 
  public:
-  LeftOfRightOfEventData(SampleNode const* left_of, SampleNode const* right_of, ExtremeType next_extreme_type,
-      double critical_point_w, double critical_point_Lw) :
-    left_of_(left_of), right_of_(right_of), next_extreme_type_(next_extreme_type),
-    critical_point_w_(critical_point_w), critical_point_Lw_(critical_point_Lw) { }
+  LeftOfRightOfEventData(SampleNode const* left_of, SampleNode const* right_of) :
+    left_of_(left_of), right_of_(right_of) { }
 
   SampleNode const* left_of() const { return left_of_; }
   SampleNode const* right_of() const { return right_of_; }
-  ExtremeType next_extreme_type() const { return next_extreme_type_; }
-  double critical_point_w() const { return critical_point_w_; }
-  double critical_point_Lw() const { return critical_point_Lw_; }
 
   void print_on(std::ostream& os) const
   {
@@ -190,6 +183,28 @@ class LeftOfRightOfEventData
       os << "[" << left_of_->label() << "], ";
     else
       os << "+inf, ";
+    os << "}";
+  }
+};
+
+class JumpPointEventData
+{
+ protected:
+  ExtremeType next_extreme_type_;
+  double critical_point_w_;
+  double critical_point_Lw_;
+
+ public:
+  JumpPointEventData(ExtremeType next_extreme_type, double critical_point_w, double critical_point_Lw) :
+    next_extreme_type_(next_extreme_type), critical_point_w_(critical_point_w), critical_point_Lw_(critical_point_Lw) { }
+
+  ExtremeType next_extreme_type() const { return next_extreme_type_; }
+  double critical_point_w() const { return critical_point_w_; }
+  double critical_point_Lw() const { return critical_point_Lw_; }
+
+  void print_on(std::ostream& os) const
+  {
+    os << "JumpPointEventData:{";
     os << next_extreme_type_ << ", " << critical_point_w_ << ", " << critical_point_Lw_ << "}";
   }
 };
@@ -262,8 +277,8 @@ class AlgorithmEventData
 {
  private:
   std::variant<ResetEventData, DifferenceEventData, FourthDegreeApproximationEventData, QuotientEventData, DerivativeEventData,
-    QuadraticPolynomialEventData, KineticEnergyEventData, ScaleDrawEventData, LeftOfRightOfEventData, ScaleEraseEventData, NewSampleEventData,
-    CubicPolynomialEventData, NewLocalExtremeEventData, HDirectionKnownEventData> event_data_;
+    QuadraticPolynomialEventData, KineticEnergyEventData, ScaleDrawEventData, LeftOfRightOfEventData, JumpPointEventData,
+    ScaleEraseEventData, NewSampleEventData, CubicPolynomialEventData, NewLocalExtremeEventData, HDirectionKnownEventData> event_data_;
 
  public:
   AlgorithmEventData() = default;
@@ -320,11 +335,16 @@ class AlgorithmEventData
     event_data_.emplace<ScaleDrawEventData>(result, sample_node, old_cubic);
   }
 
-  AlgorithmEventData(event_type type, SampleNode const* left_of, SampleNode const* right_of, ExtremeType next_extreme_type,
-      double critical_point_w, double critical_point_Lw)
+  AlgorithmEventData(event_type type, SampleNode const* left_of, SampleNode const* right_of)
   {
     ASSERT(type == left_of_right_of_event);
-    event_data_.emplace<LeftOfRightOfEventData>(left_of, right_of, next_extreme_type, critical_point_w, critical_point_Lw);
+    event_data_.emplace<LeftOfRightOfEventData>(left_of, right_of);
+  }
+
+  AlgorithmEventData(event_type type, ExtremeType next_extreme_type, double critical_point_w, double critical_point_Lw)
+  {
+    ASSERT(type == jump_point_event);
+    event_data_.emplace<JumpPointEventData>(next_extreme_type, critical_point_w, critical_point_Lw);
   }
 
   AlgorithmEventData(event_type type, Sample const& current)

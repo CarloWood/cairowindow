@@ -1,6 +1,7 @@
 #pragma once
 
 #include "utils/square.h"
+#include "utils/macros.h"
 #include <array>
 #include <cmath>
 #include "debug.h"
@@ -40,25 +41,38 @@ class QuadraticPolynomial
   double operator[](int i) const { ASSERT(0 <= i && i < coefficients_.size()); return coefficients_[i]; }
   double& operator[](int i) { ASSERT(0 <= i && i < coefficients_.size()); return coefficients_[i]; }
 
-  int get_zeroes(std::array<double, 2>& zeroes_out) const
+  int get_roots(std::array<double, 2>& roots_out) const
   {
     if (coefficients_[2] == 0.0)
     {
-      if (coefficients_[1] < 0.0)
-        return 0;
-      zeroes_out[0] = -coefficients_[0] / coefficients_[1];
+      roots_out[0] = -coefficients_[0] / coefficients_[1];
+      return std::isnormal(roots_out[0]) ? 1 : 0;
+    }
+
+    double const D = utils::square(coefficients_[1]) - 4.0 * coefficients_[2] * coefficients_[0];
+    if (D < 0.0)
+      return 0;
+    // Use a sqrt with the same sign as coefficients_[1];
+    double const signed_sqrt_D = std::copysign(std::sqrt(D), coefficients_[1]);
+
+    // Calculate the root closest to zero.
+    roots_out[0] = -2.0 * coefficients_[0] / (coefficients_[1] + signed_sqrt_D);
+
+    if (AI_UNLIKELY(std::isnan(roots_out[0])))
+    {
+      // This means we must have divided by zero, which means that both, coefficients_[1] as well as sqrtD, must be zero.
+      // The latter means that coefficients_[0] is zero (coefficients_[2] was already checked not to be zero).
+      // Therefore we have: f(x) = c x^2 with one root at x=0.
+      roots_out[0] = 0.0;
       return 1;
     }
 
-    double D = utils::square(coefficients_[1]) - 4.0 * coefficients_[2] * coefficients_[0];
-    if (D < 0.0)
-      return 0;
-    double avg = -coefficients_[1] / (2.0 * coefficients_[2]);
-    double delta = std::sqrt(D) / std::abs(2.0 * coefficients_[2]);
-    zeroes_out[0] = avg - delta;
-    if (D == 0.0)
-      return 1;
-    zeroes_out[1] = avg + delta;
+    // Calculate the root further away from zero.
+    roots_out[1] = -0.5 * (coefficients_[1] + signed_sqrt_D) / coefficients_[2];
+
+    // The second one is larger in absolute value.
+    ASSERT(std::abs(roots_out[1]) > std::abs(roots_out[0]));
+
     return 2;
   }
 

@@ -62,19 +62,21 @@ class SampleNode : public Sample
   void initialize_cubic(const_iterator next
       COMMA_CWDEBUG_ONLY(events::Server<AlgorithmEventType>& event_server, bool this_is_last)) const;
 
+  void change_type_to_left_extreme(ExtremeType extreme_type) const;
+
  public:
   double find_extreme(Sample const& next, ExtremeType& extreme_type) const;
-
-  void set_scale(CriticalPointType type, double critical_point_w, double left_edge_w, double right_edge_w) const
-  {
-    scale_.set(type, critical_point_w, left_edge_w, right_edge_w, cubic_.inflection_point());
-  }
 
   const_iterator next_node() const
   {
     // Call initialize_cubic before using this member function.
     ASSERT(type_ != CubicToNextSampleType::unknown);
     return next_node_;
+  }
+
+  void set_scale(CriticalPointType type, double critical_point_w, double left_edge_w, double right_edge_w) const
+  {
+    scale_.set(type, critical_point_w, left_edge_w, right_edge_w, cubic_.inflection_point());
   }
 
   //---------------------------------------------------------------------------

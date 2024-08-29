@@ -110,7 +110,7 @@ class EnableDrawing
 
 EnableDrawing::EnableDrawing(gradient_descent::Algorithm* algorithm, Function const& L, double w_min, double w_max) :
   window("Gradient descent of " + L.to_string(), 2*600, 2*450),
-  background_layer(window.create_background_layer<Layer>(color::white COMMA_DEBUG_ONLY("background_layer"))),
+  background_layer(window.create_background_layer<Layer>(color::silver COMMA_DEBUG_ONLY("background_layer"))),
   second_layer(window.create_layer<Layer>({} COMMA_DEBUG_ONLY("second_layer"))),
   event_loop([&](){
       // Open window, handle event loop. This must be constructed after the draw stuff, so that it is destructed first!
@@ -119,7 +119,7 @@ EnableDrawing::EnableDrawing(gradient_descent::Algorithm* algorithm, Function co
       event_loop.set_cleanly_terminated();
     }),
   L_min_max(get_L_min_max(L, w_min, w_max)),
-  plot(window.geometry(), { .grid = {.color = color::orange} },
+  plot(window.geometry(), { .grid = {.color = color::gray} },
         L.to_string(), {}, "w", {}, "L", {}),
   algorithm_event(plot, second_layer),
   algorithm_event_handle(algorithm->event_server().request(algorithm_event, &AlgorithmEvent::callback))
@@ -608,31 +608,42 @@ int main()
   //==========================================================================
   Dout(dc::notice, "*** TEST: parabola connected to dampened sin ***");
   {
-    constexpr double w0 = -80.0; //-48.5;//-10.0;
+    constexpr double w0 = -87.0; //-48.5;//-10.0;
     constexpr double learning_rate = 0.001;
     constexpr double L_max = 2649;
 
     Algorithm gda(learning_rate, L_max);
     double w = w0;
 
+    gda.debug_set_hdirection_next_extreme_type_small_step(HorizontalDirection::right, ExtremeType::maximum, 1.0);
+
     symbolic::Symbol const& x = symbolic::Symbol::realize("w");
     symbolic::Constant const& tp = symbolic::Constant::realize(55);
     symbolic::Function const& sigmoid = symbolic::Function::realize("sigmoid", exp(3 * (x + tp)) / (1 + exp(3 * (x + tp))));
+    symbolic::Constant const& tp2 = symbolic::Constant::realize(80);
+    symbolic::Function const& sigmoid2 = symbolic::Function::realize("sigmoid", exp(3 * (x + tp2)) / (1 + exp(3 * (x + tp2))));
     symbolic::Constant const& a = symbolic::Constant::realize(146, 10);
     symbolic::Constant const& b = symbolic::Constant::realize(315, 100);
     symbolic::Constant const& c = symbolic::Constant::realize(451, 1000);
     symbolic::Constant const& d = symbolic::Constant::realize(5, 10);
+    symbolic::Constant const& e = symbolic::Constant::realize(-6, 1);
     symbolic::Constant const& amplitude = symbolic::Constant::realize(12027, 1000000);
     symbolic::Constant const& level = symbolic::Constant::realize(187838, 100);
     symbolic::Constant const& phase = symbolic::Constant::realize(191892, 100000);
     symbolic::Function const& sL = symbolic::Function::realize("L",
-        (1.0 - sigmoid) * (a + b * x + c * (x^2)) + (sigmoid * (amplitude * exp((tp - x) / 10) * sin(d * x + phase) + level)));
-    Function L(x, sL, sigmoid);
+       (1.0 - sigmoid2) * (2800 + e * ((x + 85)^2)) + sigmoid2 * ((1.0 - sigmoid) * (a + b * x + c * (x^2)) + (sigmoid * (amplitude * exp((tp - x) / 10) * sin(d * x + phase) + level))));
+    Function L(x, sL, sigmoid, sigmoid2);
 
     double zoom = 10.0;
     //gda.enable_drawing(L, -51.3629 - zoom, -51.3629 + zoom);
     //gda.enable_drawing(L, -55.7732647023600875968 - zoom, -55.7732647023600875968 + zoom);
     gda.enable_drawing(L, -80.0, 0.0);
+
+    gda(w, L(w), L.derivative(w));
+    gda(w, L(w), L.derivative(w));
+    gda(w, L(w), L.derivative(w));
+    w = -78.0;
+    gda.debug_chain().find_larger(w);
 
     while (gda(w, L(w), L.derivative(w)))
     {

@@ -6,17 +6,75 @@ namespace gradient_descent {
 
 void AnalyzedCubic::initialize(math::CubicPolynomial const& cubic, ExtremeType extreme_type)
 {
-  inflection_point_ = critical_point_w_ = cubic.inflection_point();
-  double D = utils::square(cubic[2]) - 3.0 * cubic[3] * cubic[1];
-
-  // Deliberately leave signed_sqrt_D_ at NaN instead of setting it to zero:
-  // in that case we still don't have local extrema anyway.
-  if (D > 0.0)
+  double half_sqrt_D;
+  if (AI_UNLIKELY(cubic[3] == 0.0))
   {
-    // Don't ask about the minus sign.
-    signed_sqrt_D_ = -static_cast<int>(extreme_type) * std::sqrt(D);
-    critical_point_w_ += signed_sqrt_D_ / (3.0 * cubic[3]);
+    // In this case the cubic is a parabola:
+    //
+    //   A(w) = b w^2 + c w + d
+    //
+    // with derivative:
+    //
+    //   A'(w) = 2b w + c
+    //
+    // The second derivative is a constant:
+    //
+    //   A''(w) = 2b
+    //
+    // Hence whether or not r is a minimum or maximum depends on the sign of b.
+    // If b < 0 then it is a maximum.
+
+    if ((extreme_type == ExtremeType::minimum) == (cubic[2] < 0.0))
+      return;   // The only extreme that we have is not the one we want.
+
+    // The derivative has one root at -c / 2b.
+    critical_point_w_ = -0.5 * cubic[1] / cubic[2];
+    // We don't really have an inflection point.
+    inflection_point_ = std::numeric_limits<double>::infinity();
+    // See below, assuming cubic[3] = 0.
+    half_sqrt_D = std::abs(cubic[2]);
   }
+  else
+  {
+    inflection_point_ = cubic.inflection_point();
+
+    double one_fourth_D = utils::square(cubic[2]) - 3.0 * cubic[1] * cubic[3];
+    if (one_fourth_D <= 0.0)
+    {
+      // If the determinant is zero, then the cubic has no roots.
+      return;
+    }
+
+    // Use a sqrt with the same sign as cubic[2];
+    half_sqrt_D = std::sqrt(one_fourth_D);
+    double const half_Q = std::copysign(half_sqrt_D, cubic[2]);
+
+    // The roots of the derivative are:
+    // x_0 = -c / (b + 0.5 * Q);
+    // x_1 = (-b - 0.5 * Q) / (3 * a);
+    // where
+    // f''(x_0) = Q
+    // f''(x_1) = -Q
+    // Therefore if Q is positive then x_0 is the minimum and x_1 is the maximum
+    // and if Q is negative then x_0 is the maximum and x_0 is the minimum.
+    //
+    // Note: if cubic[2] is zero (or close to zero due to floating point round of errors)
+    // then the sign of half_Q is not well defined, but it's absolute value is usually still
+    // significant. In that case, x_0 == -x_1 however and changing the sign of half_Q has
+    // no real influence because that is exactly where we swap formula as well.
+    if ((extreme_type == ExtremeType::maximum) == (half_Q < 0.0))
+    {
+      // Calculate the root closest to zero.
+      critical_point_w_ = -cubic[1] / (cubic[2] + half_Q);
+    }
+    else
+    {
+      // Calculate the root further away from zero.
+      critical_point_w_ = -(cubic[2] + half_Q) / (3.0 * cubic[3]);
+    }
+  }
+  // Don't ask about the minus sign.
+  signed_sqrt_D_ = -2 * static_cast<int>(extreme_type) * half_sqrt_D;
 }
 
 void AnalyzedCubic::initialize_matches(SampleNode const& left_sample, SampleNode const& right_sample)

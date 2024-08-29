@@ -5,11 +5,71 @@
 
 namespace gradient_descent {
 
+void SampleNode::change_type_to_left_extreme(ExtremeType extreme_type) const
+{
+  using enum CubicToNextSampleType;
+  switch (type_)
+  {
+//  case flat:                  // __
+    case up:                    // /
+      ASSERT(extreme_type == ExtremeType::maximum);
+      type_ = left_max;         // /‾
+      break;
+    case down:                  // \.
+      ASSERT(extreme_type == ExtremeType::minimum);
+      type_ = left_min;         // \_
+      break;
+//  case right_stop:            // /^
+//  case left_stop:             // ^\.          ^\_ does not exist...
+    case right_min:             // _/
+      ASSERT(extreme_type == ExtremeType::maximum);
+      type_ = right_min_left_max;       // _/‾
+      break;
+//  case left_min:              // \_           don't call this function if nothing changes.
+    case right_max:             // ‾\.
+      ASSERT(extreme_type == ExtremeType::minimum);
+      type_ = right_max_left_min;       // ‾\_
+      break;
+//  case left_max:              // /‾           don't call this function if nothing changes.
+//  case right_max_left_min:    // ‾\_          don't call this function if nothing changes.
+//  case right_min_left_max:    // _/‾          don't call this function if nothing changes.
+    case min:                   // \/
+      type_ = (extreme_type == ExtremeType::minimum) ? left_min : min_left_max; // \_ or \/‾
+      break;
+    case right_max_min:         // ‾\/
+      ASSERT(extreme_type == ExtremeType::minimum);
+      type_ = left_min;         // \_
+      break;
+//  case min_left_max:          // \/‾          don't call this function if nothing changes.
+    case min_max:               // \/\.
+      ASSERT(extreme_type == ExtremeType::maximum);
+      type_ = min_left_max;     // \/‾
+      break;
+    case max_min:               // /\/
+      ASSERT(extreme_type == ExtremeType::minimum);
+      type_ = max_left_min;     // /\_
+      break;
+    case max:                   // /\.
+      type_ = extreme_type == ExtremeType::minimum ? max_left_min : left_max;   // /\_ or /‾
+      break;
+//  case max_left_min:          // /\_          don't call this function if nothing changes.
+    case right_min_max:         // _/\.
+      ASSERT(extreme_type == ExtremeType::maximum);
+      type_ = right_min_left_max;       // _/‾
+      break;
+    default:
+      ASSERT(false);
+  }
+  Dout(dc::notice, "Changed the type of the cubic [" << label() << "] to " << type_ << ".");
+}
+
 void SampleNode::initialize_cubic(const_iterator next
     COMMA_CWDEBUG_ONLY(events::Server<AlgorithmEventType>& event_server, bool this_is_last)) const
 {
   DoutEntering(dc::notice, "SampleNode::initialize_cubic(" << *next << ", event_server, " <<
       std::boolalpha << this_is_last << ") [" << static_cast<Sample const&>(*this) << "]");
+
+  using enum CubicToNextSampleType;
 
   // next must always be on the right.
   ASSERT(w() < next->w());
@@ -33,8 +93,6 @@ void SampleNode::initialize_cubic(const_iterator next
   int const sign_dLdw_0 = std::abs(dLdw()) < significant_derivative ? 0 : dLdw() < 0.0 ? -1 : 1;
   int const sign_dLdw_1 = std::abs(next->dLdw()) < significant_derivative ? 0 : next->dLdw() < 0.0 ? -1 : 1;
   bool const neither_derivative_is_zero = (sign_dLdw_0 & sign_dLdw_1) != 0;
-
-  using enum CubicToNextSampleType;
 
   // The easiest first.
   if (sign_dLdw_0 != sign_dLdw_1)

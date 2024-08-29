@@ -89,4 +89,10 @@ inline symbolic::Expression const& square(symbolic::Expression const& expression
   return symbolic::Power::make_power(expression, cached_two);
 }
 
+inline symbolic::Expression const& sqrt(symbolic::Expression const& expression)
+{
+  static symbolic::Constant const& cached_half = symbolic::Constant::realize(1, 2);
+  return symbolic::Power::make_power(expression, cached_half);
+}
+
 } // namespace symbolic

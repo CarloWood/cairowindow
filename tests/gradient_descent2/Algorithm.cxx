@@ -12,6 +12,31 @@
 
 namespace gradient_descent {
 
+void Algorithm::initialize_node(SampleNode::const_iterator node, SampleNode::const_iterator next
+    COMMA_CWDEBUG_ONLY(bool node_is_last))
+{
+  // Remember if node (the left node of the cubic) is already marked as an extreme.
+  // If that is the case then it will have either right_max_bit or right_min_bit set.
+  bool const is_extreme_before = (static_cast<int>(node->type()) & (right_max_bit|right_min_bit)) != 0;
+
+  // Initialize the cubic between node and next.
+  node->initialize_cubic(next COMMA_CWDEBUG_ONLY(event_server_, node_is_last));
+
+  bool const is_extreme_after = (static_cast<int>(node->type()) & (right_max_bit|right_min_bit)) != 0;
+
+  // If node was already marked as extreme, then it should still be!
+  ASSERT(!is_extreme_before || is_extreme_after);
+
+  if (!is_extreme_before && is_extreme_after)
+  {
+    bool const is_maximum_after = (static_cast<int>(node->type()) & right_max_bit) != 0;
+    // The node has been marked as right_* extreme type.
+    // Mark the opposite side of the extreme as left_* extreme type.
+    if (node != chain_.begin())
+      std::prev(node)->change_type_to_left_extreme(is_maximum_after ? ExtremeType::maximum : ExtremeType::minimum);
+  }
+}
+
 bool Algorithm::operator()(double& w, double Lw, double dLdw)
 {
   DoutEntering(dc::notice, "Algorithm::operator()(" << w << ", " << Lw << ", " << dLdw << ")");
@@ -80,10 +105,10 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
   if (new_node != chain_.begin())
   {
     left_node = std::prev(new_node);
-    left_node->initialize_cubic(new_node COMMA_CWDEBUG_ONLY(event_server_, false));        // false: new_node is passed.
+    initialize_node(left_node, new_node COMMA_CWDEBUG_ONLY(false));                     // false: new_node is passed as second argument.
   }
   if (right_node != chain_.end())
-    new_node->initialize_cubic(right_node COMMA_CWDEBUG_ONLY(event_server_, true));        // true: called on new_node.
+    initialize_node(new_node, right_node COMMA_CWDEBUG_ONLY(true));                     // true: new_node is passed as first argument.
 
   for (;;)
   {
@@ -165,7 +190,8 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
 #ifdef CWDEBUG
           event_server_.trigger(AlgorithmEventType{left_of_right_of_event,
               left_of_ == chain_.end() ? nullptr : &*left_of_,
-              right_of_ == chain_.end() ? nullptr : &*right_of_,
+              right_of_ == chain_.end() ? nullptr : &*right_of_});
+          event_server_.trigger(AlgorithmEventType{jump_point_event,
               next_extreme_type_, w, cubic_used_->cubic()(w)});
 #endif
 
@@ -512,7 +538,7 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
 
           cubic_used_->set_scale(scale_cp_type, critical_point_w, left_edge_w_good, right_edge_w_good);
 #ifdef CWDEBUG
-          event_server_.trigger(AlgorithmEventType{scale_draw_event, ScaleUpdate::towards_cp, *cubic_used_, old_cubic});
+          event_server_.trigger(AlgorithmEventType{scale_draw_event, ScaleUpdate::away_from_cp, *cubic_used_, old_cubic});
 #endif
 
           Dout(dc::debug, "w = " << w << "; cubic_used_->scale().value() = " << cubic_used_->scale().value());
@@ -533,7 +559,8 @@ bool Algorithm::operator()(double& w, double Lw, double dLdw)
 #ifdef CWDEBUG
           event_server_.trigger(AlgorithmEventType{left_of_right_of_event,
               left_of_ == chain_.end() ? nullptr : &*left_of_,
-              right_of_ == chain_.end() ? nullptr : &*right_of_,
+              right_of_ == chain_.end() ? nullptr : &*right_of_});
+          event_server_.trigger(AlgorithmEventType{jump_point_event,
               next_extreme_type_, w, cubic_used_->cubic()(w)});
 #endif
 
@@ -694,6 +721,81 @@ void Algorithm::set_algorithm_str(double new_w, char const* algorithm_str)
 }
 #endif
 
+void Algorithm::move_into_range(double& w)
+{
+  if (left_of_ != chain_.end() && left_of_->w() < w)
+  {
+    Dout(dc::notice, "Attempt to jump to " << w << " thwarted because that is larger than left_of_ (" << left_of_->w() << ").");
+    // If only left_of_ is set then we should be going to the left.
+    // right_of_ can't be set too because then we would be jumping to an extreme in between the two.
+    ASSERT(hdirection_ == HorizontalDirection::left);
+    if (left_of_ == chain_.begin())
+    {
+      w = left_of_->w();
+      Scale const& scale = left_of_->scale();
+      if (scale.is_valid())
+        w += scale.step(hdirection_);
+      else
+      {
+        ASSERT(small_step_ != 0.0);
+        w += static_cast<int>(hdirection_) * small_step_;
+      }
+      have_expected_Lw_ = false;
+      return;
+    }
+    else
+    {
+      cubic_used_ = std::prev(left_of_);
+      math::CubicPolynomial const& cubic = cubic_used_->cubic();
+      AnalyzedCubic acubic;
+      acubic.initialize(cubic, next_extreme_type_);
+      w = acubic.get_extreme();
+
+#ifdef CWDEBUG
+      // Show the cubic that is being used to jump.
+      event_server_.trigger(AlgorithmEventType{cubic_polynomial_event, cubic, HorizontalDirection::left});
+#endif
+    }
+  }
+  else if (right_of_ != chain_.end() && w < right_of_->w())
+  {
+    Dout(dc::notice, "Attempt to jump to " << w << " thwarted because this is less than right_of_ (" << right_of_->w() << ".");
+    // If only right_of_ is set then we should be going to the right.
+    ASSERT(hdirection_ == HorizontalDirection::right);
+    if (right_of_->type() == CubicToNextSampleType::unknown)
+    {
+      w = right_of_->w();
+      Scale const& scale = std::prev(right_of_)->scale();
+      if (scale.is_valid())
+        w += scale.step(hdirection_);
+      else
+      {
+        ASSERT(small_step_ != 0.0);
+        w += static_cast<int>(hdirection_) * small_step_;
+      }
+      have_expected_Lw_ = false;
+      return;
+    }
+    else
+    {
+      cubic_used_ = right_of_;
+      math::CubicPolynomial const& cubic = cubic_used_->cubic();
+      AnalyzedCubic acubic;
+      acubic.initialize(cubic, next_extreme_type_);
+      w = acubic.get_extreme();
+
+#ifdef CWDEBUG
+      // Show the cubic that is being used to jump.
+      event_server_.trigger(AlgorithmEventType{cubic_polynomial_event, cubic, HorizontalDirection::right});
+#endif
+    }
+  }
+
+  // A cubic was used.
+  expected_Lw_ = cubic_used_->cubic()(w);
+  have_expected_Lw_ = true;
+}
+
 bool Algorithm::update_energy(double Lw)
 {
   if (check_energy_)
@@ -759,11 +861,13 @@ bool Algorithm::handle_abort_hdirection(double& w)
   next_extreme_type_ = ExtremeType::maximum;
   small_step_ = best_minimum_cubic_->scale().value();
   initialize_range(best_minimum_cubic_->extreme_w());
+  move_into_range(w);
 
 #ifdef CWDEBUG
   event_server_.trigger(AlgorithmEventType{left_of_right_of_event,
       left_of_ == chain_.end() ? nullptr : &*left_of_,
-      right_of_ == chain_.end() ? nullptr : &*right_of_,
+      right_of_ == chain_.end() ? nullptr : &*right_of_});
+  event_server_.trigger(AlgorithmEventType{jump_point_event,
       next_extreme_type_, w, expected_Lw_});
 #endif
 
@@ -1061,7 +1165,7 @@ bool Algorithm::handle_local_extreme(double& w)
   Dout(dc::notice, "derivative = " << derivative);
 
 #ifdef CWDEBUG
-  event_server_.trigger(AlgorithmEventType{derivative_event, derivative});
+//  event_server_.trigger(AlgorithmEventType{derivative_event, derivative});
 #endif
 
   double remainder;
@@ -1072,7 +1176,7 @@ bool Algorithm::handle_local_extreme(double& w)
   Dout(dc::notice, "second_derivative = " << second_derivative);
 
 #ifdef CWDEBUG
-  event_server_.trigger(AlgorithmEventType{quotient_event, quotient});
+//  event_server_.trigger(AlgorithmEventType{quotient_event, quotient});
 #endif
 
   std::array<double, 2> quotient_roots;
@@ -1196,33 +1300,18 @@ bool Algorithm::handle_local_extreme(double& w)
   }
 
   initialize_range(extreme_w);
+#ifdef CWDEBUG
+  event_server_.trigger(AlgorithmEventType{left_of_right_of_event,
+      left_of_ == chain_.end() ? nullptr : &*left_of_,
+      right_of_ == chain_.end() ? nullptr : &*right_of_});
+#endif
 
-  if (left_of_ != chain_.end() && left_of_->w() < w)
-  {
-    // If only left_of_ is set then we should be going to the left.
-    // right_of_ can't be set too because then we would be jumping to an extreme in between the two.
-    ASSERT(hdirection_ == HorizontalDirection::left);
-    w = left_of_->w();
-    cubic_used_ = left_of_;
-    w += cubic_used_->scale().step(hdirection_);
-  }
-  else if (right_of_ != chain_.end() && w < right_of_->w())
-  {
-    // If only right_of_ is set then we should be going to the right.
-    ASSERT(hdirection_ == HorizontalDirection::right);
-    w = right_of_->w();
-    // I don't think this can ever fail.
-    ASSERT(right_of_ != chain_.begin());
-    cubic_used_ = std::prev(right_of_);
-    w += cubic_used_->scale().step(hdirection_);
-  }
+  move_into_range(w);
 
   ASSERT(debug_within_range(w));
 
 #ifdef CWDEBUG
-  event_server_.trigger(AlgorithmEventType{left_of_right_of_event,
-      left_of_ == chain_.end() ? nullptr : &*left_of_,
-      right_of_ == chain_.end() ? nullptr : &*right_of_,
+  event_server_.trigger(AlgorithmEventType{jump_point_event,
       next_extreme_type_, w, expected_Lw_});
 #endif
 

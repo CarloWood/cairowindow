@@ -54,15 +54,16 @@ class Algorithm
   }
 
   void initialize_range(double extreme_w);
+  void initialize_node(SampleNode::const_iterator node, SampleNode::const_iterator next COMMA_CWDEBUG_ONLY(bool node_is_last));
 
-  bool out_of_range(double root)
+  bool out_of_range(double root) const
   {
     // initialize_range should be called before calling this function, and that didn't happen if hdirection_ is still undecided!
     ASSERT(hdirection_ != HorizontalDirection::undecided);
     return (left_of_ != chain_.end() && left_of_->w() < root) || (right_of_ != chain_.end() && root < right_of_->w());
   }
 
-  bool wrong_direction(double step)
+  bool wrong_direction(double step) const
   {
     ASSERT(hdirection_ != HorizontalDirection::undecided);
     return (step > 0.0) == (hdirection_ == HorizontalDirection::left);
@@ -81,6 +82,7 @@ class Algorithm
 
   bool operator()(double& w, double Lw, double dLdw);
   void handle_single_sample(double& w);
+  void move_into_range(double& w);
   [[nodiscard]] bool update_energy(double Lw);
   [[nodiscard]] bool handle_abort_hdirection(double& w);
   [[nodiscard]] bool handle_local_extreme(double& w);

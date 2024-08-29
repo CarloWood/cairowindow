@@ -74,6 +74,8 @@ class Scale
     value_ = calculate_value(inflection_point_w);
   }
 
+  bool is_valid() const { return type_ != CriticalPointType::none; }
+
   // Return a directional scale: minus the scale if direction is `left` and plus the scale if direction is `right`.
   double step(HorizontalDirection& hdirection) const
   {

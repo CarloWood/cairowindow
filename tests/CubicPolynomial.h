@@ -1,9 +1,10 @@
 #pragma once
 
+#include "utils/square.h"
+#include "utils/macros.h"
 #include <array>
 #include <cmath>
 #include "debug.h"
-#include "utils/square.h"
 #ifdef CWDEBUG
 #include "utils/has_print_on.h"
 #endif
@@ -45,11 +46,30 @@ class CubicPolynomial
   {
     DoutEntering(dc::notice, "CubicPolynomial::get_extrema()");
 
-    double D = utils::square(coefficients_[2]) - 3.0 * coefficients_[1] * coefficients_[3];
-    Dout(dc::notice, "D = " << D);
+    // The cubic is:
+    // coefficients_[0] + coefficients_[1] * x + coefficients_[2] * x^2 + coefficients_[3] * x^3.
+    // The derivative is:
+    // coefficients_[1] + 2 * coefficients_[2] * x + 3 * coefficients_[3] * x^2.
 
-    if (D < 0.0)
+    if (coefficients_[3] == 0.0)
     {
+      // If coefficients_[3] is zero, then the derivative has a single root when
+      // coefficients_[1] + 2 * coefficients_[2] * x = 0 -->
+      // x = -coefficients_[1] / (2 * coefficients_[2]).
+      extrema_out[0] = -0.5 * coefficients_[1] / coefficients_[2];
+      return std::isnormal(extrema_out[0]) ? 1 : 0;
+    }
+
+    // The determinant is (2 * coefficients_[2])^2 - 4 * coefficients_[1] * (3 * coefficients_[3]).
+    double one_fourth_D = utils::square(coefficients_[2]) - 3.0 * coefficients_[1] * coefficients_[3];
+    Dout(dc::notice, "D = " << (4.0 * one_fourth_D));
+
+    if (one_fourth_D < 0.0)
+    {
+      // The inflection point is
+      // -(2 * coefficients_[2]) / (2 * (3 * coefficients_[3])) =
+      // -coefficients_[2] / (3 * coefficients_[3]).
+
       // Write the inflection point to index 0.
       extrema_out[0] = -coefficients_[2] / (3.0 * coefficients_[3]);
       return 0;
@@ -59,13 +79,32 @@ class CubicPolynomial
     // Otherwise, put the minimum in index 0.
     int index_minimum = (left_most_first && coefficients_[3] > 0.0) ? 1 : 0;
 
-    double sqrt_D = std::sqrt(D);
-    extrema_out[index_minimum] = (-coefficients_[2] + sqrt_D) / (3.0 * coefficients_[3]);
-    extrema_out[1 - index_minimum] = (-coefficients_[2] - sqrt_D) / (3.0 * coefficients_[3]);
+    // Use a sqrt with the same sign as coefficients_[2];
+    double const signed_half_sqrt_D = std::copysign(std::sqrt(one_fourth_D), coefficients_[2]);
+
+    // Calculate the root closest to zero.
+    extrema_out[1 - index_minimum] = -coefficients_[1] / (coefficients_[2] + signed_half_sqrt_D);
+
+    if (AI_UNLIKELY(std::isnan(extrema_out[1 - index_minimum])))
+    {
+      // This means we must have divided by zero, which means that both, coefficients_[1] as well as sqrtD, must be zero.
+      // The latter means that coefficients_[0] is zero (coefficients_[2] was already checked not to be zero).
+      // Therefore we have: f(x) = c x^2 with one root at x=0.
+      extrema_out[0] = 0.0;
+      return 1;
+    }
+
+    // Calculate the root further away from zero.
+    extrema_out[index_minimum] = (-coefficients_[2] + signed_half_sqrt_D) / (3.0 * coefficients_[3]);
 
     Dout(dc::notice, "extrema_out = " << std::setprecision(std::numeric_limits<double>::digits10) << extrema_out);
 
-    return (D == 0.0) ? 1 : 2;
+    // The smallest one must be in index 0 if left_most_first is true.
+    ASSERT(!left_most_first || extrema_out[0] < extrema_out[1]);
+    // The minimum must be in index 0 if left_most_first is false.
+    ASSERT(left_most_first || (extrema_out[0] < extrema_out[1] == coefficients_[3] < 0.0));
+
+    return (one_fourth_D == 0.0) ? 1 : 2;
   }
 
   // Evaluation.
@@ -88,6 +127,8 @@ class CubicPolynomial
 
   double inflection_point() const
   {
+    if (AI_UNLIKELY(coefficients_[3] == 0.0))
+      return std::numeric_limits<double>::infinity();           // Anything really large would do (or towards negative infinity too).
     return -coefficients_[2] / (3.0 * coefficients_[3]);
   }
 

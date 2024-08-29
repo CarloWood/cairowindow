@@ -25,10 +25,10 @@ class Color
   constexpr Color() : red_(2.0), green_(2.0), blue_(2.0), alpha_(2.0) { }
   constexpr Color(double red, double green, double blue, double alpha = 1.0) : red_(red), green_(green), blue_(blue), alpha_(alpha) { }
 
-  double red() const { return red_; }
-  double green() const { return green_; }
-  double blue() const { return blue_; }
-  double alpha() const { return alpha_; }
+  constexpr double red() const { return red_; }
+  constexpr double green() const { return green_; }
+  constexpr double blue() const { return blue_; }
+  constexpr double alpha() const { return alpha_; }
 
   bool is_defined() const { return alpha_ != 2.0; }
   bool is_transparent() const { return alpha_ == 0.0; }
@@ -212,5 +212,10 @@ constexpr Color yellowgreen{0.604, 0.804, 0.196};
 constexpr Color transparent{0.0, 0.0, 0.0, 0.0};
 
 } // namespace color
+
+constexpr Color operator*(double multiplier, Color orig)
+{
+  return {orig.red() * multiplier, orig.green() * multiplier, orig.blue() * multiplier};
+}
 
 } // namespace cairowindow

@@ -44,6 +44,8 @@ void AlgorithmEventData::print_on(std::ostream& os) const
     std::get<ScaleDrawEventData>(event_data_).print_on(os);
   else if (std::holds_alternative<LeftOfRightOfEventData>(event_data_))
     std::get<LeftOfRightOfEventData>(event_data_).print_on(os);
+  else if (std::holds_alternative<JumpPointEventData>(event_data_))
+    std::get<JumpPointEventData>(event_data_).print_on(os);
   else if (std::holds_alternative<ScaleEraseEventData>(event_data_))
     std::get<ScaleEraseEventData>(event_data_).print_on(os);
   else if (std::holds_alternative<NewSampleEventData>(event_data_))
