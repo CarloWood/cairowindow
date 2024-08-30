@@ -64,7 +64,7 @@ void SampleNode::change_type_to_left_extreme(ExtremeType extreme_type) const
 }
 
 void SampleNode::initialize_cubic(const_iterator next
-    COMMA_CWDEBUG_ONLY(events::Server<AlgorithmEventType>& event_server, bool this_is_last)) const
+    COMMA_CWDEBUG_ONLY(ExtremeType next_extreme_type, events::Server<AlgorithmEventType>& event_server, bool this_is_last)) const
 {
   DoutEntering(dc::notice, "SampleNode::initialize_cubic(" << *next << ", event_server, " <<
       std::boolalpha << this_is_last << ") [" << static_cast<Sample const&>(*this) << "]");
@@ -77,6 +77,10 @@ void SampleNode::initialize_cubic(const_iterator next
   // Once a cubic is used to define a local extreme, it really shouldn't happen that we
   // add a new Sample in the middle of it!
   ASSERT(local_extreme_ == ExtremeType::unknown);
+
+  // If the node on the right is a local extreme, then it also shouldn't happen that we
+  // cut this cubic into two while looking for the same extreme!
+  ASSERT(!next->is_local_extreme() || next->get_extreme_type() != next_extreme_type);
 
   cubic_.initialize(w(), Lw(), dLdw(), next->w(), next->Lw(), next->dLdw());
   next_node_ = next;

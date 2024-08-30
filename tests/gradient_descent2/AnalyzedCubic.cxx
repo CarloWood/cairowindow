@@ -49,7 +49,7 @@ void AnalyzedCubic::initialize(math::CubicPolynomial const& cubic, ExtremeType e
     double one_fourth_D = utils::square(cubic[2]) - 3.0 * cubic[1] * cubic[3];
     if (one_fourth_D <= 0.0)
     {
-      // If the determinant is zero, then the cubic has no roots.
+      // If the determinant is zero, then the cubic has no local extremes.
       return;
     }
 
@@ -64,11 +64,11 @@ void AnalyzedCubic::initialize(math::CubicPolynomial const& cubic, ExtremeType e
     // f''(x_0) = Q
     // f''(x_1) = -Q
     // Therefore if Q is positive then x_0 is the minimum and x_1 is the maximum
-    // and if Q is negative then x_0 is the maximum and x_0 is the minimum.
+    // and if Q is negative then x_0 is the maximum and x_1 is the minimum.
     //
     // Note: if cubic[2] is zero (or close to zero due to floating point round of errors)
-    // then the sign of half_Q is not well defined, but it's absolute value is usually still
-    // significant. In that case, x_0 == -x_1 however and changing the sign of half_Q has
+    // then the sign of half_Q is not well defined, but its absolute value is usually still
+    // significant. However, in that case, x_0 == -x_1 and changing the sign of half_Q has
     // no real influence because that is exactly where we swap formula as well.
     if ((extreme_type == ExtremeType::maximum) == (half_Q < 0.0))
     {

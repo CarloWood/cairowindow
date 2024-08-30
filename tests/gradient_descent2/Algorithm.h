@@ -36,6 +36,7 @@ class Algorithm
   SampleNode::const_iterator last_extreme_cubic_;       // Used for handle_local_extreme; upon return, points to the SampleNode containing the
                                                         // cubic whose critical point is considered to be the local extreme.
   SampleNode::const_iterator best_minimum_cubic_{chain_.end()}; // Copy of the best last_extreme_cubic_ that was a minimum, so far.
+  double best_minimum_energy_;                          // The energy that we had when in the local minimum that is the best minimum.
 
 #ifdef CWDEBUG
   events::Server<AlgorithmEventType> event_server_;
@@ -55,13 +56,6 @@ class Algorithm
 
   void initialize_range(double extreme_w);
   void initialize_node(SampleNode::const_iterator node, SampleNode::const_iterator next COMMA_CWDEBUG_ONLY(bool node_is_last));
-
-  bool out_of_range(double root) const
-  {
-    // initialize_range should be called before calling this function, and that didn't happen if hdirection_ is still undecided!
-    ASSERT(hdirection_ != HorizontalDirection::undecided);
-    return (left_of_ != chain_.end() && left_of_->w() < root) || (right_of_ != chain_.end() && root < right_of_->w());
-  }
 
   bool wrong_direction(double step) const
   {

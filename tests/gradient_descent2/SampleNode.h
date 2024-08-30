@@ -60,7 +60,7 @@ class SampleNode : public Sample
   SampleNode(Sample&& sample) : Sample(std::move(sample)), type_(CubicToNextSampleType::unknown) { }
 
   void initialize_cubic(const_iterator next
-      COMMA_CWDEBUG_ONLY(events::Server<AlgorithmEventType>& event_server, bool this_is_last)) const;
+      COMMA_CWDEBUG_ONLY(ExtremeType next_extreme_type, events::Server<AlgorithmEventType>& event_server, bool this_is_last)) const;
 
   void change_type_to_left_extreme(ExtremeType extreme_type) const;
 

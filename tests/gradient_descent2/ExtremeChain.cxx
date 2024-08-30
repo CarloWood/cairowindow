@@ -85,7 +85,33 @@ void ExtremeChain::dump(Algorithm const* algorithm) const
   Dout(dc::notice, "Current chain:");
   NAMESPACE_DEBUG::Indent indent(2);
 
-  for (SampleNode::const_iterator node = sample_node_list_.begin(); node != sample_node_list_.end(); ++node)
+  SampleNode::const_iterator node = sample_node_list_.begin();
+  SampleNode::const_iterator end = sample_node_list_.end();
+
+  // Print at most 7 nodes around the last node that was added.
+  if (sample_node_list_.size() > 7)
+  {
+    end = node = algorithm->debug_chain().last();
+    int left_count = 0;
+    while (left_count < 3 && node != sample_node_list_.begin())
+    {
+      --node;
+      ++left_count;
+    }
+    int right_count = 0;
+    while (right_count < 7 - left_count && end != sample_node_list_.end())
+    {
+      ++end;
+      ++right_count;
+    }
+    while (left_count + right_count < 7 && node != sample_node_list_.begin())
+    {
+      --node;
+      ++left_count;
+    }
+  }
+
+  while (node != end)
   {
     Dout(dc::notice|continued_cf, '[' << node->label() << "] " << std::setprecision(12) << node->w());
     if (node->is_local_extreme())
@@ -103,6 +129,7 @@ void ExtremeChain::dump(Algorithm const* algorithm) const
         Dout(dc::continued, " [right_of]");
       Dout(dc::finish, "");
     }
+    ++node;
   }
 }
 
@@ -170,13 +197,13 @@ CubicEndShape get_end(CubicToNextSampleType type, bool left)
 
 void ExtremeChain::sanity_check(Algorithm const* algorithm) const
 {
-  SampleNode::const_iterator node = sample_node_list_.begin();
-  if (node == sample_node_list_.end())
+  if (sample_node_list_.empty())
     return;
   CubicToNextSampleType prev_type = CubicToNextSampleType::unknown;
   SampleNode::const_iterator last_extreme;
   ExtremeType last_extreme_type = ExtremeType::unknown;     // Extreme type of the last extreme;
   // Run over all node pairs {node, next} that make up cubics.
+  SampleNode::const_iterator node = sample_node_list_.begin();
   for (SampleNode::const_iterator next = std::next(node); next != sample_node_list_.end(); prev_type = node->type(), node = next++)
   {
     // The type of the cubic between every two samples in the chain must be known.
