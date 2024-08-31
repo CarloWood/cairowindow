@@ -57,7 +57,7 @@ class CubicPolynomial
       // coefficients_[1] + 2 * coefficients_[2] * x = 0 -->
       // x = -coefficients_[1] / (2 * coefficients_[2]).
       extrema_out[0] = -0.5 * coefficients_[1] / coefficients_[2];
-      return std::isnormal(extrema_out[0]) ? 1 : 0;
+      return std::isfinite(extrema_out[0]) ? 1 : 0;
     }
 
     // The determinant is (2 * coefficients_[2])^2 - 4 * coefficients_[1] * (3 * coefficients_[3]).

@@ -5,8 +5,14 @@
 #include "AlgorithmEventType.h"
 #include "KineticEnergy.h"
 #include "utils/UniqueID.h"
+#include "utils/Badge.h"
+#ifdef CWDEBUG
+#include "debug.h"
+#endif
 
 namespace gradient_descent {
+
+class WeightRef;
 
 class Algorithm
 {
@@ -74,12 +80,12 @@ class Algorithm
     DoutEntering(dc::notice, "Algorithm::Algorithm(" << learning_rate << ", " << L_max << ")");
   }
 
-  bool operator()(double& w, double Lw, double dLdw);
-  void handle_single_sample(double& w);
-  void move_into_range(double& w);
+  bool operator()(WeightRef w, double Lw, double dLdw);
+  void handle_single_sample(WeightRef w);
+  void move_into_range(WeightRef w);
   [[nodiscard]] bool update_energy(double Lw);
-  [[nodiscard]] bool handle_abort_hdirection(double& w);
-  [[nodiscard]] bool handle_local_extreme(double& w);
+  [[nodiscard]] bool handle_abort_hdirection(WeightRef w);
+  [[nodiscard]] bool handle_local_extreme(WeightRef w);
 
   bool success() const
   {
@@ -104,7 +110,15 @@ class Algorithm
     return *cubic_used_;
   }
 
+  // Don't call these from outside of Algorithm. It is only public because WeightRef needs to friend them.
+  inline void handle_single_sample_step(WeightRef w, double step, utils::Badge<Algorithm>);
+  inline void handle_get_extra_sample(WeightRef w, double requested_w, utils::Badge<Algorithm>);
+  inline void handle_extreme_jump(WeightRef w, SampleNode::const_iterator cubic, AnalyzedCubic const& acubic, utils::Badge<Algorithm>);
+  inline void handle_last_extreme_plus_step(WeightRef w, utils::Badge<Algorithm>);
+  inline void handle_fourth_degree_approximation_jump(WeightRef w, double extreme_w, double extreme_Lw, utils::Badge<Algorithm>);
+
 #ifdef CWDEBUG
+ public:
   // Accessors for the event servers.
   events::Server<AlgorithmEventType>& event_server()
   {
@@ -138,5 +152,108 @@ class Algorithm
   }
 #endif
 };
+
+class WeightRef
+{
+ private:
+  double& ref_;
+
+  // These need to be able to directly assign to ref_.
+  friend void Algorithm::handle_single_sample_step(WeightRef w, double step, utils::Badge<Algorithm>);
+  friend void Algorithm::handle_get_extra_sample(WeightRef w, double requested_w, utils::Badge<Algorithm>);
+  friend void Algorithm::handle_extreme_jump(WeightRef w, SampleNode::const_iterator cubic, AnalyzedCubic const& acubic,
+      utils::Badge<Algorithm>);
+  friend void Algorithm::handle_last_extreme_plus_step(WeightRef w, utils::Badge<Algorithm>);
+  friend void Algorithm::handle_fourth_degree_approximation_jump(WeightRef w, double extreme_w, double extreme_Lw, utils::Badge<Algorithm>);
+
+ public:
+  WeightRef(double& w) : ref_(w) { }
+
+  // Read-only accessor.
+  operator double() const { return ref_; }
+
+  void find_extreme_jump(SampleNode::const_iterator cubic, SampleNode const& next_node, ExtremeType& next_extreme_type)
+  {
+    ref_ = cubic->find_extreme(next_node, next_extreme_type);
+  }
+
+  void node_jump_step(SampleNode::const_iterator node, double step)
+  {
+    ref_ = node->w() + step;
+  }
+
+ private:
+  void extreme_jump(double extreme_w)
+  {
+    ref_ = extreme_w;
+  }
+
+  void extreme_jump_plus_step(SampleNode::const_iterator last_extreme_cubic, double step)
+  {
+    ref_ = last_extreme_cubic->extreme_w() + step;
+  }
+
+#ifdef CWDEBUG
+ public:
+  // Allow printing without depending on the above.
+  friend std::ostream& operator<<(std::ostream& os, WeightRef w)
+  {
+    return os << w.ref_;
+  }
+#endif
+};
+
+void Algorithm::handle_single_sample_step(WeightRef w, double step, utils::Badge<Algorithm>)
+{
+  ASSERT(state_ == IterationState::initialization);
+
+  // Never requires a special action-- just update w.ref_.
+  w.ref_ += step;
+  have_expected_Lw_ = false;
+}
+
+void Algorithm::handle_extreme_jump(WeightRef w, SampleNode::const_iterator cubic, AnalyzedCubic const& acubic, utils::Badge<Algorithm>)
+{
+  // acubic must be initialized from cubic.
+  ASSERT(acubic.debug_cubic() == &cubic->cubic());
+
+  cubic_used_ = cubic;
+  w.extreme_jump(acubic.get_extreme());
+
+#ifdef CWDEBUG
+  // Show the cubic that is being used to jump.
+  event_server_.trigger(AlgorithmEventType{cubic_polynomial_event, cubic_used_->cubic(), hdirection_});
+#endif
+  expected_Lw_ = cubic_used_->cubic()(w);
+  have_expected_Lw_ = true;
+}
+
+void Algorithm::handle_get_extra_sample(WeightRef w, double requested_w, utils::Badge<Algorithm>)
+{
+  // This forced assignment is required to be "in range".
+  ASSERT(debug_within_range(requested_w));
+
+  Dout(dc::notice, "Not enough samples to fit a fourth degree polynomial: asking for another samples at w = " << requested_w);
+  // Never requires a special action-- just update w.ref_.
+  w.ref_ = requested_w;
+  have_expected_Lw_ = false;
+  state_ = IterationState::extra_sample;
+}
+
+void Algorithm::handle_last_extreme_plus_step(WeightRef w, utils::Badge<Algorithm>)
+{
+  // Keep going in the same hdirection.
+  auto& scale = last_extreme_cubic_->scale();
+  w.extreme_jump_plus_step(last_extreme_cubic_, scale.step(hdirection_));
+  expected_Lw_ = last_extreme_cubic_->cubic()(w);
+  have_expected_Lw_ = true;
+}
+
+void Algorithm::handle_fourth_degree_approximation_jump(WeightRef w, double extreme_w, double extreme_Lw, utils::Badge<Algorithm>)
+{
+  w.extreme_jump(extreme_w);
+  expected_Lw_ = extreme_Lw;
+  have_expected_Lw_ = true;
+}
 
 } // namespace gradient_descent

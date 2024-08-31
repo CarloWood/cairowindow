@@ -52,8 +52,11 @@ class SampleNode : public Sample
   mutable int explored_{0};                                     // Bit mask 1: exploration to the left of this extreme has started.
                                                                 // Bit mask 2: same, on the right.
                                                                 // Only valid if this is a local extreme.
-  mutable double opposite_direction_w_;                         // The w value of the opposite direction to explore if we jump back here
-                                                                // as best minimum, only valid if local_extreme_ isn't unknown.
+  mutable bool opposite_direction_is_fourth_degree_extreme_;    // Set iff opposite_direction_w_/opposite_direction_Lw_ refer to the local
+                                                                // extreme of a fourth degree approximation.
+  mutable double opposite_direction_w_;                         // The w value of the local extreme of the fourth degree approximation,
+                                                                // in the opposite direction.
+                                                                // Only valid if opposite_direction_is_fourth_degree_extreme_ is set.
   mutable double opposite_direction_Lw_;                        // Same but Lw coordinate.
 
  public:
@@ -168,13 +171,30 @@ class SampleNode : public Sample
   bool is_local_extreme() const { return local_extreme_ != ExtremeType::unknown; }
   ExtremeType get_extreme_type() const { ASSERT(local_extreme_ != ExtremeType::unknown); return local_extreme_; }
   double extreme_Lw() const { ASSERT(local_extreme_ != ExtremeType::unknown); return extreme_Lw_; }
-  void set_opposite_direction(double opposite_direction_w, double opposite_direction_Lw) const
+  void set_opposite_direction(bool opposite_direction_is_fourth_degree_extreme, double opposite_direction_w, double opposite_direction_Lw) const
   {
+    opposite_direction_is_fourth_degree_extreme_ = opposite_direction_is_fourth_degree_extreme;
     opposite_direction_w_ = opposite_direction_w;
     opposite_direction_Lw_ = opposite_direction_Lw;
   }
-  double opposite_direction_w() const { ASSERT(local_extreme_ != ExtremeType::unknown); return opposite_direction_w_; }
-  double opposite_direction_Lw() const { ASSERT(local_extreme_ != ExtremeType::unknown); return opposite_direction_Lw_; }
+  double opposite_direction_is_fourth_degree_extreme() const
+  {
+    // opposite_direction_is_fourth_degree_extreme_ is undefined if local_extreme_ isn't set.
+    ASSERT(local_extreme_ != ExtremeType::unknown);
+    return opposite_direction_is_fourth_degree_extreme_;
+  }
+  double opposite_direction_w() const
+  {
+    // opposite_direction_w is not required if opposite_direction_is_fourth_degree_extreme_ isn't set.
+    ASSERT(local_extreme_ != ExtremeType::unknown && opposite_direction_is_fourth_degree_extreme_);
+    return opposite_direction_w_;
+  }
+  double opposite_direction_Lw() const
+  {
+    // opposite_direction_w is not required if opposite_direction_is_fourth_degree_extreme_ isn't set.
+    ASSERT(local_extreme_ != ExtremeType::unknown && opposite_direction_is_fourth_degree_extreme_);
+    return opposite_direction_Lw_;
+  }
 
   void explored(HorizontalDirection hdirection) const
   {

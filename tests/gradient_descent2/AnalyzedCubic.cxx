@@ -6,6 +6,11 @@ namespace gradient_descent {
 
 void AnalyzedCubic::initialize(math::CubicPolynomial const& cubic, ExtremeType extreme_type)
 {
+#if CW_DEBUG
+  // Remember for which cubic this function was called.
+  debug_cubic_ = &cubic;
+#endif
+
   double half_sqrt_D;
   if (AI_UNLIKELY(cubic[3] == 0.0))
   {
@@ -88,10 +93,13 @@ void AnalyzedCubic::initialize(math::CubicPolynomial const& cubic, ExtremeType e
 void AnalyzedCubic::initialize_matches(SampleNode const& left_sample, SampleNode const& right_sample)
 {
 #if CW_DEBUG
+  // Call initialize before calling initialize_matches.
+  ASSERT(debug_cubic_);
   // This function can only be called once.
   ASSERT(!initialize_matches_called_);
-  // Remember for which cubic this function was called.
-  initialize_matches_called_ = &left_sample.cubic();
+  initialize_matches_called_ = true;
+  // This should match.
+  ASSERT(debug_cubic_ == &left_sample.cubic());
 #endif
   // Do not measure a "height" of the cubic relative to its extreme if the cubic doesn't have any extrema...
   detached_from_extreme_ = !has_extrema();

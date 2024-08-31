@@ -25,7 +25,8 @@ class AnalyzedCubic
   double critical_point_w_;             // If extreme, then the one passed to initialize.
   bool detached_from_extreme_{false};   // Set if matches shouldn't use height. Only valid after calling initialize_matches.
 #if CW_DEBUG
-  math::CubicPolynomial const* initialize_matches_called_{nullptr};
+  bool initialize_matches_called_{false};
+  math::CubicPolynomial const* debug_cubic_{nullptr};
 #endif
 
  public:
@@ -94,7 +95,7 @@ class AnalyzedCubic
     if (!std::isfinite(vertical_scale_))
       return true;
     // Call initialize_matches before calling matches.
-    ASSERT(initialize_matches_called_ == &g);
+    ASSERT(initialize_matches_called_ && debug_cubic_ == &g);
     double const vertical_scale = detached_from_extreme_ ? vertical_scale_ : height(w, g[3]);
     // We want to return true if the point (w, Lw), deviates from the value according to the cubic g(w)
     // less than 10% of the (vertical) distance to the extreme: |g(w) - g(e)|.
@@ -103,6 +104,9 @@ class AnalyzedCubic
   }
 
 #ifdef CWDEBUG
+  // Return a pointer to the cubic that initalize was called with.
+  math::CubicPolynomial const* debug_cubic() const { return debug_cubic_; }
+
   void print_on(std::ostream& os) const
   {
     os << "{inflection_point:" << inflection_point_ <<

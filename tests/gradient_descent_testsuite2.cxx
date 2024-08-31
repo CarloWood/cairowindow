@@ -178,7 +178,7 @@ int main()
   constexpr double L_max = 100.0;
   constexpr double learning_rate = 0.125;
 
-#if 0
+#if 1
   //==========================================================================
   Dout(dc::notice, "*** TEST: starting with a derivative of zero ***");
   {
@@ -507,7 +507,7 @@ int main()
   }
 #endif
 
-#if 0
+#if 1
   //==========================================================================
   Dout(dc::notice, "*** TEST: first local extreme ***");
   {

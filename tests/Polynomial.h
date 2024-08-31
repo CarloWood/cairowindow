@@ -94,7 +94,7 @@ class Polynomial
       if (coefficients_.size() < 2)
         return 0;
       roots_out[0] = -coefficients_[0] / coefficients_[1];
-      return std::isnormal(roots_out[0]) ? 1 : 0;
+      return std::isfinite(roots_out[0]) ? 1 : 0;
     }
 
     double const D = utils::square(coefficients_[1]) - 4.0 * coefficients_[2] * coefficients_[0];
