@@ -116,7 +116,7 @@ void ExtremeChain::dump(Algorithm const* algorithm) const
   {
     Dout(dc::notice|continued_cf, '[' << node->label() << "] " << std::setprecision(12) << node->w());
     if (node->is_local_extreme())
-      Dout(dc::continued, " [" << node->get_extreme_type() << ']');
+      Dout(dc::continued, " [" << node->local_extreme().get_extreme_type() << ']');
     Dout(dc::finish, " " << node->scale());
     if (node->type() != CubicToNextSampleType::unknown)
     {
@@ -222,13 +222,13 @@ void ExtremeChain::sanity_check(Algorithm const* algorithm) const
     if (node->is_local_extreme())
     {
       // Can't have two extrema of the same type on a row.
-      if (last_extreme_type == node->get_extreme_type())
+      if (last_extreme_type == node->local_extreme().get_extreme_type())
       {
         // This should never happen and probably means that we're trying to detect a local extreme that was already found before.
         DoutFatal(dc::core, "The node at " << static_cast<Sample const&>(*last_extreme) << " has the same type as the node at " <<
             static_cast<Sample const&>(*node) << " (" << last_extreme_type << ")!");
       }
-      last_extreme_type = node->get_extreme_type();
+      last_extreme_type = node->local_extreme().get_extreme_type();
       last_extreme = node;
     }
 

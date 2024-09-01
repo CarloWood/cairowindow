@@ -849,12 +849,15 @@ bool Algorithm::handle_abort_hdirection(WeightRef w)
   // Jump back to the best minimum and continue in the opposite hdirection.
   Dout(dc::notice, "Aborting exploring " << hdirection_ << " of the minimum at " << best_minimum_cubic_->extreme_w() << ".");
 
-  // Was this minimum already explored in both directions?
-  if (best_minimum_cubic_->done())
-    return false;
+  //
+  // Go back in time to when we were at the best minimum so far, and then go into the opposite direction.
+  //
 
-  // Go back in time to when we were at the best minimum so far,
-  // and then go into the opposite direction.
+  LocalExtreme const& local_extreme = best_minimum_cubic_->local_extreme();
+
+  // Was this minimum already explored in both directions?
+  if (local_extreme.done())
+    return false;
 
   ASSERT(hdirection_ != HorizontalDirection::undecided);
   set_hdirection(opposite(hdirection_));        // Change hdirection.
@@ -863,8 +866,8 @@ bool Algorithm::handle_abort_hdirection(WeightRef w)
   next_extreme_type_ = ExtremeType::maximum;    // The best minimum is a minimum, so next we'll be looking for a maximum.
   small_step_ = best_minimum_cubic_->scale().value();
 
-  if (best_minimum_cubic_->opposite_direction_is_fourth_degree_extreme())
-    handle_fourth_degree_approximation_jump(w, best_minimum_cubic_->opposite_direction_w(), best_minimum_cubic_->opposite_direction_Lw(), {});
+  if (local_extreme.opposite_direction_is_fourth_degree_extreme())
+    handle_fourth_degree_approximation_jump(w, local_extreme.opposite_direction_w(), local_extreme.opposite_direction_Lw(), {});
   else
     handle_last_extreme_plus_step(w, {});
 
@@ -924,10 +927,11 @@ bool Algorithm::handle_local_extreme(WeightRef w)
     // Keep track of the best minimum so far; or abort if this minimum isn't better than one found before.
     if (next_extreme_type_ == ExtremeType::minimum)
     {
-      Dout(dc::notice, "new minimum = {" << extreme_w << ", " << last_extreme_cubic_->extreme_Lw() << "}");
+      Dout(dc::notice, "new minimum = {" << extreme_w << ", " << last_extreme_cubic_->local_extreme().extreme_Lw() << "}");
       // We were looking for a minimum.
-      ASSERT(last_extreme_cubic_->get_extreme_type() == ExtremeType::minimum);
-      if (best_minimum_cubic_ == chain_.end() || best_minimum_cubic_->extreme_Lw() > last_extreme_cubic_->extreme_Lw())
+      ASSERT(last_extreme_cubic_->local_extreme().get_extreme_type() == ExtremeType::minimum);
+      if (best_minimum_cubic_ == chain_.end() ||
+          best_minimum_cubic_->local_extreme().extreme_Lw() > last_extreme_cubic_->local_extreme().extreme_Lw())
       {
         best_minimum_cubic_ = last_extreme_cubic_;
         Dout(dc::notice, "best_minimum_cubic_ set to " << *best_minimum_cubic_);
@@ -1297,7 +1301,8 @@ bool Algorithm::handle_local_extreme(WeightRef w)
   }
 
   // Also remember the opposite direction (in case we jump back here).
-  last_extreme_cubic_->set_opposite_direction(opposite_direction_is_fourth_degree_extreme, opposite_direction_w, opposite_direction_Lw);
+  last_extreme_cubic_->local_extreme().set_opposite_direction(
+      opposite_direction_is_fourth_degree_extreme, opposite_direction_w, opposite_direction_Lw);
 
   if (hdirection_ == HorizontalDirection::undecided)
   {
@@ -1340,10 +1345,11 @@ bool Algorithm::handle_local_extreme(WeightRef w)
 
 #if 0
   // Keep track of the best minimum so far; or abort if this minimum isn't better than one found before.
-  if (last_extreme_cubic_->get_extreme_type() == ExtremeType::minimum)
+  if (last_extreme_cubic_.local_extreme()->get_extreme_type() == ExtremeType::minimum)
   {
     //saw_minimum_ = true;
-    if (best_minimum_cubic_ == chain_.end() || best_minimum_cubic_->extreme_Lw() > last_extreme_cubic_->extreme_Lw())
+    if (best_minimum_cubic_ == chain_.end() ||
+        best_minimum_cubic_->local_extreme().extreme_Lw() > last_extreme_cubic_->local_extreme().extreme_Lw())
     {
       best_minimum_cubic_ = last_extreme_cubic_;
       best_minimum_energy_ = energy_.energy();

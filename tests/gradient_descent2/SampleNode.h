@@ -1,5 +1,6 @@
 #pragma once
 
+#include "LocalExtreme.h"
 #include "Sample.h"
 #include "Scale.h"
 #include "CubicToNextSampleType.h"
@@ -29,9 +30,6 @@ struct AlgorithmEventType;
 class SampleNode : public Sample
 {
  public:
-  static constexpr int explored_left = 1;               // Bit mask used for explored_.
-  static constexpr int explored_right = 2;
-
   using list_type = std::list<SampleNode>;              // The actual list is member of ExtremeChain.
   using iterator = list_type::iterator;
   using const_iterator = list_type::const_iterator;
@@ -47,19 +45,9 @@ class SampleNode : public Sample
                                                         // copy of what was passed to initialize_cubic.
   math::CubicPolynomial cubic_;                         // The cubic that fits this and next_node_, if the latter isn't chain_.end().
   CubicToNextSampleType type_;                          // The type of cubic_.
-
   mutable Scale scale_;                                 // The scale that belongs to this cubic.
-  mutable ExtremeType local_extreme_{ExtremeType::unknown};     // Set to minimum or maximum if this is a local extreme. Otherwise set to unknown.
-  mutable double extreme_Lw_;                                   // The Lw coordinate of the local extreme (w is stored in the scale_).
-  mutable int explored_{0};                                     // Bit mask 1: exploration to the left of this extreme has started.
-                                                                // Bit mask 2: same, on the right.
-                                                                // Only valid if this is a local extreme.
-  mutable bool opposite_direction_is_fourth_degree_extreme_;    // Set iff opposite_direction_w_/opposite_direction_Lw_ refer to the local
-                                                                // extreme of a fourth degree approximation.
-  mutable double opposite_direction_w_;                         // The w value of the local extreme of the fourth degree approximation,
-                                                                // in the opposite direction.
-                                                                // Only valid if opposite_direction_is_fourth_degree_extreme_ is set.
-  mutable double opposite_direction_Lw_;                        // Same but Lw coordinate.
+
+  mutable std::unique_ptr<LocalExtreme> local_extreme_; // Points to LocalExtreme instance iff this cubic was used for a local extreme.
 
  public:
   SampleNode(Sample&& sample) : Sample(std::move(sample)), type_(CubicToNextSampleType::unknown) { }
@@ -90,21 +78,11 @@ class SampleNode : public Sample
   // Returns the cubic that was fitted between this and the next sample.
   math::CubicPolynomial const& cubic() const { return cubic_; }
 
-  // The scale of this cubic.
-  Scale const& scale() const { return scale_; }
-
   // Returns the type of the cubic that was fitted between this and the next sample.
   CubicToNextSampleType type() const { return type_; }
 
-  // Returns the w value of the underlying extreme.
-  double extreme_w() const
-  {
-    // Call initialize_cubic before using this member function.
-    ASSERT(type_ != CubicToNextSampleType::unknown);
-    // Call set_local_extreme before calling this function.
-    ASSERT(local_extreme_ != ExtremeType::unknown);
-    return scale_.critical_point_w();
-  }
+  // The scale of this cubic.
+  Scale const& scale() const { return scale_; }
 
   // Returns true if this type falls in the 'rising' class.
   bool is_rising() const
@@ -135,16 +113,6 @@ class SampleNode : public Sample
     return extreme_type == ExtremeType::minimum ? has_minimum(type_) : has_maximum(type_);
   }
 
-  // Scale estimates that can be used when scale is not available yet.
-  double w_scale_estimate() const
-  {
-    ASSERT(type_ != CubicToNextSampleType::unknown);
-    ASSERT(next_node_->w() > w());
-    return next_node_->w() - w();
-  }
-  double Lw_scale_estimate() const { return std::abs(next_node_->Lw() - Lw()); }
-  double dLdw_scale_estimate() const { return std::abs((next_node_->Lw() - Lw()) / (next_node_->w() - w())); }
-
   bool has_left_min() const
   {
     return (static_cast<int>(type_) & left_min_bit) != 0;
@@ -166,59 +134,52 @@ class SampleNode : public Sample
   }
 
   //---------------------------------------------------------------------------
+  // Local extreme data.
+
+  // Returns the w value of the underlying extreme.
+  double extreme_w() const
+  {
+    // Call initialize_cubic before using this member function.
+    ASSERT(type_ != CubicToNextSampleType::unknown);
+    // Call set_local_extreme before calling this function.
+    ASSERT(local_extreme_);
+    return scale_.critical_point_w();
+  }
+
+  //---------------------------------------------------------------------------
+  // Scale estimates that can be used when scale is not available yet.
+  double w_scale_estimate() const
+  {
+    ASSERT(type_ != CubicToNextSampleType::unknown);
+    ASSERT(next_node_->w() > w());
+    return next_node_->w() - w();
+  }
+  double Lw_scale_estimate() const { return std::abs(next_node_->Lw() - Lw()); }
+  double dLdw_scale_estimate() const { return std::abs((next_node_->Lw() - Lw()) / (next_node_->w() - w())); }
+
+  //---------------------------------------------------------------------------
   // Local extreme functions.
 
+  // Mark this node as the left node of a cubic whose local_extreme type is a local extreme of the underlying function L(w).
   void set_local_extreme(ExtremeType local_extreme) const
   {
+    // Pass minimum or maximum.
+    ASSERT(local_extreme != ExtremeType::unknown);
+    // Call set_scale before calling this function.
     ASSERT(scale_.type() != CriticalPointType::none);
-    extreme_Lw_ = cubic_(scale_.critical_point_w());
-    local_extreme_ = local_extreme;
+    // Only call this function once.
+    ASSERT(!local_extreme_);
+    local_extreme_ = std::make_unique<LocalExtreme>(local_extreme, cubic_(scale_.critical_point_w()));
   }
 
-  bool is_local_extreme() const { return local_extreme_ != ExtremeType::unknown; }
-  ExtremeType get_extreme_type() const { ASSERT(local_extreme_ != ExtremeType::unknown); return local_extreme_; }
-  double extreme_Lw() const { ASSERT(local_extreme_ != ExtremeType::unknown); return extreme_Lw_; }
-  void set_opposite_direction(bool opposite_direction_is_fourth_degree_extreme, double opposite_direction_w, double opposite_direction_Lw) const
-  {
-    opposite_direction_is_fourth_degree_extreme_ = opposite_direction_is_fourth_degree_extreme;
-    opposite_direction_w_ = opposite_direction_w;
-    opposite_direction_Lw_ = opposite_direction_Lw;
-  }
-  double opposite_direction_is_fourth_degree_extreme() const
-  {
-    // opposite_direction_is_fourth_degree_extreme_ is undefined if local_extreme_ isn't set.
-    ASSERT(local_extreme_ != ExtremeType::unknown);
-    return opposite_direction_is_fourth_degree_extreme_;
-  }
-  double opposite_direction_w() const
-  {
-    // opposite_direction_w is not required if opposite_direction_is_fourth_degree_extreme_ isn't set.
-    ASSERT(local_extreme_ != ExtremeType::unknown && opposite_direction_is_fourth_degree_extreme_);
-    return opposite_direction_w_;
-  }
-  double opposite_direction_Lw() const
-  {
-    // opposite_direction_w is not required if opposite_direction_is_fourth_degree_extreme_ isn't set.
-    ASSERT(local_extreme_ != ExtremeType::unknown && opposite_direction_is_fourth_degree_extreme_);
-    return opposite_direction_Lw_;
-  }
+  // Return true iff set_local_extreme was called.
+  bool is_local_extreme() const { return static_cast<bool>(local_extreme_); }
 
-  void explored(HorizontalDirection hdirection) const
+  LocalExtreme& local_extreme() const
   {
-    ASSERT(hdirection != HorizontalDirection::undecided);
-    int explore_flag = hdirection == HorizontalDirection::left ? explored_left : explored_right;
-    explored_ |= explore_flag;
-  }
-
-  bool done() const
-  {
-    return explored_ == (explored_left|explored_right);
-  }
-
-  bool is_explored(HorizontalDirection hdirection) const
-  {
-    int explore_flag = hdirection == HorizontalDirection::left ? explored_left : explored_right;
-    return (explored_ & explore_flag) != 0;
+    // Only cal this function if is_local_extreme returns true.
+    ASSERT(local_extreme_);
+    return *local_extreme_;
   }
 
   //---------------------------------------------------------------------------
@@ -234,16 +195,8 @@ class SampleNode : public Sample
   {
     os << "{";
     Sample::print_on(os);
-    if (explored_)
-    {
-      os << " E:";
-      if (explored_ == explored_left)
-        os << "←";
-      else if (explored_ == explored_right)
-        os << "→";
-      else
-        os << "↔";
-    }
+    if (local_extreme_)
+      local_extreme_->print_on(os);
     os << ", cubic:";
     if (type_ == CubicToNextSampleType::unknown)
       os << "<none>";

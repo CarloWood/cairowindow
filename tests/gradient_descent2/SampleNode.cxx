@@ -76,11 +76,11 @@ void SampleNode::initialize_cubic(const_iterator next
 
   // Once a cubic is used to define a local extreme, it really shouldn't happen that we
   // add a new Sample in the middle of it!
-  ASSERT(local_extreme_ == ExtremeType::unknown);
+  ASSERT(!local_extreme_);
 
   // If the node on the right is a local extreme, then it also shouldn't happen that we
   // cut this cubic into two while looking for the same extreme!
-  ASSERT(!next->is_local_extreme() || next->get_extreme_type() != next_extreme_type);
+  ASSERT(!next->is_local_extreme() || next->local_extreme().get_extreme_type() != next_extreme_type);
 
   cubic_.initialize(w(), Lw(), dLdw(), next->w(), next->Lw(), next->dLdw());
   next_node_ = next;

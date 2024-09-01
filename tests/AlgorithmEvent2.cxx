@@ -242,7 +242,7 @@ void AlgorithmEvent::callback(gradient_descent::AlgorithmEventType const& event)
     auto const& data = event.get<NewLocalExtremeEventData>();
     SampleNode const& node = data.extreme_cubic();
     double x = node.extreme_w();
-    double y = node.extreme_Lw();
+    double y = node.local_extreme().extreme_Lw();
 
     plot_local_extremes_.emplace_back(
         plot_.create_point(layer_, point_style_({.color_index = 2}), {x, y}),
@@ -265,7 +265,7 @@ void AlgorithmEvent::callback(gradient_descent::AlgorithmEventType const& event)
     auto const& data = event.get<HDirectionKnownEventData>();
     SampleNode const& node = data.extreme_cubic();
     double x = node.extreme_w();
-    double y = node.extreme_Lw();
+    double y = node.local_extreme().extreme_Lw();
 
     plot_current_hdirection_ = plot::Connector{{x, y},
       {x + static_cast<int>(data.hdirection()) * plot_.convert_horizontal_offset_from_pixel(25.0), y},
