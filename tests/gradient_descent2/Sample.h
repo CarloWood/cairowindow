@@ -18,9 +18,9 @@ using utils::has_print_on::operator<<;
 class Sample
 {
  private:
-  double w_;            // w value.
-  double Lw_;           // The corresponding function value L(w).
-  double dLdw_;         // The corresponding derivative value dL/dw at w.
+  double const w_;              // w value.
+  double const Lw_;             // The corresponding function value L(w).
+  double const dLdw_;           // The corresponding derivative value dL/dw at w.
 #ifdef CWDEBUG
   utils::UniqueID<int> label_;
 #endif

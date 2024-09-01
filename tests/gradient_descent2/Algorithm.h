@@ -61,7 +61,7 @@ class Algorithm
   }
 
   void initialize_range(double extreme_w);
-  void initialize_node(SampleNode::const_iterator node, SampleNode::const_iterator next COMMA_CWDEBUG_ONLY(bool node_is_last));
+  void initialize_node(SampleNode::iterator node, SampleNode::const_iterator next COMMA_CWDEBUG_ONLY(bool node_is_last));
 
   bool wrong_direction(double step) const
   {

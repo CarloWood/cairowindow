@@ -69,14 +69,15 @@ std::pair<SampleNode::const_iterator, bool> ExtremeChain::duplicate(double scale
   return ibp;
 }
 
-SampleNode::const_iterator ExtremeChain::insert(Sample&& new_sample)
+SampleNode::iterator ExtremeChain::insert(Sample&& new_sample)
 {
   // Call find_larger with the w value of the next sample.
   ASSERT(new_w_ == new_sample.w());
 
   // Insert the new sample before `larger_`.
-  last_ = sample_node_list_.insert(larger_, std::move(new_sample));
-  return last_;
+  auto new_node = sample_node_list_.insert(larger_, std::move(new_sample));
+  last_ = new_node;
+  return new_node;
 }
 
 #ifdef CWDEBUG

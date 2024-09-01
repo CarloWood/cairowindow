@@ -12,7 +12,7 @@
 
 namespace gradient_descent {
 
-void Algorithm::initialize_node(SampleNode::const_iterator node, SampleNode::const_iterator next
+void Algorithm::initialize_node(SampleNode::iterator node, SampleNode::const_iterator next
     COMMA_CWDEBUG_ONLY(bool node_is_last))
 {
   // Remember if node (the left node of the cubic) is already marked as an extreme.
@@ -63,11 +63,14 @@ bool Algorithm::operator()(WeightRef w, double Lw, double dLdw)
 #endif
 
   SampleNode::const_iterator new_node;
-  SampleNode::const_iterator right_node;        // The node right of the new node.
   SampleNode::const_iterator left_node;         // The node left of the new node (only valid if new_node != chain_.begin()).
+  SampleNode::const_iterator right_node;        // The node right of the new node.
 
   if (!must_abort)
   {
+    SampleNode::iterator non_const_new_node;
+    SampleNode::iterator non_const_left_node;
+
     // Create a new Sample for this sample.
     Sample current{w, Lw, dLdw COMMA_CWDEBUG_ONLY(label_context_)};
     Dout(dc::notice, "current = " << current);
@@ -106,17 +109,19 @@ bool Algorithm::operator()(WeightRef w, double Lw, double dLdw)
     }
 
     // Insert the new sample.
-    new_node = chain_.insert(std::move(current));
+    non_const_new_node = chain_.insert(std::move(current));
+    new_node = non_const_new_node;
 
     // Initialize the cubic(s).
     right_node = std::next(new_node);
     if (new_node != chain_.begin())
     {
-      left_node = std::prev(new_node);
-      initialize_node(left_node, new_node COMMA_CWDEBUG_ONLY(false));                     // false: new_node is passed as second argument.
+      non_const_left_node = std::prev(non_const_new_node);
+      initialize_node(non_const_left_node, new_node COMMA_CWDEBUG_ONLY(false));         // false: new_node is passed as second argument.
+      left_node = non_const_left_node;
     }
     if (right_node != chain_.end())
-      initialize_node(new_node, right_node COMMA_CWDEBUG_ONLY(true));                     // true: new_node is passed as first argument.
+      initialize_node(non_const_new_node, right_node COMMA_CWDEBUG_ONLY(true));         // true: new_node is passed as first argument.
   }
 
   for (;;)
@@ -341,7 +346,7 @@ bool Algorithm::operator()(WeightRef w, double Lw, double dLdw)
             Dout(dc::finish, (right_of_ != chain_.end() ? right_of_->w() : -std::numeric_limits<double>::infinity()) <<
                 " and " << (left_of_ != chain_.end() ? left_of_->w() : std::numeric_limits<double>::infinity()));
 #endif
-            auto current = new_node;
+            SampleNode::const_iterator current = new_node;
             // If we are on the wrong side of 'foo_of_', jump to foo_of_.
             //
             //                           |==>           <==|
@@ -632,8 +637,8 @@ bool Algorithm::operator()(WeightRef w, double Lw, double dLdw)
     chain_.reuse(new_node);
 
     // Re-initialize right_node and left_node.
-    right_node = std::next(new_node);           // The node right of the new node.
-    if (new_node != chain_.begin())
+    right_node = std::next(new_node);          // The node right of the new node.
+    if (new_node != chain_.begin())            // If this is true then left_node isn't used (and therefore doesn't need to be assigned).
       left_node = std::prev(new_node);
 
     must_abort = false;

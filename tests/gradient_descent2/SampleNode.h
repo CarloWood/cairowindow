@@ -43,10 +43,12 @@ class SampleNode : public Sample
 #endif
 
  private:
-  mutable math::CubicPolynomial cubic_;                         // The cubic that fits this and the next Sample.
-  mutable CubicToNextSampleType type_;                          // The type of this cubic.
-  mutable Scale scale_;                                         // The scale that belongs to this cubic.
-  mutable const_iterator next_node_;                            // The right-sample used for cubic_, copy of what was passed to initialize_cubic.
+  const_iterator next_node_;                            // The right-sample, if any, used for cubic_,
+                                                        // copy of what was passed to initialize_cubic.
+  math::CubicPolynomial cubic_;                         // The cubic that fits this and next_node_, if the latter isn't chain_.end().
+  CubicToNextSampleType type_;                          // The type of cubic_.
+
+  mutable Scale scale_;                                 // The scale that belongs to this cubic.
   mutable ExtremeType local_extreme_{ExtremeType::unknown};     // Set to minimum or maximum if this is a local extreme. Otherwise set to unknown.
   mutable double extreme_Lw_;                                   // The Lw coordinate of the local extreme (w is stored in the scale_).
   mutable int explored_{0};                                     // Bit mask 1: exploration to the left of this extreme has started.
@@ -63,9 +65,9 @@ class SampleNode : public Sample
   SampleNode(Sample&& sample) : Sample(std::move(sample)), type_(CubicToNextSampleType::unknown) { }
 
   void initialize_cubic(const_iterator next
-      COMMA_CWDEBUG_ONLY(ExtremeType next_extreme_type, events::Server<AlgorithmEventType>& event_server, bool this_is_last)) const;
+      COMMA_CWDEBUG_ONLY(ExtremeType next_extreme_type, events::Server<AlgorithmEventType>& event_server, bool this_is_last));
 
-  void change_type_to_left_extreme(ExtremeType extreme_type) const;
+  void change_type_to_left_extreme(ExtremeType extreme_type);
 
  public:
   double find_extreme(Sample const& next, ExtremeType& extreme_type) const;
@@ -134,7 +136,12 @@ class SampleNode : public Sample
   }
 
   // Scale estimates that can be used when scale is not available yet.
-  double w_scale_estimate() const { ASSERT(type_ != CubicToNextSampleType::unknown); ASSERT(next_node_->w() > w()); return next_node_->w() - w(); }
+  double w_scale_estimate() const
+  {
+    ASSERT(type_ != CubicToNextSampleType::unknown);
+    ASSERT(next_node_->w() > w());
+    return next_node_->w() - w();
+  }
   double Lw_scale_estimate() const { return std::abs(next_node_->Lw() - Lw()); }
   double dLdw_scale_estimate() const { return std::abs((next_node_->Lw() - Lw()) / (next_node_->w() - w())); }
 

@@ -5,7 +5,7 @@
 
 namespace gradient_descent {
 
-void SampleNode::change_type_to_left_extreme(ExtremeType extreme_type) const
+void SampleNode::change_type_to_left_extreme(ExtremeType extreme_type)
 {
   using enum CubicToNextSampleType;
   switch (type_)
@@ -64,7 +64,7 @@ void SampleNode::change_type_to_left_extreme(ExtremeType extreme_type) const
 }
 
 void SampleNode::initialize_cubic(const_iterator next
-    COMMA_CWDEBUG_ONLY(ExtremeType next_extreme_type, events::Server<AlgorithmEventType>& event_server, bool this_is_last)) const
+    COMMA_CWDEBUG_ONLY(ExtremeType next_extreme_type, events::Server<AlgorithmEventType>& event_server, bool this_is_last))
 {
   DoutEntering(dc::notice, "SampleNode::initialize_cubic(" << *next << ", event_server, " <<
       std::boolalpha << this_is_last << ") [" << static_cast<Sample const&>(*this) << "]");

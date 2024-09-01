@@ -26,7 +26,7 @@ class ExtremeChain
  public:
   void initialize(Sample&& first_sample);
   void find_larger(double new_w);
-  SampleNode::const_iterator insert(Sample&& new_sample);
+  SampleNode::iterator insert(Sample&& new_sample);
   void reuse(SampleNode::const_iterator const& sample_node) { last_ = sample_node; }
 
   bool empty() const { return sample_node_list_.empty(); }
