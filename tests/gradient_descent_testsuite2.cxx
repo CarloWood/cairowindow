@@ -462,7 +462,8 @@ int main()
             double w = w0;
 
             Dout(dc::notice, "===========================================");
-            //gda.enable_drawing(L, -6.0, 25.0);
+            //if (!no_extremes && i0 == 2 && i1 == 6)
+            //  gda.enable_drawing(L, -6.0, 25.0);
 
             gda(w, L(w), L.derivative(w));
             ASSERT(gda.algorithm_str() ==
@@ -495,10 +496,19 @@ int main()
             int i = target_extreme_is_first_extreme ? i_max : i_min;
             if (no_extremes || (i0 != i && i1 != i))
               ASSERT(gda.debug_hdirection() == HorizontalDirection::undecided);
+            else if (!no_extremes && i0 == 2 && i1 == 6)
+            {
+              // In this case the algorithm is asking for an extra sample to cut the current local extreme cubic in half.
+              ASSERT(gda.debug_hdirection() == HorizontalDirection::undecided);
+              ASSERT(w == inflection_point);
+              expected = maximum_last ? CubicToNextSampleType::left_max : CubicToNextSampleType::right_max;
+              // Call gda again to see what happens next.
+              gda(w, L(w), L.derivative(w));
+            }
             else
               ASSERT(gda.debug_hdirection() == (i0 == i ? HorizontalDirection::left : HorizontalDirection::right));
             // Because w > w0, the cubic through both is stored in the SampleNode of w0 (last() returns the one of w).
-            auto cubic_node = gda.debug_chain().begin();        // There is only one cubic, so it must be the first node.
+            auto cubic_node = gda.debug_cubic_used();
             ASSERT(cubic_node->type() == expected);
             ASSERT(gda.debug_next_extreme_type() == expected_next_extreme_type);
           }

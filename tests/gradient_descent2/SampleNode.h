@@ -81,6 +81,9 @@ class SampleNode : public Sample
   // Returns the type of the cubic that was fitted between this and the next sample.
   CubicToNextSampleType type() const { return type_; }
 
+  // Returns true if there is a node on the right and the cubic in between is initialized.
+  bool is_cubic() const { return type_ != CubicToNextSampleType::unknown; }
+
   // The scale of this cubic.
   Scale const& scale() const { return scale_; }
 
@@ -113,6 +116,11 @@ class SampleNode : public Sample
     return extreme_type == ExtremeType::minimum ? has_minimum(type_) : has_maximum(type_);
   }
 
+  bool has_extreme() const
+  {
+    return (static_cast<int>(type_) & (minimum_bit|left_min_bit|right_min_bit|maximum_bit|left_max_bit|right_max_bit)) != 0;
+  }
+
   bool has_left_min() const
   {
     return (static_cast<int>(type_) & left_min_bit) != 0;
@@ -131,6 +139,12 @@ class SampleNode : public Sample
   bool has_right_max() const
   {
     return (static_cast<int>(type_) & right_max_bit) != 0;
+  }
+
+  bool has_flat_extreme(ExtremeType extreme_type, SideOfCubic on_side) const
+  {
+    int bits_to_test = left_min_bit << (static_cast<int>(extreme_type) + 1 + on_side);
+    return (static_cast<int>(type_) & bits_to_test) != 0;
   }
 
   //---------------------------------------------------------------------------
@@ -161,7 +175,7 @@ class SampleNode : public Sample
   // Local extreme functions.
 
   // Mark this node as the left node of a cubic whose local_extreme type is a local extreme of the underlying function L(w).
-  void set_local_extreme(ExtremeType local_extreme) const
+  void set_local_extreme(ExtremeType local_extreme, const_iterator chain_end) const
   {
     // Pass minimum or maximum.
     ASSERT(local_extreme != ExtremeType::unknown);
@@ -169,7 +183,8 @@ class SampleNode : public Sample
     ASSERT(scale_.type() != CriticalPointType::none);
     // Only call this function once.
     ASSERT(!local_extreme_);
-    local_extreme_ = std::make_unique<LocalExtreme>(local_extreme, cubic_(scale_.critical_point_w()));
+    local_extreme_ = std::make_unique<LocalExtreme>(local_extreme, cubic_(scale_.critical_point_w()), chain_end
+        COMMA_CWDEBUG_ONLY('[' + std::to_string(label()) + ']'));
   }
 
   // Return true iff set_local_extreme was called.

@@ -85,6 +85,7 @@ class Algorithm
   void move_into_range(WeightRef w);
   [[nodiscard]] bool update_energy(double Lw);
   [[nodiscard]] bool handle_abort_hdirection(WeightRef w);
+  [[nodiscard]] bool handle_local_extreme_jump(WeightRef w);
   [[nodiscard]] bool handle_local_extreme(WeightRef w);
 
   bool success() const
@@ -113,6 +114,8 @@ class Algorithm
   // Don't call these from outside of Algorithm. It is only public because WeightRef needs to friend them.
   inline void handle_single_sample_step(WeightRef w, double step, utils::Badge<Algorithm>);
   inline void handle_get_extra_sample(WeightRef w, double requested_w, utils::Badge<Algorithm>);
+  inline void handle_divide_last_extreme_cubic(WeightRef w, utils::Badge<Algorithm>);
+  inline void extreme_jump_range_edge(WeightRef w, SampleNode::const_iterator range_edge, utils::Badge<Algorithm>);
   inline void handle_extreme_jump(WeightRef w, SampleNode::const_iterator cubic, AnalyzedCubic const& acubic, utils::Badge<Algorithm>);
   inline void handle_last_extreme_plus_step(WeightRef w, utils::Badge<Algorithm>);
   inline void handle_fourth_degree_approximation_jump(WeightRef w, double extreme_w, double extreme_Lw, utils::Badge<Algorithm>);
@@ -148,7 +151,7 @@ class Algorithm
 
   bool debug_within_range(double w) const
   {
-    return (left_of_ == chain_.end() || w < left_of_->w()) && (right_of_ == chain_.end() || right_of_->w() < w);
+    return (left_of_ == chain_.end() || w <= left_of_->w()) && (right_of_ == chain_.end() || right_of_->w() <= w);
   }
 #endif
 };
@@ -161,6 +164,8 @@ class WeightRef
   // These need to be able to directly assign to ref_.
   friend void Algorithm::handle_single_sample_step(WeightRef w, double step, utils::Badge<Algorithm>);
   friend void Algorithm::handle_get_extra_sample(WeightRef w, double requested_w, utils::Badge<Algorithm>);
+  friend void Algorithm::handle_divide_last_extreme_cubic(WeightRef w, utils::Badge<Algorithm>);
+  friend void Algorithm::extreme_jump_range_edge(WeightRef w, SampleNode::const_iterator range_edge, utils::Badge<Algorithm>);
   friend void Algorithm::handle_extreme_jump(WeightRef w, SampleNode::const_iterator cubic, AnalyzedCubic const& acubic,
       utils::Badge<Algorithm>);
   friend void Algorithm::handle_last_extreme_plus_step(WeightRef w, utils::Badge<Algorithm>);
@@ -205,6 +210,7 @@ class WeightRef
 
 void Algorithm::handle_single_sample_step(WeightRef w, double step, utils::Badge<Algorithm>)
 {
+  DoutEntering(dc::notice, "Algorithm::handle_single_sample_step(" << w << ", " << step << ")");
   ASSERT(state_ == IterationState::initialization);
 
   // Never requires a special action-- just update w.ref_.
@@ -214,6 +220,7 @@ void Algorithm::handle_single_sample_step(WeightRef w, double step, utils::Badge
 
 void Algorithm::handle_extreme_jump(WeightRef w, SampleNode::const_iterator cubic, AnalyzedCubic const& acubic, utils::Badge<Algorithm>)
 {
+  DoutEntering(dc::notice, "Algorithm::handle_extreme_jump(" << w << ", " << *cubic << ", " << acubic << ")");
   // acubic must be initialized from cubic.
   ASSERT(acubic.debug_cubic() == &cubic->cubic());
 
@@ -230,6 +237,7 @@ void Algorithm::handle_extreme_jump(WeightRef w, SampleNode::const_iterator cubi
 
 void Algorithm::handle_get_extra_sample(WeightRef w, double requested_w, utils::Badge<Algorithm>)
 {
+  DoutEntering(dc::notice, "Algorithm::handle_get_extra_sample(" << w << ", " << requested_w << ")");
   // This forced assignment is required to be "in range".
   ASSERT(debug_within_range(requested_w));
 
@@ -240,8 +248,29 @@ void Algorithm::handle_get_extra_sample(WeightRef w, double requested_w, utils::
   state_ = IterationState::extra_sample;
 }
 
+void Algorithm::handle_divide_last_extreme_cubic(WeightRef w, utils::Badge<Algorithm>)
+{
+  DoutEntering(dc::notice, "Algorithm::handle_divide_last_extreme_cubic(" << w << ")");
+  math::CubicPolynomial const& cubic = last_extreme_cubic_->cubic();
+  w.ref_ = cubic.inflection_point();
+  expected_Lw_ = cubic[0] + cubic[2] * (2.0 * utils::square(cubic[2] / 3.0) - cubic[3] * cubic[1]) / (3.0 * utils::square(cubic[3]));
+  have_expected_Lw_ = true;
+//  state_ = IterationState::divide_last_extreme_cubic;
+}
+
+void Algorithm::extreme_jump_range_edge(WeightRef w, SampleNode::const_iterator range_edge, utils::Badge<Algorithm>)
+{
+  DoutEntering(dc::notice, "Algorithm::extreme_jump_range_edge(" << w << ", [" << range_edge->label() << "])");
+  // This function should only be used to jump to the flat end of a range.
+  ASSERT(range_edge == left_of_ || range_edge == right_of_);
+  w.extreme_jump(range_edge->w());
+  expected_Lw_ = range_edge->Lw();
+  have_expected_Lw_ = true;
+}
+
 void Algorithm::handle_last_extreme_plus_step(WeightRef w, utils::Badge<Algorithm>)
 {
+  DoutEntering(dc::notice, "Algorithm::handle_last_extreme_plus_step(" << w << ")");
   // Keep going in the same hdirection.
   auto& scale = last_extreme_cubic_->scale();
   w.extreme_jump_plus_step(last_extreme_cubic_, scale.step(hdirection_));
@@ -251,6 +280,7 @@ void Algorithm::handle_last_extreme_plus_step(WeightRef w, utils::Badge<Algorith
 
 void Algorithm::handle_fourth_degree_approximation_jump(WeightRef w, double extreme_w, double extreme_Lw, utils::Badge<Algorithm>)
 {
+  DoutEntering(dc::notice, "Algorithm::handle_fourth_degree_approximation_jump(" << w << ", " << extreme_w << ", " << extreme_Lw << ")");
   w.extreme_jump(extreme_w);
   expected_Lw_ = extreme_Lw;
   have_expected_Lw_ = true;

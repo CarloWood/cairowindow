@@ -10,14 +10,19 @@
 
 namespace gradient_descent {
 
+enum SideOfCubic : int {
+  on_the_right_side = 0,        // Type has left_min_bit or left_max_bit.
+  on_the_left_side = 1          // Type has right_min_bit or right_max_bit.
+};
+
 static constexpr int minimum_bit   = 0x01;
 static constexpr int maximum_bit   = 0x02;
 static constexpr int rising_bit    = 0x04;
 static constexpr int falling_bit   = 0x08;
-static constexpr int left_min_bit  = 0x10;
-static constexpr int left_max_bit  = 0x20;
-static constexpr int right_min_bit = 0x40;
-static constexpr int right_max_bit = 0x80;
+static constexpr int left_min_bit  = 0x10;      // The next three must be exact twice as larger every time (see SampleNode::has_flat_extreme).
+static constexpr int right_min_bit = left_min_bit << on_the_left_side;
+static constexpr int left_max_bit  = left_min_bit << 2; // We shift 2 to go from minimum to maximum.
+static constexpr int right_max_bit = left_max_bit << on_the_left_side;
 static constexpr int max_before_min_bit = 0x100;
 static constexpr int id_shift = 9;
 
