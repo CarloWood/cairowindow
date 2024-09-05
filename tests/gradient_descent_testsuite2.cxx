@@ -640,9 +640,12 @@ int main()
     symbolic::Constant const& amplitude = symbolic::Constant::realize(12027, 1000000);
     symbolic::Constant const& level = symbolic::Constant::realize(187838, 100);
     symbolic::Constant const& phase = symbolic::Constant::realize(191892, 100000);
+    //symbolic::Function const& sL = symbolic::Function::realize("L",
+    //   (1.0 - sigmoid2) * (2800 + e * ((x + 85)^2)) + sigmoid2 * ((1.0 - sigmoid) * (a + b * x + c * (x^2)) + (sigmoid * (amplitude * exp((tp - x) / 10) * sin(d * x + phase) + level))));
     symbolic::Function const& sL = symbolic::Function::realize("L",
-       (1.0 - sigmoid2) * (2800 + e * ((x + 85)^2)) + sigmoid2 * ((1.0 - sigmoid) * (a + b * x + c * (x^2)) + (sigmoid * (amplitude * exp((tp - x) / 10) * sin(d * x + phase) + level))));
-    Function L(x, sL, sigmoid, sigmoid2);
+       ((1.0 - sigmoid) * (a + b * x + c * (x^2)) + (sigmoid * (amplitude * exp((tp - x) / 10) * sin(d * x + phase) + level))));
+    //Function L(x, sL, sigmoid, sigmoid2);
+    Function L(x, sL, sigmoid);
 
     double zoom = 10.0;
     //gda.enable_drawing(L, -51.3629 - zoom, -51.3629 + zoom);

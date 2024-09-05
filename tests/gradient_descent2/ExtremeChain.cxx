@@ -58,10 +58,12 @@ void ExtremeChain::find_larger(double const new_w)
 #endif
 }
 
-std::pair<SampleNode::const_iterator, bool> ExtremeChain::duplicate(double scale) const
+std::pair<SampleNode::const_iterator, bool> ExtremeChain::duplicate(double scale, bool is_finish) const
 {
   std::pair<SampleNode::const_iterator, bool> ibp{{}, false};
-  double const significant_difference = significant_scale_fraction * scale;
+  double significant_difference = significant_scale_fraction * scale;
+  if (AI_UNLIKELY(is_finish))
+      significant_difference *= 1e-3;
   if (AI_UNLIKELY(larger_ != sample_node_list_.begin() && std::abs(std::prev(larger_)->w() - new_w_) < significant_difference))
     ibp = {std::prev(larger_), true};
   else if (AI_UNLIKELY(larger_ != sample_node_list_.end() && std::abs(larger_->w() - new_w_) < significant_difference))

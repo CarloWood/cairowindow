@@ -30,7 +30,7 @@ class ExtremeChain
   void reuse(SampleNode::const_iterator const& sample_node) { last_ = sample_node; }
 
   bool empty() const { return sample_node_list_.empty(); }
-  std::pair<SampleNode::const_iterator, bool> duplicate(double scale) const;
+  std::pair<SampleNode::const_iterator, bool> duplicate(double scale, bool is_finish) const;
   SampleNode::const_iterator last() const { return last_; }
   SampleNode::const_iterator larger() const { return larger_; }
   SampleNode::const_iterator begin() const { return sample_node_list_.begin(); }

@@ -39,10 +39,18 @@ class Algorithm
   bool check_energy_{false};                            // Set to true iff the last probe is a "keep going" step.
   bool have_expected_Lw_{false};                        // True if expected_Lw_ was set.
   double expected_Lw_;                                  // Whenever w is changed, this is set to what Lw value the approximation is expecting there.
-  SampleNode::const_iterator last_extreme_cubic_;       // Used for handle_local_extreme; upon return, points to the SampleNode containing the
-                                                        // cubic whose critical point is considered to be the local extreme.
+  SampleNode::const_iterator last_extreme_cubic_;       // After calling handle_local_extreme while state_ is not extra_sample, this will
+                                                        // point to the cubic that was used to find the local extreme.
+                                                        // If that cubic contains two extremes, then it was not marked as local extreme yet.
+                                                        // This is also set to point to the local extreme that we jump (back) to, aka before
+                                                        // calling handle_local_extreme_jump.
+                                                        // Therefore, this can be viewed as being the last local extreme that was visited.
   SampleNode::const_iterator best_minimum_cubic_{chain_.end()}; // Copy of the best last_extreme_cubic_ that was a minimum, so far.
   double best_minimum_energy_;                          // The energy that we had when in the local minimum that is the best minimum.
+  bool saw_minimum_ = false;                            // Set to true once we find our first mininum. After it remains true, because
+                                                        // we only go to adjacent local extreme, or jump (back) to the best minimum.
+                                                        // TODO: reset this to false if we "start over" because we ended up somewhere that
+                                                        // is lower than the best minimum so far.
 
 #ifdef CWDEBUG
   events::Server<AlgorithmEventType> event_server_;
@@ -119,6 +127,7 @@ class Algorithm
   inline void handle_extreme_jump(WeightRef w, SampleNode::const_iterator cubic, AnalyzedCubic const& acubic, utils::Badge<Algorithm>);
   inline void handle_last_extreme_plus_step(WeightRef w, utils::Badge<Algorithm>);
   inline void handle_fourth_degree_approximation_jump(WeightRef w, double extreme_w, double extreme_Lw, utils::Badge<Algorithm>);
+  inline void handle_finish(WeightRef w, utils::Badge<Algorithm>);
 
 #ifdef CWDEBUG
  public:
@@ -170,6 +179,7 @@ class WeightRef
       utils::Badge<Algorithm>);
   friend void Algorithm::handle_last_extreme_plus_step(WeightRef w, utils::Badge<Algorithm>);
   friend void Algorithm::handle_fourth_degree_approximation_jump(WeightRef w, double extreme_w, double extreme_Lw, utils::Badge<Algorithm>);
+  friend void Algorithm::handle_finish(WeightRef w, utils::Badge<Algorithm>);
 
  public:
   WeightRef(double& w) : ref_(w) { }
@@ -284,6 +294,15 @@ void Algorithm::handle_fourth_degree_approximation_jump(WeightRef w, double extr
   w.extreme_jump(extreme_w);
   expected_Lw_ = extreme_Lw;
   have_expected_Lw_ = true;
+}
+
+void Algorithm::handle_finish(WeightRef w, utils::Badge<Algorithm>)
+{
+  DoutEntering(dc::notice, "Algorithm::handle_finish(" << w << ")");
+  // There is always a minimum :/.
+  ASSERT(best_minimum_cubic_ != chain_.end());
+  w.extreme_jump(best_minimum_cubic_->extreme_w());
+  finish();
 }
 
 } // namespace gradient_descent

@@ -59,7 +59,14 @@ bool Algorithm::operator()(WeightRef w, double Lw, double dLdw)
   }
 
   // Print the chain_ to debug output and do a sanity check just before leaving this function.
-  auto&& dump_chain = at_scope_end([this]{ chain_.dump(this); chain_.sanity_check(this); });
+  auto&& dump_chain = at_scope_end([this]{
+      // After the last step the sanity check might fail because we skip initializing the new cubics left and right of the final minimum.
+      if (state_ != IterationState::success)
+      {
+        chain_.dump(this);
+        chain_.sanity_check(this);
+      }
+  });
 #endif
 
   SampleNode::const_iterator new_node;
@@ -112,16 +119,21 @@ bool Algorithm::operator()(WeightRef w, double Lw, double dLdw)
     non_const_new_node = chain_.insert(std::move(current));
     new_node = non_const_new_node;
 
-    // Initialize the cubic(s).
-    right_node = std::next(new_node);
-    if (new_node != chain_.begin())
+    // There is no NEED to initialize the cubics left and right of the final sample.
+    // In fact, that would cause an assertion, so avoid it.
+    if (AI_UNLIKELY(state_ != IterationState::finish))
     {
-      non_const_left_node = std::prev(non_const_new_node);
-      initialize_node(non_const_left_node, new_node COMMA_CWDEBUG_ONLY(false));         // false: new_node is passed as second argument.
-      left_node = non_const_left_node;
+      // Initialize the cubic(s).
+      right_node = std::next(new_node);
+      if (new_node != chain_.begin())
+      {
+        non_const_left_node = std::prev(non_const_new_node);
+        initialize_node(non_const_left_node, new_node COMMA_CWDEBUG_ONLY(false));         // false: new_node is passed as second argument.
+        left_node = non_const_left_node;
+      }
+      if (right_node != chain_.end())
+        initialize_node(non_const_new_node, right_node COMMA_CWDEBUG_ONLY(true));         // true: new_node is passed as first argument.
     }
-    if (right_node != chain_.end())
-      initialize_node(non_const_new_node, right_node COMMA_CWDEBUG_ONLY(true));         // true: new_node is passed as first argument.
   }
 
   for (;;)
@@ -623,7 +635,7 @@ bool Algorithm::operator()(WeightRef w, double Lw, double dLdw)
     chain_.find_larger(w);
 
     // Check if this is a duplicate (closer than 0.00001 * scale) to an existing sample.
-    auto ibp = chain_.duplicate(cubic_used_->scale().value());
+    auto ibp = chain_.duplicate(cubic_used_->scale().value(), state_ == IterationState::finish);
     if (AI_LIKELY(!ibp.second))
     {
       // Ask for a new sample at `w` if not already finished.
@@ -847,6 +859,12 @@ bool Algorithm::update_energy(double Lw)
     if (!energy_.maybe_update(Lw))
     {
       Dout(dc::notice, "Too much energy used: need to abort this direction (" << hdirection_ << ").");
+      if (last_extreme_cubic_ != chain_.end())
+      {
+        // We tried to go to hdirection_ but that wasn't possible.
+        // Mark the local extreme that we came from as explored, in this direction.
+        last_extreme_cubic_->local_extreme().explored(hdirection_);
+      }
       return false;
     }
   }
@@ -879,6 +897,8 @@ bool Algorithm::handle_abort_hdirection(WeightRef w)
   ASSERT(hdirection_ != HorizontalDirection::undecided);
   set_hdirection(opposite(hdirection_));        // Change hdirection.
   last_extreme_cubic_ = best_minimum_cubic_;
+  saw_minimum_ = true;
+  Dout(dc::notice, "Set last_extreme_cubic_ to [" << last_extreme_cubic_->label() << "].");
   cubic_used_ = chain_.end();
 
   return handle_local_extreme_jump(w);
@@ -891,9 +911,18 @@ bool Algorithm::handle_local_extreme_jump(WeightRef w)
   // Set last_extreme_cubic_ to the local extreme that you want to jump (back) to.
   LocalExtreme const& local_extreme = last_extreme_cubic_->local_extreme();
 
-  // Was this minimum already explored in both directions?
+  // Was this local extreme already explored in both directions?
   if (local_extreme.done())
-    return false;
+  {
+    // It shouldn't be possible that the best minimum wasn't explored into both directions yet, but an adjacent local extreme was.
+    ASSERT(last_extreme_cubic_ == best_minimum_cubic_);
+    handle_finish(w, {});
+    return true;
+  }
+
+  // Was this local extreme already explored in hdirection?
+  if (local_extreme.is_explored(hdirection_))
+    return handle_abort_hdirection(w);
 
   Dout(dc::notice, "Jumping to " << local_extreme.label() << " with hdirection_ = " << hdirection_ << '.');
 
@@ -908,6 +937,11 @@ bool Algorithm::handle_local_extreme_jump(WeightRef w)
   if (neighbor != chain_.end())
   {
     last_extreme_cubic_ = neighbor;
+    Dout(dc::notice, "Set last_extreme_cubic_ to [" << last_extreme_cubic_->label() << "].");
+    // We already saw a minimum.
+    ASSERT(saw_minimum_);
+    // Don't go back towards that minimum from this neighbor.
+    neighbor->local_extreme().explored(opposite(hdirection_));
     return handle_local_extreme_jump(w);
   }
 
@@ -964,6 +998,7 @@ bool Algorithm::handle_local_extreme(WeightRef w)
   {
     // Remember the node containing the cubic that found this extreme.
     last_extreme_cubic_ = cubic_used_;
+    Dout(dc::notice, "Set last_extreme_cubic_ to [" << last_extreme_cubic_->label() << "].");
 
     // The 'local extreme cubic' may not contain an extreme of the opposite type: SampleNode has only one LocalExtreme pointer!
     // If this fails then we need to insert an extra sample to cut the last_extreme_cubic_ in two.
@@ -983,9 +1018,266 @@ bool Algorithm::handle_local_extreme(WeightRef w)
 
     // Mark this sample as local extreme "cubic".
     last_extreme_cubic_->set_local_extreme(next_extreme_type_, chain_.end());
+    LocalExtreme const& local_extreme = last_extreme_cubic_->local_extreme();
 
     // We should get here with a w value that was already set to the critical point of the latest cubic approximation.
     ASSERT(w == last_extreme_cubic_->extreme_w());
+
+    // Because ascii-art is failing me big time, lets represent a local minimum like
+    //
+    //       \     /
+    //        \   /
+    //         `·´
+    // as follows:
+    //       ---·---
+    //
+    // where a · represents the local extreme and the rest of the function is simply flattened.
+    //
+    // A SampleNode (A or B, below) is marked as local extreme if its cubic has an extreme of
+    // the desired type that is close to the last SampleNode (B, which is chain_.last()).
+    //
+    // We can distinguish the following cases (where last_extreme_cubic_ is marked with a * (the local extreme cubic)).
+    //
+    // 1.   ------A*--------B-·-----------C---          cubic: A-B has extreme in · close to B. A is marked as local extreme.
+    //          <-^         ^->                         Start search to the left at A. Start search to the right at B.
+    // 2.   ------A*----------·-B---------C---          cubic: A-B has extreme in · close to B. A is marked as local extreme.
+    //          <-^             ^->                     Start search to the left at A. Start search to the right at B.
+    // 3.   ------C-----------·-B*--------A---          cubic: B-A has extreme in · close to B. B is marked as local extreme.
+    //          <-^             ^->                     Start search to the left at C. Start search to the right at B.
+    // 4.   ------C---------B*·-----------A---          cubic: B-A has extreme in · close to B. B is marked as local extreme.
+    //          <-^         ^->                         Start search to the left at C. Start search to the right at B.
+    //
+    // Note that in the first two cases, A is left of B and therefore contains the cubic.
+    // Therefore A is last_extreme_cubic_, the one marked as local extreme (and B is chain_.last()).
+    // In the last two cases, B is left of A and therefore B contains the cubic and is marked as local extreme:
+    // B is both last_extreme_cubic_ and chain_.last().
+    //
+    // Let next_extreme_type_ be a ╿maximum│minimum╽, then
+    //
+    // in case 1. the type of A-B can have get_end(A-B, right) = ╿uphill│downhill╽
+    //     and is not allowed to contain the opposite extreme therefore the type of A-B can be: ╿`/`│`\` or `^\`╽,
+    //     in which case B-C is ╿`/\/`, `/\` or `/\_`│`\/`, `\/‾` or `\/\`╽ (get_end(B-C, left) is ╿uphill│downhill╽
+    //     and B-C begins with a ╿maximum│minimum╽)
+    //   or the type of A-B can have get_end(A-B, right) = ╿flat_high│flat_low╽
+    //     and is not allowed to contain the opposite extreme therefore the type of A-B can only be ╿`/‾`│`\_`╽,
+    //     in which case B-C is ╿`‾\`, `‾\_` or `‾\/`│`_/`, `_/‾` or `_/\`╽ (get_end(B-C, left) is ╿flat_high│flat_low╽ too
+    //     and thus B-C begins with a ╿maximum│minimum╽).
+    //
+    // in case 2. the type of A-B can end on a ╿maximum│minimum╽
+    //     and is not allowed to contain the opposite extreme therefore the type of A-B can only be ╿`/\`│`\/`╽,
+    //     in which case get_end(B-C, left) is ╿downhill│uphill╽
+    //     (the type begins with a ╿`\`: `\`, `\_`, `\/`, `\/‾` or `\/\`│`/`: `/`, `/^`, `/‾`, `/\/`, `/\` or `/\_`╽)
+    //   or the type of A-B can have get_end(A-B, right) = ╿flat_high│flat_low╽
+    //     and is not allowed to contain the opposite extreme therefore the type of A-B can only be ╿`/‾`│`\_`╽,
+    //     in which case B-C is ╿`‾\`, `‾\_` or `‾\/`│`_/`, `_/‾` or `_/\`╽ (get_end(B-C, left) is ╿flat_high│flat_low╽ too
+    //     and thus B-C begins with a ╿maximum│minimum╽).
+    //
+    // in case 3. the type of B-A can have get_end(B-A, left) = ╿downhill│uphill╽
+    //     and is not allowed to contain the opposite extreme therefore the type of B-A can be: ╿`\`│`/` or `/^`╽,
+    //     in which case C-B is ╿`/\`, `_/\` or `\/\`│`\/`, `‾\/` or `/\/`╽ (get_end(C-B, right) is ╿downhill│uphill╽
+    //     and C-B ends on a ╿maximum│minimum╽)
+    //   or the type of B-A can have get_end(B-A, left) = ╿flat_high│flat_low╽
+    //     and is not allowed to contain the opposite extreme therefore the type of B-A can only be: ╿`‾\`│`_/`╽,
+    //     in which case C-B is ╿`/‾`, `_/‾` or `\/‾`│`\_`, `‾\_` or `/\_`╽) (get_end(C-B, right) is ╿flat_high│flat_low╽ too
+    //     and thus C-B ends on a ╿maximum│minimum╽).
+    //
+    // in case 4. the type of B-A can begin with a ╿maximum│minimum╽
+    //     and is not allowed to contain the opposite extreme therefore the type of B-A can only be: ╿`/\`│`\/`╽,
+    //     in which case get_end(C-B, right) is ╿uphill│downhill╽
+    //     (the type ends on a ╿`/`: `/`, `_/`, `/\/`, `\/` or `‾\/`│`\`: `\`, `^\`, `‾\`, `\/\`, `/\` or `_/\`╽)
+    //   or the type of B-A can have get_end(B-A, left) = ╿flat_high│flat_low╽
+    //     and is not allowed to contain the opposite extreme therefore the type of B-A can only be: ╿`‾\`│`_/`╽,
+    //     in which case C-B is ╿`/‾`, `_/‾` or `\/‾`│`\_`, `‾\_` or `/\_`╽) (get_end(C-B, right) is ╿flat_high│flat_low╽ too
+    //     and thus C-B ends on a ╿maximum│minimum╽).
+    //
+
+    // Find in both directions the first cubic that has an extreme, and/or is marked as local extreme.
+
+    // Case 3 or 4? Otherwise it's case 1 or 2.
+    bool case34 = last_extreme_cubic_ == chain_.last();
+    for (int d = -1; d <= 1; d += 2)
+    {
+      HorizontalDirection const direction = static_cast<HorizontalDirection>(d);
+
+      // Determine the starting node (the node with the arrow in the ascii art).
+      // 1.   ------A*--------B-·-----------C---
+      //          <-^
+      // 2.   ------A*----------·-B---------C---
+      //          <-^
+      // 3.   ------C-----------·-B*--------A---
+      //                          ^->
+      // 4.   ------C---------B*·-----------A---
+      //                      ^->
+      // First set start at the default (the node marked with a *).
+      SampleNode::const_iterator start = last_extreme_cubic_;
+
+      // However, if the direction is not left for case 1 and 2, or not right for case 3 and 4...
+      if (case34 != (direction == HorizontalDirection::right))
+      {
+        if (!case34)
+        {
+          // Direction is right; start should have been B (if cubic B-C exists).
+          // 1.   ------A*--------B-·-----------C---
+          //                      ^->
+          // 2.   ------A*----------·-B---------C---
+          //                          ^->
+          if (!start->is_cubic())       // Can't go further to the right?
+            continue;                   // There is no opposite extreme on the right of A.
+          ++start;
+        }
+        else
+        {
+          // Direction is left; start should have been C (if that exists).
+          // 3.   ------C-----------·-B*--------A---
+          //          <-^
+          // 4.   ------C---------B*·-----------A---
+          //          <-^
+          if (start == chain_.begin())  // Can't go further to the left?
+            continue;                   // There is no opposite extreme on the left of B.
+          --start;
+        }
+      }
+
+      SampleNode::const_iterator node = start;
+
+      // Advance until we find a cubic X-Y with the a local extreme between X and Y,
+      // or we run into another local extreme cubic (where X->is_local_extreme() is true,
+      // which does not necessarily imply the former if the used extreme falls outside the range between X and Y).
+
+      // The first time (while node == start) we only want to stop if node is a local extreme that is of the opposite type.
+      if (node->is_cubic() &&
+          (!node->is_local_extreme() || node->local_extreme().get_extreme_type() != opposite(next_extreme_type_)) &&
+          !node->has_extreme(opposite(next_extreme_type_)))
+      {
+        if (direction == HorizontalDirection::left)
+        {
+          do
+          {
+            if (node == chain_.begin())
+            {
+              node = std::prev(chain_.end());   // We failed to find an opposite extreme; cause node->is_cubic() to be false.
+              break;
+            }
+            --node;
+          }
+          while (!node->is_local_extreme() && !node->has_extreme());
+        }
+        else
+        {
+          do
+          {
+            ++node;
+          }
+          while (node->is_cubic() && !node->is_local_extreme() && !node->has_extreme());
+        }
+      }
+
+#if CW_DEBUG
+      if (node->is_cubic())
+      {
+        if (node == start)
+        {
+          // If node didn't change then it can't have been a local extreme cubic: if it was, then it can't also
+          // be a local extreme cubic of the opposite type, nor is it allowed to contain an extreme of the opposite type.
+          // If node didn't change and it not last_extreme_cubic_ then still it is not allowed have next_extreme_type_
+          // as first local extreme, of course (extremes must alternate).
+          ASSERT(start != last_extreme_cubic_);
+        }
+        else
+        {
+          // We found the first cubic that either has a local extreme, or is a local extreme cubic.
+          // Since node was changed, it can impossibly contain the same extreme as where we came from,
+          // unless it follows the opposite extreme in the same cubic.
+          ASSERT(!node->has_extreme(next_extreme_type_) || has_extreme_order(node->type(), next_extreme_type_, direction));
+        }
+
+        // If the node does not have the sought for local extreme then it must be a local extreme cubic
+        // that has its extreme outside of the cubic on the side of direction; aka we stopped one node too soon.
+        ASSERT(node->has_extreme(opposite(next_extreme_type_)) ||
+            (node->is_local_extreme() &&
+             ((direction == HorizontalDirection::left && node == chain_.begin()) ||
+              (direction == HorizontalDirection::left ? std::prev(node) : std::next(node))->has_extreme(opposite(next_extreme_type_)))));
+      }
+#endif
+
+      if (node->is_cubic() && !node->is_local_extreme())
+      {
+        // If this is not a local extreme, then the next one must be - or this local extreme wasn't found yet.
+        if (direction == HorizontalDirection::left)
+        {
+          if (node != chain_.begin())
+            --node;
+        }
+        else
+          ++node;
+      }
+
+      if (node->is_cubic() && node->is_local_extreme())
+      {
+        // If we found a neighboring local extreme, it better be of the opposite type.
+        ASSERT(node->local_extreme().get_extreme_type() == opposite(next_extreme_type_));
+        if (direction == HorizontalDirection::left)
+        {
+          last_extreme_cubic_->local_extreme().set_left_neighbor(node);
+          node->local_extreme().set_right_neighbor(last_extreme_cubic_);
+        }
+        else
+        {
+          last_extreme_cubic_->local_extreme().set_right_neighbor(node);
+          node->local_extreme().set_left_neighbor(last_extreme_cubic_);
+        }
+      }
+
+    } // Another direction?
+
+#ifdef CWDEBUG
+    // Draw the local extreme sample.
+    event_server_.trigger(AlgorithmEventType{new_local_extreme_event, *last_extreme_cubic_, std::to_string(last_extreme_cubic_->label())});
+    event_server_.trigger(AlgorithmEventType{scale_erase_event});
+#endif
+
+    // Get neighbor in the direction that we came from, if any.
+    SampleNode::const_iterator neighbor =
+      (hdirection_ == HorizontalDirection::right) ? local_extreme.left_neighbor() : local_extreme.right_neighbor();
+
+    if (neighbor != chain_.end())
+    {
+      // If we find a new local extreme by exploring in the direction left/right from a previous extreme and it is adjacent
+      // (there is no extreme in between), then the previous extreme is marked as Explored in that direction.
+      neighbor->local_extreme().explored(hdirection_);
+    }
+
+    // If we already saw a minimum, going from adjacent local extremes to the next, then also mark the newly found extreme
+    // as Explored in the opposite direction (towards that already seen extreme).
+    if (saw_minimum_)
+      local_extreme.explored(opposite(hdirection_));
+
+    // Keep track of the best minimum so far; or abort if this minimum isn't better than one found before.
+    if (next_extreme_type_ == ExtremeType::minimum)
+    {
+      Dout(dc::notice, "new minimum = {" << last_extreme_cubic_->extreme_w() << ", " <<
+          last_extreme_cubic_->local_extreme().extreme_Lw() << "}");
+      // We were looking for a minimum.
+      ASSERT(last_extreme_cubic_->local_extreme().get_extreme_type() == ExtremeType::minimum);
+      if (best_minimum_cubic_ == chain_.end() ||
+          best_minimum_cubic_->local_extreme().extreme_Lw() > last_extreme_cubic_->local_extreme().extreme_Lw())
+      {
+        best_minimum_cubic_ = last_extreme_cubic_;
+        Dout(dc::notice, "best_minimum_cubic_ set to " << *best_minimum_cubic_);
+        best_minimum_energy_ = energy_.energy();
+      }
+      if (last_extreme_cubic_ != best_minimum_cubic_)
+      {
+        // The new minimum isn't better than what we found already. Stop going into this direction.
+        Dout(dc::notice, "The new minimum isn't better than what we found already. "
+            "Stop going into the direction " << hdirection_ << ".");
+        return false;
+      }
+    }
+
+    // Set saw_minimum_ if this is a minimum.
+    if (next_extreme_type_ == ExtremeType::minimum)
+      saw_minimum_ = true;
   }
 
   double const extreme_w = last_extreme_cubic_->extreme_w();
@@ -1115,241 +1407,6 @@ bool Algorithm::handle_local_extreme(WeightRef w)
       set_hdirection(direction);
 
     return true;
-  }
-
-  // Because ascii-art is failing me big time, lets represent a local minimum like
-  //
-  //       \     /
-  //        \   /
-  //         `·´
-  // as follows:
-  //       ---·---
-  //
-  // where a · represents the local extreme and the rest of the function is simply flattened.
-  //
-  // A SampleNode (A or B, below) is marked as local extreme if its cubic has an extreme of
-  // the desired type that is close to the last SampleNode (B, which is chain_.last()).
-  //
-  // We can distinguish the following cases (where last_extreme_cubic_ is marked with a * (the local extreme cubic)).
-  //
-  // 1.   ------A*--------B-·-----------C---          cubic: A-B has extreme in · close to B. A is marked as local extreme.
-  //          <-^         ^->                         Start search to the left at A. Start search to the right at B.
-  // 2.   ------A*----------·-B---------C---          cubic: A-B has extreme in · close to B. A is marked as local extreme.
-  //          <-^             ^->                     Start search to the left at A. Start search to the right at B.
-  // 3.   ------C-----------·-B*--------A---          cubic: B-A has extreme in · close to B. B is marked as local extreme.
-  //          <-^             ^->                     Start search to the left at C. Start search to the right at B.
-  // 4.   ------C---------B*·-----------A---          cubic: B-A has extreme in · close to B. B is marked as local extreme.
-  //          <-^         ^->                         Start search to the left at C. Start search to the right at B.
-  //
-  // Note that in the first two cases, A is left of B and therefore contains the cubic.
-  // Therefore A is last_extreme_cubic_, the one marked as local extreme (and B is chain_.last()).
-  // In the last two cases, B is left of A and therefore B contains the cubic and is marked as local extreme:
-  // B is both last_extreme_cubic_ and chain_.last().
-  //
-  // Let next_extreme_type_ be a ╿maximum│minimum╽, then
-  //
-  // in case 1. the type of A-B can have get_end(A-B, right) = ╿uphill│downhill╽
-  //     and is not allowed to contain the opposite extreme therefore the type of A-B can be: ╿`/`│`\` or `^\`╽,
-  //     in which case B-C is ╿`/\/`, `/\` or `/\_`│`\/`, `\/‾` or `\/\`╽ (get_end(B-C, left) is ╿uphill│downhill╽
-  //     and B-C begins with a ╿maximum│minimum╽)
-  //   or the type of A-B can have get_end(A-B, right) = ╿flat_high│flat_low╽
-  //     and is not allowed to contain the opposite extreme therefore the type of A-B can only be ╿`/‾`│`\_`╽,
-  //     in which case B-C is ╿`‾\`, `‾\_` or `‾\/`│`_/`, `_/‾` or `_/\`╽ (get_end(B-C, left) is ╿flat_high│flat_low╽ too
-  //     and thus B-C begins with a ╿maximum│minimum╽).
-  //
-  // in case 2. the type of A-B can end on a ╿maximum│minimum╽
-  //     and is not allowed to contain the opposite extreme therefore the type of A-B can only be ╿`/\`│`\/`╽,
-  //     in which case get_end(B-C, left) is ╿downhill│uphill╽
-  //     (the type begins with a ╿`\`: `\`, `\_`, `\/`, `\/‾` or `\/\`│`/`: `/`, `/^`, `/‾`, `/\/`, `/\` or `/\_`╽)
-  //   or the type of A-B can have get_end(A-B, right) = ╿flat_high│flat_low╽
-  //     and is not allowed to contain the opposite extreme therefore the type of A-B can only be ╿`/‾`│`\_`╽,
-  //     in which case B-C is ╿`‾\`, `‾\_` or `‾\/`│`_/`, `_/‾` or `_/\`╽ (get_end(B-C, left) is ╿flat_high│flat_low╽ too
-  //     and thus B-C begins with a ╿maximum│minimum╽).
-  //
-  // in case 3. the type of B-A can have get_end(B-A, left) = ╿downhill│uphill╽
-  //     and is not allowed to contain the opposite extreme therefore the type of B-A can be: ╿`\`│`/` or `/^`╽,
-  //     in which case C-B is ╿`/\`, `_/\` or `\/\`│`\/`, `‾\/` or `/\/`╽ (get_end(C-B, right) is ╿downhill│uphill╽
-  //     and C-B ends on a ╿maximum│minimum╽)
-  //   or the type of B-A can have get_end(B-A, left) = ╿flat_high│flat_low╽
-  //     and is not allowed to contain the opposite extreme therefore the type of B-A can only be: ╿`‾\`│`_/`╽,
-  //     in which case C-B is ╿`/‾`, `_/‾` or `\/‾`│`\_`, `‾\_` or `/\_`╽) (get_end(C-B, right) is ╿flat_high│flat_low╽ too
-  //     and thus C-B ends on a ╿maximum│minimum╽).
-  //
-  // in case 4. the type of B-A can begin with a ╿maximum│minimum╽
-  //     and is not allowed to contain the opposite extreme therefore the type of B-A can only be: ╿`/\`│`\/`╽,
-  //     in which case get_end(C-B, right) is ╿uphill│downhill╽
-  //     (the type ends on a ╿`/`: `/`, `_/`, `/\/`, `\/` or `‾\/`│`\`: `\`, `^\`, `‾\`, `\/\`, `/\` or `_/\`╽)
-  //   or the type of B-A can have get_end(B-A, left) = ╿flat_high│flat_low╽
-  //     and is not allowed to contain the opposite extreme therefore the type of B-A can only be: ╿`‾\`│`_/`╽,
-  //     in which case C-B is ╿`/‾`, `_/‾` or `\/‾`│`\_`, `‾\_` or `/\_`╽) (get_end(C-B, right) is ╿flat_high│flat_low╽ too
-  //     and thus C-B ends on a ╿maximum│minimum╽).
-  //
-
-  // Find in both directions the first cubic that has an extreme, and/or is marked as local extreme.
-
-  // Case 3 or 4? Otherwise it's case 1 or 2.
-  bool case34 = last_extreme_cubic_ == chain_.last();
-  for (int d = -1; d <= 1; d += 2)
-  {
-    HorizontalDirection const direction = static_cast<HorizontalDirection>(d);
-
-    // Determine the starting node (the node with the arrow in the ascii art).
-    // 1.   ------A*--------B-·-----------C---
-    //          <-^
-    // 2.   ------A*----------·-B---------C---
-    //          <-^
-    // 3.   ------C-----------·-B*--------A---
-    //                          ^->
-    // 4.   ------C---------B*·-----------A---
-    //                      ^->
-    // First set start at the default (the node marked with a *).
-    SampleNode::const_iterator start = last_extreme_cubic_;
-
-    // However, if the direction is not left for case 1 and 2, or not right for case 3 and 4...
-    if (case34 != (direction == HorizontalDirection::right))
-    {
-      if (!case34)
-      {
-        // Direction is right; start should have been B (if cubic B-C exists).
-        // 1.   ------A*--------B-·-----------C---
-        //                      ^->
-        // 2.   ------A*----------·-B---------C---
-        //                          ^->
-        if (!start->is_cubic())       // Can't go further to the right?
-          continue;                   // There is no opposite extreme on the right of A.
-        ++start;
-      }
-      else
-      {
-        // Direction is left; start should have been C (if that exists).
-        // 3.   ------C-----------·-B*--------A---
-        //          <-^
-        // 4.   ------C---------B*·-----------A---
-        //          <-^
-        if (start == chain_.begin())  // Can't go further to the left?
-          continue;                   // There is no opposite extreme on the left of B.
-        --start;
-      }
-    }
-
-    SampleNode::const_iterator node = start;
-
-    // Advance until we find a cubic X-Y with the a local extreme between X and Y,
-    // or we run into another local extreme cubic (where X->is_local_extreme() is true,
-    // which does not necessarily imply the former if the used extreme falls outside the range between X and Y).
-
-    // The first time (while node == start) we only want to stop if node is a local extreme that is of the opposite type.
-    if (node->is_cubic() &&
-        (!node->is_local_extreme() || node->local_extreme().get_extreme_type() != opposite(next_extreme_type_)) &&
-        !node->has_extreme(opposite(next_extreme_type_)))
-    {
-      if (direction == HorizontalDirection::left)
-      {
-        do
-        {
-          if (node == chain_.begin())
-          {
-            node = std::prev(chain_.end());   // We failed to find an opposite extreme; cause node->is_cubic() to be false.
-            break;
-          }
-          --node;
-        }
-        while (!node->is_local_extreme() && !node->has_extreme());
-      }
-      else
-      {
-        do
-        {
-          ++node;
-        }
-        while (node->is_cubic() && !node->is_local_extreme() && !node->has_extreme());
-      }
-    }
-
-#if CW_DEBUG
-    if (node->is_cubic())
-    {
-      if (node == start)
-      {
-        // If node didn't change then it can't have been a local extreme cubic: if it was, then it can't also
-        // be a local extreme cubic of the opposite type, nor is it allowed to contain an extreme of the opposite type.
-        // If node didn't change and it not last_extreme_cubic_ then still it is not allowed have next_extreme_type_
-        // as first local extreme, of course (extremes must alternate).
-        ASSERT(start != last_extreme_cubic_);
-      }
-      else
-      {
-        // We found the first cubic that either has a local extreme, or is a local extreme cubic.
-        // Since node was changed, it can impossibly contain the same extreme as where we came from,
-        // unless it follows the opposite extreme in the same cubic.
-        ASSERT(!node->has_extreme(next_extreme_type_) || has_extreme_order(node->type(), next_extreme_type_, direction));
-      }
-
-      // If the node does not have the sought for local extreme then it must be a local extreme cubic
-      // that has its extreme outside of the cubic on the side of direction; aka we stopped one node too soon.
-      ASSERT(node->has_extreme(opposite(next_extreme_type_)) ||
-          (node->is_local_extreme() &&
-           ((direction == HorizontalDirection::left && node == chain_.begin()) ||
-            (direction == HorizontalDirection::left ? std::prev(node) : std::next(node))->has_extreme(opposite(next_extreme_type_)))));
-    }
-#endif
-
-    if (node->is_cubic() && !node->is_local_extreme())
-    {
-      // If this is not a local extreme, then the next one must be - or this local extreme wasn't found yet.
-      if (direction == HorizontalDirection::left)
-      {
-        if (node != chain_.begin())
-          --node;
-      }
-      else
-        ++node;
-    }
-
-    if (node->is_cubic() && node->is_local_extreme())
-    {
-      // If we found a neighboring local extreme, it better be of the opposite type.
-      ASSERT(node->local_extreme().get_extreme_type() == opposite(next_extreme_type_));
-      if (direction == HorizontalDirection::left)
-      {
-        last_extreme_cubic_->local_extreme().set_left_neighbor(node);
-        node->local_extreme().set_right_neighbor(last_extreme_cubic_);
-      }
-      else
-      {
-        last_extreme_cubic_->local_extreme().set_right_neighbor(node);
-        node->local_extreme().set_left_neighbor(last_extreme_cubic_);
-      }
-    }
-
-  } // Another direction?
-
-#ifdef CWDEBUG
-  // Draw the local extreme sample.
-  event_server_.trigger(AlgorithmEventType{new_local_extreme_event, *last_extreme_cubic_, std::to_string(last_extreme_cubic_->label())});
-  event_server_.trigger(AlgorithmEventType{scale_erase_event});
-#endif
-
-  // Keep track of the best minimum so far; or abort if this minimum isn't better than one found before.
-  if (next_extreme_type_ == ExtremeType::minimum)
-  {
-    Dout(dc::notice, "new minimum = {" << extreme_w << ", " << last_extreme_cubic_->local_extreme().extreme_Lw() << "}");
-    // We were looking for a minimum.
-    ASSERT(last_extreme_cubic_->local_extreme().get_extreme_type() == ExtremeType::minimum);
-    if (best_minimum_cubic_ == chain_.end() ||
-        best_minimum_cubic_->local_extreme().extreme_Lw() > last_extreme_cubic_->local_extreme().extreme_Lw())
-    {
-      best_minimum_cubic_ = last_extreme_cubic_;
-      Dout(dc::notice, "best_minimum_cubic_ set to " << *best_minimum_cubic_);
-      best_minimum_energy_ = energy_.energy();
-    }
-    if (last_extreme_cubic_ != best_minimum_cubic_)
-    {
-      // The new minimum isn't better than what we found already. Stop going into this direction.
-      Dout(dc::notice, "The new minimum isn't better than what we found already. "
-          "Stop going into the direction " << hdirection_ << ".");
-      return false;
-    }
   }
 
   // After finding a maximum we want to find a minimum and visa versa. Change next_extreme_type_.
@@ -1584,39 +1641,6 @@ bool Algorithm::handle_local_extreme(WeightRef w)
 
   initialize_range(extreme_w);
   move_into_range(w);
-
-#if 0 //FIXME: add this functionality (copied from histogram.cxx)
-  // If this is an extreme that we found by exploring hdirection_ from a previous extreme,
-  // then mark that last extreme as being explored in that hdirection_.
-  if (std::abs(last_step_) == 1)
-  {
-    mark_explored(last_w_, hdirection_);
-
-    // If the current extreme is a maximum, then it can be marked as having been explored to the opposite direction (in that case the previous extreme is a minimum).
-    // Or if the current extreme is a minimum and we came from another minimum (with steps of size 1), then mark it as having been explored into the opposite direction.
-    if (saw_minimum_)
-    {
-      // Mark that the current extreme is being explored in the opposite hdirection_.
-      mark_explored(w, opposite(hdirection_));
-    }
-  }
-#endif
-
-#if 0
-  // Keep track of the best minimum so far; or abort if this minimum isn't better than one found before.
-  if (last_extreme_cubic_.local_extreme()->get_extreme_type() == ExtremeType::minimum)
-  {
-    //saw_minimum_ = true;
-    if (best_minimum_cubic_ == chain_.end() ||
-        best_minimum_cubic_->local_extreme().extreme_Lw() > last_extreme_cubic_->local_extreme().extreme_Lw())
-    {
-      best_minimum_cubic_ = last_extreme_cubic_;
-      best_minimum_energy_ = energy_.energy();
-    }
-    if (last_extreme_cubic_ != best_minimum_cubic_)
-      return false;
-  }
-#endif
 
   state_ = IterationState::find_extreme;
   return true;

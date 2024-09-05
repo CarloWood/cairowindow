@@ -27,7 +27,7 @@ class LocalExtreme
  private:
   ExtremeType local_extreme_;                           // Set to minimum or maximum.
   double extreme_Lw_;                                   // The Lw coordinate of the local extreme (w is stored in the scale_).
-  int explored_{0};                                     // Bit mask 1: exploration to the left of this extreme has started.
+  mutable int explored_{0};                             // Bit mask 1: exploration to the left of this extreme has started.
                                                         // Bit mask 2: same, on the right.
 
   // Opposite direction data.
@@ -93,8 +93,9 @@ class LocalExtreme
     return opposite_direction_Lw_;
   }
 
-  void explored(HorizontalDirection hdirection)
+  void explored(HorizontalDirection hdirection) const
   {
+    DoutEntering(dc::notice, "LocalExtreme::explored(" << hdirection << ") \"" << label() << "\"");
     ASSERT(hdirection != HorizontalDirection::undecided);
     int explore_flag = hdirection == HorizontalDirection::left ? explored_left : explored_right;
     explored_ |= explore_flag;
