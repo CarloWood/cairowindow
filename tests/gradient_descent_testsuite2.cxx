@@ -1,23 +1,14 @@
 #include "sys.h"
-#include "AlgorithmEvent2.h"
-#include "gradient_descent2/Algorithm.h"
-#include "cairowindow/Window.h"
-#include "cairowindow/Layer.h"
-#include "cairowindow/Range.h"
-#include "cairowindow/Plot.h"
-#include "cairowindow/draw/Line.h"
+#include "Algorithm.h"
+#include "Function.h"
 #include "cairowindow/symbolic/symbolic.h"
-#include <thread>
-#include "debug.h"
 #ifdef CWDEBUG
 #include "cwds/Restart.h"
 #endif
 
 using namespace cairowindow;
 
-struct EnableDrawing;
-
-struct Function
+struct Function : enable_drawing::Function
 {
   symbolic::Function const& function_;
   symbolic::Symbol const& symbol_;
@@ -27,7 +18,7 @@ struct Function
   Function(symbolic::Symbol const& symbol, symbolic::Function const& function, Deps&&... deps) :
     function_(function), symbol_(symbol), deps_({&deps...}) { }
 
-  double operator()(double x) const
+  double operator()(double x) const override
   {
     symbol_ = x;
     reset_evaluation();
@@ -47,7 +38,7 @@ struct Function
   }
 
  private:
-  friend struct EnableDrawing;
+  friend class Algorithm;
   void reset_evaluation() const
   {
     function_.reset_evaluation();
@@ -55,111 +46,21 @@ struct Function
       dep->reset_evaluation();
   }
 
-  std::string to_string() const
+  std::string to_string() const override
   {
     return function_.to_string();
   }
 };
 
-class EnableDrawing
+class Algorithm : public enable_drawing::Algorithm
 {
  public:
-  static constexpr draw::LineStyle curve_line_style{{.line_width = 1.0}};
-
- private:
-  cairowindow::Window window;
-  boost::intrusive_ptr<Layer> background_layer;
-  boost::intrusive_ptr<Layer> second_layer;
-  std::thread event_loop;
-  Range L_min_max;
-  plot::Plot plot;
-  AlgorithmEvent algorithm_event;
-  events::RequestHandle<gradient_descent::AlgorithmEventType> algorithm_event_handle;
-  plot::BezierFitter plot_curve;
-
- public:
-  EnableDrawing(gradient_descent::Algorithm* algorithm, Function const& L, double w_min, double w_max);
-  ~EnableDrawing();
-
-  static Range get_L_min_max(Function const& L, double w_min, double w_max)
-  {
-    double L_min = L(w_min);
-    double L_max = L_min;
-    {
-      int const steps = 100;
-      double w = w_min;
-      double delta_w = (w_max - w_min) / (steps - 1);
-      for (int i = 0; i < steps; ++i)
-      {
-        double Lw = L(w);
-        L_min= std::min(L_min, Lw);
-        L_max= std::max(L_max, Lw);
-        w += delta_w;
-      }
-    }
-    return {L_min, L_max};
-  }
-
-  void wait()
-  {
-    // Block until a key is pressed.
-    if (!window.handle_input_events())
-      Dout(dc::notice, "Algorithm Terminated");
-  }
-};
-
-EnableDrawing::EnableDrawing(gradient_descent::Algorithm* algorithm, Function const& L, double w_min, double w_max) :
-  window("Gradient descent of " + L.to_string(), 2*600, 2*450),
-  background_layer(window.create_background_layer<Layer>(color::silver COMMA_DEBUG_ONLY("background_layer"))),
-  second_layer(window.create_layer<Layer>({} COMMA_DEBUG_ONLY("second_layer"))),
-  event_loop([&](){
-      // Open window, handle event loop. This must be constructed after the draw stuff, so that it is destructed first!
-      // Upon destruction it blocks until the event loop thread finished (aka, the window was closed).
-      EventLoop event_loop = window.run();
-      event_loop.set_cleanly_terminated();
-    }),
-  L_min_max(get_L_min_max(L, w_min, w_max)),
-  plot(window.geometry(), { .grid = {.color = color::gray} },
-        L.to_string(), {}, "w", {}, "L", {}),
-  algorithm_event(plot, second_layer),
-  algorithm_event_handle(algorithm->event_server().request(algorithm_event, &AlgorithmEvent::callback))
-{
-  plot.set_xrange({w_min, w_max});
-  plot.set_yrange(L_min_max);
-  plot.add_to(background_layer, false);
-
-  plot_curve.solve([&L](double w) -> Point { return {w, L(w)}; }, plot.viewport());
-  plot.add_bezier_fitter(second_layer, curve_line_style, plot_curve);
-
-  L.reset_evaluation();
-}
-
-EnableDrawing::~EnableDrawing()
-{
-  algorithm_event_handle.cancel();
-  window.close();
-  event_loop.join();
-}
-
-class Algorithm : public gradient_descent::Algorithm
-{
- private:
-  std::unique_ptr<EnableDrawing> enable_drawing_;
-
- public:
-  using gradient_descent::Algorithm::Algorithm;
+  using enable_drawing::Algorithm::Algorithm;
 
   void enable_drawing(Function const& L, double w_min, double w_max)
   {
-    enable_drawing_ = std::make_unique<EnableDrawing>(this, L, w_min, w_max);
-  }
-
-  bool operator()(double& w, double Lw, double dLdw)
-  {
-    bool result = gradient_descent::Algorithm::operator()(w, Lw, dLdw);
-    if (enable_drawing_ && !debug::Restart<0>::s_restarting)
-      enable_drawing_->wait();
-    return result;
+    enable_drawing::Algorithm::enable_drawing(L, w_min, w_max);
+    L.reset_evaluation();
   }
 };
 
@@ -618,14 +519,14 @@ int main()
   //==========================================================================
   Dout(dc::notice, "*** TEST: parabola connected to dampened sin ***");
   {
-    constexpr double w0 = -87.0; //-48.5;//-10.0;
+    constexpr double w0 = -48.5;//-10.0;
     constexpr double learning_rate = 0.001;
     constexpr double L_max = 2649;
 
     Algorithm gda(learning_rate, L_max);
     double w = w0;
 
-    gda.debug_set_hdirection_next_extreme_type_small_step(HorizontalDirection::right, ExtremeType::maximum, 1.0);
+    //gda.debug_set_hdirection_next_extreme_type_small_step(HorizontalDirection::right, ExtremeType::maximum, 1.0);
 
     symbolic::Symbol const& x = symbolic::Symbol::realize("w");
     symbolic::Constant const& tp = symbolic::Constant::realize(55);
@@ -652,11 +553,13 @@ int main()
     //gda.enable_drawing(L, -55.7732647023600875968 - zoom, -55.7732647023600875968 + zoom);
     gda.enable_drawing(L, -90.0, 0.0);
 
+#if 0
     gda(w, L(w), L.derivative(w));
     gda(w, L(w), L.derivative(w));
     gda(w, L(w), L.derivative(w));
     w = -78.0;
     gda.debug_chain().find_larger(w);
+#endif
 
     while (gda(w, L(w), L.derivative(w)))
     {

@@ -68,7 +68,8 @@ add_executable(gradient_descent gradient_descent.cxx AlgorithmEvent.cxx
   gradient_descent/AlgorithmEventType.cxx)
 target_link_libraries(gradient_descent AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST} Eigen3::Eigen)
 
-add_executable(gradient_descent_testsuite2 gradient_descent_testsuite2.cxx AlgorithmEvent2.cxx
+add_executable(gradient_descent_testsuite2 gradient_descent_testsuite2.cxx
+  AlgorithmEvent2.cxx EnableDrawing.cxx
   gradient_descent2/Algorithm.cxx gradient_descent2/IterationState.cxx
   gradient_descent2/HorizontalDirection.cxx gradient_descent2/ExtremeType.cxx
   gradient_descent2/AlgorithmEventType.cxx gradient_descent2/CubicToNextSampleType.cxx
