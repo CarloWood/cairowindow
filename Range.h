@@ -34,6 +34,7 @@ class Range
   double min() const { return min_; }
   double max() const { return max_; }
   double size() const { return max_ - min_; }
+  double center() const { return 0.5 * (min_ + max_); }
 
 #ifdef CWDEBUG
   void print_on(std::ostream& os) const
