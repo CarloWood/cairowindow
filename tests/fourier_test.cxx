@@ -158,24 +158,25 @@ class TestFunctionGenerator : public enable_drawing::Function
       }
     }
 
-    Interval(IntervalSpan* P, Range x_range, int begin_sign, int end_sign) : x_range_(x_range),
+    Interval(IntervalSpan* interval_span, Range x_range, int begin_sign, int end_sign) : x_range_(x_range),
       begin_sign_(begin_sign), end_sign_(end_sign), span_(nullptr, nullptr)
     {
       if (begin_sign == end_sign)
       {
-        span_.first = P;
-        if (P)
-          P->increment();
+        span_.first = interval_span;
+        if (interval_span)
+          interval_span->increment();
       }
       else
-        span_.second = P;
+        span_.second = interval_span;
     }
 
     double x_range_begin() const { return x_range_.min(); }
     double x_range_end() const { return x_range_.max(); }
 
-    void insert_before(Interval* new_interval)
+    void insert_before(IntervalSpan* interval_span, Range x_range, int begin_sign, int end_sign)
     {
+      Interval* new_interval = new Interval(interval_span, x_range, begin_sign, end_sign);
       //                     this
       //                     v
       // .----.              .----.
@@ -213,8 +214,9 @@ class TestFunctionGenerator : public enable_drawing::Function
       begin_sign_ = new_interval->end_sign_;
     }
 
-    void insert_after(Interval* new_interval)
+    void insert_after(IntervalSpan* interval_span, Range x_range, int begin_sign, int end_sign)
     {
+      Interval* new_interval = new Interval(interval_span, x_range, begin_sign, end_sign);
       // this
       // v
       // .----.              .----.
@@ -303,7 +305,7 @@ class TestFunctionGenerator : public enable_drawing::Function
               //                     1       2
               //                 |  P    |  P    |
               //                 +       +       +
-              insert_after(new Interval(P, {mid, x_range_.max()}, mid_sign, end_sign_));
+              insert_after(P, {mid, x_range_.max()}, mid_sign, end_sign_);
             }
             else
             {
@@ -315,7 +317,7 @@ class TestFunctionGenerator : public enable_drawing::Function
                 prev_->span_.second.reset();
               if (next_)
                 next_->span_.first.reset();
-              insert_after(new Interval(nullptr, {mid, x_range_.max()}, mid_sign, end_sign_));
+              insert_after(nullptr, {mid, x_range_.max()}, mid_sign, end_sign_);
               // This was the last interval using this IntervalSpan.
               ASSERT(span_.first->unique().is_true());
               span_.first.reset();
@@ -337,7 +339,7 @@ class TestFunctionGenerator : public enable_drawing::Function
               //                     1       2           3
               //                 |  P    |  P    |      P        |
               //                 +       +       +               +
-              insert_after(new Interval(P, {mid, x_range_.max()}, mid_sign, end_sign_));
+              insert_after(P, {mid, x_range_.max()}, mid_sign, end_sign_);
             }
             else
             {
@@ -347,7 +349,7 @@ class TestFunctionGenerator : public enable_drawing::Function
               //                 |  NN   |  NP   |      P        |
               //                 +       -       +               +
               P->change_begin(x_range_.max(), P->number_of_intervals() - 1);
-              insert_after(new Interval(P, {mid, x_range_.max()}, mid_sign, end_sign_));
+              insert_after(P, {mid, x_range_.max()}, mid_sign, end_sign_);
               span_.first.reset();
             }
           }
@@ -371,7 +373,7 @@ class TestFunctionGenerator : public enable_drawing::Function
               //         n          n+1     n+2
               // |      P        |   P   |  P    |
               // +               +       +       +
-              insert_after(new Interval(P, {mid, x_range_.max()}, mid_sign, end_sign_));
+              insert_after(P, {mid, x_range_.max()}, mid_sign, end_sign_);
             }
             else
             {
@@ -381,7 +383,7 @@ class TestFunctionGenerator : public enable_drawing::Function
               // |      P        |   PN  |   NN  |
               // +               +       -       +
               P->change_end(x_range_.min(), P->number_of_intervals() - 1);
-              insert_after(new Interval(nullptr, {mid, x_range_.max()}, mid_sign, end_sign_));
+              insert_after(nullptr, {mid, x_range_.max()}, mid_sign, end_sign_);
             }
           }
           else
@@ -400,7 +402,7 @@ class TestFunctionGenerator : public enable_drawing::Function
               //         n          n+1     n+2         n+3
               // |      P        |  P    |  P    |      P        |
               // +               +       +       +               +
-              insert_after(new Interval(P, {mid, x_range_.max()}, mid_sign, end_sign_));
+              insert_after(P, {mid, x_range_.max()}, mid_sign, end_sign_);
             }
             else
             {
@@ -423,12 +425,10 @@ class TestFunctionGenerator : public enable_drawing::Function
               P->change_end(x_range_.min(), left_intervals);
 
               // Create the new NQ interval (sign change interval).
-              Interval* NQ_interval = new Interval(nullptr, {mid, x_range_.max()}, mid_sign, end_sign_);
-              NQ_interval->span_.second = Q;
-              insert_after(NQ_interval);
+              insert_after(Q, {mid, x_range_.max()}, mid_sign, end_sign_);
 
               // Update subsequent intervals to use Q instead of P.
-              for (Interval* next = NQ_interval->next_; next && !next->contains_sign_change(); next = next->next_)
+              for (Interval* next = next_->next_; next && !next->contains_sign_change(); next = next->next_)
                 next->span_.first = Q;
 
               // Update Q's number of intervals.
@@ -469,7 +469,7 @@ class TestFunctionGenerator : public enable_drawing::Function
                 // ?N --> ?Q
                 prev_->span_.second = Q;
               }
-              insert_before(new Interval(Q, {x_range_.min(), mid}, begin_sign_, mid_sign));
+              insert_before(Q, {x_range_.min(), mid}, begin_sign_, mid_sign);
               // NN --> QN
               span_.first = Q;
             }
@@ -486,7 +486,7 @@ class TestFunctionGenerator : public enable_drawing::Function
                 // N? --> Q?
                 next_->span_.first = Q;
               }
-              insert_after(new Interval(Q, {mid, x_range_.max()}, mid_sign, end_sign_));
+              insert_after(Q, {mid, x_range_.max()}, mid_sign, end_sign_);
               // QN --> NQ
               span_.second = Q;
               span_.first.reset();
@@ -514,7 +514,7 @@ class TestFunctionGenerator : public enable_drawing::Function
                 // ?N --> ?Q
                 prev_->span_.second = Q;
               }
-              insert_before(new Interval(Q, {x_range_.min(), mid}, begin_sign_, mid_sign));
+              insert_before(Q, {x_range_.min(), mid}, begin_sign_, mid_sign);
               // NR --> QR
               span_.first = Q;
             }
@@ -525,7 +525,7 @@ class TestFunctionGenerator : public enable_drawing::Function
               //                             1           2
               // |      ?N       |   NR  |   R   |      R        |
               // -               +       -       -               -
-              insert_after(new Interval(R, {mid, x_range_.max()}, mid_sign, end_sign_));
+              insert_after(R, {mid, x_range_.max()}, mid_sign, end_sign_);
               R->change_begin(mid);
             }
           }
@@ -549,7 +549,7 @@ class TestFunctionGenerator : public enable_drawing::Function
               //         n          n+1
               // |      L        |   L   |  LN   |      N?       |
               // +               +       +       -               +
-              insert_before(new Interval(L, {x_range_.min(), mid}, begin_sign_, mid_sign));
+              insert_before(L, {x_range_.min(), mid}, begin_sign_, mid_sign);
               L->change_end(mid);
             }
             else
@@ -565,7 +565,7 @@ class TestFunctionGenerator : public enable_drawing::Function
                 // N? --> Q?
                 next_->span_.first = Q;
               }
-              insert_after(new Interval(Q, {mid, x_range_.max()}, mid_sign, end_sign_));
+              insert_after(Q, {mid, x_range_.max()}, mid_sign, end_sign_);
               // LN --> LQ
               span_.second = Q;
             }
@@ -586,7 +586,7 @@ class TestFunctionGenerator : public enable_drawing::Function
               //         n          n+1                 1
               // |      L        |   L   |  LR   |       R       |
               // +               +       +       -               -
-              insert_before(new Interval(L, {x_range_.min(), mid}, begin_sign_, mid_sign));
+              insert_before(L, {x_range_.min(), mid}, begin_sign_, mid_sign);
               L->change_end(mid);
             }
             else
@@ -596,7 +596,7 @@ class TestFunctionGenerator : public enable_drawing::Function
               //         n                   1          2
               // |      L        |  LR   |   R   |       R       |
               // +               +       -       -               -
-              insert_after(new Interval(R, {mid, x_range_.max()}, mid_sign, end_sign_));
+              insert_after(R, {mid, x_range_.max()}, mid_sign, end_sign_);
               R->change_begin(mid);
             }
           }
