@@ -80,7 +80,7 @@ add_executable(gradient_descent_testsuite2 gradient_descent_testsuite2.cxx
 target_link_libraries(gradient_descent_testsuite2 AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST})
 
 add_executable(fourier_test fourier_test.cxx
-  AlgorithmEvent2.cxx EnableDrawing.cxx
+  Interval.cxx AlgorithmEvent2.cxx EnableDrawing.cxx
   gradient_descent2/Algorithm.cxx gradient_descent2/IterationState.cxx
   gradient_descent2/HorizontalDirection.cxx gradient_descent2/ExtremeType.cxx
   gradient_descent2/AlgorithmEventType.cxx gradient_descent2/CubicToNextSampleType.cxx
