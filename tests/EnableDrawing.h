@@ -28,10 +28,10 @@ class EnableDrawing
  private:
   cairowindow::Window window;
   boost::intrusive_ptr<cairowindow::Layer> background_layer;
-  boost::intrusive_ptr<cairowindow::Layer> second_layer;
+  boost::intrusive_ptr<cairowindow::Layer> second_layer_;
   std::thread event_loop;
   cairowindow::Range L_min_max;
-  cairowindow::plot::Plot plot;
+  cairowindow::plot::Plot plot_;
   AlgorithmEvent algorithm_event;
   events::RequestHandle<gradient_descent::AlgorithmEventType> algorithm_event_handle;
   cairowindow::plot::BezierFitter plot_curve;
@@ -39,6 +39,9 @@ class EnableDrawing
  public:
   EnableDrawing(gradient_descent::Algorithm* algorithm, Function const& L, double w_min, double w_max);
   ~EnableDrawing();
+
+  cairowindow::plot::Plot& plot() { return plot_; }
+  boost::intrusive_ptr<cairowindow::Layer> const& second_layer() const { return second_layer_; }
 
   static cairowindow::Range get_L_min_max(Function const& L, double w_min, double w_max);
 

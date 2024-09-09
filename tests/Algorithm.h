@@ -27,6 +27,9 @@ class Algorithm : public gradient_descent::Algorithm
       enable_drawing_->wait();
     return result;
   }
+
+  EnableDrawing& enable_drawing() { return *enable_drawing_; }
+  EnableDrawing const& enable_drawing() const { return *enable_drawing_; }
 };
 
 } // namespace enable_drawing

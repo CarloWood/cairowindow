@@ -10,7 +10,7 @@ namespace color = cairowindow::color;
 EnableDrawing::EnableDrawing(gradient_descent::Algorithm* algorithm, Function const& L, double w_min, double w_max) :
   window("Gradient descent of " + L.to_string(), 2*600, 2*450),
   background_layer(window.create_background_layer<cairowindow::Layer>(color::silver COMMA_DEBUG_ONLY("background_layer"))),
-  second_layer(window.create_layer<cairowindow::Layer>({} COMMA_DEBUG_ONLY("second_layer"))),
+  second_layer_(window.create_layer<cairowindow::Layer>({} COMMA_DEBUG_ONLY("second_layer"))),
   event_loop([&](){
       // Open window, handle event loop. This must be constructed after the draw stuff, so that it is destructed first!
       // Upon destruction it blocks until the event loop thread finished (aka, the window was closed).
@@ -18,17 +18,17 @@ EnableDrawing::EnableDrawing(gradient_descent::Algorithm* algorithm, Function co
       event_loop.set_cleanly_terminated();
     }),
   L_min_max(get_L_min_max(L, w_min, w_max)),
-  plot(window.geometry(), { .grid = {.color = color::gray} },
+  plot_(window.geometry(), { .grid = {.color = color::gray} },
         L.to_string(), {}, "w", {}, "L", {}),
-  algorithm_event(plot, second_layer),
+  algorithm_event(plot_, second_layer_),
   algorithm_event_handle(algorithm->event_server().request(algorithm_event, &AlgorithmEvent::callback))
 {
-  plot.set_xrange({w_min, w_max});
-  plot.set_yrange(L_min_max);
-  plot.add_to(background_layer, false);
+  plot_.set_xrange({w_min, w_max});
+  plot_.set_yrange(L_min_max);
+  plot_.add_to(background_layer, false);
 
-  plot_curve.solve([&L](double w) -> cairowindow::Point { return {w, L(w)}; }, plot.viewport());
-  plot.add_bezier_fitter(second_layer, curve_line_style, plot_curve);
+  plot_curve.solve([&L](double w) -> cairowindow::Point { return {w, L(w)}; }, plot_.viewport());
+  plot_.add_bezier_fitter(second_layer_, curve_line_style, plot_curve);
 }
 
 EnableDrawing::~EnableDrawing()
