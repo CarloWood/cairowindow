@@ -210,16 +210,7 @@ class Interval : public IntervalNode
     end_ = new_interval->begin_;
   }
 
-  bool must_be_divided() const
-  {
-    if (!contains_sign_change())
-      return x_range_end() - x_range_begin() > span_.first->range().size() / 6.0;
-
-    if (!span_.first || !span_.second || span_.first->number_of_intervals() < 4 || span_.second->number_of_intervals() < 2)
-      return true;
-
-    return (end_.x_ - begin_.x_) > std::min(span_.first->interval_size(), span_.second->interval_size());
-  }
+  bool must_be_divided(IntervalList const& intervals) const;
 
   bool is_first_interval() const
   {
@@ -291,7 +282,7 @@ class IntervalList
   utils::UniqueIDContext<int>& id_context() { return id_context_; }
   bool empty() const { return root_.next_ == &root_; }
 
-  bool is_root(Interval const* interval) const { return interval == &root_; }
+  bool is_root(IntervalNode const* node) const { return node == &root_; }
   bool is_front(Interval const* interval) const { return interval == root_.next_; }
   bool is_last(Interval const* interval) const { return interval == root_.prev_; }
 

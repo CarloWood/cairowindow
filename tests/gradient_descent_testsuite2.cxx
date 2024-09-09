@@ -18,7 +18,7 @@ struct Function : enable_drawing::Function
   Function(symbolic::Symbol const& symbol, symbolic::Function const& function, Deps&&... deps) :
     function_(function), symbol_(symbol), deps_({&deps...}) { }
 
-  double operator()(double x) const override
+  double evaluate(double x) const override
   {
     symbol_ = x;
     reset_evaluation();

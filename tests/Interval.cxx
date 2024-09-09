@@ -490,4 +490,24 @@ void Interval::split(XSignPair mid, IntervalList& intervals)
   }
 }
 
+bool Interval::must_be_divided(IntervalList const& intervals) const
+{
+  if (!contains_sign_change())
+    return span_.first->number_of_intervals() < 2;
+
+  if (span_.first && span_.second)
+    return false;
+
+  if (!span_.first && !span_.second)
+    return true;
+
+  if (span_.first)
+  {
+    // PN interval. Return true iff followed by an NQ interval.
+    return !intervals.is_root(next_) && next()->span_.second;
+  }
+  // NQ interval. Return true iff preceeded by an PN interval.
+  return !intervals.is_root(prev_) && prev()->span_.first;
+}
+
 } // namespace intervallist
