@@ -151,34 +151,78 @@ class TestFunctionGenerator : public enable_drawing::Function
       ++depth;
     }
     while (had_divide);
-
     // Now intervals contains sign-changing intervals around every local extreme.
+
+    struct Point {
+      double x;
+      double y;
+      double dxdy;
+    };
+
+    double const tolerance = 1e-5 * x_range.size();
+    math::CubicPolynomial cubic;
+
+    // Loop over all intervals with a sign change and find the corresponding local extreme.
     for (Interval const* interval = intervals_.front(); !intervals_.is_root(interval); interval = interval->next())
     {
       // Skip intervals where the derivative does not change sign.
       if (!interval->contains_sign_change())
         continue;
 
-      double x_left = interval->x_range_begin();
-      double y_left = evaluate(x_left);
-      double dxdy_left = derivative(x_left);
-      double x_right = interval->x_range_end();
-      double y_right = evaluate(x_right);
-      double dxdy_right = derivative(x_right);
+      Dout(dc::notice, "Determining the extreme between " << *interval << ".");
 
-      // These will have different signs.
-      ASSERT((dxdy_left < 0.0) != (dxdy_right < 0.0));
+      using namespace gradient_descent;
 
-      math::CubicPolynomial cubic;
-      cubic.initialize(x_left, y_left, dxdy_left, x_right, y_right, dxdy_right);
+      ExtremeType const extreme_type = interval->begin_sign() == -1 ? ExtremeType::minimum : ExtremeType::maximum;
 
-      if (dxdy_left < dxdy_right)
+      std::array<Point, 2> points = {{
+        {interval->x_range_begin(), evaluate(interval->x_range_begin()), derivative(interval->x_range_begin())},
+        {interval->x_range_end(), evaluate(interval->x_range_end()), derivative(interval->x_range_end())}
+      }};
+
+      for (;;)
       {
-        // There is a minimum between interval->x_range_begin() and interval->x_range_end().
-      }
-      else
-      {
-        // There is a maximum between interval->x_range_begin() and interval->x_range_end().
+        for (int i = 0; i < points.size(); ++i)
+          Dout(dc::notice, "f(" << points[i].x << ") = " << points[i].y << ", f'(" << points[i].x << ") = " << points[i].dxdy);
+
+        // Fit a cubic through both points and find the appropriate extreme.
+        cubic.initialize(points[0].x, points[0].y, points[0].dxdy, points[1].x, points[1].y, points[1].dxdy);
+        Dout(dc::notice, "f(x) = " << cubic);
+        AnalyzedCubic acubic;
+        acubic.initialize(cubic, extreme_type);
+        double x_new = acubic.get_extreme();
+        double dxdy_new = derivative(x_new);
+
+        // Determine which point is furthest from x_new.
+        int furthest = (std::abs(x_new - points[0].x) > std::abs(x_new - points[1].x)) ? 0 : 1;
+        int closest = 1 - furthest;
+
+        if (std::abs(x_new - points[closest].x) < tolerance)
+        {
+          double y_new = evaluate(x_new);
+          if (extreme_type == ExtremeType::minimum)
+            minima_.emplace_back(x_new, y_new);
+          else
+            maxima_.emplace_back(x_new, y_new);
+          Dout(dc::notice, "Extreme: x = " << x_new << ", y = " << y_new << ", f'(x) = " << dxdy_new);
+          break;
+        }
+
+        // If derivative sign is the same as the closest one, move the new point 1% of the
+        // current shift distance (the distance between furthest and new) away from the
+        // closest point; this in order to avoid the two points becoming too close.
+        if (std::signbit(dxdy_new) == std::signbit(points[closest].dxdy))
+        {
+          x_new += (x_new > points[closest].x ? 0.01 : -0.01) * std::abs(x_new - points[furthest].x);
+          dxdy_new = derivative(x_new);
+        }
+
+        // Calculate the new y and dx/dy.
+        double y_new = evaluate(x_new);
+        Dout(dc::notice, "x_new = " << x_new << ", y_new = " << y_new << ", f'(x_new) = " << dxdy_new);
+
+        // Update the furthest point.
+        points[furthest] = {x_new, y_new, dxdy_new};
       }
     }
 
@@ -346,8 +390,8 @@ int main(int argc, char* argv[])
   TestFunctionGenerator L(number_of_frequencies, frequency_range, amplitude_range, seed);
   L.advanced_normalize(0.1, 0.1, x_range);
 
-//  gda.enable_drawing(L, x_range.min(), x_range.max());
-  gda.enable_drawing(L, 2.0, 3.75);
+  gda.enable_drawing(L, x_range.min(), x_range.max());
+//  gda.enable_drawing(L, 2.0, 3.75);
   while (gda(w, L(w), L.derivative(w)))
   {
     Dout(dc::notice, "-------------------------------------------");
