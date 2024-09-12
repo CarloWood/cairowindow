@@ -1196,6 +1196,7 @@ bool Algorithm::handle_local_extreme(WeightRef w)
         ASSERT(node->has_extreme(opposite(next_extreme_type_)) ||
             (node->is_local_extreme() &&
              ((direction == HorizontalDirection::left && node == chain_.begin()) ||
+              (direction == HorizontalDirection::right && !std::next(node)->is_cubic()) ||
               (direction == HorizontalDirection::left ? std::prev(node) : std::next(node))->has_extreme(opposite(next_extreme_type_)))));
       }
 #endif
@@ -1770,6 +1771,25 @@ void Algorithm::initialize_range(double extreme_w)
   {
     // Likewise, still assuming we're looking for a maximum (next_extreme_type_) and the situation is:
     //
+    //       .---- the maximum that we want to find next (it's on the right of extreme_w);
+    //       |     it is on the left of right_node, NOT on the left of left_node.
+    //       v
+    //      .-.           .-.
+    //     /   \         O
+    //    O     \       /
+    //   /^      \     /
+    //  / |       \   O <-- last_extreme_cubic_
+    //    |        `·´^
+    //    |         ^ `-- right_node (the first node larger than extreme_w)
+    //    |         |
+    //    |         extreme_w = last_extreme_cubic_->extreme_w()
+    // left_node (the node immediately on the left of right_node)
+    //
+    // We have left_node point to a cubic with two extremes, and need left_of_ to be set to right_node (and not advance it),
+    // because the maximum that we're looking for IS the maximum between left_node and right_node.
+    //
+    // While if the situation is:
+    //
     // last_extreme_cubic_
     //  .--|--- the maximum that we want to find next (it's on the left of extreme_w);
     //  v  |    it is on the left of left_node.
@@ -1789,10 +1809,30 @@ void Algorithm::initialize_range(double extreme_w)
     // We have left_node point to a cubic with two extremes, but need left_of_ to be set to left_node
     // because it can't be right_node: that would cause us to find the maximum on the right of extreme_w (M).
     //
-    // Note that also in this case we want to use left_node if right_node doesn't exist (and thus left_node->is_cubic() is false).
+    // Finally we can have the following situation, where there is no sample on the left of the found extreme:
+    //
+    //       .---- the maximum that we want to find next (it's on the left of extreme_w);
+    //       |     it is on the left of right_node.
+    //       v
+    //      .-.           .-.
+    //     /   \         O
+    //    /     \       /
+    //   /       \     /
+    //            \   O <-- last_extreme_cubic_
+    //             `·´^
+    //              ^ `-- right_node (the first node larger than extreme_w)
+    //              |
+    //              extreme_w = last_extreme_cubic_->extreme_w()
+    // left_node = chain_.end() (there is no sample on the left of extreme_w).
+    //
+    // In which case we want left_of_ to be set to right_node, so that we'll look for a possible maximum beyond the last sample.
+    //
+    // Note that in this case we want to use right_node if left_node doesn't exist (left_node == chain_.end()),
+    // but left_node if right_node doesn't exist (left_node->is_cubic() is false).
     left_of_ =
-      (!left_node->is_cubic() || has_extreme_order(left_node->type(), next_extreme_type_, HorizontalDirection::right)) ? left_node
-                                                                                                                       : right_node;
+      (left_node != chain_.end() &&
+       (!left_node->is_cubic() || has_extreme_order(left_node->type(), next_extreme_type_, HorizontalDirection::right))) ? left_node
+                                                                                                                         : right_node;
     while (left_of_ != chain_.begin() && !std::prev(left_of_)->has_extreme(next_extreme_type_))
       --left_of_;
 

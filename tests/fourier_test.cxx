@@ -20,6 +20,8 @@ using utils::has_print_on::operator<<;
 #endif
 
 using Range = cairowindow::Range;
+using Point = cairowindow::Point;
+using ExtremeType = gradient_descent::ExtremeType;
 
 class TestFunctionGenerator : public enable_drawing::Function
 {
@@ -28,22 +30,38 @@ class TestFunctionGenerator : public enable_drawing::Function
   using Interval = intervallist::Interval;
 
  private:
+  // Filled by constructor.
+  unsigned int seed_;
+  std::mt19937 generator_;
   double max_frequency_;
   std::vector<double> amplitudes_;
   std::vector<double> frequencies_;
   std::vector<double> phases_;
-  double vertical_shift_;
-  double amplitude_scale_;
-  unsigned int seed_;
-  std::mt19937 generator_;
-  std::vector<std::pair<double, double>> minima_;
-  std::vector<std::pair<double, double>> maxima_;
+
+  // Changed by an optional call to normalize_amplitude.
+  double vertical_shift_{0.0};
+  double amplitude_scale_{1.0};
+
+  // Filled/used by call to find_extrema.
   utils::UniqueIDContext<int> id_context_;
-  IntervalList intervals_;
+  ExtremeType first_extreme_;
+  ExtremeType last_extreme_;
+  std::vector<Point> extrema_;
+  double lowest_minimum_;
+  double lowest_maximum_;
+  double highest_minimum_;
+  double highest_maximum_;
+
+  // Filled by call to advanced_normalize.
+  double low_low_band_;
+  double high_low_band_;
+  double low_high_band_;
+  double high_high_band_;
+  bool advanced_normalization_{false};
 
  public:
   TestFunctionGenerator(int num_components, Range frequency_range, Range amplitude_range, unsigned int seed = 0) :
-    max_frequency_(frequency_range.max()), vertical_shift_(0.0), amplitude_scale_(1.0), seed_(seed)
+    max_frequency_(frequency_range.max()), seed_(seed)
   {
     DoutEntering(dc::notice, "TestFunctionGenerator(" << num_components << ", " << frequency_range << ", " <<
         amplitude_range << ", " << seed << ")");
@@ -70,8 +88,6 @@ class TestFunctionGenerator : public enable_drawing::Function
   }
 
   unsigned int get_seed() const { return seed_; }
-  IntervalList& intervals() { return intervals_; }
-  IntervalList const& intervals() const { return intervals_; }
   utils::UniqueIDContext<int>& id_context() { return id_context_; }
   double max_frequency() const { return max_frequency_; }
 
@@ -80,25 +96,9 @@ class TestFunctionGenerator : public enable_drawing::Function
     return derivative(x) < 0.0 ? -1 : 1;
   }
 
-  double evaluate(double x) const override
-  {
-    double result = 0.0;
-    for (size_t i = 0; i < amplitudes_.size(); ++i)
-      result += amplitudes_[i] * std::sin(frequencies_[i] * x + phases_[i]);
-    return result * amplitude_scale_ + vertical_shift_;
-  }
-
   std::string to_string() const override
   {
     return "test function (seed: " + std::to_string(seed_) + ")";
-  }
-
-  double derivative(double x) const
-  {
-    double result = 0;
-    for (size_t i = 0; i < amplitudes_.size(); ++i)
-      result += amplitudes_[i] * frequencies_[i] * std::cos(frequencies_[i] * x + phases_[i]);
-    return amplitude_scale_ * result;
   }
 
   void normalize_amplitude(Range desired_amplitude_range, Range x_range, int num_samples = 1000)
@@ -116,35 +116,132 @@ class TestFunctionGenerator : public enable_drawing::Function
     vertical_shift_ = desired_amplitude_range.center() - amplitude_scale_ * current.center();
   }
 
+  void calculate_alpha_beta(std::vector<Point>::const_iterator right, double& alpha, double& beta) const
+  {
+    // The extreme on the left of x.
+    auto left = std::prev(right);
+
+    // Let f_min be the minimum value of f: f(0).
+    // Let f_max be the maximum value of f: f(1).
+    double f_min = left->y();
+    double f_max = right->y();
+    if (f_min > f_max)
+      std::swap(f_min, f_max);
+
+    // Linearly transform input_range --> output_range. If the input_range is empty then return output_range.min().
+    auto transform_range = [](double input, Range input_range, Range output_range){
+      if (input_range.size() == 0.0)
+        return output_range.min();
+      return output_range.min() + (input - input_range.min()) / input_range.size() * output_range.size();
+    };
+
+    // Let g_min be the required output in the minimum at t = 0.
+    // Let g_max be the required output in the maximum at t = 1.
+    double g_min = transform_range(f_min, {lowest_minimum_, highest_minimum_}, {low_low_band_, high_low_band_});
+    double g_max = transform_range(f_max, {highest_maximum_, lowest_maximum_}, {high_high_band_, low_high_band_});
+    //
+    // g(t) = alpha * f(t) + beta  -->
+    //
+    //  g(0) = g_min = alpha * f(0) + beta = alpha * f_min + beta
+    //  g(1) = g_max = alpha * f(1) + beta = alpha * f_max + beta
+    //        --------------------------------------------------- -
+    // g_min - g_max = alpha * (f_min - f_max) -->
+    //
+    alpha = (g_max - g_min) / (f_max - f_min);
+    beta = g_min - alpha * f_min;
+  }
+
+  double evaluate(double x) const override
+  {
+    double sum_of_sins = 0.0;
+    for (size_t i = 0; i < amplitudes_.size(); ++i)
+      sum_of_sins += amplitudes_[i] * std::sin(frequencies_[i] * x + phases_[i]);
+
+    double y = sum_of_sins * amplitude_scale_ + vertical_shift_;
+
+    if (advanced_normalization_)
+    {
+      // Find the first extreme on the right of x.
+      auto right = std::upper_bound(extrema_.begin(), extrema_.end(), x, [](double value, Point const& point) { return value < point.x(); });
+      double alpha{}, beta{};
+
+      bool before_first_extreme = right == extrema_.begin();
+      // x is before the first extreme. Use a transformation equal to that of the first interval.
+      if (before_first_extreme)
+        ++right;
+      // If x is past the last extreme then leave alpha and beta as they were in the last interval.
+      if (right != extrema_.end())
+        calculate_alpha_beta(right, alpha, beta);
+
+      // Apply advanced normalization.
+      y = alpha * y + beta;
+    }
+
+    return y;
+  }
+
+  double derivative(double x) const
+  {
+    double sum_of_cos = 0.0;
+    for (size_t i = 0; i < amplitudes_.size(); ++i)
+      sum_of_cos += amplitudes_[i] * frequencies_[i] * std::cos(frequencies_[i] * x + phases_[i]);
+
+    double dxdy = amplitude_scale_ * sum_of_cos;
+
+    if (advanced_normalization_)
+    {
+      // Find the first extreme on the right of x.
+      auto right = std::upper_bound(extrema_.begin(), extrema_.end(), x, [](double value, Point const& point) { return value < point.x(); });
+      double alpha{}, beta{};
+
+      bool before_first_extreme = right == extrema_.begin();
+      // x is before the first extreme. Use a transformation equal to that of the first interval.
+      if (before_first_extreme)
+        ++right;
+      // If x is past the last extreme then leave alpha and beta as they were in the last interval.
+      if (right != extrema_.end())
+        calculate_alpha_beta(right, alpha, beta);
+
+      // Apply advanced normalization.
+      dxdy *= alpha;
+    }
+
+    return dxdy;
+  }
+
+  // Finds all local extrema in x_range and puts them in extrema_.
   void find_extrema(Range x_range)
   {
-    minima_.clear();
-    maxima_.clear();
+    advanced_normalization_ = false;
 
-    intervals_.push_back(new Interval(
+    IntervalList intervals;
+    intervals.push_back(new Interval(
           {x_range.min(), sign_of_derivative(x_range.min())},
           {x_range.max(), sign_of_derivative(x_range.max())},
-          intervals_.id_context()));
+          intervals.id_context()));
+    Interval const* interval = intervals.front();
+    first_extreme_ = interval->begin_sign() == -1 ? ExtremeType::minimum : ExtremeType::maximum;
+    last_extreme_ = interval->end_sign() == -1 ? ExtremeType::minimum : ExtremeType::maximum;
 
-    // Emperically found.
+    // Emperically found constant.
     double const number_of_local_extrema_estimate = 0.255 * x_range.size() * max_frequency();
     // In order to make at least this many cuts we need a minimum depth of,
     int const max_depth = std::ceil(std::log2(number_of_local_extrema_estimate));
 
-    int local_extremes;
+    int local_extrema;
     bool had_divide;
     int depth = 0;
     do
     {
       had_divide = false;
       Interval* next;
-      for (Interval* interval = intervals_.front(); !intervals_.is_root(interval); interval = next)
+      for (Interval* interval = intervals.front(); !intervals.is_root(interval); interval = next)
       {
         next = interval->next();
-        if (depth < max_depth || interval->must_be_divided(intervals_))
+        if (depth < max_depth || interval->must_be_divided(intervals))
         {
           double mid_x = 0.5 * (interval->x_range_begin() + interval->x_range_end());
-          interval->split({mid_x, sign_of_derivative(mid_x)}, intervals_);
+          interval->split({mid_x, sign_of_derivative(mid_x)}, intervals);
           had_divide = true;
         }
       }
@@ -153,7 +250,7 @@ class TestFunctionGenerator : public enable_drawing::Function
     while (had_divide);
     // Now intervals contains sign-changing intervals around every local extreme.
 
-    struct Point {
+    struct Bound {
       double x;
       double y;
       double dxdy;
@@ -162,8 +259,13 @@ class TestFunctionGenerator : public enable_drawing::Function
     double const tolerance = 1e-5 * x_range.size();
     math::CubicPolynomial cubic;
 
+    lowest_minimum_ = std::numeric_limits<double>::max();
+    lowest_maximum_ = std::numeric_limits<double>::max();
+    highest_minimum_ = std::numeric_limits<double>::lowest();
+    highest_maximum_ = std::numeric_limits<double>::lowest();
+
     // Loop over all intervals with a sign change and find the corresponding local extreme.
-    for (Interval const* interval = intervals_.front(); !intervals_.is_root(interval); interval = interval->next())
+    for (Interval const* interval = intervals.front(); !intervals.is_root(interval); interval = interval->next())
     {
       // Skip intervals where the derivative does not change sign.
       if (!interval->contains_sign_change())
@@ -175,19 +277,19 @@ class TestFunctionGenerator : public enable_drawing::Function
 
       ExtremeType const extreme_type = interval->begin_sign() == -1 ? ExtremeType::minimum : ExtremeType::maximum;
 
-      std::array<Point, 2> points = {{
+      std::array<Bound, 2> points = {{
         {interval->x_range_begin(), evaluate(interval->x_range_begin()), derivative(interval->x_range_begin())},
         {interval->x_range_end(), evaluate(interval->x_range_end()), derivative(interval->x_range_end())}
       }};
 
       for (;;)
       {
-        for (int i = 0; i < points.size(); ++i)
-          Dout(dc::notice, "f(" << points[i].x << ") = " << points[i].y << ", f'(" << points[i].x << ") = " << points[i].dxdy);
+//        for (int i = 0; i < points.size(); ++i)
+//          Dout(dc::notice, "f(" << points[i].x << ") = " << points[i].y << ", f'(" << points[i].x << ") = " << points[i].dxdy);
 
         // Fit a cubic through both points and find the appropriate extreme.
         cubic.initialize(points[0].x, points[0].y, points[0].dxdy, points[1].x, points[1].y, points[1].dxdy);
-        Dout(dc::notice, "f(x) = " << cubic);
+//        Dout(dc::notice, "f(x) = " << cubic);
         AnalyzedCubic acubic;
         acubic.initialize(cubic, extreme_type);
         double x_new = acubic.get_extreme();
@@ -200,11 +302,18 @@ class TestFunctionGenerator : public enable_drawing::Function
         if (std::abs(x_new - points[closest].x) < tolerance)
         {
           double y_new = evaluate(x_new);
-          if (extreme_type == ExtremeType::minimum)
-            minima_.emplace_back(x_new, y_new);
-          else
-            maxima_.emplace_back(x_new, y_new);
+          extrema_.emplace_back(x_new, y_new);
           Dout(dc::notice, "Extreme: x = " << x_new << ", y = " << y_new << ", f'(x) = " << dxdy_new);
+          if (extreme_type == ExtremeType::minimum)
+          {
+            lowest_minimum_ = std::min(lowest_minimum_, y_new);
+            highest_minimum_ = std::max(highest_minimum_, y_new);
+          }
+          else
+          {
+            lowest_maximum_ = std::min(lowest_maximum_, y_new);
+            highest_maximum_ = std::max(highest_maximum_, y_new);
+          }
           break;
         }
 
@@ -217,149 +326,29 @@ class TestFunctionGenerator : public enable_drawing::Function
           dxdy_new = derivative(x_new);
         }
 
-        // Calculate the new y and dx/dy.
-        double y_new = evaluate(x_new);
-        Dout(dc::notice, "x_new = " << x_new << ", y_new = " << y_new << ", f'(x_new) = " << dxdy_new);
-
         // Update the furthest point.
-        points[furthest] = {x_new, y_new, dxdy_new};
+        points[furthest] = {x_new, evaluate(x_new), dxdy_new};
       }
     }
 
-    Dout(dc::notice, "This function has " << minima_.size() << " minima and " << maxima_.size() << " maxima.");
+    Dout(dc::notice, "This function has " << extrema_.size() << " local extrema in the interval " << x_range << '.');
   }
 
-  void advanced_normalize(double min_percentage, double max_percentage, Range x_range)
+  void advanced_normalize(double min_fraction, double max_fraction, Range x_range)
   {
-    // First, apply regular normalization to [-1, 1].
-    //normalize_amplitude({-1, 1}, x_range, 2000);
-
-    // Find extrema.
+    // Find extrema of the original function.
     find_extrema(x_range);
 
-    // Calculate desired ranges for minima and maxima.
-    double min_low = -1.0;
-    double min_high = -1.0 + 2.0 * min_percentage;
-    double max_low = 1.0 - 2.0 * max_percentage;
-    double max_high = 1.0;
+    // Calculate the bands
+    low_low_band_ = lowest_minimum_;
+    high_low_band_ = lowest_minimum_ + min_fraction * (highest_maximum_ - lowest_minimum_);
+    low_high_band_ = highest_maximum_ - max_fraction * (highest_maximum_ - lowest_minimum_);
+    high_high_band_ = highest_maximum_;
 
-    // Create transformation function.
-    auto transform = [&](double x) -> double {
-      auto it_min = std::lower_bound(minima_.begin(), minima_.end(), std::pair<double, double>(x, 0));
-      auto it_max = std::lower_bound(maxima_.begin(), maxima_.end(), std::pair<double, double>(x, 0));
+    Dout(dc::notice, "Advanced normalization applied with min_fraction = " << min_fraction << " and max_fraction = " << max_fraction);
 
-      double dist_to_min_left = (it_min == minima_.begin()) ? std::numeric_limits<double>::max() : x - std::prev(it_min)->first;
-      double dist_to_min_right = (it_min == minima_.end()) ? std::numeric_limits<double>::max() : it_min->first - x;
-      double dist_to_max_left = (it_max == maxima_.begin()) ? std::numeric_limits<double>::max() : x - std::prev(it_max)->first;
-      double dist_to_max_right = (it_max == maxima_.end()) ? std::numeric_limits<double>::max() : it_max->first - x;
-
-      double min_dist_to_min = std::min(dist_to_min_left, dist_to_min_right);
-      double min_dist_to_max = std::min(dist_to_max_left, dist_to_max_right);
-
-      bool closer_to_min = min_dist_to_min <= min_dist_to_max;
-
-      double left_x, left_y, right_x, right_y;
-      double left_target, right_target;
-
-      if (closer_to_min)
-      {
-        // Handle the case when x is closer to a minimum.
-        if (dist_to_min_right <= dist_to_min_left)
-        {
-          right_x = it_min->first;
-          right_y = it_min->second;
-          right_target = min_low + (min_high - min_low) * (right_y - min_low) / 2.0;
-
-          if (it_min != minima_.begin())
-          {
-            left_x = std::prev(it_min)->first;
-            left_y = std::prev(it_min)->second;
-            left_target = min_low + (min_high - min_low) * (left_y - min_low) / 2.0;
-          }
-          else
-          {
-            left_x = x_range.min();
-            left_y = evaluate(left_x);
-            left_target = left_y;
-          }
-        }
-        else
-        {
-          left_x = std::prev(it_min)->first;
-          left_y = std::prev(it_min)->second;
-          left_target = min_low + (min_high - min_low) * (left_y - min_low) / 2.0;
-
-          if (it_min != minima_.end())
-          {
-            right_x = it_min->first;
-            right_y = it_min->second;
-            right_target = min_low + (min_high - min_low) * (right_y - min_low) / 2.0;
-          }
-          else
-          {
-            right_x = x_range.max();
-            right_y = evaluate(right_x);
-            right_target = right_y;
-          }
-        }
-      }
-      else
-      {
-        // Handle the case when x is closer to a maximum.
-        if (dist_to_max_right <= dist_to_max_left)
-        {
-          right_x = it_max->first;
-          right_y = it_max->second;
-          right_target = max_high - (max_high - max_low) * (max_high - right_y) / 2.0;
-
-          if (it_max != maxima_.begin())
-          {
-            left_x = std::prev(it_max)->first;
-            left_y = std::prev(it_max)->second;
-            left_target = max_high - (max_high - max_low) * (max_high - left_y) / 2.0;
-          }
-          else
-          {
-            left_x = x_range.min();
-            left_y = evaluate(left_x);
-            left_target = left_y;
-          }
-        }
-        else
-        {
-          left_x = std::prev(it_max)->first;
-          left_y = std::prev(it_max)->second;
-          left_target = max_high - (max_high - max_low) * (max_high - left_y) / 2.0;
-
-          if (it_max != maxima_.end())
-          {
-            right_x = it_max->first;
-            right_y = it_max->second;
-            right_target = max_high - (max_high - max_low) * (max_high - right_y) / 2.0;
-          }
-          else
-          {
-            right_x = x_range.max();
-            right_y = evaluate(right_x);
-            right_target = right_y;
-          }
-        }
-      }
-
-      // Linear interpolation between surrounding extrema.
-      double t = (x - left_x) / (right_x - left_x);
-      double y = evaluate(x);
-      double y_normalized = left_target + t * (right_target - left_target);
-
-      return y_normalized;
-    };
-
-    // Apply transformation.
-    //auto original_function = [this](double x) { return evaluate(x); };
-    //*this = TestFunctionGenerator([transform, original_function](double x) { return transform(original_function(x)); });
-
-    Dout(dc::notice, "Advanced normalization applied with min_percentage = " << min_percentage <<
-        " and max_percentage = " << max_percentage);
+    // Use advanced normalization.
+    advanced_normalization_ = true;
   }
 };
 
@@ -370,7 +359,7 @@ int main(int argc, char* argv[])
 {
   Debug(NAMESPACE_DEBUG::init());
 
-  constexpr double w0 = M_PI;
+  constexpr double w0 = 4.0;
   constexpr double learning_rate = 0.0001;
   constexpr double L_max = 100;
 
@@ -383,18 +372,23 @@ int main(int argc, char* argv[])
   }
 
   int const number_of_frequencies = 20;
-  Range const frequency_range{1.0, 20.0};
-  Range const amplitude_range{50.0, 100.0};
-  Range const x_range{0.0, 2.0 * M_PI};
+  Range const frequency_range{0.5, 10.0};
+  Range const amplitude_range{25.0, 100.0};
+  Range const x_range{0.0, 8.0};
+
+  for (;;)
+  {
 
   TestFunctionGenerator L(number_of_frequencies, frequency_range, amplitude_range, seed);
   L.advanced_normalize(0.1, 0.1, x_range);
 
-  gda.enable_drawing(L, x_range.min(), x_range.max());
-//  gda.enable_drawing(L, 2.0, 3.75);
+  //gda.enable_drawing(L, x_range.min(), x_range.max());
+  gda.enable_drawing(L, 3.5, 4.5);
   while (gda(w, L(w), L.derivative(w)))
   {
     Dout(dc::notice, "-------------------------------------------");
+  }
+
   }
 
   ASSERT(gda.success());
