@@ -93,9 +93,9 @@ class LocalExtreme
     return opposite_direction_Lw_;
   }
 
-  void explored(HorizontalDirection hdirection) const
+  void mark_explored(HorizontalDirection hdirection) const
   {
-    DoutEntering(dc::notice, "LocalExtreme::explored(" << hdirection << ") \"" << label() << "\"");
+    DoutEntering(dc::notice, "LocalExtreme::mark_explored(" << hdirection << ") \"" << label() << "\"");
     ASSERT(hdirection != HorizontalDirection::undecided);
     int explore_flag = hdirection == HorizontalDirection::left ? explored_left : explored_right;
     explored_ |= explore_flag;

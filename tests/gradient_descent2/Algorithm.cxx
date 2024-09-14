@@ -863,7 +863,7 @@ bool Algorithm::update_energy(double Lw)
       {
         // We tried to go to hdirection_ but that wasn't possible.
         // Mark the local extreme that we came from as explored, in this direction.
-        last_extreme_cubic_->local_extreme().explored(hdirection_);
+        last_extreme_cubic_->local_extreme().mark_explored(hdirection_);
       }
       return false;
     }
@@ -941,7 +941,7 @@ bool Algorithm::handle_local_extreme_jump(WeightRef w)
     // We already saw a minimum.
     ASSERT(saw_minimum_);
     // Don't go back towards that minimum from this neighbor.
-    neighbor->local_extreme().explored(opposite(hdirection_));
+    neighbor->local_extreme().mark_explored(opposite(hdirection_));
     return handle_local_extreme_jump(w);
   }
 
@@ -1245,13 +1245,13 @@ bool Algorithm::handle_local_extreme(WeightRef w)
     {
       // If we find a new local extreme by exploring in the direction left/right from a previous extreme and it is adjacent
       // (there is no extreme in between), then the previous extreme is marked as Explored in that direction.
-      neighbor->local_extreme().explored(hdirection_);
+      neighbor->local_extreme().mark_explored(hdirection_);
     }
 
     // If we already saw a minimum, going from adjacent local extremes to the next, then also mark the newly found extreme
     // as Explored in the opposite direction (towards that already seen extreme).
     if (saw_minimum_)
-      local_extreme.explored(opposite(hdirection_));
+      local_extreme.mark_explored(opposite(hdirection_));
 
     // Keep track of the best minimum so far; or abort if this minimum isn't better than one found before.
     if (next_extreme_type_ == ExtremeType::minimum)
@@ -1668,7 +1668,7 @@ void Algorithm::initialize_range(double extreme_w)
 
 #ifdef CWDEBUG
   // Note that extreme_w is an extreme of the opposite type of next_extreme_type_.
-  if (left_node->is_cubic())    // Can't check the cubic type if it doesn't exist.
+  if (left_node != chain_.end() && left_node->is_cubic())    // Can't check the cubic type if it doesn't exist.
   {
     if (next_extreme_type_ == ExtremeType::maximum)
     {
