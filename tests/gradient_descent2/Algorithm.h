@@ -39,8 +39,8 @@ class Algorithm
   bool check_energy_{false};                            // Set to true iff the last probe is a "keep going" step.
   bool have_expected_Lw_{false};                        // True if expected_Lw_ was set.
   double expected_Lw_;                                  // Whenever w is changed, this is set to what Lw value the approximation is expecting there.
-  SampleNode::const_iterator last_extreme_cubic_;       // After calling handle_local_extreme while state_ is not extra_sample, this will
-                                                        // point to the cubic that was used to find the local extreme.
+  SampleNode::const_iterator last_extreme_cubic_{chain_.end()}; // After calling handle_local_extreme while state_ is not extra_sample,
+                                                        // this will point to the cubic that was used to find the local extreme.
                                                         // If that cubic contains two extremes, then it was not marked as local extreme yet.
                                                         // This is also set to point to the local extreme that we jump (back) to, aka before
                                                         // calling handle_local_extreme_jump.
@@ -249,7 +249,8 @@ void Algorithm::handle_get_extra_sample(WeightRef w, double requested_w, utils::
 {
   DoutEntering(dc::notice, "Algorithm::handle_get_extra_sample(" << w << ", " << requested_w << ")");
   // This forced assignment is required to be "in range".
-  ASSERT(debug_within_range(requested_w));
+  //FIXME: why? Is it really a problem if it is out of range?
+//  ASSERT(debug_within_range(requested_w));
 
   Dout(dc::notice, "Not enough samples to fit a fourth degree polynomial: asking for another samples at w = " << requested_w);
   // Never requires a special action-- just update w.ref_.

@@ -3,6 +3,7 @@
 #include <string>
 #include "ExtremeType.h"
 #include "HorizontalDirection.h"
+#include "utils/macros.h"
 #ifdef CWDEBUG
 #include <iostream>
 #endif
@@ -95,6 +96,17 @@ enum class CubicToNextSampleType : int
   // _/\ This sample is a local minimum and the next sample has a negative derivative.
   right_min_max         = 19 << id_shift | maximum_bit | right_min_bit,
 };
+
+enum CubicEndShape
+{
+  flat_high,
+  flat_low,
+  downhill,
+  uphill,
+  plus_inf
+};
+
+CubicEndShape get_end(CubicToNextSampleType type, bool left);
 
 inline bool has_unfound_minimum(CubicToNextSampleType type)
 {

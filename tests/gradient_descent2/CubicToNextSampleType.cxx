@@ -84,4 +84,53 @@ char const* to_utf8_art(CubicToNextSampleType type)
   AI_NEVER_REACHED
 }
 
+CubicEndShape get_end(CubicToNextSampleType type, bool left)
+{
+  using enum CubicToNextSampleType;
+  switch (type)
+  {
+    case flat:                  // __
+      return flat_low;
+    case up:                    // /
+      return uphill;
+    case down:                  // \.
+      return downhill;
+    case right_stop:            // /^
+      return left ? uphill : plus_inf;
+    case left_stop:             // ^\.
+      return left ? plus_inf : downhill;
+    case right_min:             // _/
+      return left ? flat_low : uphill;
+    case left_min:              // \_
+      return left ? downhill : flat_low;
+    case right_max:             // ‾\.
+      return left ? flat_high : downhill;
+    case left_max:              // /‾
+      return left ? uphill : flat_high;
+    case right_max_left_min:    // ‾\_
+      return left ? flat_high : flat_low;
+    case right_min_left_max:    // _/‾
+      return left ? flat_low : flat_high;
+    case min:                   // \/
+      return left ? downhill : uphill;
+    case right_max_min:         // ‾\/
+      return left ? flat_high : uphill;
+    case min_left_max:          // \/‾
+      return left ? downhill : flat_high;
+    case min_max:               // \/\.
+      return downhill;
+    case max_min:               // /\/
+      return uphill;
+    case max:                   // /\.
+      return left ? uphill : downhill;
+    case max_left_min:          // /\_
+      return left ? uphill : flat_low;
+    case right_min_max:         // _/\.
+      return left ? flat_low : downhill;
+    default:
+      ASSERT(false);
+  }
+  AI_NEVER_REACHED
+}
+
 } // namespace gradient_descent

@@ -56,6 +56,7 @@ class SampleNode : public Sample
       COMMA_CWDEBUG_ONLY(ExtremeType next_extreme_type, events::Server<AlgorithmEventType>& event_server, bool this_is_last));
 
   void change_type_to_left_extreme(ExtremeType extreme_type);
+  void change_type_to_right_extreme(ExtremeType extreme_type);
 
  public:
   double find_extreme(Sample const& next, ExtremeType& extreme_type) const;

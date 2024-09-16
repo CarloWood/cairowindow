@@ -361,10 +361,7 @@ int main(int argc, char* argv[])
 
   constexpr double w0 = 4.0;
   constexpr double learning_rate = 0.0001;
-  constexpr double L_max = 100;
-
-  Algorithm gda(learning_rate, L_max);
-  double w = w0;
+  constexpr double L_max = 600;
 
   unsigned int seed = 0;
   if (argc > 1) {
@@ -376,22 +373,25 @@ int main(int argc, char* argv[])
   Range const amplitude_range{25.0, 100.0};
   Range const x_range{0.0, 8.0};
 
-  for (;;)
+  do
   {
+    Algorithm gda(learning_rate, L_max);
+    double w = w0;
 
-  TestFunctionGenerator L(number_of_frequencies, frequency_range, amplitude_range, seed);
-  L.advanced_normalize(0.1, 0.1, x_range);
+    TestFunctionGenerator L(number_of_frequencies, frequency_range, amplitude_range, seed);
+    L.advanced_normalize(0.1, 0.1, x_range);
 
-  //gda.enable_drawing(L, x_range.min(), x_range.max());
-  gda.enable_drawing(L, 2.5, 5.5);
-  while (gda(w, L(w), L.derivative(w)))
-  {
-    Dout(dc::notice, "-------------------------------------------");
+//    gda.enable_drawing(L, x_range.min(), x_range.max());
+    gda.enable_drawing(L, 3.0, 8.0);
+    while (gda(w, L(w), L.derivative(w)))
+    {
+      Dout(dc::notice, "-------------------------------------------");
+    }
+
+    ASSERT(gda.success());
+
+    gradient_descent::Sample const& result = gda.minimum();
+    Dout(dc::notice, "Global minimum: " << result);
   }
-
-  }
-
-  ASSERT(gda.success());
-  gradient_descent::Sample const& result = gda.minimum();
-  Dout(dc::notice, "Global minimum: " << result);
+  while (seed == 0);
 }

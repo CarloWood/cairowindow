@@ -10,7 +10,7 @@ void SampleNode::change_type_to_left_extreme(ExtremeType extreme_type)
   using enum CubicToNextSampleType;
   switch (type_)
   {
-//  case flat:                  // __
+//  case flat:                  // __           doesn't change.
     case up:                    // /
       ASSERT(extreme_type == ExtremeType::maximum);
       type_ = left_max;         // /‾
@@ -19,28 +19,31 @@ void SampleNode::change_type_to_left_extreme(ExtremeType extreme_type)
       ASSERT(extreme_type == ExtremeType::minimum);
       type_ = left_min;         // \_
       break;
-//  case right_stop:            // /^
-//  case left_stop:             // ^\.          ^\_ does not exist...
+#if CW_DEBUG
+    case right_stop:            // /^
+    case left_stop:             // ^\.          ^\_ does not exist...
+      ASSERT(false);
+#endif
     case right_min:             // _/
       ASSERT(extreme_type == ExtremeType::maximum);
       type_ = right_min_left_max;       // _/‾
       break;
-//  case left_min:              // \_           don't call this function if nothing changes.
+//  case left_min:              // \_           doesn't change.
     case right_max:             // ‾\.
       ASSERT(extreme_type == ExtremeType::minimum);
       type_ = right_max_left_min;       // ‾\_
       break;
-//  case left_max:              // /‾           don't call this function if nothing changes.
-//  case right_max_left_min:    // ‾\_          don't call this function if nothing changes.
-//  case right_min_left_max:    // _/‾          don't call this function if nothing changes.
+//  case left_max:              // /‾           doesn't change.
+//  case right_max_left_min:    // ‾\_          doesn't change.
+//  case right_min_left_max:    // _/‾          doesn't change.
     case min:                   // \/
       type_ = (extreme_type == ExtremeType::minimum) ? left_min : min_left_max; // \_ or \/‾
       break;
     case right_max_min:         // ‾\/
       ASSERT(extreme_type == ExtremeType::minimum);
-      type_ = left_min;         // \_
+      type_ = right_max_left_min;       // ‾\_
       break;
-//  case min_left_max:          // \/‾          don't call this function if nothing changes.
+//  case min_left_max:          // \/‾          doesn't change.
     case min_max:               // \/\.
       ASSERT(extreme_type == ExtremeType::maximum);
       type_ = min_left_max;     // \/‾
@@ -52,13 +55,76 @@ void SampleNode::change_type_to_left_extreme(ExtremeType extreme_type)
     case max:                   // /\.
       type_ = extreme_type == ExtremeType::minimum ? max_left_min : left_max;   // /\_ or /‾
       break;
-//  case max_left_min:          // /\_          don't call this function if nothing changes.
+//  case max_left_min:          // /\_          doesn't change.
     case right_min_max:         // _/\.
       ASSERT(extreme_type == ExtremeType::maximum);
       type_ = right_min_left_max;       // _/‾
       break;
     default:
+      Dout(dc::notice, "No need to change the type of the cubic [" << label() << "], which is already " << type_ << ".");
+      return;
+  }
+  Dout(dc::notice, "Changed the type of the cubic [" << label() << "] to " << type_ << ".");
+}
+
+void SampleNode::change_type_to_right_extreme(ExtremeType extreme_type)
+{
+  using enum CubicToNextSampleType;
+  switch (type_)
+  {
+//  case flat:                  // __           doesn't change.
+    case up:                    // /
+      ASSERT(extreme_type == ExtremeType::minimum);
+      type_ = right_min;        // _/
+      break;
+    case down:                  // \.
+      ASSERT(extreme_type == ExtremeType::maximum);
+      type_ = right_max;        // ‾\
+      break;
+#if CW_DEBUG
+    case right_stop:            // /^           _/^ does not exist...
+    case left_stop:             // ^\.
       ASSERT(false);
+#endif
+//  case right_min:             // _/           doesn't change.
+    case left_min:              // \_
+      ASSERT(extreme_type == ExtremeType::maximum);
+      type_ = right_max_left_min;       // ‾\_
+      break;
+//  case right_max:             // ‾\.          doesn't change.
+    case left_max:              // /‾           doesn't change.
+      ASSERT(extreme_type == ExtremeType::minimum);
+      type_ = right_min_left_max;       // _/‾
+      break;
+//  case right_max_left_min:    // ‾\_          doesn't change.
+//  case right_min_left_max:    // _/‾          doesn't change.
+    case min:                   // \/
+      type_ = (extreme_type == ExtremeType::minimum) ? right_min : right_max_min; // _/ or ‾\/
+      break;
+//  case right_max_min:         // ‾\/          doesn't change.
+    case min_left_max:          // \/‾
+      ASSERT(extreme_type == ExtremeType::minimum);
+      type_ = right_min_left_max;       // _/‾
+      break;
+    case min_max:               // \/\.
+      ASSERT(extreme_type == ExtremeType::minimum);
+      type_ = right_min_max;    // _/\.
+      break;
+    case max_min:               // /\/
+      ASSERT(extreme_type == ExtremeType::maximum);
+      type_ = right_max_min;    // ‾\/
+      break;
+    case max:                   // /\.
+      type_ = extreme_type == ExtremeType::minimum ? right_min_max : right_max;   // _/\ or ‾\.
+      break;
+    case max_left_min:          // /\_
+      ASSERT(extreme_type == ExtremeType::maximum);
+      type_ = right_max_left_min;       // ‾\_
+      break;
+//  case right_min_max:         // _/\.         doesn't change.
+    default:
+      Dout(dc::notice, "No need to change the type of the cubic [" << label() << "], which is already " << type_ << ".");
+      return;
   }
   Dout(dc::notice, "Changed the type of the cubic [" << label() << "] to " << type_ << ".");
 }
