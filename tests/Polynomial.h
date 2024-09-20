@@ -36,6 +36,9 @@ class Polynomial
   double operator[](int i) const { ASSERT(0 <= i && i < coefficients_.size()); return coefficients_[i]; }
   double& operator[](int i) { ASSERT(0 <= i && i < coefficients_.size()); return coefficients_[i]; }
 
+  // Accessor.
+  std::vector<double> const& coefficients() const { return coefficients_; }
+
   double operator()(double w) const
   {
     double result = 0.0;

@@ -97,3 +97,7 @@ target_link_libraries(height_test ${AICXX_OBJECTS_LIST})
 add_executable(scale_test scale_test.cxx
   gradient_descent2/ExtremeType.cxx gradient_descent2/AnalyzedCubic.cxx)
 target_link_libraries(scale_test AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST})
+
+add_executable(roots_test roots_test.cxx)
+target_link_libraries(roots_test ${AICXX_OBJECTS_LIST})
+

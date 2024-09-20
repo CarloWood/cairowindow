@@ -326,22 +326,37 @@ bool Algorithm::operator()(WeightRef w, double Lw, double dLdw)
           }
 
           cubic_used_ = chain_.end();
+          SampleNode::const_iterator used_cubic;
           AnalyzedCubic* used_acubic = nullptr;
           HorizontalDirection keep_going_direction = HorizontalDirection::undecided;      // Default: undecided means nothing needs to be done.
           SampleNode::const_iterator keep_going_node;
+
           if (right_has_extreme)
           {
+            // last_extreme_cubic_ and hdirection_ are set at the same time (in handle_local_extreme).
+            // In the code below, where we test 'hdirection_ == HorizontalDirection::undecided' we assume
+            // that if that is false then also last_extreme_cubic_ will be valid.
+            ASSERT((last_extreme_cubic_ == chain_.end()) == (hdirection_ == HorizontalDirection::undecided));
             // If both cubics have the required extreme in the required region, then
-            // use the cubic whose samples lay closest to their extreme.
-            if (!left_has_extreme || right_dist < left_dist)
+            // use the cubic that is closest to the last local extreme.
+            // If hdirection is still undecided there is no last local extreme yet; in that case use the cubic
+            // whose samples lay closest to their extreme.
+            if (!left_has_extreme || hdirection_ == HorizontalDirection::left ||
+                (hdirection_ == HorizontalDirection::undecided && right_dist < left_dist))
             {
               Dout(dc::notice|continued_cf, "Choosing " << next_extreme_type_ << " of right cubic because ");
 #ifdef CWDEBUG
               if (left_has_extreme)
-                Dout(dc::finish, "that extreme (" << right_extreme_w << ") is closer to the center of [" <<
-                    new_node->label() << "]<--->[" << right_node->label() << "], than the left cubic extreme (" <<
-                    left_extreme_w << ") is from the center of [" << std::prev(new_node)->label() << "]<--->[" << new_node->label() <<
-                    "]; (" << right_dist << " < " << left_dist << ").");
+              {
+                if (hdirection_ == HorizontalDirection::undecided)
+                  Dout(dc::finish, "that extreme (" << right_extreme_w << ") is closer to the center of [" <<
+                      new_node->label() << "]<--->[" << right_node->label() << "], than the left cubic extreme (" <<
+                      left_extreme_w << ") is from the center of [" << std::prev(new_node)->label() << "]<--->[" << new_node->label() <<
+                      "]; (" << right_dist << " < " << left_dist << ").");
+                else
+                  Dout(dc::finish, "that cubic [" << new_node->label() << "] is closer to the last extreme [" <<
+                      last_extreme_cubic_->label() << "] than the left cubic [" << left_node->label() << "].");
+              }
               else if (new_node != chain_.begin())
                 Dout(dc::finish, "the left one does not have that extreme between " <<
                     (right_of_ != chain_.end() ? right_of_->w() : -std::numeric_limits<double>::infinity()) << " and " <<
@@ -349,7 +364,7 @@ bool Algorithm::operator()(WeightRef w, double Lw, double dLdw)
               else
                 Dout(dc::finish, "the left one does not exists.");
 #endif
-              handle_extreme_jump(w, new_node, right_acubic, {});
+              used_cubic = new_node;
               used_acubic = &right_acubic;
             }
             else
@@ -357,16 +372,22 @@ bool Algorithm::operator()(WeightRef w, double Lw, double dLdw)
               Dout(dc::notice|continued_cf, "Choosing " << next_extreme_type_ << " of left cubic because ");
 #ifdef CWDEBUG
               if (left_has_extreme)
-                Dout(dc::finish, "that extreme (" << left_extreme_w << ") is closer to the center of [" <<
-                    std::prev(new_node)->label() << "]<--->[" << new_node->label() << "], than the right cubic extreme (" <<
-                    right_extreme_w << ") is from the center of [" << new_node->label() << "]<--->[" << right_node->label() <<
-                    "]; (" << left_dist << " < " << right_dist << ").");
+              {
+                if (hdirection_ == HorizontalDirection::undecided)
+                  Dout(dc::finish, "that extreme (" << left_extreme_w << ") is closer to the center of [" <<
+                      std::prev(new_node)->label() << "]<--->[" << new_node->label() << "], than the right cubic extreme (" <<
+                      right_extreme_w << ") is from the center of [" << new_node->label() << "]<--->[" << right_node->label() <<
+                      "]; (" << left_dist << " < " << right_dist << ").");
+                else
+                  Dout(dc::finish, "that cubic [" << left_node->label() << "] is closer to the last extreme [" <<
+                      last_extreme_cubic_->label() << "] than the right cubic [" << new_node->label() << "].");
+              }
               else
                 Dout(dc::finish, "the right one does not have that extreme between " <<
                     (right_of_ != chain_.end() ? right_of_->w() : -std::numeric_limits<double>::infinity()) << " and " <<
                     (left_of_ != chain_.end() ? left_of_->w() : std::numeric_limits<double>::infinity()));
 #endif
-              handle_extreme_jump(w, std::prev(new_node), left_acubic, {});
+              used_cubic = std::prev(new_node);
               used_acubic = &left_acubic;
             }
           }
@@ -381,229 +402,297 @@ bool Algorithm::operator()(WeightRef w, double Lw, double dLdw)
             else
               Dout(dc::finish, "exists.");
 #endif
-            handle_extreme_jump(w, std::prev(new_node), left_acubic, {});
+            used_cubic = std::prev(new_node);
             used_acubic = &left_acubic;
+          }
+
+          double two_cos_squared = 2.0; // By default use used_cubic.
+          if (hdirection_ != HorizontalDirection::undecided)
+          {
+            SampleNode::const_iterator local_extreme_edge = last_extreme_cubic_->local_extreme().get_edge_node(hdirection_);
+            bool const used_cubic_adjacent_to_last_extreme = hdirection_ != HorizontalDirection::undecided &&
+              ((hdirection_ == HorizontalDirection::left && used_acubic == &right_acubic && local_extreme_edge == used_cubic->next_node()) ||
+              (hdirection_ == HorizontalDirection::right && used_acubic == &left_acubic && local_extreme_edge == used_cubic));
+            if (used_cubic_adjacent_to_last_extreme)
+            {
+              math::Polynomial const& fourth_degree_approximation = last_extreme_cubic_->local_extreme().get_fourth_degree_approximation();
+              // Let (x1, y1) be the point where the approximation switches from the fourth degree polynomial to the new cubic (local_extreme_edge).
+              // Let P(x) be the fourth degree polynomial and let Q(x) be the cubic (used_cubic).
+              // Thus P(x1) = Q(x1) and P'(x1) = Q'(x1) (the piece-wise approximation is C1 continuous).
+              //
+              double x1 = local_extreme_edge->w();
+              double y1 = local_extreme_edge->Lw();
+              // Let x2 be a point a scale distance into Q.
+              double x2 = x1 + last_extreme_cubic_->scale().step(hdirection_);
+              // Let Py = P(x2)
+              double Py = fourth_degree_approximation(x2);
+              // Calculate Qy = Q(x2).
+              double Qy = used_cubic->cubic()(x2);
+
+              // Apply a coordinate transformation such that (x1, y1) --> (0, 0) and (x2, Py) --> (1, 1):
+              // Note that x2' = 1, and Py' = 1.
+
+              // Then Qy' = (Qy - y1) / (Py - y1);
+              double Qy_prime = (Qy - y1) / (Py - y1);
+
+              // Take dot product between the vectors from (x1, y1) to (x2, Py) and (x2, Qy) respectively, using the transformed coordinates.
+              // Thus x2' * x2' + Py' * Qy' = 1 + Qy'.
+              // The angle between the two vectors then is given by:
+              // 1 + Qy' = |(x2', Py')| |x2', Qy'| cos(angle) = sqrt(2) * sqrt(1 + Qy'^2) cos(angle)
+              // Calculate the square of the cosine of the angle:
+              two_cos_squared = utils::square(1.0 + Qy_prime) / (1.0 + utils::square(Qy_prime));
+
+#ifdef CWDEBUG
+              if (two_cos_squared < 1.8)
+                Dout(dc::notice, "Not using this cubic however, because the cubic deviates too much from the fourth degree polynomial "
+                    "(P(" << x2 << ") = " << Py << " and Q(" << x2 << ") = " << Qy << " --> two_cos_squared = " << two_cos_squared << ".");
+#if 0
+                     << " at [" << local_extreme_edge->label() <<
+                    "] (" << local_extreme_edge->w() << ")) is ..."
+                    " in the last local extreme (" << last_extreme_cubic_->local_extreme().label() << ").");
+#endif
+              else
+                Dout(dc::notice, "two_cos_squared = " << two_cos_squared);
+#endif
+            }
+          }
+
+          if (two_cos_squared < 1.8)
+          {
+            // This cubic "fit" is likely nonsense. Lets just make a scale step.
+            //handle_last_extreme_plus_step(w, {});
+
+            keep_going_node = hdirection_ == HorizontalDirection::left ? left_of_ : right_of_;
+            ASSERT(keep_going_node != chain_.end());
+            keep_going_direction = hdirection_;
+            cubic_used_ = last_extreme_cubic_;
+            ASSERT(cubic_used_ != chain_.end());
           }
           else
           {
+            if (left_has_extreme || right_has_extreme)
+              handle_extreme_jump(w, used_cubic, *used_acubic, {});
+            else
+            {
 #ifdef CWDEBUG
-            if (new_node == chain_.begin())
-            {
-              ASSERT(right_node != chain_.end());
-              Dout(dc::notice|continued_cf, "There is no left cubic, and the right cubic has no extreme between ");
-            }
-            else if (right_node == chain_.end())
-              Dout(dc::notice|continued_cf, "There is no right cubic, and the left cubic has no extreme between ");
-            else
-              Dout(dc::notice|continued_cf, "Neither the left nor the right cubic has an extreme between ");
-            Dout(dc::finish, (right_of_ != chain_.end() ? right_of_->w() : -std::numeric_limits<double>::infinity()) <<
-                " and " << (left_of_ != chain_.end() ? left_of_->w() : std::numeric_limits<double>::infinity()));
+              if (new_node == chain_.begin())
+              {
+                ASSERT(right_node != chain_.end());
+                Dout(dc::notice|continued_cf, "There is no left cubic, and the right cubic has no extreme between ");
+              }
+              else if (right_node == chain_.end())
+                Dout(dc::notice|continued_cf, "There is no right cubic, and the left cubic has no extreme between ");
+              else
+                Dout(dc::notice|continued_cf, "Neither the left nor the right cubic has an extreme between ");
+              Dout(dc::finish, (right_of_ != chain_.end() ? right_of_->w() : -std::numeric_limits<double>::infinity()) <<
+                  " and " << (left_of_ != chain_.end() ? left_of_->w() : std::numeric_limits<double>::infinity()));
 #endif
-            SampleNode::const_iterator current = new_node;
-            // If we are on the wrong side of 'foo_of_', jump to foo_of_.
-            //
-            //                           |==>           <==|
-            //           ------x------right_of-----x-----left_of------x-------
-            //                 |--jump-->|       stay      |<---jump--|
-            if (right_of_ != chain_.end() && current->w() < right_of_->w())
-              current = right_of_;
-            else if (left_of_ != chain_.end() && current->w() > left_of_->w())
-              current = left_of_;
-
-            // Determine the direction that we must go in. This must rely on the type_ of the cubics
-            // rather than the sign of the derivative because the latter can't be trusted to be consistent
-            // (for example, it could be -1e-14; which is close enough to zero that it might have ended up
-            // less than zero due to floating-point round-off errors).
-
-            HorizontalDirection direction;
-            if (left_of_ == chain_.end() && right_of_ == chain_.end())
-            {
-              // If no region boundaries are set, then the cubics don't have an extreme at all; aka,
-              // we are in the middle of a monotonic rising or falling area: in that case just
-              // move the current point to the highest/lowest point left/right of the current sample,
-              // depending on whether we're looking for a minimum or maximum.
-              bool at_right_edge = !current->is_cubic();
-              if (at_right_edge)
-                current = std::prev(current);
-              ASSERT(current->is_cubic());
-              direction =
-                (next_extreme_type_ == ExtremeType::minimum && current->is_falling()) ||
-                (next_extreme_type_ == ExtremeType::maximum && current->is_rising()) ?
-                HorizontalDirection::right : HorizontalDirection::left;
-              if (at_right_edge)
-                current = std::next(current);
-            }
-            else
-            {
-              // If there is one region boundary, then we should start from that boundary and move
-              // away from it until we find a cubic with the sought for local extreme, or reach the
-              // edge on the other side - in which case we'll have to "keep going" again by adding
-              // the scale (and return to probe the next sample).
-              if (left_of_ == chain_.end())
+              SampleNode::const_iterator current = new_node;
+              // If we are on the wrong side of 'foo_of_', jump to foo_of_.
+              //
+              //                           |==>           <==|
+              //           ------x------right_of-----x-----left_of------x-------
+              //                 |--jump-->|       stay      |<---jump--|
+              if (right_of_ != chain_.end() && current->w() < right_of_->w())
                 current = right_of_;
-              else if (right_of_ == chain_.end())
+              else if (left_of_ != chain_.end() && current->w() > left_of_->w())
                 current = left_of_;
 
-              // It should never happen that both left_of_ and right_of_ are set,
-              // while we're not already on one of those boundaries.
-              ASSERT(current == left_of_ || current == right_of_);
+              // Determine the direction that we must go in. This must rely on the type_ of the cubics
+              // rather than the sign of the derivative because the latter can't be trusted to be consistent
+              // (for example, it could be -1e-14; which is close enough to zero that it might have ended up
+              // less than zero due to floating-point round-off errors).
 
-              // In this case we just want to move away from the boundary that we're on.
-              direction = current == right_of_ ? HorizontalDirection::right : HorizontalDirection::left;
-            }
-            Dout(dc::notice, "direction = " << direction);
-
-            // Move current in the given direction until we find a cubic with the sought for local extreme, or reach the end of the chain.
-            if (direction == HorizontalDirection::right)
-            {
-              while (current->is_cubic() && !current->has_unfound_extreme(next_extreme_type_))
-                current = std::next(current);
-              if (!current->is_cubic())
+              HorizontalDirection direction;
+              if (left_of_ == chain_.end() && right_of_ == chain_.end())
               {
-                right_of_ = current;
-                // Set cubic_used_ in order to set the scale on it: if we keep going again, we want to use the scale of this cubic.
-                cubic_used_ = std::prev(current);
-                right_acubic.initialize(cubic_used_->cubic(), next_extreme_type_);
-                used_acubic = &right_acubic;
-                // Keep going to the right. cubic_used_->scale().value() needs to be added to right_of_->w().
-                keep_going_node = right_of_;
-                keep_going_direction = HorizontalDirection::right;
+                // If no region boundaries are set, then the cubics don't have an extreme at all; aka,
+                // we are in the middle of a monotonic rising or falling area: in that case just
+                // move the current point to the highest/lowest point left/right of the current sample,
+                // depending on whether we're looking for a minimum or maximum.
+                bool at_right_edge = !current->is_cubic();
+                if (at_right_edge)
+                  current = std::prev(current);
+                ASSERT(current->is_cubic());
+                direction =
+                  (next_extreme_type_ == ExtremeType::minimum && current->is_falling()) ||
+                  (next_extreme_type_ == ExtremeType::maximum && current->is_rising()) ?
+                  HorizontalDirection::right : HorizontalDirection::left;
+                if (at_right_edge)
+                  current = std::next(current);
               }
               else
               {
-                // implement
-                ASSERT(false);
+                // If there is one region boundary, then we should start from that boundary and move
+                // away from it until we find a cubic with the sought for local extreme, or reach the
+                // edge on the other side - in which case we'll have to "keep going" again by adding
+                // the scale (and return to probe the next sample).
+                if (left_of_ == chain_.end())
+                  current = right_of_;
+                else if (right_of_ == chain_.end())
+                  current = left_of_;
+
+                // It should never happen that both left_of_ and right_of_ are set,
+                // while we're not already on one of those boundaries.
+                ASSERT(current == left_of_ || current == right_of_);
+
+                // In this case we just want to move away from the boundary that we're on.
+                direction = current == right_of_ ? HorizontalDirection::right : HorizontalDirection::left;
               }
-            }
-            else
-            {
-              while (current != chain_.begin() && !std::prev(current)->has_unfound_extreme(next_extreme_type_))
-                current = std::prev(current);
-              if (current == chain_.begin())
+              Dout(dc::notice, "direction = " << direction);
+
+              // Move current in the given direction until we find a cubic with the sought for local extreme, or reach the end of the chain.
+              if (direction == HorizontalDirection::right)
               {
-                left_of_ = current;
-                // Set cubic_used_ in order to set the scale on it: if we keep going again,
-                // we want to use the scale of this cubic.
-                cubic_used_ = current;
-                left_acubic.initialize(cubic_used_->cubic(), next_extreme_type_);
-                used_acubic = &left_acubic;
-                // Keep going to the left. cubic_used_->scale().value() needs to be subtracted from left_of_->w().
-                keep_going_node = left_of_;
-                keep_going_direction = HorizontalDirection::left;
+                while (current->is_cubic() && !current->has_unfound_extreme(next_extreme_type_))
+                  current = std::next(current);
+                if (!current->is_cubic())
+                {
+                  right_of_ = current;
+                  // Set cubic_used_ in order to set the scale on it: if we keep going again, we want to use the scale of this cubic.
+                  cubic_used_ = std::prev(current);
+                  right_acubic.initialize(cubic_used_->cubic(), next_extreme_type_);
+                  used_acubic = &right_acubic;
+                  // Keep going to the right. cubic_used_->scale().value() needs to be added to right_of_->w().
+                  keep_going_node = right_of_;
+                  keep_going_direction = HorizontalDirection::right;
+                }
+                else
+                {
+                  // implement
+                  ASSERT(false);
+                }
               }
               else
               {
-                // implement
-                ASSERT(false);
+                while (current != chain_.begin() && !std::prev(current)->has_unfound_extreme(next_extreme_type_))
+                  current = std::prev(current);
+                if (current == chain_.begin())
+                {
+                  left_of_ = current;
+                  // Set cubic_used_ in order to set the scale on it: if we keep going again,
+                  // we want to use the scale of this cubic.
+                  cubic_used_ = current;
+                  left_acubic.initialize(cubic_used_->cubic(), next_extreme_type_);
+                  used_acubic = &left_acubic;
+                  // Keep going to the left. cubic_used_->scale().value() needs to be subtracted from left_of_->w().
+                  keep_going_node = left_of_;
+                  keep_going_direction = HorizontalDirection::left;
+                }
+                else
+                {
+                  // implement
+                  ASSERT(false);
+                }
               }
             }
-          }
 
-          // cubic_used_ should have been set to the cubic that we need to update the scale of.
-          ASSERT(cubic_used_ != chain_.end());
+            // cubic_used_ should have been set to the cubic that we need to update the scale of.
+            ASSERT(cubic_used_ != chain_.end());
 
-          // Update scale.
-          CriticalPointType const scale_cp_type =
-            used_acubic->has_extrema() ? (next_extreme_type_ == ExtremeType::minimum ? CriticalPointType::minimum
-                                                                                      : CriticalPointType::maximum)
-                                       : CriticalPointType::inflection_point;
+            // Update scale.
+            CriticalPointType const scale_cp_type =
+              used_acubic->has_extrema() ? (next_extreme_type_ == ExtremeType::minimum ? CriticalPointType::minimum
+                                                                                        : CriticalPointType::maximum)
+                                         : CriticalPointType::inflection_point;
 
-          double const critical_point_w =
-            used_acubic->has_extrema() ? used_acubic->get_extreme()
-                                       : used_acubic->inflection_point();
+            double const critical_point_w =
+              used_acubic->has_extrema() ? used_acubic->get_extreme()
+                                         : used_acubic->inflection_point();
 
-          math::CubicPolynomial const& cubic = cubic_used_->cubic();
+            math::CubicPolynomial const& cubic = cubic_used_->cubic();
 
-          // Find the left/right edge sample as far away from the samples used to fit the current cubic, that still matches that cubic.
-          //
-          // Start with setting left_edge to cubic_used_ and right_edge to the next sample,
-          // respectively the left and right sample that were used to fit the cubic.
-          //
-          //        \      /
-          //         \    🞄
-          //          `🞄-´^
-          //           ^  right
-          //        left
-          SampleNode::const_iterator left_edge = cubic_used_;
-          SampleNode::const_iterator right_edge = std::next(cubic_used_);
+            // Find the left/right edge sample as far away from the samples used to fit the current cubic, that still matches that cubic.
+            //
+            // Start with setting left_edge to cubic_used_ and right_edge to the next sample,
+            // respectively the left and right sample that were used to fit the cubic.
+            //
+            //        \      /
+            //         \    🞄
+            //          `🞄-´^
+            //           ^  right
+            //        left
+            SampleNode::const_iterator left_edge = cubic_used_;
+            SampleNode::const_iterator right_edge = std::next(cubic_used_);
 
-          // Must be called before calling matches.
-          used_acubic->initialize_matches(*left_edge, *right_edge);
+            // Must be called before calling matches.
+            used_acubic->initialize_matches(*left_edge, *right_edge);
 
 #ifdef CWDEBUG
-          // Because these points were used to generate the cubic, they should perfectly fit it.
-          if (!used_acubic->matches(left_edge->w(), left_edge->Lw(), cubic))
-          {
-            Dout(dc::warning, "left_edge, " << *left_edge << " is not matching " << cubic << " / " << *used_acubic);
-          }
-          if (!used_acubic->matches(right_edge->w(), right_edge->Lw(), cubic))
-          {
-            Dout(dc::warning, "right_edge, " << *right_edge << " is not matching " << cubic << " / " << *used_acubic);
-          }
-#endif
-          // Now advance left_edge to the left as far as possible, but not
-          // so far that it points to a sample that does not match.
-          while (left_edge != chain_.begin())
-          {
-            --left_edge;
+            // Because these points were used to generate the cubic, they should perfectly fit it.
             if (!used_acubic->matches(left_edge->w(), left_edge->Lw(), cubic))
             {
-              ++left_edge;
-              break;
+              Dout(dc::warning, "left_edge, " << *left_edge << " is not matching " << cubic << " / " << *used_acubic);
             }
-          }
-          // Same with right_edge, but as far as possible to the right.
-          while (++right_edge != chain_.end() && used_acubic->matches(right_edge->w(), right_edge->Lw(), cubic))
-            ;
-          // In this case we did overshoot by one, so move right_edge one back.
-          auto next_right_edge = right_edge--;
-
-          // Thus, left_edge and right_edge are the last "good" (matching) samples.
-          double left_edge_w_good = left_edge->w();
-          double right_edge_w_good = right_edge->w();
-
-          // Is there a (bad) sample on the left?
-          if (left_edge != chain_.begin())
-          {
-            auto left_bad_sample = std::prev(left_edge);
-            double left_edge_w = left_bad_sample->w();
-            double left_edge_Lw;
-            int guard = 32;
-            do
+            if (!used_acubic->matches(right_edge->w(), right_edge->Lw(), cubic))
             {
-              // Half the distance to left_edge_w until it matches again.
-              left_edge_w = 0.5 * (left_edge_w_good + left_edge_w);
-              // Eventually left_edge_w becomes equal to left_edge_w_good; however, due to
-              // floating-point round-off errors even matches(left_edge_w_good, cubic)
-              // might be false; therefore stop regardless after 32 loops.
-              if (--guard == 0) break;
-              left_edge_Lw = left_bad_sample->cubic()(left_edge_w);
+              Dout(dc::warning, "right_edge, " << *right_edge << " is not matching " << cubic << " / " << *used_acubic);
             }
-            while (!used_acubic->matches(left_edge_w, left_edge_Lw, cubic));
-            // Use this as the left edge.
-            left_edge_w_good = left_edge_w;
-          }
-          // Is there a (bad) sample on the right?
-          if (next_right_edge != chain_.end())
-          {
-            double right_edge_w = next_right_edge->w();   // next_right_edge is the bad sample.
-            double right_edge_Lw;
-            int guard = 32;
-            do
-            {
-              right_edge_w = 0.5 * (right_edge_w_good + right_edge_w);
-              if (--guard == 0) break;
-              right_edge_Lw = right_edge->cubic()(right_edge_w);
-            }
-            while (!used_acubic->matches(right_edge_w, right_edge_Lw, cubic));
-            // Use this as the right edge.
-            right_edge_w_good = right_edge_w;
-          }
-
-          cubic_used_->set_scale(scale_cp_type, critical_point_w, left_edge_w_good, right_edge_w_good);
-#ifdef CWDEBUG
-          event_server_.trigger(AlgorithmEventType{scale_draw_event, ScaleUpdate::away_from_cp, *cubic_used_, old_cubic});
 #endif
+            // Now advance left_edge to the left as far as possible, but not
+            // so far that it points to a sample that does not match.
+            while (left_edge != chain_.begin())
+            {
+              --left_edge;
+              if (!used_acubic->matches(left_edge->w(), left_edge->Lw(), cubic))
+              {
+                ++left_edge;
+                break;
+              }
+            }
+            // Same with right_edge, but as far as possible to the right.
+            while (++right_edge != chain_.end() && used_acubic->matches(right_edge->w(), right_edge->Lw(), cubic))
+              ;
+            // In this case we did overshoot by one, so move right_edge one back.
+            auto next_right_edge = right_edge--;
+
+            // Thus, left_edge and right_edge are the last "good" (matching) samples.
+            double left_edge_w_good = left_edge->w();
+            double right_edge_w_good = right_edge->w();
+
+            // Is there a (bad) sample on the left?
+            if (left_edge != chain_.begin())
+            {
+              auto left_bad_sample = std::prev(left_edge);
+              double left_edge_w = left_bad_sample->w();
+              double left_edge_Lw;
+              int guard = 32;
+              do
+              {
+                // Half the distance to left_edge_w until it matches again.
+                left_edge_w = 0.5 * (left_edge_w_good + left_edge_w);
+                // Eventually left_edge_w becomes equal to left_edge_w_good; however, due to
+                // floating-point round-off errors even matches(left_edge_w_good, cubic)
+                // might be false; therefore stop regardless after 32 loops.
+                if (--guard == 0) break;
+                left_edge_Lw = left_bad_sample->cubic()(left_edge_w);
+              }
+              while (!used_acubic->matches(left_edge_w, left_edge_Lw, cubic));
+              // Use this as the left edge.
+              left_edge_w_good = left_edge_w;
+            }
+            // Is there a (bad) sample on the right?
+            if (next_right_edge != chain_.end())
+            {
+              double right_edge_w = next_right_edge->w();   // next_right_edge is the bad sample.
+              double right_edge_Lw;
+              int guard = 32;
+              do
+              {
+                right_edge_w = 0.5 * (right_edge_w_good + right_edge_w);
+                if (--guard == 0) break;
+                right_edge_Lw = right_edge->cubic()(right_edge_w);
+              }
+              while (!used_acubic->matches(right_edge_w, right_edge_Lw, cubic));
+              // Use this as the right edge.
+              right_edge_w_good = right_edge_w;
+            }
+
+            cubic_used_->set_scale(scale_cp_type, critical_point_w, left_edge_w_good, right_edge_w_good);
+#ifdef CWDEBUG
+            event_server_.trigger(AlgorithmEventType{scale_draw_event, ScaleUpdate::away_from_cp, *cubic_used_, old_cubic});
+#endif
+          }
 
           if (keep_going_direction != HorizontalDirection::undecided)
           {
@@ -1037,29 +1126,29 @@ bool Algorithm::handle_local_extreme(WeightRef w)
   }
   else
   {
-    // Remember the node containing the cubic that found this extreme.
-    last_extreme_cubic_ = cubic_used_;
-    Dout(dc::notice, "Set last_extreme_cubic_ to [" << last_extreme_cubic_->label() << "].");
-
     // The 'local extreme cubic' may not contain an extreme of the opposite type: SampleNode has only one LocalExtreme pointer!
-    // If this fails then we need to insert an extra sample to cut the last_extreme_cubic_ in two.
-    if (AI_UNLIKELY(last_extreme_cubic_->has_extreme(opposite(next_extreme_type_))))
+    // If this fails then we need to insert an extra sample to cut cubic_used_ in two.
+    if (AI_UNLIKELY(cubic_used_->has_extreme(opposite(next_extreme_type_))))
     {
-      // Apparently last_extreme_cubic_ contains two extremes. They should occur in the expected order.
-      // If last_extreme_cubic_ == chain_.last() then we have case 4 (or 3), in which case the
+      // Apparently cubic_used_ contains two extremes. They should occur in the expected order.
+      // If cubic_used_ == chain_.last() then we have case 4 (or 3), in which case the
       // next_extreme_type_ (B) must be on the left of the opposite extreme that is also part of B*-A.
       // Otherwise we have case 2 (or 1) and the next_extreme_type_ must be the extreme in A*-B that
       // is on the right.
       // If in fact we are dealing with case 1 or 3 then the current extreme type (next_extreme_type_)
-      // is not contained in the last_extreme_cubic_ and has_extreme_order returns false in that case;
-      // therefore begin with testing if the current extreme is also part of last_extreme_cubic_!
-      ASSERT(!last_extreme_cubic_->has_extreme(next_extreme_type_) ||
-          has_extreme_order(last_extreme_cubic_->type(), next_extreme_type_,
-            last_extreme_cubic_ == chain_.last() ? HorizontalDirection::left : HorizontalDirection::right));
-      // Request an extra sample in the middle of last_extreme_cubic_.
+      // is not contained in the cubic_used_ and has_extreme_order returns false in that case;
+      // therefore begin with testing if the current extreme is also part of cubic_used_!
+      ASSERT(!cubic_used_->has_extreme(next_extreme_type_) ||
+          has_extreme_order(cubic_used_->type(), next_extreme_type_,
+            cubic_used_ == chain_.last() ? HorizontalDirection::left : HorizontalDirection::right));
+      // Request an extra sample in the middle of cubic_used_.
       handle_divide_last_extreme_cubic(w, {});
       return true;
     }
+
+    // Remember the node containing the cubic that found this extreme.
+    last_extreme_cubic_ = cubic_used_;
+    Dout(dc::notice, "Set last_extreme_cubic_ to [" << last_extreme_cubic_->label() << "].");
 
     // Mark this sample as local extreme "cubic".
     last_extreme_cubic_->set_local_extreme(next_extreme_type_, chain_.end());
@@ -1561,7 +1650,7 @@ bool Algorithm::handle_local_extreme(WeightRef w)
   event_server_.trigger(AlgorithmEventType{fourth_degree_approximation_event, fourth_degree_approximation});
 #endif
 
-  auto derivative = fourth_degree_approximation.derivative();
+  math::Polynomial derivative = fourth_degree_approximation.derivative();
   Dout(dc::notice, "derivative = " << derivative);
 
 #ifdef CWDEBUG
@@ -1574,6 +1663,9 @@ bool Algorithm::handle_local_extreme(WeightRef w)
 
   auto second_derivative = quotient.derivative();
   Dout(dc::notice, "second_derivative = " << second_derivative);
+
+  // Remember the left- and right-most samples that were used to fit the fourth degree polynomial.
+  last_extreme_cubic_->local_extreme().set_edge_nodes(fourth_degree_approximation, usable_samples, local_extreme_index, i0, i1);
 
 #ifdef CWDEBUG
 //  event_server_.trigger(AlgorithmEventType{quotient_event, quotient});

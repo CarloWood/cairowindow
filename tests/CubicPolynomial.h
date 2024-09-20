@@ -1,9 +1,12 @@
 #pragma once
 
+#include "Polynomial.h"
+#include "QuadraticPolynomial.h"
 #include "utils/square.h"
 #include "utils/macros.h"
 #include <array>
 #include <cmath>
+#include <cstring>
 #include "debug.h"
 #ifdef CWDEBUG
 #include "utils/has_print_on.h"
@@ -25,6 +28,15 @@ class CubicPolynomial
   // Create a polynomial  a + b x + c x^2 + d x^3.
   CubicPolynomial(double a, double b, double c, double d) : coefficients_{{a, b, c, d}} { }
 
+  // Construct a cubic polynomial from a Polynomial.
+  CubicPolynomial(Polynomial const& polynomial)
+  {
+    std::vector<double> const& coefficients = polynomial.coefficients();
+    // polynomial must have degree three or less.
+    ASSERT(coefficients.size() == 4);
+    std::memcpy(coefficients_.data(), coefficients.data(), coefficients_.size() * sizeof(double));
+  }
+
   void initialize(double x0, double y0, double dxdy0, double x1, double y1, double dxdy1)
   {
     double delta_x_inverse = 1.0 / (x0 - x1);
@@ -44,7 +56,7 @@ class CubicPolynomial
 
   int get_extrema(std::array<double, 2>& extrema_out, bool left_most_first = true) const
   {
-    DoutEntering(dc::notice, "CubicPolynomial::get_extrema()");
+    DoutEntering(dc::notice, "CubicPolynomial::get_extrema(extrema_out, left_most_first = " << std::boolalpha << left_most_first << ")");
 
     // The cubic is:
     // coefficients_[0] + coefficients_[1] * x + coefficients_[2] * x^2 + coefficients_[3] * x^3.
@@ -75,17 +87,13 @@ class CubicPolynomial
       return 0;
     }
 
-    // Put the left-most extreme in index 0 iff left_most_first is true.
-    // Otherwise, put the minimum in index 0.
-    int index_minimum = (left_most_first && coefficients_[3] > 0.0) ? 1 : 0;
-
     // Use a sqrt with the same sign as coefficients_[2];
     double const signed_half_sqrt_D = std::copysign(std::sqrt(one_fourth_D), coefficients_[2]);
 
     // Calculate the root closest to zero.
-    extrema_out[1 - index_minimum] = -coefficients_[1] / (coefficients_[2] + signed_half_sqrt_D);
+    extrema_out[0] = -coefficients_[1] / (coefficients_[2] + signed_half_sqrt_D);
 
-    if (AI_UNLIKELY(std::isnan(extrema_out[1 - index_minimum])))
+    if (AI_UNLIKELY(std::isnan(extrema_out[0])))
     {
       // This means we must have divided by zero, which means that both, coefficients_[1] as well as sqrtD, must be zero.
       // The latter means that coefficients_[0] is zero (coefficients_[2] was already checked not to be zero).
@@ -95,16 +103,22 @@ class CubicPolynomial
     }
 
     // Calculate the root further away from zero.
-    extrema_out[index_minimum] = (-coefficients_[2] + signed_half_sqrt_D) / (3.0 * coefficients_[3]);
+    extrema_out[1] = -(coefficients_[2] + signed_half_sqrt_D) / (3.0 * coefficients_[3]);
+
+    // The smallest one must be in index 0 if left_most_first is true, otherwise the minimum must be in index 0.
+    if ((left_most_first && extrema_out[1] < extrema_out[0]) ||
+        (!left_most_first && extrema_out[0] < extrema_out[1] == coefficients_[3] > 0.0))
+      std::swap(extrema_out[0], extrema_out[1]);
 
     Dout(dc::notice, "extrema_out = " << std::setprecision(std::numeric_limits<double>::digits10) << extrema_out);
 
-    // The smallest one must be in index 0 if left_most_first is true.
-    ASSERT(!left_most_first || extrema_out[0] < extrema_out[1]);
-    // The minimum must be in index 0 if left_most_first is false.
-    ASSERT(left_most_first || (extrema_out[0] < extrema_out[1] == coefficients_[3] < 0.0));
-
     return (one_fourth_D == 0.0) ? 1 : 2;
+  }
+
+  // Return the derivative of this cubic.
+  QuadraticPolynomial derivative() const
+  {
+    return {coefficients_[1], 2.0 * coefficients_[2], 3.0 * coefficients_[3]};
   }
 
   // Evaluation.

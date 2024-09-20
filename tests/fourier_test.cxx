@@ -359,7 +359,7 @@ int main(int argc, char* argv[])
 {
   Debug(NAMESPACE_DEBUG::init());
 
-  constexpr double w0 = 4.0;
+  constexpr double w0 = 4.0; //5.5;
   constexpr double learning_rate = 0.0001;
   constexpr double L_max = 600;
 

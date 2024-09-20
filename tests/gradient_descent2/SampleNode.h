@@ -193,7 +193,7 @@ class SampleNode : public Sample
 
   LocalExtreme& local_extreme() const
   {
-    // Only cal this function if is_local_extreme returns true.
+    // Only call this function if is_local_extreme returns true.
     ASSERT(local_extreme_);
     return *local_extreme_;
   }

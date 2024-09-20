@@ -2,6 +2,7 @@
 
 #include "Scale.h"
 #include "ExtremeType.h"
+#include "../QuadraticPolynomial.h"
 #ifdef CWDEBUG
 #include "utils/has_print_on.h"
 #endif
@@ -29,6 +30,8 @@ class LocalExtreme
   double extreme_Lw_;                                   // The Lw coordinate of the local extreme (w is stored in the scale_).
   mutable int explored_{0};                             // Bit mask 1: exploration to the left of this extreme has started.
                                                         // Bit mask 2: same, on the right.
+  math::Polynomial fourth_degree_approximation_;        // The fourth degree approximation around this local extreme.
+  std::array<const_iterator, 2> edge_nodes_;            // The left- and right- most samples used for that fit.
 
   // Opposite direction data.
   bool opposite_direction_is_fourth_degree_extreme_;    // Set iff opposite_direction_w_/opposite_direction_Lw_ refer to the local
@@ -49,7 +52,8 @@ class LocalExtreme
 
  public:
   LocalExtreme(ExtremeType local_extreme, double extreme_Lw, const_iterator chain_end COMMA_CWDEBUG_ONLY(std::string label)) :
-    local_extreme_(local_extreme), extreme_Lw_(extreme_Lw), left_neighbor_(chain_end), right_neighbor_(chain_end)
+    local_extreme_(local_extreme), extreme_Lw_(extreme_Lw), fourth_degree_approximation_(5 COMMA_CWDEBUG_ONLY("P")),
+    left_neighbor_(chain_end), right_neighbor_(chain_end)
   COMMA_CWDEBUG_ONLY(label_(std::move(label))) { }
 
   void set_left_neighbor(const_iterator left_neighbor)
@@ -62,6 +66,11 @@ class LocalExtreme
     Debug(debug_print_label("right", right_neighbor));
     right_neighbor_ = right_neighbor;
   }
+
+  void set_edge_nodes(math::Polynomial const& fourth_degree_approximation,
+      std::array<LocalExtreme::const_iterator, 7> const& samples, int i0, int i1, int i2);
+  const_iterator get_edge_node(HorizontalDirectionToInt dir) const { return edge_nodes_[dir.as_index()]; }
+  math::Polynomial const& get_fourth_degree_approximation() const { return fourth_degree_approximation_; }
 
   ExtremeType get_extreme_type() const { return local_extreme_; }
   double extreme_Lw() const { return extreme_Lw_; }
