@@ -89,9 +89,11 @@ class CubicPolynomial
 
     // Use a sqrt with the same sign as coefficients_[2];
     double const signed_half_sqrt_D = std::copysign(std::sqrt(one_fourth_D), coefficients_[2]);
+    // The first root that is calculated should go here (see brute_force_index_first_root.cxx).
+    int index_first_root = (left_most_first ? (coefficients_[3] > 0) : false) == (std::copysign(1.0, coefficients_[2]) > 0.0);
 
     // Calculate the root closest to zero.
-    extrema_out[0] = -coefficients_[1] / (coefficients_[2] + signed_half_sqrt_D);
+    extrema_out[index_first_root] = -coefficients_[1] / (coefficients_[2] + signed_half_sqrt_D);
 
     if (AI_UNLIKELY(std::isnan(extrema_out[0])))
     {
@@ -103,14 +105,14 @@ class CubicPolynomial
     }
 
     // Calculate the root further away from zero.
-    extrema_out[1] = -(coefficients_[2] + signed_half_sqrt_D) / (3.0 * coefficients_[3]);
-
-    // The smallest one must be in index 0 if left_most_first is true, otherwise the minimum must be in index 0.
-    if ((left_most_first && extrema_out[1] < extrema_out[0]) ||
-        (!left_most_first && extrema_out[0] < extrema_out[1] == coefficients_[3] > 0.0))
-      std::swap(extrema_out[0], extrema_out[1]);
+    extrema_out[1 - index_first_root] = -(coefficients_[2] + signed_half_sqrt_D) / (3.0 * coefficients_[3]);
 
     Dout(dc::notice, "extrema_out = " << std::setprecision(std::numeric_limits<double>::digits10) << extrema_out);
+
+    // The smallest one must be in index 0 if left_most_first is true.
+    ASSERT(one_fourth_D == 0.0 || !left_most_first || extrema_out[0] <= extrema_out[1]);
+    // The minimum must be in index 0 if left_most_first is false.
+    ASSERT(one_fourth_D == 0.0 || left_most_first || (extrema_out[0] < extrema_out[1] == coefficients_[3] < 0.0));
 
     return (one_fourth_D == 0.0) ? 1 : 2;
   }

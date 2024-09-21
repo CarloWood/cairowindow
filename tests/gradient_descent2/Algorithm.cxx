@@ -729,7 +729,7 @@ bool Algorithm::operator()(WeightRef w, double Lw, double dLdw)
           else
           {
             // Abort this hdirection if we used too much energy due to this step.
-            check_energy_ = keep_going_direction != HorizontalDirection::undecided;
+            check_energy_ = keep_going_direction != HorizontalDirection::undecided && hdirection_ != HorizontalDirection::undecided;
             Dout(dc::notice(check_energy_), "Set check_energy_ to true because " <<
                 *cubic_used_ << " had no extreme to jump to and we just added the scale.");
           }

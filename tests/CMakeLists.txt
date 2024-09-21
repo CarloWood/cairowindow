@@ -101,3 +101,4 @@ target_link_libraries(scale_test AICxx::cairowindow AICxx::symbolic ${AICXX_OBJE
 add_executable(roots_test roots_test.cxx)
 target_link_libraries(roots_test ${AICXX_OBJECTS_LIST})
 
+add_executable(brute_force_index_first_root brute_force_index_first_root.cxx)
