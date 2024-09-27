@@ -55,12 +55,10 @@ class AnalyzedCubic
     return inflection_point_;
   }
 
-#ifdef CWDEBUG
   double get_other_extreme() const
   {
     return 2.0 * inflection_point_ - critical_point_w_;
   }
-#endif
 
   double height(double w, double d) const
   {

@@ -44,6 +44,9 @@ class SampleNode : public Sample
   const_iterator next_node_;                            // The right-sample, if any, used for cubic_,
                                                         // copy of what was passed to initialize_cubic.
   math::CubicPolynomial cubic_;                         // The cubic that fits this and next_node_, if the latter isn't chain_.end().
+#if CW_DEBUG
+  bool cubic_initialized_{false};                       // Set to true after cubic_ was initialized.
+#endif
   CubicToNextSampleType type_;                          // The type of cubic_.
   mutable Scale scale_;                                 // The scale that belongs to this cubic.
 
@@ -77,7 +80,7 @@ class SampleNode : public Sample
   // Accessors for the cubic.
 
   // Returns the cubic that was fitted between this and the next sample.
-  math::CubicPolynomial const& cubic() const { return cubic_; }
+  math::CubicPolynomial const& cubic() const { ASSERT(cubic_initialized_); return cubic_; }
 
   // Returns the type of the cubic that was fitted between this and the next sample.
   CubicToNextSampleType type() const { return type_; }
@@ -165,12 +168,26 @@ class SampleNode : public Sample
   // Scale estimates that can be used when scale is not available yet.
   double w_scale_estimate() const
   {
-    ASSERT(type_ != CubicToNextSampleType::unknown);
     ASSERT(next_node_->w() > w());
     return next_node_->w() - w();
   }
-  double Lw_scale_estimate() const { return std::abs(next_node_->Lw() - Lw()); }
-  double dLdw_scale_estimate() const { return std::abs((next_node_->Lw() - Lw()) / (next_node_->w() - w())); }
+  double Lw_scale_estimate() const
+  {
+    ASSERT(cubic_initialized_);
+    // The derivaties of the cubic in the current point (w()).
+    double const dQ = dLdw();
+    double const ddQ = cubic_.second_derivative(w());
+    double const dddQ = 6.0 * cubic_[3];
+    double const u = next_node_->w() - w();
+
+    // The RMS of Q'(x) over the interval between this and the next sample. See rms.m.
+    double const avg_absolute_derivate =
+      std::sqrt(utils::square(dQ) + (dQ * ddQ +
+            ((dQ * dddQ + utils::square(ddQ)) / 3.0 + (0.25 * ddQ * dddQ + 0.05 * utils::square(dddQ) * u) * u) * u) * u);
+
+    return avg_absolute_derivate;
+  }
+  double dLdw_scale_estimate() const { return Lw_scale_estimate() / w_scale_estimate(); }
 
   //---------------------------------------------------------------------------
   // Local extreme functions.
@@ -214,8 +231,8 @@ class SampleNode : public Sample
     if (local_extreme_)
       local_extreme_->print_on(os);
     os << ", cubic:";
-    if (type_ == CubicToNextSampleType::unknown)
-      os << "<none>";
+    if (!cubic_initialized_)
+      os << "<unknown>";
     else
       os << cubic_ << ", type:" << type_;
     os << "}";

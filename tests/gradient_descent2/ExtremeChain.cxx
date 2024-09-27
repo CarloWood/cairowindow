@@ -177,7 +177,9 @@ void ExtremeChain::sanity_check(Algorithm const* algorithm) const
       continue;
 
     // The types must match.
-    ASSERT(get_end(prev_type, false) == get_end(node->type(), true));
+    ASSERT(get_end(prev_type, false) == get_end(node->type(), true) ||
+        (prev_type == CubicToNextSampleType::flat && get_end(node->type(), true) == flat_high) ||
+        (node->type() == CubicToNextSampleType::flat && get_end(prev_type, false) == flat_high));
   }
 }
 #endif

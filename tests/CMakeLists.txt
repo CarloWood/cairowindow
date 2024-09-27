@@ -102,3 +102,6 @@ add_executable(roots_test roots_test.cxx)
 target_link_libraries(roots_test ${AICXX_OBJECTS_LIST})
 
 add_executable(brute_force_index_first_root brute_force_index_first_root.cxx)
+
+add_executable(4d_3d_cat 4d_3d_cat.cxx)
+target_link_libraries(4d_3d_cat AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST} Eigen3::Eigen)

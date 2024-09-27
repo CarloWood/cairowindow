@@ -162,6 +162,8 @@ class Algorithm
   {
     return (left_of_ == chain_.end() || w <= left_of_->w()) && (right_of_ == chain_.end() || right_of_->w() <= w);
   }
+
+  void print_range_on(std::ostream& os) const;
 #endif
 };
 

@@ -238,7 +238,6 @@ void Window::event_loop()
             expose_events.clear();
           }
           cairo_rectangle(win_cr_, expose_event->x, expose_event->y, expose_event->width, expose_event->height);
-          ASSERT(expose_event->x >= 0 && expose_event->y >= 0 && expose_event->x + expose_event->width <= 1200 && expose_event->y + expose_event->height <= 900);
           cairo_clip(win_cr_);
           {
             std::lock_guard<std::mutex> lock(offscreen_surface_mutex_);
@@ -426,6 +425,8 @@ bool Window::update_grabbed(ClickableIndex grabbed_point, double pixel_x, double
 
 void Window::move_draggable(plot::Draggable* draggable, ClickableIndex clickable_index, cairowindow::Point new_position)
 {
+  // draggable must have been registered as draggable by calling register_draggable first.
+  ASSERT(!clickable_index.undefined());
   plot::Plot* plot = clickable_plots_[clickable_index];
   draggable->set_position(new_position);        // Because we want to apply restrictions, if any, relative to the new position.
   plot->apply_restrictions({}, clickable_index, new_position);

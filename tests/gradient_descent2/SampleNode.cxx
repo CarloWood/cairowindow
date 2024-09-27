@@ -149,6 +149,9 @@ void SampleNode::initialize_cubic(const_iterator next
   ASSERT(!next->is_local_extreme() || next->local_extreme().get_extreme_type() != next_extreme_type);
 
   cubic_.initialize(w(), Lw(), dLdw(), next->w(), next->Lw(), next->dLdw());
+#if CW_DEBUG
+  cubic_initialized_ = true;
+#endif
   next_node_ = next;
 
 #ifdef CWDEBUG
@@ -160,8 +163,9 @@ void SampleNode::initialize_cubic(const_iterator next
 
   // Get the sign of the derivatives.
   double const significant_derivative = ExtremeChain::significant_scale_fraction * dLdw_scale_estimate();
-  int const sign_dLdw_0 = std::abs(dLdw()) < significant_derivative ? 0 : dLdw() < 0.0 ? -1 : 1;
-  int const sign_dLdw_1 = std::abs(next->dLdw()) < significant_derivative ? 0 : next->dLdw() < 0.0 ? -1 : 1;
+  // Use <= instead of <, in order to detect the case where the cubic is a constant (for which significant_derivative == 0).
+  int const sign_dLdw_0 = std::abs(dLdw()) <= significant_derivative ? 0 : dLdw() < 0.0 ? -1 : 1;
+  int const sign_dLdw_1 = std::abs(next->dLdw()) <= significant_derivative ? 0 : next->dLdw() < 0.0 ? -1 : 1;
   bool const neither_derivative_is_zero = (sign_dLdw_0 & sign_dLdw_1) != 0;
 
   // The easiest first.

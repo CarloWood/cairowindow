@@ -1,6 +1,7 @@
 #pragma once
 
 #include "utils/VectorIndex.h"
+#include "debug.h"
 
 namespace cairowindow {
 
@@ -24,7 +25,12 @@ struct Draggable
   virtual void moved(Plot* plot, cairowindow::Point const& new_position) = 0;
   virtual bool convert() const { return true; }
 
-  void set_index(ClickableIndex index) { index_ = index; }
+  void set_index(ClickableIndex index)
+  {
+    // Don't register the same draggable twice.
+    ASSERT(index_.undefined());
+    index_ = index;
+  }
 
 #ifdef CWDEBUG
   virtual void print_on(std::ostream& os) const = 0;

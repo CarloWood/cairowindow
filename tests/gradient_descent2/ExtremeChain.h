@@ -27,7 +27,11 @@ class ExtremeChain
   void initialize(Sample&& first_sample);
   void find_larger(double new_w);
   SampleNode::iterator insert(Sample&& new_sample);
-  void reuse(SampleNode::const_iterator const& sample_node) { last_ = sample_node; }
+  void reuse(SampleNode::const_iterator const& sample_node)
+  {
+    DoutEntering(dc::notice, "ExtremeChain::reuse([" << sample_node->label() << "])");
+    last_ = sample_node;
+  }
 
   bool empty() const { return sample_node_list_.empty(); }
   std::pair<SampleNode::const_iterator, bool> duplicate(double scale, bool is_finish) const;

@@ -276,9 +276,10 @@ class HDirectionKnownEventData
 class AlgorithmEventData
 {
  private:
-  std::variant<ResetEventData, DifferenceEventData, FourthDegreeApproximationEventData, QuotientEventData, DerivativeEventData,
-    QuadraticPolynomialEventData, KineticEnergyEventData, ScaleDrawEventData, LeftOfRightOfEventData, JumpPointEventData,
-    ScaleEraseEventData, NewSampleEventData, CubicPolynomialEventData, NewLocalExtremeEventData, HDirectionKnownEventData> event_data_;
+  std::variant<ResetEventData, DifferenceEventData, FourthDegreeApproximationEventData,
+    QuotientEventData, DerivativeEventData, QuadraticPolynomialEventData, KineticEnergyEventData, ScaleDrawEventData,
+    LeftOfRightOfEventData, JumpPointEventData, ScaleEraseEventData, NewSampleEventData, CubicPolynomialEventData,
+    NewLocalExtremeEventData, HDirectionKnownEventData> event_data_;
 
  public:
   AlgorithmEventData() = default;
