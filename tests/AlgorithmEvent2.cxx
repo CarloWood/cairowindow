@@ -245,7 +245,7 @@ void AlgorithmEvent::callback(gradient_descent::AlgorithmEventType const& event)
     double y = node.local_extreme().extreme_Lw();
 
     plot_local_extremes_.emplace_back(
-        plot_.create_point(layer_, point_style_({.color_index = 2}), {x, y}),
+        plot_.create_point(layer_, point_style_({.color_index = 2, .filled_shape = 7}), {x, y}),
         plot_.create_text(layer_, s_label_style({.position = cairowindow::draw::centered_above}),
           cairowindow::Point{x, y}, data.label()));
 
