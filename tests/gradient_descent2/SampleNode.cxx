@@ -168,6 +168,15 @@ void SampleNode::initialize_cubic(const_iterator next
   int const sign_dLdw_1 = std::abs(next->dLdw()) <= significant_derivative ? 0 : next->dLdw() < 0.0 ? -1 : 1;
   bool const neither_derivative_is_zero = (sign_dLdw_0 & sign_dLdw_1) != 0;
 
+#ifdef CWDEBUG
+  if (sign_dLdw_0 == 0)
+    Dout(dc::notice, "Marking slope as flat in point " << label() << " because derivative " <<
+        dLdw() << " <= " << significant_derivative << ".");
+  if (sign_dLdw_1 == 0)
+    Dout(dc::notice, "Marking slope as flat in point " << next->label() << " because derivative " <<
+        next->dLdw() << " <= " << significant_derivative);
+#endif
+
   // The easiest first.
   if (sign_dLdw_0 != sign_dLdw_1)
   {
