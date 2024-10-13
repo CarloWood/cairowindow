@@ -77,6 +77,8 @@ class Algorithm
     return (step > 0.0) == (hdirection_ == HorizontalDirection::left);
   }
 
+  void fix_flat(SampleNode::iterator non_const_left_node, SampleNode::iterator non_const_new_node);
+
  public:
   Algorithm(double learning_rate, double L_max) :
     learning_rate_(learning_rate),

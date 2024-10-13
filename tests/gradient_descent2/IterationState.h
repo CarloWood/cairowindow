@@ -13,6 +13,7 @@ enum class IterationState
   first_cubic,
   find_extreme,
   extra_sample,
+  backtracking,
   finish,
   success
 };

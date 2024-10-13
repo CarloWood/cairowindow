@@ -14,6 +14,7 @@ std::string to_string(IterationState state)
     AI_CASE_RETURN(first_cubic);
     AI_CASE_RETURN(find_extreme);
     AI_CASE_RETURN(extra_sample);
+    AI_CASE_RETURN(backtracking);
     AI_CASE_RETURN(finish);
     AI_CASE_RETURN(success);
   }
