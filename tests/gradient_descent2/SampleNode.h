@@ -181,11 +181,11 @@ class SampleNode : public Sample
     double const u = next_node_->w() - w();
 
     // The RMS of Q'(x) over the interval between this and the next sample. See rms.m.
-    double const avg_absolute_derivate =
+    double const avg_absolute_derivative =
       std::sqrt(utils::square(dQ) + (dQ * ddQ +
             ((dQ * dddQ + utils::square(ddQ)) / 3.0 + (0.25 * ddQ * dddQ + 0.05 * utils::square(dddQ) * u) * u) * u) * u);
 
-    return avg_absolute_derivate;
+    return avg_absolute_derivative;
   }
   double dLdw_scale_estimate() const { return Lw_scale_estimate() / w_scale_estimate(); }
 
