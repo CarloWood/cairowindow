@@ -382,8 +382,8 @@ int main(int argc, char* argv[])
     L.advanced_normalize(0.1, 0.1, x_range);
 
     gda.enable_drawing(L, x_range.min(), x_range.max());
-//    gda.enable_drawing(L, 5.65 - 0.05, 5.65 + 0.05);
-    gda.enable_drawing(L, 4.5, 5.5);
+//    gda.enable_drawing(L, 7.77452 - 0.001, 7.77452 + 0.001);
+//    gda.enable_drawing(L, 1.5, 8.5);
     while (gda(w, L(w), L.derivative(w)))
     {
       Dout(dc::notice, "-------------------------------------------");
