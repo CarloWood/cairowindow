@@ -68,7 +68,7 @@ class AnalyzedCubic
     ASSERT(std::isnormal(signed_sqrt_D_));
     // Let g(w) = y = a + bw + cw^2 + dw^3.
     // Then dy/dw = b + 2cw + 3dw^2.
-    // Let e be a root of the derivate: g'(e) = 0 (aka, g has an extreme in e).
+    // Let e be a root of the derivative: g'(e) = 0 (aka, g has an extreme in e).
     // Aka e = (-c +/- sqrt(c^2 - 3bd)) / (3d).
     // If we apply the coordinate transformation:
     //   w = w' + e, g'(w') = g(w) - g(e)
