@@ -192,11 +192,11 @@ int main()
         // x(t) = m00 + m01 t + m02 t^2 + m03 t^3
         // y(t) = m10 + m11 t + m12 t^2 + m13 t^3
         //
-        // First derivate (velocity vector):
+        // First derivative (velocity vector):
         // x'(t) = m01 + 2 m02 t + 3 m03 t^2
         // y'(t) = m11 + 2 m12 t + 3 m13 t^2
         //
-        // Second derivate (acceleration vector):
+        // Second derivative (acceleration vector):
         // x''(t) = 2 m02 + 6 m03 t
         // y''(t) = 2 m12 + 6 m13 t
         //
