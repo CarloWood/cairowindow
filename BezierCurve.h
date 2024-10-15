@@ -112,7 +112,7 @@ class BezierCurve
   }
 
   // The vector to the starting point (B = Begin).
-  Vector B(double t) const
+  Vector B(double t = 0.0) const
   {
     return m_.coefficient[0] + t * (m_.coefficient[1] + t * (m_.coefficient[2] + t * m_.coefficient[3]));
   }

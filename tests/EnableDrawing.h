@@ -34,7 +34,7 @@ class EnableDrawing
   cairowindow::plot::Plot plot_;
   AlgorithmEvent algorithm_event;
   events::RequestHandle<gradient_descent::AlgorithmEventType> algorithm_event_handle;
-  cairowindow::plot::BezierFitter plot_curve;
+  cairowindow::plot::BezierFitter plot_curve_;
 
  public:
   EnableDrawing(gradient_descent::Algorithm* algorithm, Function const& L, double w_min, double w_max);

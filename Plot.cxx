@@ -232,6 +232,32 @@ double Plot::convert_vertical_offset_from_pixel(double pixel_offset_y) const
   return pixel_offset_y / g.height() * range_[y_axis].size();
 }
 
+void Plot::convert_to_pixels(cairowindow::Point const* data_in, Pixel* data_out, std::size_t size)
+{
+  cairowindow::Rectangle const& g = plot_area_.geometry();
+  double const x_offset = -range_[x_axis].min();
+  double const y_offset = -range_[y_axis].max();
+  double const x_scale = g.width() / range_[x_axis].size();
+  double const y_scale = -g.height() / range_[y_axis].size();
+
+  for (std::size_t i = 0; i < size; ++i)
+  {
+    double x = data_in[i].x();
+    double y = data_in[i].y();
+
+    x += x_offset;
+    y += y_offset;
+
+    x *= x_scale;
+    y *= y_scale;
+
+    x += g.offset_x();
+    y += g.offset_y();
+
+    data_out[i] = Pixel{x, y};
+  }
+}
+
 //--------------------------------------------------------------------------
 // Point
 
@@ -424,6 +450,25 @@ void Plot::add_bezier_curve(boost::intrusive_ptr<Layer> const& layer,
         convert_x(P1.x()), convert_y(P1.y()),
         bezier_curve_style);
   draw_layer_region_on(layer, plot_bezier_curve.draw_object_);
+}
+
+void Plot::add_bezier_curve_in_px(boost::intrusive_ptr<Layer> const& layer,
+    draw::BezierCurveStyle const& bezier_curve_style,
+    BezierCurve const& plot_bezier_curve_in_px)
+{
+  Vector const& P0 = plot_bezier_curve_in_px.P0();
+  Vector const& C0 = plot_bezier_curve_in_px.C0();
+  Vector const& C1 = plot_bezier_curve_in_px.C1();
+  Vector const& P1 = plot_bezier_curve_in_px.P1();
+
+  plot_bezier_curve_in_px.draw_object_ =
+      std::make_shared<draw::BezierCurve>(
+        P0.x(), P0.y(),
+        C0.x(), C0.y(),
+        C1.x(), C1.y(),
+        P1.x(), P1.y(),
+        bezier_curve_style);
+  draw_layer_region_on(layer, plot_bezier_curve_in_px.draw_object_);
 }
 
 //--------------------------------------------------------------------------

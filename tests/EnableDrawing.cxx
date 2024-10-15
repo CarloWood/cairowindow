@@ -27,8 +27,8 @@ EnableDrawing::EnableDrawing(gradient_descent::Algorithm* algorithm, Function co
   plot_.set_yrange(L_min_max);
   plot_.add_to(background_layer, false);
 
-  plot_curve.solve([&L](double w) -> cairowindow::Point { return {w, L(w)}; }, plot_.viewport());
-  plot_.add_bezier_fitter(second_layer_, curve_line_style, plot_curve);
+  plot_curve_.solve([&L](double w) -> cairowindow::Point { return {w, L(w)}; }, plot_.viewport());
+  plot_.add_bezier_fitter(second_layer_, curve_line_style, plot_curve_);
 }
 
 EnableDrawing::~EnableDrawing()

@@ -2,6 +2,7 @@
 #include "SampleNode.h"
 #include "ExtremeChain.h"
 #include "AlgorithmEventType.h"
+#include "utils/almost_equal.h"
 
 namespace gradient_descent {
 

@@ -37,7 +37,7 @@ target_link_libraries(chess_diagram AICxx::cairowindow AICxx::symbolic AICxx::ch
 add_executable(pango_text pango_text.cxx)
 target_link_libraries(pango_text AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST})
 
-add_executable(gradient_descent_testsuite gradient_descent_testsuite.cxx AlgorithmEvent.cxx
+add_executable(gradient_descent_testsuite gradient_descent_testsuite.cxx AlgorithmEvent.cxx Polynomial.cxx
   gradient_descent/Approximation.cxx gradient_descent/HorizontalDirection.cxx
   gradient_descent/ExtremeType.cxx gradient_descent/Algorithm.cxx gradient_descent/LocalExtreme.cxx
   gradient_descent/AlgorithmEventType.cxx)
@@ -46,30 +46,30 @@ target_link_libraries(gradient_descent_testsuite AICxx::cairowindow AICxx::symbo
 add_executable(parabolic_scale parabolic_scale.cxx)
 target_link_libraries(parabolic_scale AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST} Eigen3::Eigen)
 
-add_executable(backtrack_check backtrack_check.cxx)
+add_executable(backtrack_check backtrack_check.cxx Polynomial.cxx)
 target_link_libraries(backtrack_check AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST})
 
-add_executable(clamp_check clamp_check.cxx)
+add_executable(clamp_check clamp_check.cxx Polynomial.cxx)
 target_link_libraries(clamp_check AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST})
 
-add_executable(parabolic_fit parabolic_fit.cxx)
+add_executable(parabolic_fit parabolic_fit.cxx Polynomial.cxx)
 target_link_libraries(parabolic_fit AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST})
 
 add_executable(histogram histogram.cxx)
 target_link_libraries(histogram ${AICXX_OBJECTS_LIST})
 
-add_executable(generate_cubic_tests generate_cubic_tests.cxx
+add_executable(generate_cubic_tests generate_cubic_tests.cxx Polynomial.cxx
   gradient_descent/HorizontalDirection.cxx gradient_descent/ExtremeType.cxx gradient_descent/Approximation.cxx)
 target_link_libraries(generate_cubic_tests AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST})
 
-add_executable(gradient_descent gradient_descent.cxx AlgorithmEvent.cxx
+add_executable(gradient_descent gradient_descent.cxx AlgorithmEvent.cxx Polynomial.cxx
   gradient_descent/Approximation.cxx gradient_descent/HorizontalDirection.cxx
   gradient_descent/ExtremeType.cxx gradient_descent/Algorithm.cxx gradient_descent/LocalExtreme.cxx
   gradient_descent/AlgorithmEventType.cxx)
 target_link_libraries(gradient_descent AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST} Eigen3::Eigen)
 
 add_executable(gradient_descent_testsuite2 gradient_descent_testsuite2.cxx
-  AlgorithmEvent2.cxx EnableDrawing.cxx
+  AlgorithmEvent2.cxx EnableDrawing.cxx Polynomial.cxx
   gradient_descent2/Algorithm.cxx gradient_descent2/IterationState.cxx
   gradient_descent2/HorizontalDirection.cxx gradient_descent2/ExtremeType.cxx
   gradient_descent2/AlgorithmEventType.cxx gradient_descent2/CubicToNextSampleType.cxx
@@ -80,7 +80,7 @@ add_executable(gradient_descent_testsuite2 gradient_descent_testsuite2.cxx
 target_link_libraries(gradient_descent_testsuite2 AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST})
 
 add_executable(fourier_test fourier_test.cxx
-  Interval.cxx AlgorithmEvent2.cxx EnableDrawing.cxx
+  Interval.cxx AlgorithmEvent2.cxx EnableDrawing.cxx Polynomial.cxx
   gradient_descent2/Algorithm.cxx gradient_descent2/IterationState.cxx
   gradient_descent2/HorizontalDirection.cxx gradient_descent2/ExtremeType.cxx
   gradient_descent2/AlgorithmEventType.cxx gradient_descent2/CubicToNextSampleType.cxx
@@ -91,17 +91,20 @@ add_executable(fourier_test fourier_test.cxx
 target_link_libraries(fourier_test AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST})
 
 add_executable(height_test height_test.cxx
-  gradient_descent2/ExtremeType.cxx gradient_descent2/AnalyzedCubic.cxx)
-target_link_libraries(height_test ${AICXX_OBJECTS_LIST})
+  gradient_descent2/ExtremeType.cxx gradient_descent2/AnalyzedCubic.cxx Polynomial.cxx)
+target_link_libraries(height_test ${AICXX_OBJECTS_LIST} Eigen3::Eigen)
 
 add_executable(scale_test scale_test.cxx
-  gradient_descent2/ExtremeType.cxx gradient_descent2/AnalyzedCubic.cxx)
+  gradient_descent2/ExtremeType.cxx gradient_descent2/AnalyzedCubic.cxx Polynomial.cxx)
 target_link_libraries(scale_test AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST})
 
 add_executable(roots_test roots_test.cxx)
-target_link_libraries(roots_test ${AICXX_OBJECTS_LIST})
+target_link_libraries(roots_test ${AICXX_OBJECTS_LIST} Eigen3::Eigen)
 
 add_executable(brute_force_index_first_root brute_force_index_first_root.cxx)
 
-add_executable(4d_3d_cat 4d_3d_cat.cxx)
+add_executable(4d_3d_cat 4d_3d_cat.cxx Polynomial.cxx)
 target_link_libraries(4d_3d_cat AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST} Eigen3::Eigen)
+
+add_executable(cubic_bezier2 cubic_bezier2.cxx Polynomial.cxx)
+target_link_libraries(cubic_bezier2 AICxx::cairowindow AICxx::symbolic ${AICXX_OBJECTS_LIST} Eigen3::Eigen)

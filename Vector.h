@@ -2,6 +2,7 @@
 
 #include "LinePiece.h"
 #include "Direction.h"
+#include "Pixel.h"
 #include <cmath>
 #ifdef CWDEBUG
 #include "utils/has_print_on.h"
@@ -58,6 +59,9 @@ class Vector
 
   // Convert the vector to a Point.
   Point point() const { return {x_, y_}; }
+
+  // Convert the vector to a Pixel.
+  Pixel pixel() const { return Pixel{x_, y_}; }
 
  public:
   // Return the vector rotated 90 degrees counter-clockwise.

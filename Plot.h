@@ -240,6 +240,14 @@ class Plot : public Printable
   double convert_horizontal_offset_from_pixel(double pixel_offset_x) const;
   double convert_vertical_offset_from_pixel(double pixel_offset_y) const;
 
+  void convert_to_pixels(cairowindow::Point const* data_in, Pixel* data_out, std::size_t size);
+
+  template<std::size_t size>
+  [[gnu::always_inline]] void convert_to_pixels(std::array<cairowindow::Point, size> const& in, std::array<Pixel, size>& out)
+  {
+    convert_to_pixels(in.data(), out.data(), size);
+  }
+
   //--------------------------------------------------------------------------
   // Point
 
@@ -431,6 +439,11 @@ class Plot : public Printable
       draw::BezierCurveStyle const& bezier_style,
       BezierCurve const& plot_bezier_curve);
 
+  // Add and draw plot_bezier_curve on layer using bezier_style.
+  void add_bezier_curve_in_px(boost::intrusive_ptr<Layer> const& layer,
+      draw::BezierCurveStyle const& bezier_style,
+      BezierCurve const& plot_bezier_curve_in_px);
+
   // Create and draw a Bezier curve on layer using bezier_style.
   template<typename... Args>
   [[nodiscard]] BezierCurve create_bezier_curve(boost::intrusive_ptr<Layer> const& layer,
@@ -440,6 +453,17 @@ class Plot : public Printable
     BezierCurve plot_bezier_curve(std::forward<Args>(args)...);
     add_bezier_curve(layer, bezier_style, plot_bezier_curve);
     return plot_bezier_curve;
+  }
+
+  // Create and draw a Bezier curve on layer using bezier_style.
+  template<typename... Args>
+  [[nodiscard]] BezierCurve create_bezier_curve_in_px(boost::intrusive_ptr<Layer> const& layer,
+      draw::BezierCurveStyle const& bezier_style,
+      Args&&... args)
+  {
+    BezierCurve plot_bezier_curve_in_px(std::forward<Args>(args)...);
+    add_bezier_curve_in_px(layer, bezier_style, plot_bezier_curve_in_px);
+    return plot_bezier_curve_in_px;
   }
 
   //--------------------------------------------------------------------------

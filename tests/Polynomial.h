@@ -1,12 +1,9 @@
 #pragma once
 
-#include "utils/almost_equal.h"
-#include "utils/square.h"
-#include "utils/macros.h"
 #include <vector>
 #include <array>
 #include <ranges>
-#include <cmath>
+#include <complex>
 #include "debug.h"
 #ifdef CWDEBUG
 #include "utils/has_print_on.h"
@@ -88,71 +85,15 @@ class Polynomial
     return result;
   }
 
-  int get_roots(std::array<double, 2>& roots_out) const
-  {
-    // This can be at most a parabola.
-    ASSERT(1 <= coefficients_.size() && coefficients_.size() <= 3);
-    if (coefficients_.size() < 3 || coefficients_[2] == 0.0)
-    {
-      if (coefficients_.size() < 2)
-        return 0;
-      roots_out[0] = -coefficients_[0] / coefficients_[1];
-      return std::isfinite(roots_out[0]) ? 1 : 0;
-    }
+  // Get the real roots of a polynomial, up till degree two.
+  int get_roots(std::array<double, 2>& roots_out) const;
 
-    double const D = utils::square(coefficients_[1]) - 4.0 * coefficients_[2] * coefficients_[0];
-    if (D < 0.0)
-      return 0;
-    // Use a sqrt with the same sign as coefficients_[1];
-    double const signed_sqrt_D = std::copysign(std::sqrt(D), coefficients_[1]);
-
-    // Calculate the root closest to zero.
-    roots_out[0] = -2.0 * coefficients_[0] / (coefficients_[1] + signed_sqrt_D);
-
-    if (AI_UNLIKELY(std::isnan(roots_out[0])))
-    {
-      // This means we must have divided by zero, which means that both, coefficients_[1] as well as sqrtD, must be zero.
-      // The latter means that coefficients_[0] is zero (coefficients_[2] was already checked not to be zero).
-      // Therefore we have: f(x) = c x^2 with one root at x=0.
-      roots_out[0] = 0.0;
-      return 1;
-    }
-
-    // Calculate the root further away from zero.
-    roots_out[1] = -0.5 * (coefficients_[1] + signed_sqrt_D) / coefficients_[2];
-
-    // The second one is larger in absolute value.
-    ASSERT(std::abs(roots_out[1]) > std::abs(roots_out[0]));
-
-    return 2;
-  }
+  // Get the complex roots of a polynomial, up till degree five.
+  // Returns the number of roots (equal to the degree of the Polynomial).
+  int get_roots(std::array<std::complex<double>, 5>& roots_out) const;
 
 #ifdef CWDEBUG
-  void print_on(std::ostream& os) const
-  {
-    bool first = true;
-    int exponent = 0;
-    for (double coefficient : coefficients_)
-    {
-      if (coefficient != 0.0)
-      {
-        if (first)
-          os << coefficient;
-        else if (coefficient > 0.0)
-          os << " + " << coefficient;
-        else
-          os << " - " << -coefficient;
-        if (exponent > 0)
-        {
-          os << ' ' << symbol_name_;
-          if (exponent > 1)
-            os << '^' << exponent;
-        }
-        first = false;
-      }
-      ++exponent;
-    }
-  }
+  void print_on(std::ostream& os) const;
 #endif
 };
 
