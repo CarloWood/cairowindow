@@ -440,6 +440,8 @@ class Plot : public Printable
       BezierCurve const& plot_bezier_curve);
 
   // Add and draw plot_bezier_curve on layer using bezier_style.
+  // The difference with the previous one is that in this case it is assumed that the x and y coordinates
+  // of the Bezier curve are in pixels already, and no conversion will take place.
   void add_bezier_curve_in_px(boost::intrusive_ptr<Layer> const& layer,
       draw::BezierCurveStyle const& bezier_style,
       BezierCurve const& plot_bezier_curve_in_px);
@@ -456,6 +458,8 @@ class Plot : public Printable
   }
 
   // Create and draw a Bezier curve on layer using bezier_style.
+  // The difference with the previous one is that it is assumed the Args passed are in pixels:
+  // the constructed BezierCurve is added using add_bezier_curve_in_px.
   template<typename... Args>
   [[nodiscard]] BezierCurve create_bezier_curve_in_px(boost::intrusive_ptr<Layer> const& layer,
       draw::BezierCurveStyle const& bezier_style,

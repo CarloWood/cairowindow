@@ -142,48 +142,49 @@ int main()
 
       //Dout(dc::notice, "P0 = " << plot_P0 << "; P1 = " << plot_P1 << "; P_gamma = " << plot_P_gamma << "; Q = " << plot_Q);
 
-      // Convert all points to pixels.
-      std::array<Point, 6> points = { plot_P0, plot_Q0, plot_P1, plot_Q1, plot_P_gamma, plot_Q };
-      std::array<Pixel, 6> points_in_px;
-      plot.convert_to_pixels(points, points_in_px);
-      // Convert Pixel back to Point because that's the only thing we can do math with :/.
-      Point P0_in_px{points_in_px[0].x(), points_in_px[0].y()};
-      Point Q0_in_px{points_in_px[1].x(), points_in_px[1].y()};
-      Point P1_in_px{points_in_px[2].x(), points_in_px[2].y()};
-      Point Q1_in_px{points_in_px[3].x(), points_in_px[3].y()};
-      Point Pg_in_px{points_in_px[4].x(), points_in_px[4].y()};
-      Point Q_in_px {points_in_px[5].x(), points_in_px[5].y()};
-
-      // Store the velocity vectors as Direction.
-      Direction const D0_in_px = (Q0_in_px - P0_in_px).direction();
-      Direction const D1_in_px = (Q1_in_px - P1_in_px).direction();
-
-      // Calculate the control points C₀ and C₁.
-      Eigen::Matrix2d A;
-      A << D0_in_px.x(), -D1_in_px.x(),
-           D0_in_px.y(), -D1_in_px.y();
-
-      Eigen::Vector2d b;
-      b << (8 * Pg_in_px.x() - 4 * P0_in_px.x() - 4 * P1_in_px.x()) / 3,
-           (8 * Pg_in_px.y() - 4 * P0_in_px.y() - 4 * P1_in_px.y()) / 3;
-
-      Eigen::Vector2d solution = A.colPivHouseholderQr().solve(b);
-      double alpha = solution(0);
-      double beta = solution(1);
-
-      //Dout(dc::notice, "alpha = " << alpha << "; beta = " << beta);
-      Point C0_in_px = P0_in_px + alpha * D0_in_px;
-      Point C1_in_px = P1_in_px - beta * D1_in_px;
-      BezierCurve bezier_curve_in_px(P0_in_px, C0_in_px, C1_in_px, P1_in_px);
-
-      // Draw the Bezier curve.
+      // The life-time this object determines how long the curve is visible.
       plot::BezierCurve plot_bezier_curve;
-      plot_bezier_curve = plot.create_bezier_curve_in_px(second_layer, curve_line_style, bezier_curve_in_px);
 
-      Vector J = bezier_curve_in_px.J();
-      Vector A0 = bezier_curve_in_px.A0();
-      Vector V0 = bezier_curve_in_px.V0();
-      Vector B = bezier_curve_in_px.B();
+      {
+        //------------------------------------------------------------------------------------------
+        // Create shorter alias for all points involved.
+        Point P0{plot_P0};
+        Point Q0{plot_Q0};
+        Point P1{plot_P1};
+        Point Q1{plot_Q1};
+        Point Pg{plot_P_gamma};
+
+        // Store the velocity vectors as Direction.
+        Direction const D0 = (Q0 - P0).direction();
+        Direction const D1 = (Q1 - P1).direction();
+
+        // Calculate the control points C₀ and C₁.
+        Eigen::Matrix2d A;
+        A << D0.x(), -D1.x(),
+             D0.y(), -D1.y();
+
+        Eigen::Vector2d b;
+        b << (8 * Pg.x() - 4 * P0.x() - 4 * P1.x()) / 3,
+             (8 * Pg.y() - 4 * P0.y() - 4 * P1.y()) / 3;
+
+        Eigen::Vector2d solution = A.colPivHouseholderQr().solve(b);
+        double alpha = solution(0);
+        double beta = solution(1);
+
+        // If alpha and beta are not both positive, then the Bezier curve enters P0 and/or P1 from the wrong end and this is not a usable solution.
+        //Dout(dc::notice, "alpha = " << alpha << "; beta = " << beta);
+        Point C0 = P0 + alpha * D0;
+        Point C1 = P1 - beta * D1;
+        BezierCurve bezier_curve(P0, C0, C1, P1);
+
+        // Draw the Bezier curve.
+        plot_bezier_curve = plot.create_bezier_curve(second_layer, curve_line_style, bezier_curve);
+      }
+
+      Vector const J = plot_bezier_curve.J();
+      Vector const A0 = plot_bezier_curve.A0();
+      Vector const V0 = plot_bezier_curve.V0();
+      Vector const B{plot_P0};        // = plot_bezier_curve.B();      // This is the Beginning of the curve, aka P0.
 
       // Solve P'⋅(P - Q) = 0, to find all t such that P(t) is a point on the Bezier curve
       // where the tangent of the curve is perpendicular to a line from Q to that point P.
@@ -194,38 +195,37 @@ int main()
       // P - Q = (B - Q) + V0 t + (A0/2) t² + J/6 t³
 
       // Abbreviate B - Q.
-      Vector R = B - Vector{Q_in_px};
+      Vector const QB = plot_P0 - plot_Q;
 
       //
-      // 0 = P'⋅(P - Q) =     V0⋅R    +    V0⋅V0 t  + 1/2 V0⋅A0 t² + 1/6 V0⋅J t³ +
-      //                      A0⋅R t  +    A0⋅V0 t² + 1/2 A0⋅A0 t³ + 1/6 A0⋅J t⁴ +
-      //                   1/2 J⋅R t² + 1/2 J⋅V0 t³ + 1/4  J⋅A0 t⁴ + 1/12 J⋅J t⁵
+      // 0 = P'⋅(P - Q) =     V0⋅QB    +    V0⋅V0 t  + 1/2 V0⋅A0 t² + 1/6 V0⋅J t³ +
+      //                      A0⋅QB t  +    A0⋅V0 t² + 1/2 A0⋅A0 t³ + 1/6 A0⋅J t⁴ +
+      //                   1/2 J⋅QB t² + 1/2 J⋅V0 t³ + 1/4  J⋅A0 t⁴ + 1/12 J⋅J t⁵
       //
       // Multiply with 12 to get:
       //
-      // 0 =               12 V0⋅R    + 12 V0⋅V0 t  +   6 V0⋅A0 t² +   2 V0⋅J t³ +
-      //                   12 A0⋅R t  + 12 A0⋅V0 t² +   6 A0⋅A0 t³ +   2 A0⋅J t⁴ +
-      //                    6  J⋅R t² +  6  J⋅V0 t³ +   3  J⋅A0 t⁴ +      J⋅J t⁵
+      // 0 =               12 V0⋅QB    + 12 V0⋅V0 t  +   6 V0⋅A0 t² +   2 V0⋅J t³ +
+      //                   12 A0⋅QB t  + 12 A0⋅V0 t² +   6 A0⋅A0 t³ +   2 A0⋅J t⁴ +
+      //                    6  J⋅QB t² +  6  J⋅V0 t³ +   3  J⋅A0 t⁴ +      J⋅J t⁵
       //
       // Thus,
       //
-      // 0 = J² t⁵ + 5 J⋅A0 t⁴ + (8 J⋅V0 + 6 A0²) t³ + (6 J⋅R + 18 A0⋅V0) t² + (12 A0⋅R + 12 V0²) t + 12 V0⋅R
+      // 0 = J² t⁵ + 5 J⋅A0 t⁴ + (8 J⋅V0 + 6 A0²) t³ + (6 J⋅QB + 18 A0⋅V0) t² + (12 A0⋅QB + 12 V0²) t + 12 V0⋅QB
 
       math::Polynomial polynomial(6 COMMA_CWDEBUG_ONLY("t"));
       polynomial[5] = J.length_squared();
       polynomial[4] = 5.0 * J.dot(A0);
       polynomial[3] = 8.0 * J.dot(V0) + 6.0 * A0.length_squared();
-      polynomial[2] = 6.0 * (J.dot(R) + 3.0 * A0.dot(V0));
-      polynomial[1] = 12.0 * (A0.dot(R) + V0.length_squared());
-      polynomial[0] = 12.0 * V0.dot(R);
+      polynomial[2] = 6.0 * (J.dot(QB) + 3.0 * A0.dot(V0));
+      polynomial[1] = 12.0 * (A0.dot(QB) + V0.length_squared());
+      polynomial[0] = 12.0 * V0.dot(QB);
 
       // Get the real roots of polynomial to find the points Pt on the curve where PtQ makes an angle of 90 degrees with the curve.
       std::array<std::complex<double>, 5> roots;
       int number_of_roots = polynomial.get_roots(roots);
 
       // Find the shorest distance.
-      double min_distance_in_px_squared = std::numeric_limits<double>::max();
-      std::array<plot::Connector, 5> lines;
+      double min_distance_squared = std::numeric_limits<double>::max();
       int min_r = -1;
       for (int r = 0; r < number_of_roots; ++r)
       {
@@ -235,24 +235,24 @@ int main()
         double t = roots[r].real();
         if (t < 0.0 || t > 1.0)
           continue;
-        Point Pt_in_px = bezier_curve_in_px.B(t).point();
-        double distance_in_px_squared = (Q_in_px - Pt_in_px).length_squared();
-        if (distance_in_px_squared < min_distance_in_px_squared)
+        double distance_squared = (plot_bezier_curve.P(t) - plot_Q).length_squared();
+        if (distance_squared < min_distance_squared)
         {
-          min_distance_in_px_squared = distance_in_px_squared;
+          min_distance_squared = distance_squared;
           min_r = r;
         }
       }
       // Also calculate the distance to P₀ and P₁.
-      double distance_in_px_P0_squared = (Q_in_px - P0_in_px).length_squared();
-      double distance_in_px_P1_squared = (Q_in_px - P1_in_px).length_squared();
+      double distance_P0_squared = QB.length_squared();
+      double distance_P1_squared = (plot_P1 - plot_Q).length_squared();
       // If one of those distances is less than the shortest distance found so far, than
       // this point Q does not belong to this Bezier curve.
-      if (distance_in_px_P0_squared > min_distance_in_px_squared && distance_in_px_P1_squared > min_distance_in_px_squared)
+      plot::Connector plot_shortest_distance;
+      if (distance_P0_squared > min_distance_squared && distance_P1_squared > min_distance_squared)
       {
-        // Draw a line for the shortest distance found.
-        lines[min_r] = plot.create_connector(second_layer, solid_line_style({.line_color = color::lime}),
-            plot_Q, plot.convert_from_pixel(bezier_curve_in_px.B(roots[min_r].real()).pixel()));
+        // Draw a line for the shortest distance found, from Q to P(root[min_r]).
+        plot_shortest_distance = plot.create_connector(second_layer, solid_line_style({.line_color = color::lime}),
+            plot_Q, plot_bezier_curve.P(roots[min_r].real()));
       }
 
       // Flush all expose events related to the drawing done above.
