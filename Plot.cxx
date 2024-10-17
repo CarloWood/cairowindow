@@ -476,6 +476,9 @@ void Plot::add_bezier_curve_in_px(boost::intrusive_ptr<Layer> const& layer,
 
 void Plot::add_bezier_fitter(boost::intrusive_ptr<Layer> const& layer,
     draw::LineStyle const& line_style,
+#if CAIROWINDOW_SHOW_BEZIER_CURVE_POINTS
+    draw::PointStyle const& point_style,
+#endif
     BezierFitter const& plot_bezier_fitter)
 {
   std::vector<cairowindow::BezierCurve> const& bezier_curves = plot_bezier_fitter.result();
@@ -485,6 +488,10 @@ void Plot::add_bezier_fitter(boost::intrusive_ptr<Layer> const& layer,
   plot_bezier_fitter.draw_object_ = std::make_shared<draw::BezierFitter>(bezier_curves, line_style);
   for (BezierCurve const& plot_bezier_curve : plot_bezier_fitter.draw_object_->plot_bezier_curves())
     add_bezier_curve(layer, line_style, plot_bezier_curve);
+#if CAIROWINDOW_SHOW_BEZIER_CURVE_POINTS
+  for (Point const& plot_bezier_curve_point : plot_bezier_fitter.draw_object_->plot_bezier_curve_points())
+    add_point(layer, point_style, plot_bezier_curve_point);
+#endif
 }
 
 //--------------------------------------------------------------------------

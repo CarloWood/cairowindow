@@ -475,7 +475,19 @@ class Plot : public Printable
 
   void add_bezier_fitter(boost::intrusive_ptr<Layer> const& layer,
       draw::LineStyle const& line_style,
+#if CAIROWINDOW_SHOW_BEZIER_CURVE_POINTS
+      draw::PointStyle const& point_style,
+#endif
       BezierFitter const& plot_bezier_fitter);
+
+#if CAIROWINDOW_SHOW_BEZIER_CURVE_POINTS
+  void add_bezier_fitter(boost::intrusive_ptr<Layer> const& layer,
+      draw::LineStyle const& line_style,
+      BezierFitter const& plot_bezier_fitter)
+  {
+    add_bezier_fitter(layer, line_style, draw::PointStyle{}, plot_bezier_fitter);
+  }
+#endif
 
   [[nodiscard]] BezierFitter create_bezier_fitter(boost::intrusive_ptr<Layer> const& layer,
       draw::LineStyle const& line_style,

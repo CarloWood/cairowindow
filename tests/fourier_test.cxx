@@ -381,9 +381,8 @@ int main(int argc, char* argv[])
     TestFunctionGenerator L(number_of_frequencies, frequency_range, amplitude_range, seed);
     L.advanced_normalize(0.1, 0.1, x_range);
 
-//    gda.enable_drawing(L, x_range.min(), x_range.max());
-//    gda.enable_drawing(L, 7.77452 - 0.2, 7.77452 + 0.2);
-    gda.enable_drawing(L, 7.4622, 7.4623, -50.0, 350.0);
+    gda.enable_drawing(L, x_range.min(), x_range.max());
+//    gda.enable_drawing(L, 7.4622, 7.4623, -50.0, 350.0);        // For seed 2784233688
     while (gda(w, L(w), L.derivative(w)))
     {
       Dout(dc::notice, "-------------------------------------------");
