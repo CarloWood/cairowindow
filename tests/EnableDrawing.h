@@ -10,6 +10,7 @@
 #include "cairowindow/BezierFitter.h"
 #include "events/Events.h"
 #include <thread>
+#include <limits>
 #include "debug.h"
 
 namespace gradient_descent {
@@ -37,7 +38,8 @@ class EnableDrawing
   cairowindow::plot::BezierFitter plot_curve_;
 
  public:
-  EnableDrawing(gradient_descent::Algorithm* algorithm, Function const& L, double w_min, double w_max);
+  EnableDrawing(gradient_descent::Algorithm* algorithm, Function const& L,
+      double w_min, double w_max, double L_min = std::numeric_limits<double>::max(), double L_max = std::numeric_limits<double>::max());
   ~EnableDrawing();
 
   cairowindow::plot::Plot& plot() { return plot_; }

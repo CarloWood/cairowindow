@@ -7,7 +7,8 @@
 namespace enable_drawing {
 namespace color = cairowindow::color;
 
-EnableDrawing::EnableDrawing(gradient_descent::Algorithm* algorithm, Function const& L, double w_min, double w_max) :
+EnableDrawing::EnableDrawing(gradient_descent::Algorithm* algorithm, Function const& L,
+    double w_min, double w_max, double L_min, double L_max) :
   window("Gradient descent of " + L.to_string(), 2*600, 2*450),
   background_layer(window.create_background_layer<cairowindow::Layer>(color::silver COMMA_DEBUG_ONLY("background_layer"))),
   second_layer_(window.create_layer<cairowindow::Layer>({} COMMA_DEBUG_ONLY("second_layer"))),
@@ -24,7 +25,9 @@ EnableDrawing::EnableDrawing(gradient_descent::Algorithm* algorithm, Function co
   algorithm_event_handle(algorithm->event_server().request(algorithm_event, &AlgorithmEvent::callback))
 {
   plot_.set_xrange({w_min, w_max});
-  plot_.set_yrange(L_min_max);
+  plot_.set_yrange(
+      { L_min != std::numeric_limits<double>::max() ? L_min : L_min_max.min(),
+        L_max != std::numeric_limits<double>::max() ? L_max : L_min_max.max()});
   plot_.add_to(background_layer, false);
 
   plot_curve_.solve([&L](double w) -> cairowindow::Point { return {w, L(w)}; }, plot_.viewport());
