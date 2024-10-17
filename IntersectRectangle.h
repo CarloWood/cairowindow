@@ -1,9 +1,11 @@
 #pragma once
 
 #include "Rectangle.h"
+#include "utils/has_print_on.h"
 #include <algorithm>
 
 namespace cairowindow {
+using utils::has_print_on::operator<<;
 
 class StrokeExtents;
 
@@ -31,6 +33,13 @@ class IntersectRectangle
   IntersectRectangle(IntersectRectangle rect1, IntersectRectangle rect2) :
     x1_(std::max(rect1.x1_, rect2.x1_)), y1_(std::max(rect1.y1_, rect2.y1_)),
     x2_(std::min(rect1.x2_, rect2.x2_)), y2_(std::min(rect1.y2_, rect2.y2_)) { }
+
+#ifdef CWDEBUG
+  void print_on(std::ostream& os) const
+  {
+    os << "{x1:" << x1_ << ", y1:" << y1_ << ", x2:" << x2_ << ", y2:" << y2_ << "}";
+  }
+#endif
 };
 
 } // namespace cairowindow

@@ -142,45 +142,75 @@ int main()
 
       //Dout(dc::notice, "P0 = " << plot_P0 << "; P1 = " << plot_P1 << "; P_gamma = " << plot_P_gamma << "; Q = " << plot_Q);
 
+      //------------------------------------------------------------------------------------------
+      // Create shorter alias for all points involved.
+      Point P0{plot_P0};
+      Point Q0{plot_Q0};
+      Point P1{plot_P1};
+      Point Q1{plot_Q1};
+      Point Pg{plot_P_gamma};
+
+      // Calculate the required tangent vectors (with arbitrary length).
+      Vector const T0 = Q0 - P0;
+      Vector const T1 = Q1 - P1;
+
+      // Calculate the control points C₀ and C₁.
+      //
+      // Note that P(t) = (1-t)³ P₀ + 3(1-t)²t C₀ + 3(1-t)t² C₁ + t³ P₁
+      // and we want Pg to be P(0.5) = (1-0.5)³ P₀ + 3(1-0.5)²t C₀ + 3(1-0.5)t² C₁ +  0.5³ P₁ =
+      //                             =    (1/8) P₀ +      (3/8) C₀ +      (3/8) C₁ + (1/8) P₁
+      // Moreover we can write the control points as:
+      //   C₀ = P₀ + α T₀
+      //   C₁ = P₁ + β T₁
+      // because control points lay on the lines tangent to the curve in P₀ respectively P₁.
+      // Fill in C₀ and C₁ to get
+      //   Pg = (1/2) (P₀ + P₁) + (3/8) (α T₀ - β T₁)
+      // or
+      //   α T₀ - β T₁ = (8/3) Pg - (4/3) P₀ - 4/3 P₁.
+      //
+      // where we can find α and β by solving:
+      //
+      //   ⎛α⎞
+      // A ⎝β⎠ = b
+      //
+      // where,
+      Eigen::Matrix2d A;
+      A << T0.x(), -T1.x(),
+           T0.y(), -T1.y();
+
+      Eigen::Vector2d b;
+      b << (8 * Pg.x() - 4 * P0.x() - 4 * P1.x()) / 3,
+           (8 * Pg.y() - 4 * P0.y() - 4 * P1.y()) / 3;
+
+      Eigen::Vector2d solution = A.colPivHouseholderQr().solve(b);
+      double alpha = solution(0);
+      double beta = solution(1);
+
+      // If alpha and beta are not both positive, then the Bezier curve enters P0 and/or P1 from the wrong end and this is not a usable solution.
+      //Dout(dc::notice, "alpha = " << alpha << "; beta = " << beta);
+      Point C0 = P0 + alpha * T0;
+      Point C1 = P1 - beta * T1;
+      BezierCurve bezier_curve(P0, C0, C1, P1);
+
+      // Draw the Bezier curve.
+      //plot_bezier_curve = plot.create_bezier_curve(second_layer, curve_line_style, bezier_curve);
+
       // The life-time this object determines how long the curve is visible.
-      plot::BezierCurve plot_bezier_curve;
+      BezierFitter bezier_fitter(
+          [&bezier_curve](double t) -> Point
+          {
+            Point p{3.0 * std::cos(2.0 * M_PI * t), 3.0 * std::sin(2.0 * M_PI * t)};
+            Dout(dc::notice, "P(" << t << ") = " << p);
+            //return bezier_curve.P(t);
+            return p;
+          },
+          {0.0, 1.0},           // Domain
+          plot.viewport());
 
-      {
-        //------------------------------------------------------------------------------------------
-        // Create shorter alias for all points involved.
-        Point P0{plot_P0};
-        Point Q0{plot_Q0};
-        Point P1{plot_P1};
-        Point Q1{plot_Q1};
-        Point Pg{plot_P_gamma};
+      // Draw bezier_fitter.
+      plot::BezierFitter plot_bezier_fitter = plot.create_bezier_fitter(second_layer, curve_line_style, std::move(bezier_fitter));
 
-        // Store the velocity vectors as Direction.
-        Direction const D0 = (Q0 - P0).direction();
-        Direction const D1 = (Q1 - P1).direction();
-
-        // Calculate the control points C₀ and C₁.
-        Eigen::Matrix2d A;
-        A << D0.x(), -D1.x(),
-             D0.y(), -D1.y();
-
-        Eigen::Vector2d b;
-        b << (8 * Pg.x() - 4 * P0.x() - 4 * P1.x()) / 3,
-             (8 * Pg.y() - 4 * P0.y() - 4 * P1.y()) / 3;
-
-        Eigen::Vector2d solution = A.colPivHouseholderQr().solve(b);
-        double alpha = solution(0);
-        double beta = solution(1);
-
-        // If alpha and beta are not both positive, then the Bezier curve enters P0 and/or P1 from the wrong end and this is not a usable solution.
-        //Dout(dc::notice, "alpha = " << alpha << "; beta = " << beta);
-        Point C0 = P0 + alpha * D0;
-        Point C1 = P1 - beta * D1;
-        BezierCurve bezier_curve(P0, C0, C1, P1);
-
-        // Draw the Bezier curve.
-        plot_bezier_curve = plot.create_bezier_curve(second_layer, curve_line_style, bezier_curve);
-      }
-
+#if 0
       Vector const J = plot_bezier_curve.J();
       Vector const A0 = plot_bezier_curve.A0();
       Vector const V0 = plot_bezier_curve.V0();
@@ -254,6 +284,7 @@ int main()
         plot_shortest_distance = plot.create_connector(second_layer, solid_line_style({.line_color = color::lime}),
             plot_Q, plot_bezier_curve.P(roots[min_r].real()));
       }
+#endif
 
       // Flush all expose events related to the drawing done above.
       window.set_send_expose_events(true);
