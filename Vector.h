@@ -58,10 +58,10 @@ class Vector
   double length_squared() const { return x_ * x_ + y_ * y_; }
 
   // Convert the vector to a Point.
-  Point point() const { return {x_, y_}; }
+  Point as_point() const { return {x_, y_}; }
 
   // Convert the vector to a Pixel.
-  Pixel pixel() const { return Pixel{x_, y_}; }
+  Pixel as_pixel() const { return Pixel{x_, y_}; }
 
  public:
   // Return the vector rotated 90 degrees counter-clockwise.
@@ -127,6 +127,11 @@ inline Vector operator*(double length, Vector const& v2)
 inline Point operator+(Point const& point, Vector const& v2)
 {
   return {point.x() + v2.x(), point.y() + v2.y()};
+}
+
+inline Point operator-(Point const& point, Vector const& v2)
+{
+  return {point.x() - v2.x(), point.y() - v2.y()};
 }
 
 inline Vector operator+(Vector const& v1, Vector const& v2)

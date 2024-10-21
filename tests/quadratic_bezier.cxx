@@ -78,7 +78,7 @@ int main()
 
     // Draw a cirle around the midpoint of P₀P₁ with radius |P₀P₁|/2.
     Vector P0P1(P1);
-    Point P0P1_circle_center = (0.5 * P0P1).point();
+    Point P0P1_circle_center = (0.5 * P0P1).as_point();
     auto plot_P0P1_circle_center = plot.create_point(second_layer, point_style, P0P1_circle_center);
     double P0P1_circle_radius = 0.5 * P0P1.length();
     auto plot_P0P1_circle = plot.create_circle(second_layer, line_style({.line_color = color::gray}), P0P1_circle_center, P0P1_circle_radius);
@@ -323,7 +323,7 @@ int main()
       {
         double t = i * 0.01;
         Vector v{xt(t), yt(t)};
-        curve_points.push_back(v.point());
+        curve_points.push_back(v.as_point());
       }
       auto curve = plot.create_curve(second_layer, curve_line_style, std::move(curve_points));
 

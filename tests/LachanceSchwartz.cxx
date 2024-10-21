@@ -130,8 +130,8 @@ int main()
         marker[0] = plot.create_point(second_layer, point_circle_style, bc.P(0.0));
         marker[1] = plot.create_point(second_layer, point_square_style, bc.P(1.0));
 
-        control[0] = plot.create_connector(second_layer, line_style, P0, bc.C0().point());
-        control[1] = plot.create_connector(second_layer, line_style, P1, bc.C1().point());
+        control[0] = plot.create_connector(second_layer, line_style, P0, bc.C0().as_point());
+        control[1] = plot.create_connector(second_layer, line_style, P1, bc.C1().as_point());
       }
 
       // Flush all expose events related to the drawing done above.

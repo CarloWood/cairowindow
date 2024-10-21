@@ -56,6 +56,8 @@ int main()
 
     utils::ColorPool<32> color_pool;
     draw::PointStyle point_style({.color_index = color_pool.get_and_use_color(), .filled_shape = 1});
+    draw::PointStyle C0_point_style({.color_index = color_pool.get_and_use_color(), .filled_shape = 12});
+    draw::PointStyle C1_point_style({.color_index = color_pool.get_and_use_color(), .filled_shape = 12});
     draw::TextStyle label_style({.position = draw::centered_left_of, .font_size = 18.0, .offset = 10});
     draw::TextStyle slider_style({.position = draw::centered_below, .font_size = 18.0, .offset = 10});
     draw::LineStyle curve_line_style({.line_width = 1.0});
@@ -111,6 +113,9 @@ int main()
         }
     );
 
+    auto slider_gamma = plot.create_slider(second_layer, {978, 83, 7, 400}, 0.5, 0.01, 0.99);
+    auto slider_gamma_label = plot.create_text(second_layer, slider_style, Pixel{978, 483}, "γ");
+
     while (true)
     {
       // Suppress immediate updating of the window for each created item, in order to avoid flickering.
@@ -140,75 +145,77 @@ int main()
       // Draw a label for Q.
       auto P_Q_label = plot.create_text(second_layer, label_style({.position = draw::centered_right_of}), plot_Q, "Q");
 
-      //Dout(dc::notice, "P0 = " << plot_P0 << "; P1 = " << plot_P1 << "; P_gamma = " << plot_P_gamma << "; Q = " << plot_Q);
+      Dout(dc::notice, "P0 = " << plot_P0 << "; P1 = " << plot_P1 << "; P_gamma = " << plot_P_gamma);
 
-      //------------------------------------------------------------------------------------------
-      // Create shorter alias for all points involved.
-      Point P0{plot_P0};
-      Point Q0{plot_Q0};
-      Point P1{plot_P1};
-      Point Q1{plot_Q1};
-      Point Pg{plot_P_gamma};
+      // Get the distance between P0 and P1.
+      double dist = (plot_P1 - plot_P0).length();
 
-      // Calculate the required tangent vectors (with arbitrary length).
-      Vector const T0 = Q0 - P0;
-      Vector const T1 = Q1 - P1;
+      // Calculate the required tangent vectors, normalized wrt the distance between P0 and P1.
+      Vector const T0 = plot_Q0 - plot_P0;
+      Vector const T1 = plot_Q1 - plot_P1;
 
-      // Calculate the control points C₀ and C₁.
-      //
-      // Note that P(t) = (1-t)³ P₀ + 3(1-t)²t C₀ + 3(1-t)t² C₁ + t³ P₁
-      // and we want Pg to be P(0.5) = (1-0.5)³ P₀ + 3(1-0.5)²t C₀ + 3(1-0.5)t² C₁ +  0.5³ P₁ =
-      //                             =    (1/8) P₀ +      (3/8) C₀ +      (3/8) C₁ + (1/8) P₁
-      // Moreover we can write the control points as:
-      //   C₀ = P₀ + α T₀
-      //   C₁ = P₁ + β T₁
-      // because control points lay on the lines tangent to the curve in P₀ respectively P₁.
-      // Fill in C₀ and C₁ to get
-      //   Pg = (1/2) (P₀ + P₁) + (3/8) (α T₀ - β T₁)
-      // or
-      //   α T₀ - β T₁ = (8/3) Pg - (4/3) P₀ - 4/3 P₁.
-      //
-      // where we can find α and β by solving:
-      //
-      //   ⎛α⎞
-      // A ⎝β⎠ = b
-      //
-      // where,
-      Eigen::Matrix2d A;
-      A << T0.x(), -T1.x(),
-           T0.y(), -T1.y();
+      Dout(dc::notice, "T0 = " << T0 << "; T1 = " << T1);
 
-      Eigen::Vector2d b;
-      b << (8 * Pg.x() - 4 * P0.x() - 4 * P1.x()) / 3,
-           (8 * Pg.y() - 4 * P0.y() - 4 * P1.y()) / 3;
+      BezierCurve bezier_curve(plot_P0, plot_P1);
+      double gamma = slider_gamma.value();
+      Vector alpha_beta = bezier_curve.cubic_from(T0, T1, plot_P_gamma);
+      double const& alpha = alpha_beta.x();
+      double const& beta = alpha_beta.y();
 
-      Eigen::Vector2d solution = A.colPivHouseholderQr().solve(b);
-      double alpha = solution(0);
-      double beta = solution(1);
+      Dout(dc::notice, "α T0 = " << (alpha * T0) << "; β T1 = " << (beta * T1));
 
-      // If alpha and beta are not both positive, then the Bezier curve enters P0 and/or P1 from the wrong end and this is not a usable solution.
-      //Dout(dc::notice, "alpha = " << alpha << "; beta = " << beta);
-      Point C0 = P0 + alpha * T0;
-      Point C1 = P1 - beta * T1;
-      BezierCurve bezier_curve(P0, C0, C1, P1);
+      bool reject = alpha < 0.1 || beta < 0.1;
 
       // Draw the Bezier curve.
       //plot_bezier_curve = plot.create_bezier_curve(second_layer, curve_line_style, bezier_curve);
 
-      // The life-time this object determines how long the curve is visible.
-      BezierFitter bezier_fitter(
-          [&bezier_curve](double t) -> Point
-          {
-            Point p{3.0 * std::cos(2.0 * M_PI * t), 3.0 * std::sin(2.0 * M_PI * t)};
-            Dout(dc::notice, "P(" << t << ") = " << p);
-            //return bezier_curve.P(t);
-            return p;
-          },
-          {0.0, 1.0},           // Domain
-          plot.viewport());
+      plot::BezierFitter plot_bezier_fitter;
 
-      // Draw bezier_fitter.
-      plot::BezierFitter plot_bezier_fitter = plot.create_bezier_fitter(second_layer, curve_line_style, std::move(bezier_fitter));
+      if (alpha != -1.0 || beta != -1.0)
+      {
+        // The life-time this object determines how long the curve is visible.
+        BezierFitter bezier_fitter(
+            [&bezier_curve](double t) -> Point
+            {
+              //Point p{3.0 * std::cos(2.0 * M_PI * t), 3.0 * std::sin(2.0 * M_PI * t)};
+              //Dout(dc::notice, "P(" << t << ") = " << p);
+              //return p;
+              return bezier_curve.P(t);
+            },
+            {0.0, 1.0},           // Domain
+            plot.viewport());
+
+        Dout(dc::notice, "bezier_curve = " << bezier_curve);
+        Dout(dc::notice, "|J| = " << bezier_curve.J().length());
+
+        // Draw bezier_fitter.
+        plot_bezier_fitter = plot.create_bezier_fitter(second_layer,
+            curve_line_style({.line_color = reject ? color::red : color::black}), std::move(bezier_fitter));
+      }
+
+      plot::Point plot_C0 = plot.create_point(second_layer, C0_point_style, bezier_curve.C0().as_point());
+      plot::Point plot_C1 = plot.create_point(second_layer, C1_point_style, bezier_curve.C1().as_point());
+
+      BezierCurve quadratic_bezier_curve(plot_P0, plot_P1);
+      quadratic_bezier_curve.quadratic_from(T0.direction(), T1.direction());
+      auto plot_bezier_curve = plot.create_bezier_curve(second_layer, line_style, quadratic_bezier_curve);
+
+#if 0
+      Debug(libcw_do.off());
+      // Draw J.
+      BezierFitter J(
+          [&](double g) -> Point
+          {
+            BezierCurve bc(plot_P0, plot_P1);
+            [[maybe_unused]] Vector S = bc.cubic_from(T0, T1, plot_P_gamma, g);
+            return (0.01 * bc.J()).as_point();
+          },
+          {0.01, 0.99},
+          plot.viewport()
+          );
+      plot::BezierFitter plot_J_curve = plot.create_bezier_fitter(second_layer, curve_line_style({.line_color = color::blue}), std::move(J));
+      Debug(libcw_do.on());
+#endif
 
 #if 0
       Vector const J = plot_bezier_curve.J();

@@ -59,6 +59,11 @@ enum point_nt
 //
 //          = A0 + J t
 //
+// Third derivative
+//
+//   P'''(t) = 6(P₁ - 3C₁ + 3C₀ - P₀)
+//           = J
+//
 class BezierCurve
 {
  protected:
@@ -80,6 +85,12 @@ class BezierCurve
 
   BezierCurve(Vector P0, Vector C0, Vector C1, Vector P1) :
     m_{{{P0, 3.0 * (C0 - P0), 3.0 * ((C1 - P0) - 2.0 * (C0 - P0)), P1 - P0 - 3.0 * (C1 - C0)}}} { }
+
+  // Construct a fully defined BezierCurve from begin and end point plus their derivative and a third point.
+  // The vectors T0 and T1 are the "velocity" vectors in P0 and P1 respectively, but can have an arbitrary length.
+  // The curve will go through P0 at t=0, P05 at t=0.5 and P1 at t=1.
+  // If it is not possible to construct such a curve, this constructor will throw an exception.
+  BezierCurve(Point P0, Vector T0, Point P1, Vector T1, Point P05);
 
   // Construct a fully defined BezierCurve from "matrix" columns.
   BezierCurve(BezierCurveMatrix const& m) : m_{m} { }
@@ -105,7 +116,7 @@ class BezierCurve
     return 2.0 * m_.coefficient[2];
   }
 
-  // Jolt at t=0.
+  // Jolt (at any t).
   Vector J() const
   {
     return 6.0 * m_.coefficient[3];
@@ -120,7 +131,7 @@ class BezierCurve
   // Point at t.
   Point P(double t) const
   {
-    return B(t).point();
+    return B(t).as_point();
   }
 
   // Velocity at t.
@@ -204,6 +215,10 @@ class BezierCurve
   // If this is a quadratic BezierCurve (constructed with quadratic_from) then this will return the exact bending energy.
   // This uses an algebraic formula and therefore much faster (and more accurate) than bending_energy.
   double quadratic_bending_energy() const;
+
+  // Initialize a cubic BezierCurve from tangent vectors in P₀ and P₁, and a third point that it has to pass through at t = gamma.
+  // Returns [α; β] - which should both be positive.
+  Vector cubic_from(Vector T0, Vector T1, Point Pg);
 
 #ifdef CWDEBUG
  public:

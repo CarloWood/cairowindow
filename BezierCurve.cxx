@@ -1,7 +1,8 @@
 #include "sys.h"
+#include "BezierCurve.h"
+#include "Matrix.h"
 #include "utils/square.h"
 #include "utils/almost_equal.h"
-#include "BezierCurve.h"
 #include <Eigen/Dense>
 #include <boost/math/quadrature/gauss_kronrod.hpp>
 
@@ -430,6 +431,178 @@ bool BezierCurve::quadratic_from(double v0qa, double v1qa)
 
   quadratic_from(V0);
   return true;
+}
+
+#if 0
+void print(double dfdg, double g, std::function<double(double)>&& f)
+{
+  constexpr double epsilon = 1e-3;
+  Dout(dc::notice, "dFdg = " << dfdg << " (should have been " << ((f(g + epsilon) - f(g - epsilon)) / (2 * epsilon))  << ").");
+}
+
+void print2(double d2fdg2, double g, std::function<double(double)>&& f)
+{
+  constexpr double epsilon = 1e-4;
+  Dout(dc::notice, "d²F/dg² = " << d2fdg2 << " (should have been " <<
+      ((f(g + epsilon) + f(g - epsilon) - 2 * f(g)) / (epsilon * epsilon))  << ").");
+}
+#endif
+
+// Construct a Bezier curve defined by starting point P0 and end point P1 (initialized by the constructor),
+// and the tangents T0 and T1;
+//
+//   B(t) = (1 - t)^3 * P0 + 3 * (1 - t)^2 * t * C0 + 3 * (1 - t) * t^2 * C1 + t^3 * P1
+//
+// where
+//
+//   C0 = P0 + Sx * T0;
+//   C1 = P1 - Sy * T1;
+//
+// where alpha and beta are two positive real values, such that B(g) = Pg.
+//
+Vector BezierCurve::cubic_from(Vector T0, Vector T1, Point Pg)
+{
+  // Get P0 and P1 from the values passed to the constructor.
+  Point const P0{m_.coefficient[0].as_point()};
+  Point const P1{m_.coefficient[1].as_point()};
+
+  // Calculate the determinant of the matrix formed by the tangent vectors T0 and T1.
+  //
+  //   | T_0x  T_1x |
+  //   | T_0y  T_1y | = T_0x * T_1y - T_0y * T_1x
+  //
+  double const T0xT1 = T0.cross(T1);
+  Vector const V1 = P1 - P0;
+  Vector const Vg = Pg - P0;
+
+  using utils::square;
+
+  double const V1xT0 = V1.cross(T0);
+  double const VgxT0 = Vg.cross(T0);
+  double const V1xT1 = V1.cross(T1);
+  double const VgxT1 = Vg.cross(T1);
+
+  // None of these are a function of g.
+  double const cghx = V1xT1 * T0.x() - V1xT0 * T1.x();
+  double const cgx = VgxT1 * T0.x() - VgxT0 * T1.x();
+  double const chx = V1xT0 * T1.x();
+  double const cex = VgxT0 * T1.x();
+  double const cghy = V1xT1 * T0.y() - V1xT0 * T1.y();
+  double const cgy = VgxT1 * T0.y() - VgxT0 * T1.y();
+  double const chy = V1xT0 * T1.y();
+  double const cey = VgxT0 * T1.y();
+  double const cx = -2 * T0xT1 * V1.x();
+  double const cy = -2 * T0xT1 * V1.y();
+
+  // Use Newton-Raphson to find the minimum of J.
+  double g = 0.5;
+  double delta_g;
+  do
+  {
+    // The following variables are a function of g.
+    double const h = g * g * (2 * g - 3);
+    double const g1mg = g * (1 - g);
+    double const g1mg2 = square(g1mg);
+    double const gh = g * h;
+    double const fx = gh * cghx + g * cgx + h * chx + cex;
+    double const fy = gh * cghy + g * cgy + h * chy + cey;
+
+    // The coordinates of J'. Since J' = (T0xT1 / 6) J, minimizing J' means minimizing J.
+    double T0xT1Jdiv6_x = fx / g1mg2 + cx;
+    double T0xT1Jdiv6_y = fy / g1mg2 + cy;
+
+    // Calculate ∂g1mg2/∂g = ∂(g²(1-g)²)/∂g = ∂(g²-2g³+g⁴)/∂g = 2g - 6g² + 4g³ = g(2 - 6g + 4g²).
+    double const dg1mg2dg = g * (2 - 6 * g + 4 * square(g));
+    // Calculate ∂h/∂g = ∂(g²(2g - 3))/∂g = ∂(2g³ - 3g²)/∂g = 6g² - 6g = -6g(1 - g).
+    double const dhdg = -6 * g1mg;
+    // Calculate ∂(gh)/∂g = ∂(2g⁴ - 3g³)/∂g = 8g³ - 9g² = g²(8g - 9).
+    double const dghdg = square(g) * (8 * g - 9);
+    // Calculate ∂fx/∂g = ∂(cghx·gh + cgx·g + chx·h + cex)/∂g.
+    double const dfxdg = cghx * dghdg + cgx + chx * dhdg;
+    // Calculate ∂fy/∂g = ∂(cghy·gh + cgy·g + chy·h + cey)/∂g.
+    double const dfydg = cghy * dghdg + cgy + chy * dhdg;
+    // Calculate g1mg2⁻² = g1mg⁻⁴.
+    double const g1mgm4 = 1.0 / square(g1mg2);
+    // Calculate ∂T0xT1Jdiv6_x/∂g = (∂fx/∂g · g1mg2 - fx · ∂g1mg2/∂g) / g1mg2².
+    double const dT0xT1Jdiv6_xdg = (dfxdg * g1mg2 - fx * dg1mg2dg) * g1mgm4;
+    // Calculate ∂T0xT1Jdiv6_y/∂g = (∂fy/∂g · g1mg2 - fy · ∂g1mg2/∂g) / g1mg2².
+    double const dT0xT1Jdiv6_ydg = (dfydg * g1mg2 - fy * dg1mg2dg) * g1mgm4;
+    // Calculate ∂∥J'∥²/∂g = ∂n2Jp/∂g = ∂(T0xT1Jdiv6_x² + T0xT1Jdiv6_y²)/∂g = ∂(T0xT1Jdiv6_x²)/∂g + ∂(T0xT1Jdiv6_y²)/∂g =
+    //   2 T0xT1Jdiv6_x ∂T0xT1Jdiv6_x/∂g + 2 T0xT1Jdiv6_y ∂T0xT1Jdiv6_y/∂g
+    double const dn2Jpdg = 2 * (T0xT1Jdiv6_x * dT0xT1Jdiv6_xdg + T0xT1Jdiv6_y * dT0xT1Jdiv6_ydg);
+
+    // We need the derivative of dn2Jpdg (the second derivative of n2Jp). For that we need the derivative of each of the above factors.
+    // Calculate ∂g1mgm4/∂g = ∂(g1mg2⁻²)/∂g = -2 g1mg2⁻³ dg1mg2dg.
+    double const dg1mgm4dg = -2 * std::pow(g1mg2, -3.0) * dg1mg2dg;
+    // Calculate ∂dg1mg2dg/∂g = ∂(2g - 6g² + 4g³)/∂g = 2 - 12g + 12g² = 2 - 12 g (1 - g).
+    double const ddg1mg2dgdg = 2 - 12 * g1mg;
+    // Calculate ∂dghdg/∂g = ∂(8g³ - 9g²)/∂g = 24g² - 18g = g (24g - 18).
+    double const ddghdgdg = g * (24 * g - 18);
+    // Calculate ∂dhdg/∂g = ∂(6g² - 6g)/∂g = 12g - 6.
+    double const ddhdgdg = 12 * g - 6;
+    // Calculate ∂dfxdg/∂g.
+    double const ddfxdgdg = cghx * ddghdgdg + chx * ddhdgdg;
+    // Calculate ∂dfydg/∂g.
+    double const ddfydgdg = cghy * ddghdgdg + chy * ddhdgdg;
+    // Calculate ∂dT0xT1Jdiv6_xdg/∂g.
+    double const ddT0xT1Jdiv6_xdgdg =
+      (ddfxdgdg * g1mg2 - fx * ddg1mg2dgdg) * g1mgm4 + (dfxdg * g1mg2 - fx * dg1mg2dg) * dg1mgm4dg;
+    // Calculate ∂dT0xT1Jdiv6_ydg/∂g.
+    double const ddT0xT1Jdiv6_ydgdg =
+      (ddfydgdg * g1mg2 - fy * ddg1mg2dgdg) * g1mgm4 + (dfydg * g1mg2 - fy * dg1mg2dg) * dg1mgm4dg;
+    // Calculate ∂dn2Jpdg/∂g.
+    double const ddn2Jpdgdg =
+      2 * (square(dT0xT1Jdiv6_xdg) + T0xT1Jdiv6_x * ddT0xT1Jdiv6_xdgdg + square(dT0xT1Jdiv6_ydg) + T0xT1Jdiv6_y * ddT0xT1Jdiv6_ydgdg);
+
+#if 0
+    // Calculate the square of the norm of J'.
+    double n2Jp = square(T0xT1Jdiv6_x) + square(T0xT1Jdiv6_y);
+
+    Dout(dc::notice, "∥J'∥² = " << n2Jp << "; ∥J∥ = " << (6.0 * std::sqrt(n2Jp) / T0xT1));
+    Dout(dc::notice, "∂(∥J'∥²)/∂g = " << dn2Jpdg << "; ∂²(∥J'∥²)/∂g² = " << ddn2Jpdgdg);
+#endif
+
+    delta_g = dn2Jpdg / ddn2Jpdgdg;
+    Dout(dc::notice, "g = " << g << "; better g = " << (g - delta_g));
+    Dout(dc::notice, "delta_g = " << delta_g << "; std::abs(delta_g / g) = " << std::abs(delta_g / g));
+    g -= delta_g;
+    if (g == 0.0 || g == 1.0)
+      continue;
+    if (!std::isnormal(g) || g <= -1.0 || g >= 2.0)
+      return { -1.0, -1.0 };
+  }
+  while (std::abs(delta_g) > std::abs(0.001 * g));
+
+  // Helper vector.
+  double h = g * g * (2 * g - 3);
+  Vector const Z = h * V1 + Vg;
+
+  //   Sx = (Z × T_1) / (3 (1-g)^2 g T0 × T1)
+  //   Sy = (Z × T_0) / (3 g^2 (1-g) T0 × T1)
+  Vector S{
+    Z.cross(T1) / (3 * square(1 - g) *      g  * T0xT1),
+    Z.cross(T0) / (3 * square(g)     * (1 - g) * T0xT1)
+  };
+
+  // If not both elements of S are positive, then the Bezier curve enters P0 and/or P1 from the wrong end and this is not a usable solution.
+  // Let R0 = C0 - P0 and R1 = C1 - P0; note that C1 - C0 = R1 - R0.
+  Vector R0 = S.x() * T0;
+  Vector R1 = V1 - S.y() * T1;
+
+  m_.coefficient[1] = 3.0 * R0;
+  m_.coefficient[2] = 3.0 * (R1 - 2.0 * R0);
+  m_.coefficient[3] = V1 - 3.0 * (R1 - R0);     // This is J/6.
+
+  ASSERT(!std::isnan(m_.coefficient[0].x()));
+  ASSERT(!std::isnan(m_.coefficient[0].y()));
+  ASSERT(!std::isnan(m_.coefficient[1].x()));
+  ASSERT(!std::isnan(m_.coefficient[1].y()));
+  ASSERT(!std::isnan(m_.coefficient[2].x()));
+  ASSERT(!std::isnan(m_.coefficient[2].y()));
+  ASSERT(!std::isnan(m_.coefficient[3].x()));
+  ASSERT(!std::isnan(m_.coefficient[3].y()));
+
+  return S;
 }
 
 double BezierCurve::quadratic_arc_length() const
