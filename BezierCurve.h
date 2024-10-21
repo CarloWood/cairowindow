@@ -103,6 +103,7 @@ class BezierCurve
 
   // As matrix (coefficients of a polynomial in t).
   BezierCurveMatrix const& M() const { return m_; }
+  BezierCurveMatrix& M() { return m_; }
 
   // Velocity at t=0.
   Vector V0() const
@@ -225,6 +226,19 @@ class BezierCurve
   void print_on(std::ostream& os) const;
 #endif
 };
+
+#ifdef CWDEBUG
+// Allow examining a cubic Bezier curve constructed from P0, P1 and tangents T0, T1 going through point Pg for a given value of g.
+// Normally g is automatically determined by minimizing |J|.
+struct CubicBezierCurve : public BezierCurve
+{
+  static std::unique_ptr<CubicBezierCurve> create(Point P0, Point P1, Vector T0, Vector T1, Point Pg);
+
+  CubicBezierCurve(Point P0, Point P1) : BezierCurve(P0, P1) { }
+  virtual ~CubicBezierCurve() = default;
+  virtual void initialize_from_g(double g) = 0;
+};
+#endif
 
 namespace draw {
 class BezierCurve;

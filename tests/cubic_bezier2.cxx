@@ -54,6 +54,33 @@ int main()
     plot.set_yrange({-10, 10});
     plot.add_to(background_layer, true);
 
+    // Create a second window.
+    Window window_newton_raphson("Newton-Raphson", 1200, 900);
+
+    // Create a new layer with a gray background.
+    auto background_layer_newton_raphson =
+      window_newton_raphson.create_background_layer<Layer>(color::white COMMA_DEBUG_ONLY("background_layer_newton_raphson"));
+
+    // Create another layer.
+    auto second_layer_newton_raphson = window_newton_raphson.create_layer<Layer>({} COMMA_DEBUG_ONLY("second_layer_newton_raphson"));
+
+    // Open the window and start drawing.
+    std::thread event_loop_newton_raphson([&](){
+      // Open window, handle event loop. This must be constructed after the draw stuff, so that it is destructed first!
+      // Upon destruction it blocks until the event loop thread finished (aka, the window was closed).
+      EventLoop event_loop = window_newton_raphson.run();
+      event_loop.set_cleanly_terminated();
+    });
+
+    // Create and draw plot area.
+    plot::Plot plot_newton_raphson(window_newton_raphson.geometry(), { .grid = {.color = color::orange} },
+        "Newton Raphson test", {},
+        "g", {},
+        "dJ/dg", {});
+    plot_newton_raphson.set_xrange({0, 1});
+    plot_newton_raphson.set_yrange({0, 10000});
+    plot_newton_raphson.add_to(background_layer_newton_raphson, false);
+
     utils::ColorPool<32> color_pool;
     draw::PointStyle point_style({.color_index = color_pool.get_and_use_color(), .filled_shape = 1});
     draw::PointStyle C0_point_style({.color_index = color_pool.get_and_use_color(), .filled_shape = 12});
@@ -113,13 +140,14 @@ int main()
         }
     );
 
-    auto slider_gamma = plot.create_slider(second_layer, {978, 83, 7, 400}, 0.5, 0.01, 0.99);
-    auto slider_gamma_label = plot.create_text(second_layer, slider_style, Pixel{978, 483}, "γ");
+//    auto slider_gamma = plot.create_slider(second_layer, {978, 83, 7, 400}, 0.5, 0.01, 0.99);
+//    auto slider_gamma_label = plot.create_text(second_layer, slider_style, Pixel{978, 483}, "γ");
 
     while (true)
     {
       // Suppress immediate updating of the window for each created item, in order to avoid flickering.
       window.set_send_expose_events(false);
+      window_newton_raphson.set_send_expose_events(false);
 
       // Draw a circle around P₀.
       auto plot_circle0 = plot.create_circle(second_layer, solid_line_style({.line_color = color::gray}), plot_P0, circle_radius);
@@ -157,7 +185,6 @@ int main()
       Dout(dc::notice, "T0 = " << T0 << "; T1 = " << T1);
 
       BezierCurve bezier_curve(plot_P0, plot_P1);
-      double gamma = slider_gamma.value();
       Vector alpha_beta = bezier_curve.cubic_from(T0, T1, plot_P_gamma);
       double const& alpha = alpha_beta.x();
       double const& beta = alpha_beta.y();
@@ -199,6 +226,20 @@ int main()
       BezierCurve quadratic_bezier_curve(plot_P0, plot_P1);
       quadratic_bezier_curve.quadratic_from(T0.direction(), T1.direction());
       auto plot_bezier_curve = plot.create_bezier_curve(second_layer, line_style, quadratic_bezier_curve);
+
+      plot::BezierFitter plot_dJdg;
+      std::unique_ptr<CubicBezierCurve> cubic_bezier_curve = CubicBezierCurve::create(plot_P0, plot_P1, T0, T1, plot_P_gamma);
+      BezierFitter bezier_fitter_dJdg(
+          [&](double g) -> Point
+          {
+            cubic_bezier_curve->initialize_from_g(g);
+            return {g, cubic_bezier_curve->J().length()};
+          },
+          {0.01, 0.99},
+          plot_newton_raphson.viewport());
+      cubic_bezier_curve.reset();
+      plot_dJdg = plot_newton_raphson.create_bezier_fitter(second_layer_newton_raphson,
+          curve_line_style, std::move(bezier_fitter_dJdg));
 
 #if 0
       Debug(libcw_do.off());
@@ -295,14 +336,19 @@ int main()
 
       // Flush all expose events related to the drawing done above.
       window.set_send_expose_events(true);
+      window_newton_raphson.set_send_expose_events(true);
 
       // Block until a redraw is necessary (for example because the user moved a draggable object,
       // or wants to print the current drawing) then go to the top of loop for a redraw.
       if (!window.handle_input_events())
+      {
+        window_newton_raphson.close();
         break;          // Program must be terminated.
+      }
     }
 
     event_loop.join();
+    event_loop_newton_raphson.join();
   }
   catch (AIAlert::Error const& error)
   {
