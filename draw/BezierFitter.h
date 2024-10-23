@@ -1,6 +1,6 @@
 #pragma once
 
-#define CAIROWINDOW_SHOW_BEZIER_CURVE_POINTS 0
+#define CAIROWINDOW_SHOW_BEZIER_CURVE_POINTS 1
 
 #include "MultiRegion.h"
 #include "Line.h"

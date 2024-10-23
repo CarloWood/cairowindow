@@ -488,136 +488,153 @@ class CubicBezierCurveImpl
   double const cx = -2 * T0xT1 * V1.x();
   double const cy = -2 * T0xT1 * V1.y();
 
+  // The following variables are a function of g.
+  double h;                     // g²(2g - 3)
+  double g1mg;                  // g(1 - g)
+  double g1mg2;                 // g²(1 - g)² = g1mg²
+  double gh;                    // g³(2g - 3) = g·h
+  double fx;                    // cghx·g·h + cgx·g + chx·h + cex
+  double fy;                    // cghy·g·h + cgy·g + chy·h + cex
+
+  double Jp_x;                  // x-coordinate of J⁺, where J⁺ = (T0 × T1)/6 J.
+  double Jp_y;                  // y-coordinate of J⁺.
+
+  // First derivatives, additionally needed to calculate dn2Jpdg.
+  double dg1mg2dg;              // ∂g1mg2/∂g
+  double dhdg;                  // ∂h/∂g
+  double dghdg;                 // ∂(gh)/∂g
+  double dfxdg;                 // ∂fx/∂g
+  double dfydg;                 // ∂fy/∂g
+  double g1mgm4;                // (g(1 - g))⁻⁴ = g1mg⁻⁴ = g1mg2⁻²
+  double dJp_xdg;               // ∂Jp_x/∂g
+  double dJp_ydg;               // ∂Jp_y/∂g
+  double dn2Jpdg;               // ∂∥J⁺∥²/∂g
+
+  // Additionally needed to calculate ddn2Jpdgdg (mostly second derivatives).
+  double dg1mgm4dg;             // ∂g1mgm4/∂g
+  double ddg1mg2dgdg;           // ∂dg1mg2dg/∂g
+  double ddghdgdg;              // ∂dghdg/∂g
+  double ddhdgdg;               // ∂dhdg/∂g
+  double ddfxdgdg;              // ∂dfxdg/∂g
+  double ddfydgdg;              // ∂dfydg/∂g
+  double ddJp_xdgdg;            // ∂dJp_xdg/∂g
+  double ddJp_ydgdg;            // ∂dJp_ydg/∂g
+  double ddn2Jpdgdg;            // ∂dn2Jpdg/∂g
+
+ private:
+#ifdef CWDEBUG
+  friend struct DebugAccessToCubicBezierCurveImpl;
+#endif
+  friend Vector BezierCurve::cubic_from(Vector T0, Vector T1, Point Pg);
+  [[gnu::always_inline]] inline void calculate_derivatives(double g);
+  [[gnu::always_inline]] inline Vector initialize(double g);
+  [[gnu::always_inline]] double derivative() const { return dn2Jpdg; }
+  [[gnu::always_inline]] double second_derivative() const { return ddn2Jpdgdg; }
+
  public:
   CubicBezierCurveImpl(BezierCurve* parent, Vector T0_, Vector T1_, Point Pg_) : parent_(parent), T0(T0_), T1(T1_), Pg(Pg_) { }
-
-  // Use Newton-Raphson to find the minimum of J.
-  double g = 0.5;
-  double delta_g;
-
-  bool newton_raphson();
-  Vector initialize();
-
-  bool bad_g() const
-  {
-    return !std::isnormal(g) || g <= -1.0 || g >= 2.0;
-  }
 };
 
-struct CubicBezierCurveImpl2 : public CubicBezierCurve
+#ifdef CWDEBUG
+struct DebugAccessToCubicBezierCurveImpl : public CubicBezierCurve
 {
   CubicBezierCurveImpl impl_;
 
-  CubicBezierCurveImpl2(Point P0, Point P1, Vector T0, Vector T1, Point Pg) : CubicBezierCurve(P0, P1), impl_(this, T0, T1, Pg) { }
+  DebugAccessToCubicBezierCurveImpl(Point P0, Point P1, Vector T0, Vector T1, Point Pg) : CubicBezierCurve(P0, P1), impl_(this, T0, T1, Pg) { }
 
-  void initialize_from_g(double g) final
-  {
-    impl_.g = g;
-    impl_.initialize();
-  }
+  void initialize_from_g(double g) final { impl_.initialize(g); }
+  double derivative(double g) final { impl_.calculate_derivatives(g); return impl_.derivative(); }
+  double second_derivative(double g) final { impl_.calculate_derivatives(g); return impl_.second_derivative(); }
 };
+#endif
 
 } // namespace
 
-bool CubicBezierCurveImpl::newton_raphson()
+void CubicBezierCurveImpl::calculate_derivatives(double g)
 {
   using utils::square;
 
-  // The following variables are a function of g.
-  double const h = g * g * (2 * g - 3);
-  double const g1mg = g * (1 - g);
-  double const g1mg2 = square(g1mg);
-  double const gh = g * h;
-  double const fx = gh * cghx + g * cgx + h * chx + cex;
-  double const fy = gh * cghy + g * cgy + h * chy + cey;
+  h = g * g * (2 * g - 3);
+  g1mg = g * (1 - g);
+  g1mg2 = square(g1mg);
+  gh = g * h;
+  fx = gh * cghx + g * cgx + h * chx + cex;
+  fy = gh * cghy + g * cgy + h * chy + cey;
 
-  // The coordinates of J'. Since J' = (T0xT1 / 6) J, minimizing J' means minimizing J.
-  double const T0xT1Jdiv6_x = fx / g1mg2 + cx;
-  double const T0xT1Jdiv6_y = fy / g1mg2 + cy;
+  // The coordinates of J⁺. Since J⁺ = (T0xT1 / 6) J, minimizing J⁺ means minimizing J.
+  Jp_x = fx / g1mg2 + cx;
+  Jp_y = fy / g1mg2 + cy;
 
   // Calculate ∂g1mg2/∂g = ∂(g²(1-g)²)/∂g = ∂(g²-2g³+g⁴)/∂g = 2g - 6g² + 4g³ = g(2 - 6g + 4g²).
-  double const dg1mg2dg = g * (2 - 6 * g + 4 * square(g));
+  dg1mg2dg = g * (2 - 6 * g + 4 * square(g));
   // Calculate ∂h/∂g = ∂(g²(2g - 3))/∂g = ∂(2g³ - 3g²)/∂g = 6g² - 6g = -6g(1 - g).
-  double const dhdg = -6 * g1mg;
+  dhdg = -6 * g1mg;
   // Calculate ∂(gh)/∂g = ∂(2g⁴ - 3g³)/∂g = 8g³ - 9g² = g²(8g - 9).
-  double const dghdg = square(g) * (8 * g - 9);
+  dghdg = square(g) * (8 * g - 9);
   // Calculate ∂fx/∂g = ∂(cghx·gh + cgx·g + chx·h + cex)/∂g.
-  double const dfxdg = cghx * dghdg + cgx + chx * dhdg;
+  dfxdg = cghx * dghdg + cgx + chx * dhdg;
   // Calculate ∂fy/∂g = ∂(cghy·gh + cgy·g + chy·h + cey)/∂g.
-  double const dfydg = cghy * dghdg + cgy + chy * dhdg;
+  dfydg = cghy * dghdg + cgy + chy * dhdg;
   // Calculate g1mg2⁻² = g1mg⁻⁴.
-  double const g1mgm4 = 1.0 / square(g1mg2);
-  // Calculate ∂T0xT1Jdiv6_x/∂g = (∂fx/∂g · g1mg2 - fx · ∂g1mg2/∂g) / g1mg2².
-  double const dT0xT1Jdiv6_xdg = (dfxdg * g1mg2 - fx * dg1mg2dg) * g1mgm4;
-  // Calculate ∂T0xT1Jdiv6_y/∂g = (∂fy/∂g · g1mg2 - fy · ∂g1mg2/∂g) / g1mg2².
-  double const dT0xT1Jdiv6_ydg = (dfydg * g1mg2 - fy * dg1mg2dg) * g1mgm4;
-  // Calculate ∂∥J'∥²/∂g = ∂n2Jp/∂g = ∂(T0xT1Jdiv6_x² + T0xT1Jdiv6_y²)/∂g = ∂(T0xT1Jdiv6_x²)/∂g + ∂(T0xT1Jdiv6_y²)/∂g =
-  //   2 T0xT1Jdiv6_x ∂T0xT1Jdiv6_x/∂g + 2 T0xT1Jdiv6_y ∂T0xT1Jdiv6_y/∂g
-  double const dn2Jpdg = 2 * (T0xT1Jdiv6_x * dT0xT1Jdiv6_xdg + T0xT1Jdiv6_y * dT0xT1Jdiv6_ydg);
+  g1mgm4 = 1.0 / square(g1mg2);
+  // Calculate ∂Jp_x/∂g = (∂fx/∂g · g1mg2 - fx · ∂g1mg2/∂g) / g1mg2².
+  dJp_xdg = (dfxdg * g1mg2 - fx * dg1mg2dg) * g1mgm4;
+  // Calculate ∂Jp_y/∂g = (∂fy/∂g · g1mg2 - fy · ∂g1mg2/∂g) / g1mg2².
+  dJp_ydg = (dfydg * g1mg2 - fy * dg1mg2dg) * g1mgm4;
+  // Calculate ∂∥J⁺∥²/∂g = ∂n2Jp/∂g = ∂(Jp_x² + Jp_y²)/∂g = ∂(Jp_x²)/∂g + ∂(Jp_y²)/∂g =
+  //   2 Jp_x ∂Jp_x/∂g + 2 Jp_y ∂Jp_y/∂g
+  dn2Jpdg = 2 * (Jp_x * dJp_xdg + Jp_y * dJp_ydg);
 
   // We need the derivative of dn2Jpdg (the second derivative of n2Jp). For that we need the derivative of each of the above factors.
   // Calculate ∂g1mgm4/∂g = ∂(g1mg2⁻²)/∂g = -2 g1mg2⁻³ dg1mg2dg.
-  double const dg1mgm4dg = -2 * std::pow(g1mg2, -3.0) * dg1mg2dg;
+  dg1mgm4dg = -2 * std::pow(g1mg2, -3.0) * dg1mg2dg;
   // Calculate ∂dg1mg2dg/∂g = ∂(2g - 6g² + 4g³)/∂g = 2 - 12g + 12g² = 2 - 12 g (1 - g).
-  double const ddg1mg2dgdg = 2 - 12 * g1mg;
+  ddg1mg2dgdg = 2 - 12 * g1mg;
   // Calculate ∂dghdg/∂g = ∂(8g³ - 9g²)/∂g = 24g² - 18g = g (24g - 18).
-  double const ddghdgdg = g * (24 * g - 18);
+  ddghdgdg = g * (24 * g - 18);
   // Calculate ∂dhdg/∂g = ∂(6g² - 6g)/∂g = 12g - 6.
-  double const ddhdgdg = 12 * g - 6;
+  ddhdgdg = 12 * g - 6;
   // Calculate ∂dfxdg/∂g.
-  double const ddfxdgdg = cghx * ddghdgdg + chx * ddhdgdg;
+  ddfxdgdg = cghx * ddghdgdg + chx * ddhdgdg;
   // Calculate ∂dfydg/∂g.
-  double const ddfydgdg = cghy * ddghdgdg + chy * ddhdgdg;
-  // Calculate ∂dT0xT1Jdiv6_xdg/∂g.
-  double const ddT0xT1Jdiv6_xdgdg =
-    (ddfxdgdg * g1mg2 - fx * ddg1mg2dgdg) * g1mgm4 + (dfxdg * g1mg2 - fx * dg1mg2dg) * dg1mgm4dg;
-  // Calculate ∂dT0xT1Jdiv6_ydg/∂g.
-  double const ddT0xT1Jdiv6_ydgdg =
-    (ddfydgdg * g1mg2 - fy * ddg1mg2dgdg) * g1mgm4 + (dfydg * g1mg2 - fy * dg1mg2dg) * dg1mgm4dg;
+  ddfydgdg = cghy * ddghdgdg + chy * ddhdgdg;
+  // Calculate ∂dJp_xdg/∂g.
+  ddJp_xdgdg = (ddfxdgdg * g1mg2 - fx * ddg1mg2dgdg) * g1mgm4 + (dfxdg * g1mg2 - fx * dg1mg2dg) * dg1mgm4dg;
+  // Calculate ∂dJp_ydg/∂g.
+  ddJp_ydgdg = (ddfydgdg * g1mg2 - fy * ddg1mg2dgdg) * g1mgm4 + (dfydg * g1mg2 - fy * dg1mg2dg) * dg1mgm4dg;
   // Calculate ∂dn2Jpdg/∂g.
-  double const ddn2Jpdgdg =
-    2 * (square(dT0xT1Jdiv6_xdg) + T0xT1Jdiv6_x * ddT0xT1Jdiv6_xdgdg + square(dT0xT1Jdiv6_ydg) + T0xT1Jdiv6_y * ddT0xT1Jdiv6_ydgdg);
+  ddn2Jpdgdg = 2 * (square(dJp_xdg) + Jp_x * ddJp_xdgdg + square(dJp_ydg) + Jp_y * ddJp_ydgdg);
 
 #if 0
-  // Calculate the square of the norm of J'.
-  double n2Jp = square(T0xT1Jdiv6_x) + square(T0xT1Jdiv6_y);
+  // Calculate the square of the norm of J⁺.
+  double n2Jp = square(Jp_x) + square(Jp_y);
 
-  Dout(dc::notice, "∥J'∥² = " << n2Jp << "; ∥J∥ = " << (6.0 * std::sqrt(n2Jp) / T0xT1));
-  Dout(dc::notice, "∂(∥J'∥²)/∂g = " << dn2Jpdg << "; ∂²(∥J'∥²)/∂g² = " << ddn2Jpdgdg);
+  Dout(dc::notice, "∥J⁺∥² = " << n2Jp << "; ∥J∥ = " << (6.0 * std::sqrt(n2Jp) / T0xT1));
+  Dout(dc::notice, "∂(∥J⁺∥²)/∂g = " << dn2Jpdg << "; ∂²(∥J⁺∥²)/∂g² = " << ddn2Jpdgdg);
 #endif
-
-  delta_g = dn2Jpdg / ddn2Jpdgdg;
-  Dout(dc::notice, "g = " << g << "; better g = " << (g - delta_g));
-  Dout(dc::notice, "delta_g = " << delta_g << "; std::abs(delta_g / g) = " << std::abs(delta_g / g));
-  g -= delta_g;
-  if (g == 0.0 || g == 1.0)
-    return true;
-
-  if (!std::isnormal(g) || g <= -1.0 || g >= 2.0)
-    return false;
-
-  return std::abs(delta_g) > std::abs(0.001 * g);
 }
 
-Vector CubicBezierCurveImpl::initialize()
+Vector CubicBezierCurveImpl::initialize(double g)
 {
   using utils::square;
 
-  double h = g * g * (2 * g - 3);
+  // We can call this function with any value of g (no need to first call calculate_derivatives).
+  double const h = g * g * (2 * g - 3);
+
   // Helper vector.
   Vector const Z = h * V1 + Vg;
 
   //   Sx = (Z × T_1) / (3 (1-g)^2 g T0 × T1)
   //   Sy = (Z × T_0) / (3 g^2 (1-g) T0 × T1)
-  Vector S{
+  Vector const S{
     Z.cross(T1) / (3 * square(1 - g) *      g  * T0xT1),
     Z.cross(T0) / (3 * square(g)     * (1 - g) * T0xT1)
   };
 
   // If not both elements of S are positive, then the Bezier curve enters P0 and/or P1 from the wrong end and this is not a usable solution.
   // Let R0 = C0 - P0 and R1 = C1 - P0; note that C1 - C0 = R1 - R0.
-  Vector R0 = S.x() * T0;
-  Vector R1 = V1 - S.y() * T1;
+  Vector const R0 = S.x() * T0;
+  Vector const R1 = V1 - S.y() * T1;
 
   auto& m_ = parent_->M();
   m_.coefficient[1] = 3.0 * R0;
@@ -646,28 +663,61 @@ Vector CubicBezierCurveImpl::initialize()
 //   C0 = P0 + Sx * T0;
 //   C1 = P1 - Sy * T1;
 //
-// where alpha and beta are two positive real values, such that B(g) = Pg.
+// where Sx and Sy are two positive real values, such that B(g) = Pg.
+//
+// It is possible that either of the elements of the returned S is negative,
+// in which case the curve is tangent to T0 and/or T1 respectively but
+// approaching P0 and/or P1 from the wrong direction. The caller has to
+// check this themselves.
 //
 Vector BezierCurve::cubic_from(Vector T0, Vector T1, Point Pg)
 {
+  DoutEntering(dc::notice, "BezierCurve::cubic_from(" << T0 << ", " << T1 << ", " << Pg << ")");
+
   CubicBezierCurveImpl helper(this, T0, T1, Pg);
 
   // Iteratively change g until the change in g becomes less than one thousands of g.
-  while (helper.newton_raphson())
-    ;
 
-  if (helper.bad_g())
-    return { -1.0, -1.0 };
+  double prev_g;
+  double g = 0.5;
+  do
+  {
+    prev_g = g;
 
-  // Initialize the Bezier curve from the last value of g.
-  return helper.initialize();
+    helper.calculate_derivatives(g);
+    double second_derivative = helper.second_derivative();
+
+    // If the second derivative is negative, we'd go in the wrong direction (away from the root).
+    bool use_bracket_algorithm = second_derivative <= 0.0;
+    if (!use_bracket_algorithm)
+    {
+      // Newton-Raphson.
+      g -= helper.derivative() / second_derivative;
+
+      // If we went out of bounds, drop back to using a bracket algorithm.
+      use_bracket_algorithm = g <= 0.0 || g >= 1.0;
+    }
+    if (use_bracket_algorithm)
+    {
+      double closest_boundary = prev_g < 0.5 ? 0.0 : 1.0;
+      g = 0.5 * (closest_boundary + prev_g);
+    }
+    Dout(dc::notice, (use_bracket_algorithm ? "Bracket" : "Newton-Raphson") <<
+        ": new g = " << g << "; Δg = " << (g - prev_g) << "; Δg/g = " << ((g - prev_g) / g));
+  }
+  while (std::abs(g - prev_g) > std::abs(0.001 * g));
+
+  // Initialize the Bezier curve with the found value of g.
+  return helper.initialize(g);
 }
 
+#ifdef CWDEBUG
 //static
 std::unique_ptr<CubicBezierCurve> CubicBezierCurve::create(Point P0, Point P1, Vector T0, Vector T1, Point Pg)
 {
-  return std::make_unique<CubicBezierCurveImpl2>(P0, P1, T0, T1, Pg);
+  return std::make_unique<DebugAccessToCubicBezierCurveImpl>(P0, P1, T0, T1, Pg);
 }
+#endif
 
 double BezierCurve::quadratic_arc_length() const
 {
@@ -755,6 +805,11 @@ double BezierCurve::arc_length(double tolerance) const
     return std::sqrt(c0 + t * (c1 + t * (c2 + t * (c3 + t * c4))));
   };
   return boost::math::quadrature::gauss_kronrod<double, 31>::integrate(f, 0.0, 1.0, tolerance);
+}
+
+double BezierCurve::distance_squared(Vector Q, Vector direction) const
+{
+  return 0.0;
 }
 
 double BezierCurve::stretching_energy(double tolerance) const

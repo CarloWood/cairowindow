@@ -10,6 +10,14 @@
 
 namespace cairowindow {
 
+// Whether the distance of a point to a fitted Bezier curve is measured horizontally, vertically or perpendicular to the curve.
+enum class Orientation
+{
+  horizontal,
+  vertical,     // This is what one should typically use for normal functions.
+  perpendicular // This should only be used when rotations of the curve make sense (x and y are interchangable and the draw ratio is 1:1).
+};
+
 class BezierFitter
 {
  private:
@@ -18,6 +26,9 @@ class BezierFitter
 
  public:
   BezierFitter() = default;
+
+  void solve(std::function<Point(double)>&& P, std::function<Vector(double)>&& V,
+      Range const& domain, Rectangle const& viewport, double fraction, Orientation orientation);
 
   // func     : the parametric function that must be fitted: takes the parameter (t) and returns a Point.
   // domain   : the minimum and maximum values that will be passed to func_ (the domain of t).
@@ -49,6 +60,10 @@ class BezierFitter
   std::vector<BezierCurve> const& result() const { return result_; }
 
  private:
+  void solve(std::function<Point(double)> const& P, std::function<Vector(double)> const& V,
+      IntersectRectangle const& viewport, double fraction, Orientation orientation,
+      double t0, double t1, Vector P0, Vector T0, Vector Pg, Vector P1, Vector T1);
+
   void solve(std::function<Point(double)> const& func, IntersectRectangle const& viewport,
       double tolerance, double t0, double t6, Vector P0, Vector P3, Vector P6);
 };

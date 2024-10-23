@@ -86,12 +86,6 @@ class BezierCurve
   BezierCurve(Vector P0, Vector C0, Vector C1, Vector P1) :
     m_{{{P0, 3.0 * (C0 - P0), 3.0 * ((C1 - P0) - 2.0 * (C0 - P0)), P1 - P0 - 3.0 * (C1 - C0)}}} { }
 
-  // Construct a fully defined BezierCurve from begin and end point plus their derivative and a third point.
-  // The vectors T0 and T1 are the "velocity" vectors in P0 and P1 respectively, but can have an arbitrary length.
-  // The curve will go through P0 at t=0, P05 at t=0.5 and P1 at t=1.
-  // If it is not possible to construct such a curve, this constructor will throw an exception.
-  BezierCurve(Point P0, Vector T0, Point P1, Vector T1, Point P05);
-
   // Construct a fully defined BezierCurve from "matrix" columns.
   BezierCurve(BezierCurveMatrix const& m) : m_{m} { }
 
@@ -168,6 +162,9 @@ class BezierCurve
     return a.dot(v.rotate_90_degrees()) / utils::square(v.length_squared()) * v.rotate_90_degrees();
   }
 
+  // Return the square of the distance from Q to the intersection point of the curve with the line Q + ξ * direction.
+  double distance_squared(Vector Q, Vector direction) const;
+
   double arc_length(double tolerance) const;
   double stretching_energy(double tolerance) const;
   double bending_energy(double tolerance) const;
@@ -237,6 +234,8 @@ struct CubicBezierCurve : public BezierCurve
   CubicBezierCurve(Point P0, Point P1) : BezierCurve(P0, P1) { }
   virtual ~CubicBezierCurve() = default;
   virtual void initialize_from_g(double g) = 0;
+  virtual double derivative(double g) = 0;
+  virtual double second_derivative(double g) = 0;
 };
 #endif
 

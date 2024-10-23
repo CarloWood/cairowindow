@@ -119,4 +119,70 @@ void BezierFitter::solve(std::function<Point(double)>&& func, Range const& domai
   solve(func, viewport, tolerance, t0, t6, Vector{func(t0)}, Vector{func(0.5 * (t0 + t6))}, Vector{func(t6)});
 }
 
+void BezierFitter::solve(std::function<Point(double)> const& P, std::function<Vector(double)> const& T,
+    IntersectRectangle const& viewport, double fraction, Orientation orientation,
+    double t0, double t4, Vector P0, Vector T0, Vector P2, Vector P4, Vector T4)
+{
+  // 0 --1-- 2 --3-- 4
+  // ↑       ↑       ↑
+  // t0  ↑   |   ↑   t4
+  double     t2         = 0.5 * (t0 + t4);  // 2 is in between 0 and 4.
+  double t1             = 0.5 * (t0 + t2);  // 1 is in between 0 and 2.
+  double         t3     = 0.5 * (t2 + t4);  // 3 is in between 2 and 4.
+
+  Vector P1{P(t1)};     // The point at t1.
+  Vector T2{T(t2)};     // The tangent of P2 (P2 itself is provided as input).
+  Vector P3{P(t3)};     // The point at t3.
+
+  if (depth_ >= 1)
+  {
+    result_.emplace_back(P0, P4);
+    Vector S = result_.back().cubic_from(T0, T4, P2.as_point());
+
+    Vector D1 =
+      orientation == Orientation::horizontal ? Direction::right
+                                             : orientation == Orientation::vertical ? Direction::up
+                                                                                    : T(t1).rotate_90_degrees();
+    Vector D3 =
+      orientation == Orientation::horizontal ? Direction::right
+                                             : orientation == Orientation::vertical ? Direction::up
+                                                                                    : T(t3).rotate_90_degrees();
+    double max_distance_squared =
+      utils::square(fraction * (orientation == Orientation::vertical ? viewport.y2() - viewport.y1() : viewport.x2() - viewport.x1()));
+
+    bool reject = S.x() <= 0.0 || S.y() <= 0.0 ||
+      result_.back().distance_squared(P1, D1) > max_distance_squared ||
+      result_.back().distance_squared(P3, D3) > max_distance_squared;
+
+    if (!reject)
+    {
+#if 0
+      auto& bc = result_.front();
+      Dout(dc::notice, "Drawing: " << bc << "; P0 = " << bc.P0() << ", V0 = " << bc.V0() << ", T0 = " << bc.V0().direction());
+      Dout(dc::notice, "Direction: " << (bc.B(0.001) - bc.P0()).direction());
+#endif
+      return;
+    }
+
+    result_.pop_back();
+  }
+
+  ++depth_;
+  solve(P, T, viewport, fraction, orientation, t0, t2, P0, T0, P1, P2, T2);
+  solve(P, T, viewport, fraction, orientation, t2, t4, P2, T2, P3, P4, T4);
+  --depth_;
+}
+
+void BezierFitter::solve(std::function<Point(double)>&& P, std::function<Vector(double)>&& T,
+    Range const& domain, Rectangle const& viewport, double fraction, Orientation orientation)
+{
+  // Clear result data, in case this object is being re-used.
+  result_.clear();
+
+  double t0 = domain.min();
+  double t1 = domain.max();
+  depth_ = 0;
+  solve(P, T, viewport, fraction, orientation, t0, t1, Vector{P(t0)}, T(t0), Vector{P(0.5 * (t0 + t1))}, Vector{P(t1)}, T(t1));
+}
+
 } // namespace cairowindow

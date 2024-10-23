@@ -77,8 +77,8 @@ int main()
         "Newton Raphson test", {},
         "g", {},
         "dJ/dg", {});
-    plot_newton_raphson.set_xrange({0, 1});
-    plot_newton_raphson.set_yrange({0, 10000});
+    plot_newton_raphson.set_xrange({0.0, 1.0});
+    plot_newton_raphson.set_yrange({-1e6, 1e6});
     plot_newton_raphson.add_to(background_layer_newton_raphson, false);
 
     utils::ColorPool<32> color_pool;
@@ -94,21 +94,23 @@ int main()
     draw::RectangleStyle rectangle_style({.line_color = color::red, .line_width = 1.0});
 
     // Create a point P₀.
-    auto plot_P0 = plot.create_point(second_layer, point_style, {-6.44753, -0.657396});
+    auto plot_P0 = plot.create_point(second_layer, point_style, {-9.50695, 0.0505689});
     // Create a point P₁.
-    auto plot_P1 = plot.create_point(second_layer, point_style, {0.91024, -5.05689});
+    auto plot_P1 = plot.create_point(second_layer, point_style, {2.88243, -3.43869});
     // Create a point Pᵧ.
-    auto plot_P_gamma = plot.create_point(second_layer, point_style, {3.13527, 4.45006});
+    auto plot_P_gamma = plot.create_point(second_layer, point_style, {-8.87484, 1.03666});
     // Create a point Q.
     auto plot_Q = plot.create_point(second_layer, point_style, {0.151707, 1.64349});
 
-    // Create a point Q0 on the circle.
-    double phi0 = -1.18728;
+    Vector initial_T0{1.07732, 1.68504};
+    Vector initial_T1{0.218681, 1.98801};
+
+    // Create point Q0 and Q1 on circles around P0 and P1.
+    double phi0 = initial_T0.direction().as_angle();
+    double phi1 = initial_T1.direction().as_angle();
 
     double const circle_radius = 2.0;
     auto plot_Q0 = plot.create_point(second_layer, point_style({.color_index = 2}), plot_P0 + circle_radius * Direction{phi0});
-    // Create a point Q1 on the circle.
-    double phi1 = -0.233249;
     auto plot_Q1 = plot.create_point(second_layer, point_style({.color_index = 2}), plot_P1 + circle_radius * Direction{phi1});
 
     // Make all points draggable.
@@ -185,61 +187,69 @@ int main()
       Dout(dc::notice, "T0 = " << T0 << "; T1 = " << T1);
 
       BezierCurve bezier_curve(plot_P0, plot_P1);
-      Vector alpha_beta = bezier_curve.cubic_from(T0, T1, plot_P_gamma);
-      double const& alpha = alpha_beta.x();
-      double const& beta = alpha_beta.y();
+      Vector S = bezier_curve.cubic_from(T0, T1, plot_P_gamma);
+      double const& Sx = S.x();
+      double const& Sy = S.y();
 
-      Dout(dc::notice, "α T0 = " << (alpha * T0) << "; β T1 = " << (beta * T1));
+      Dout(dc::notice, "α T0 = " << (Sx * T0) << "; β T1 = " << (Sy * T1));
 
-      bool reject = alpha < 0.1 || beta < 0.1;
+      bool reject = Sx < 0.1 || Sy < 0.1;
 
       // Draw the Bezier curve.
       //plot_bezier_curve = plot.create_bezier_curve(second_layer, curve_line_style, bezier_curve);
 
       plot::BezierFitter plot_bezier_fitter;
 
-      if (alpha != -1.0 || beta != -1.0)
-      {
-        // The life-time this object determines how long the curve is visible.
-        BezierFitter bezier_fitter(
-            [&bezier_curve](double t) -> Point
-            {
-              //Point p{3.0 * std::cos(2.0 * M_PI * t), 3.0 * std::sin(2.0 * M_PI * t)};
-              //Dout(dc::notice, "P(" << t << ") = " << p);
-              //return p;
-              return bezier_curve.P(t);
-            },
-            {0.0, 1.0},           // Domain
-            plot.viewport());
+      // The life-time this object determines how long the curve is visible.
+      BezierFitter bezier_fitter(
+          [&bezier_curve](double t) -> Point
+          {
+            //Point p{3.0 * std::cos(2.0 * M_PI * t), 3.0 * std::sin(2.0 * M_PI * t)};
+            //Dout(dc::notice, "P(" << t << ") = " << p);
+            //return p;
+            return bezier_curve.P(t);
+          },
+          {0.0, 1.0},           // Domain
+          plot.viewport());
 
-        Dout(dc::notice, "bezier_curve = " << bezier_curve);
-        Dout(dc::notice, "|J| = " << bezier_curve.J().length());
+      Dout(dc::notice, "bezier_curve = " << bezier_curve);
+      Dout(dc::notice, "|J| = " << bezier_curve.J().length());
 
-        // Draw bezier_fitter.
-        plot_bezier_fitter = plot.create_bezier_fitter(second_layer,
-            curve_line_style({.line_color = reject ? color::red : color::black}), std::move(bezier_fitter));
-      }
+      // Draw bezier_fitter.
+      plot_bezier_fitter = plot.create_bezier_fitter(second_layer,
+          curve_line_style({.line_color = reject ? color::red : color::black}), std::move(bezier_fitter));
 
       plot::Point plot_C0 = plot.create_point(second_layer, C0_point_style, bezier_curve.C0().as_point());
       plot::Point plot_C1 = plot.create_point(second_layer, C1_point_style, bezier_curve.C1().as_point());
 
       BezierCurve quadratic_bezier_curve(plot_P0, plot_P1);
       quadratic_bezier_curve.quadratic_from(T0.direction(), T1.direction());
-      auto plot_bezier_curve = plot.create_bezier_curve(second_layer, line_style, quadratic_bezier_curve);
+      auto plot_quadratic_bezier_curve = plot.create_bezier_curve(second_layer, line_style, quadratic_bezier_curve);
 
       plot::BezierFitter plot_dJdg;
       std::unique_ptr<CubicBezierCurve> cubic_bezier_curve = CubicBezierCurve::create(plot_P0, plot_P1, T0, T1, plot_P_gamma);
       BezierFitter bezier_fitter_dJdg(
           [&](double g) -> Point
           {
-            cubic_bezier_curve->initialize_from_g(g);
-            return {g, cubic_bezier_curve->J().length()};
+            return {g, cubic_bezier_curve->derivative(g)};
           },
           {0.01, 0.99},
           plot_newton_raphson.viewport());
-      cubic_bezier_curve.reset();
       plot_dJdg = plot_newton_raphson.create_bezier_fitter(second_layer_newton_raphson,
           curve_line_style, std::move(bezier_fitter_dJdg));
+
+      plot::BezierFitter plot_ddJdgdg;
+      BezierFitter bezier_fitter_ddJdgdg(
+          [&](double g) -> Point
+          {
+            return {g, 0.1 * cubic_bezier_curve->second_derivative(g)};
+          },
+          {0.01, 0.99},
+          plot_newton_raphson.viewport());
+      plot_ddJdgdg = plot_newton_raphson.create_bezier_fitter(second_layer_newton_raphson,
+          curve_line_style({.line_color = color::red}), std::move(bezier_fitter_ddJdgdg));
+
+      cubic_bezier_curve.reset();
 
 #if 0
       Debug(libcw_do.off());
@@ -258,11 +268,11 @@ int main()
       Debug(libcw_do.on());
 #endif
 
-#if 0
-      Vector const J = plot_bezier_curve.J();
-      Vector const A0 = plot_bezier_curve.A0();
-      Vector const V0 = plot_bezier_curve.V0();
-      Vector const B{plot_P0};        // = plot_bezier_curve.B();      // This is the Beginning of the curve, aka P0.
+#if 1
+      Vector const J = bezier_curve.J();
+      Vector const A0 = bezier_curve.A0();
+      Vector const V0 = bezier_curve.V0();
+      Vector const B{plot_P0};        // = bezier_curve.B();      // This is the Beginning of the curve, aka P0.
 
       // Solve P'⋅(P - Q) = 0, to find all t such that P(t) is a point on the Bezier curve
       // where the tangent of the curve is perpendicular to a line from Q to that point P.
@@ -313,7 +323,7 @@ int main()
         double t = roots[r].real();
         if (t < 0.0 || t > 1.0)
           continue;
-        double distance_squared = (plot_bezier_curve.P(t) - plot_Q).length_squared();
+        double distance_squared = (bezier_curve.P(t) - plot_Q).length_squared();
         if (distance_squared < min_distance_squared)
         {
           min_distance_squared = distance_squared;
@@ -330,7 +340,7 @@ int main()
       {
         // Draw a line for the shortest distance found, from Q to P(root[min_r]).
         plot_shortest_distance = plot.create_connector(second_layer, solid_line_style({.line_color = color::lime}),
-            plot_Q, plot_bezier_curve.P(roots[min_r].real()));
+            plot_Q, bezier_curve.P(roots[min_r].real()));
       }
 #endif
 
