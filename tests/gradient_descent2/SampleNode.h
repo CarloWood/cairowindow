@@ -7,7 +7,7 @@
 #include "HorizontalDirection.h"
 #include "ExtremeType.h"
 #include "CriticalPointType.h"
-#include "../CubicPolynomial.h"
+#include "math/CubicPolynomial.h"
 #include <memory>
 #ifdef CWDEBUG
 #include "utils/has_print_on.h"

@@ -4,9 +4,9 @@
 #include "HorizontalDirection.h"
 #include "ScaleUpdate.h"
 #include "SampleNode.h"
-#include "../Polynomial.h"
-#include "../QuadraticPolynomial.h"
-#include "../CubicPolynomial.h"
+#include "math/Polynomial.h"
+#include "math/QuadraticPolynomial.h"
+#include "math/CubicPolynomial.h"
 #include "events/Events.h"
 #include "utils/has_print_on.h"
 

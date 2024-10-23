@@ -1,6 +1,6 @@
 #include "sys.h"
-#include "QuadraticPolynomial.h"
-#include "Polynomial.h"
+#include "math/QuadraticPolynomial.h"
+#include "math/Polynomial.h"
 #include "gradient_descent/Sample.h"
 #include "cairowindow/BezierCurve.h"
 #include "cairowindow/Window.h"

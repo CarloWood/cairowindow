@@ -1,7 +1,7 @@
 #include "sys.h"
 #include "gradient_descent2/ExtremeType.h"
 #include "gradient_descent2/AnalyzedCubic.h"
-#include "CubicPolynomial.h"
+#include "math/CubicPolynomial.h"
 #include <array>
 #include <iomanip>
 #include <limits>

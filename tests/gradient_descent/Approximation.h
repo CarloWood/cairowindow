@@ -4,8 +4,8 @@
 #include "Sample.h"
 #include "HorizontalDirection.h"
 #include "ExtremeType.h"
-#include "../QuadraticPolynomial.h"
-#include "../CubicPolynomial.h"
+#include "math/QuadraticPolynomial.h"
+#include "math/CubicPolynomial.h"
 #include <array>
 
 namespace gradient_descent {

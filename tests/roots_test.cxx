@@ -1,6 +1,6 @@
 #include "sys.h"
-#include "CubicPolynomial.h"
-#include "QuadraticPolynomial.h"
+#include "math/CubicPolynomial.h"
+#include "math/QuadraticPolynomial.h"
 #include "debug.h"
 
 // Helper function to create a quadratic with given roots

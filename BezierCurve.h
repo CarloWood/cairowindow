@@ -162,8 +162,12 @@ class BezierCurve
     return a.dot(v.rotate_90_degrees()) / utils::square(v.length_squared()) * v.rotate_90_degrees();
   }
 
+  // Calculate the t values at which the line Q + ξ * direction intersects with the Bezier curve.
+  // Returns the number of intersection points found.
+  int calculate_intersection_points(Point Q, Vector direction, std::array<double, 3>& intersection_point_t_values_out) const;
+
   // Return the square of the distance from Q to the intersection point of the curve with the line Q + ξ * direction.
-  double distance_squared(Vector Q, Vector direction) const;
+  double distance_squared(Point Q, Vector direction) const;
 
   double arc_length(double tolerance) const;
   double stretching_energy(double tolerance) const;

@@ -4,7 +4,7 @@
 #include "Sample.h"
 #include "AnalyzedCubic.h"
 #include "HorizontalDirection.h"
-#include "../CubicPolynomial.h"
+#include "math/CubicPolynomial.h"
 #include "utils/square.h"
 #include "debug.h"
 

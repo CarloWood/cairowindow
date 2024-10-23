@@ -1,9 +1,8 @@
 #pragma once
 
 #include "ExtremeType.h"
-#include "../CubicPolynomial.h"
-#include "utils/has_print_on.h"
-#include <limits>
+#include "math/AnalyzedCubic.h"
+#include "math/CubicPolynomial.h"
 
 namespace gradient_descent {
 #ifdef CWDEBUG
@@ -14,50 +13,31 @@ static_assert(std::numeric_limits<double>::has_quiet_NaN, "Sorry, you need a qui
 
 class SampleNode;
 
-class AnalyzedCubic
+class AnalyzedCubic : public math::AnalyzedCubic
 {
  private:
-  double inflection_point_;
-  union {
-    double signed_sqrt_D_{std::numeric_limits<double>::quiet_NaN()};
-    double vertical_scale_;
-  };
-  double critical_point_w_;             // If extreme, then the one passed to initialize.
   bool detached_from_extreme_{false};   // Set if matches shouldn't use height. Only valid after calling initialize_matches.
 #if CW_DEBUG
   bool initialize_matches_called_{false};
-  math::CubicPolynomial const* debug_cubic_{nullptr};
 #endif
 
  public:
   AnalyzedCubic() = default;
 
-  void initialize(math::CubicPolynomial const& cubic, ExtremeType extreme_type_);
+  void initialize(math::CubicPolynomial const& cubic, ExtremeType extreme_type)
+  {
+    ASSERT(extreme_type != ExtremeType::unknown);
+    math::AnalyzedCubic::initialize(cubic, static_cast<int>(extreme_type));
+  }
+
   void initialize_matches(SampleNode const& left_sample, SampleNode const& right_sample);
 
   bool has_extrema() const
   {
-    // If this is set then signed_sqrt_D_ can't be used anymore (vertical_scale_ has been set).
+    // If this is set then signed_sqrt_D_ can't be used anymore (it was overwritten with "vertical_scale").
     ASSERT(!detached_from_extreme_);
     // signed_sqrt_D_ is left as NaN when it is zero.
     return !std::isnan(signed_sqrt_D_);
-  }
-
-  double get_extreme() const
-  {
-    // Only call this function if has_extrema() returns true.
-    ASSERT(has_extrema());
-    return critical_point_w_;
-  }
-
-  double inflection_point() const
-  {
-    return inflection_point_;
-  }
-
-  double get_other_extreme() const
-  {
-    return 2.0 * inflection_point_ - critical_point_w_;
   }
 
   double height(double w, double d) const
@@ -89,7 +69,9 @@ class AnalyzedCubic
 
   bool matches(double w, double Lw, math::CubicPolynomial const& g)
   {
-    // If the vertical_scale_ is +inf then (w, Lw) always matches.
+    // signed_sqrt_D_ has been used for something else.
+    double& vertical_scale_ = signed_sqrt_D_;
+    // If the vertical_scale is +inf then (w, Lw) always matches.
     if (!std::isfinite(vertical_scale_))
       return true;
     // Call initialize_matches before calling matches.
@@ -100,18 +82,6 @@ class AnalyzedCubic
     // In other words: |Lw - g(w)| <= 0.1 |g(w) - g(e)|
     return std::abs(Lw - g(w)) <= 0.1 * vertical_scale;
   }
-
-#ifdef CWDEBUG
-  // Return a pointer to the cubic that initalize was called with.
-  math::CubicPolynomial const* debug_cubic() const { return debug_cubic_; }
-
-  void print_on(std::ostream& os) const
-  {
-    os << "{inflection_point:" << inflection_point_ <<
-         ", signed_sqrt_D:" << signed_sqrt_D_ <<
-         ", critical_point_w:" << critical_point_w_ << '}';
-  }
-#endif
 };
 
 } // namespace gradient_descent

@@ -121,7 +121,7 @@ void BezierFitter::solve(std::function<Point(double)>&& func, Range const& domai
 
 void BezierFitter::solve(std::function<Point(double)> const& P, std::function<Vector(double)> const& T,
     IntersectRectangle const& viewport, double fraction, Orientation orientation,
-    double t0, double t4, Vector P0, Vector T0, Vector P2, Vector P4, Vector T4)
+    double t0, double t4, Point P0, Vector T0, Point P2, Point P4, Vector T4)
 {
   // 0 --1-- 2 --3-- 4
   // ↑       ↑       ↑
@@ -130,14 +130,14 @@ void BezierFitter::solve(std::function<Point(double)> const& P, std::function<Ve
   double t1             = 0.5 * (t0 + t2);  // 1 is in between 0 and 2.
   double         t3     = 0.5 * (t2 + t4);  // 3 is in between 2 and 4.
 
-  Vector P1{P(t1)};     // The point at t1.
+  Point P1{P(t1)};      // The point at t1.
   Vector T2{T(t2)};     // The tangent of P2 (P2 itself is provided as input).
-  Vector P3{P(t3)};     // The point at t3.
+  Point P3{P(t3)};      // The point at t3.
 
   if (depth_ >= 1)
   {
     result_.emplace_back(P0, P4);
-    Vector S = result_.back().cubic_from(T0, T4, P2.as_point());
+    Vector S = result_.back().cubic_from(T0, T4, P2);
 
     Vector D1 =
       orientation == Orientation::horizontal ? Direction::right
@@ -182,7 +182,7 @@ void BezierFitter::solve(std::function<Point(double)>&& P, std::function<Vector(
   double t0 = domain.min();
   double t1 = domain.max();
   depth_ = 0;
-  solve(P, T, viewport, fraction, orientation, t0, t1, Vector{P(t0)}, T(t0), Vector{P(0.5 * (t0 + t1))}, Vector{P(t1)}, T(t1));
+  solve(P, T, viewport, fraction, orientation, t0, t1, P(t0), T(t0), P(0.5 * (t0 + t1)), P(t1), T(t1));
 }
 
 } // namespace cairowindow

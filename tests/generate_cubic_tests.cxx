@@ -1,5 +1,5 @@
 #include "sys.h"
-#include "CubicPolynomial.h"
+#include "math/CubicPolynomial.h"
 #include "gradient_descent/Sample.h"
 #include "gradient_descent/HorizontalDirection.h"
 #include "gradient_descent/ExtremeType.h"

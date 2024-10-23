@@ -2,7 +2,7 @@
 
 #include "Scale.h"
 #include "ExtremeType.h"
-#include "../QuadraticPolynomial.h"
+#include "math/QuadraticPolynomial.h"
 #ifdef CWDEBUG
 #include "utils/has_print_on.h"
 #endif

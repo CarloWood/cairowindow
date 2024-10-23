@@ -62,7 +62,7 @@ class BezierFitter
  private:
   void solve(std::function<Point(double)> const& P, std::function<Vector(double)> const& V,
       IntersectRectangle const& viewport, double fraction, Orientation orientation,
-      double t0, double t1, Vector P0, Vector T0, Vector Pg, Vector P1, Vector T1);
+      double t0, double t1, Point P0, Vector T0, Point Pg, Point P1, Vector T1);
 
   void solve(std::function<Point(double)> const& func, IntersectRectangle const& viewport,
       double tolerance, double t0, double t6, Vector P0, Vector P3, Vector P6);

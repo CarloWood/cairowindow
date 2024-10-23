@@ -8,7 +8,7 @@
 #include "History.h"
 #include "LocalExtreme.h"
 #include "KineticEnergy.h"
-#include "../Polynomial.h"
+#include "math/Polynomial.h"
 
 namespace gradient_descent {
 

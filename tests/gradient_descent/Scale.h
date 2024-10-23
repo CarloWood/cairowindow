@@ -3,7 +3,7 @@
 #include "Sample.h"
 #include "HorizontalDirection.h"
 #include "ExtremeType.h"
-#include "../CubicPolynomial.h"
+#include "math/CubicPolynomial.h"
 #include "utils/debug_ostream_operators.h"
 #include "utils/almost_equal.h"
 #include "utils/macros.h"

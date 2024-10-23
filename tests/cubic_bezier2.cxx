@@ -1,5 +1,5 @@
 #include "sys.h"
-#include "Polynomial.h"
+#include "math/Polynomial.h"
 #include "cairowindow/BezierCurve.h"
 #include "cairowindow/Window.h"
 #include "cairowindow/Layer.h"

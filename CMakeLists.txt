@@ -151,6 +151,7 @@ target_link_libraries(cairowindow_ObjLib
   PUBLIC
     AICxx::symbolic
     AICxx::chess
+    AICxx::math
     AICxx::utils
     Eigen3::Eigen
   INTERFACE

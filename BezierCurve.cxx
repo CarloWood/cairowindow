@@ -1,8 +1,10 @@
 #include "sys.h"
 #include "BezierCurve.h"
 #include "Matrix.h"
+#include "math/CubicPolynomial.h"
 #include "utils/square.h"
 #include "utils/almost_equal.h"
+#include "utils/macros.h"
 #include <Eigen/Dense>
 #include <boost/math/quadrature/gauss_kronrod.hpp>
 
@@ -807,9 +809,38 @@ double BezierCurve::arc_length(double tolerance) const
   return boost::math::quadrature::gauss_kronrod<double, 31>::integrate(f, 0.0, 1.0, tolerance);
 }
 
-double BezierCurve::distance_squared(Vector Q, Vector direction) const
+int BezierCurve::calculate_intersection_points(Point Q, Vector direction, std::array<double, 3>& intersection_point_t_values_out) const
 {
-  return 0.0;
+  // Create a polynomial c0 + c1 x + c2 x^2 + c3 x^3.
+  double c0 = m_.coefficient[0].dot(direction) - Vector{Q}.dot(direction);
+  double c1 = m_.coefficient[1].dot(direction);
+  double c2 = m_.coefficient[2].dot(direction);
+  double c3 = m_.coefficient[3].dot(direction);
+  math::CubicPolynomial p(c0, c1, c2, c3);
+
+  return p.get_roots(intersection_point_t_values_out);
+}
+
+double BezierCurve::distance_squared(Point Q, Vector direction) const
+{
+  // There are at most three intersection points.
+  std::array<double, 3> intersection_point_t_values;
+  int n = calculate_intersection_points(Q, direction, intersection_point_t_values);
+
+  if (AI_UNLIKELY(n == 0))
+    return false;
+
+  double min_distance_squared = std::numeric_limits<double>::infinity();
+  for (int i = 0; i < n; ++i)
+  {
+    double t = intersection_point_t_values[i];
+    if (t <= 0.0 || t >= 1.0)
+      continue;
+    min_distance_squared = std::min(min_distance_squared, (Q - this->P(t)).length_squared());
+  }
+
+  // Returns infinity if no intersection point for a t in the range <0, 1> existed.
+  return min_distance_squared;
 }
 
 double BezierCurve::stretching_energy(double tolerance) const

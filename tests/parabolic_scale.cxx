@@ -1,5 +1,5 @@
 #include "sys.h"
-#include "QuadraticPolynomial.h"
+#include "math/QuadraticPolynomial.h"
 #include "cairowindow/Window.h"
 #include "cairowindow/Layer.h"
 #include "cairowindow/Plot.h"
