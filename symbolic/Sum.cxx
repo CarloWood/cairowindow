@@ -137,15 +137,32 @@ Expression const& Sum::add(Expression const& arg1, Expression const& arg2)
   {
     if (is_less(sum1->arg1_, arg2))
     {
-      Expression const& result = realize(sum1->arg1_, add(arg2, sum1->arg2_));
-      Dout(dc::finish, result);
-      return result;
+      Expression const& partial = add(arg2, sum1->arg2_);
+      if (Constant::is_zero(partial))
+      {
+        Dout(dc::finish, sum1->arg1_);
+        return sum1->arg1_;
+      }
+      else
+      {
+        Expression const& result = realize(sum1->arg1_, partial);
+        Dout(dc::finish, result);
+        return result;
+      }
     }
     else if (is_less(arg2, sum1->arg1_))
     {
-      Expression const& result = realize(arg2, *sum1);
-      Dout(dc::finish, result);
-      return result;
+      if (Constant::is_zero(arg2))
+      {
+        Dout(dc::finish, arg1);
+        return arg1;
+      }
+      else
+      {
+        Expression const& result = realize(arg2, *sum1);
+        Dout(dc::finish, result);
+        return result;
+      }
     }
     else
     {

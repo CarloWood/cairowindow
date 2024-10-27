@@ -52,7 +52,7 @@ class Vector
   Direction direction() const { return Direction{Point{x_, y_}}; }
 
   // Return the length of the vector.
-  double length() const { return std::sqrt(x_ * x_ + y_ * y_); }
+  double length() const { return std::hypot(x_, y_); }
 
   // Return the square of the length of the vector.
   double length_squared() const { return x_ * x_ + y_ * y_; }

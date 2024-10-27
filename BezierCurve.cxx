@@ -704,8 +704,8 @@ Vector BezierCurve::cubic_from(Vector T0, Vector T1, Point Pg)
       double closest_boundary = prev_g < 0.5 ? 0.0 : 1.0;
       g = 0.5 * (closest_boundary + prev_g);
     }
-    Dout(dc::notice, (use_bracket_algorithm ? "Bracket" : "Newton-Raphson") <<
-        ": new g = " << g << "; Δg = " << (g - prev_g) << "; Δg/g = " << ((g - prev_g) / g));
+//    Dout(dc::notice, (use_bracket_algorithm ? "Bracket" : "Newton-Raphson") <<
+//        ": new g = " << g << "; Δg = " << (g - prev_g) << "; Δg/g = " << ((g - prev_g) / g));
   }
   while (std::abs(g - prev_g) > std::abs(0.001 * g));
 

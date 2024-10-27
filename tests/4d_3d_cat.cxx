@@ -47,8 +47,11 @@ int main()
         "Cubic extention of a Quartic.", {},
         "x", {},
         "y", {});
-    plot.set_xrange({-20, 20});
-    plot.set_yrange({-20, 20});
+    double xz = 0;
+    double yz = 0;
+    double zw = 20;
+    plot.set_xrange({xz - zw, xz + zw});
+    plot.set_yrange({yz - zw, yz + zw});
     plot.add_to(background_layer, true);
 
     utils::ColorPool<32> color_pool;
@@ -62,7 +65,7 @@ int main()
     draw::ConnectorStyle connector_style(line_style({.line_color = color::coral, .dashes = {3.0, 3.0}}));
 
     // Initial values.
-    Point const P0{-14.6654, 14.5188};
+    Point const P0{-14.8121, 13.6755}; //{-14.6654, 14.5188};
     Point const P1{-10, 15};
     Point const P2{10.5591, -14.9588};
     Point const P3{2 * P1.x() - P0.x(), 0};
@@ -90,6 +93,7 @@ int main()
           Point result = new_position;
           if (new_position.x() >= plot_P1.x())
             result = Point{plot_P1.x() - 1e-6, new_position.y()};
+          Dout(dc::notice, "P0 --> " << result);
           return result;
         }
     );
@@ -101,6 +105,7 @@ int main()
             result = Point{plot_P0.x() + 1e-6, new_position.y()};
           if (new_position.x() >= plot_P3.x())
             result = Point{plot_P3.x() - 1e-6, new_position.y()};
+          Dout(dc::notice, "P1 --> " << result);
           return result;
         }
     );
@@ -213,8 +218,8 @@ int main()
         quartic[4 - i] = coeffs(i);
 
       // Plot the quartic.
-      BezierFitter fitter2([&](double w) -> Point{ return {w, quartic(w)}; }, plot.viewport());
-      auto plot_quartic = plot.create_bezier_fitter(second_layer, curve_line_style, std::move(fitter2));
+//      BezierFitter fitter2([&](double w) -> Point{ return {w, quartic(w)}; }, plot.viewport());
+//      auto plot_quartic = plot.create_bezier_fitter(second_layer, curve_line_style, std::move(fitter2));
 
       Dout(dc::notice, "s0 = " << (Sample{plot_P0.x(), plot_P0.y(), quartic.derivative()(plot_P0.x())}) <<
           ", s1 = " << (Sample{plot_P1.x(), plot_P1.y(), quartic.derivative()(plot_P1.x())}) <<
@@ -229,15 +234,27 @@ int main()
           (dP.second_derivative(x1) + 9.0 * a * s) / 6.0);
 
       // Plot the cubic.
-      BezierFitter fitter3([&, x1](double w) -> Point{ return {w, cubic(w - x1)}; }, plot.viewport());
+      BezierFitter fitter3_old;
+      fitter3_old.solve(
+          [&, x1](double w) -> Point { return {w, cubic(w - x1)}; },
+          plot.viewport());
+      auto old_plot_cubic = plot.create_bezier_fitter(second_layer, curve_line_style({.line_color = color::green}), std::move(fitter3_old));
+
+      BezierFitter fitter3;
+      Rectangle viewport{-20, -20, 40, 40};
+      fitter3.solve(
+          [&, x1](double w) -> Point { return {w, cubic(w - x1)}; },
+          [&, x1](double w) -> Vector { return {1.0, cubic.derivative(w - x1)}; },
+          {viewport.offset_x(), viewport.offset_x() + viewport.width()},
+          viewport, 1e-5, Orientation::vertical);
       auto plot_cubic = plot.create_bezier_fitter(second_layer, curve_line_style({.line_color = color::red}), std::move(fitter3));
 
       math::CubicPolynomial cubic2;
       cubic2.initialize(plot_P1.x(), plot_P1.y(), d1, plot_P4.x(), plot_P4.y(), d4);
 
       // Plot the cubic2.
-      BezierFitter fitter4([&](double w) -> Point{ return {w, cubic2(w)}; }, plot.viewport());
-      auto plot_cubic2 = plot.create_bezier_fitter(second_layer, curve_line_style({.line_color = color::green}), std::move(fitter4));
+//      BezierFitter fitter4([&](double w) -> Point{ return {w, cubic2(w)}; }, plot.viewport());
+//      auto plot_cubic2 = plot.create_bezier_fitter(second_layer, curve_line_style({.line_color = color::green}), std::move(fitter4));
 
       // Flush all expose events related to the drawing done above.
       window.set_send_expose_events(true);
