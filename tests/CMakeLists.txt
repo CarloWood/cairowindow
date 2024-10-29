@@ -110,7 +110,7 @@ add_executable(cubic_bezier2 cubic_bezier2.cxx)
 target_link_libraries(cubic_bezier2 AICxx::cairowindow AICxx::symbolic AICxx::math ${AICXX_OBJECTS_LIST} Eigen3::Eigen)
 
 add_executable(random_cubics random_cubics.cxx)
-target_link_libraries(random_cubics AICxx::math ${AICXX_OBJECTS_LIST})
+target_link_libraries(random_cubics AICxx::cairowindow AICxx::symbolic AICxx::math ${AICXX_OBJECTS_LIST} Eigen3::Eigen)
 
 add_executable(cubic_roots cubic_roots.cxx)
 target_link_libraries(cubic_roots AICxx::symbolic AICxx::math ${AICXX_OBJECTS_LIST})
