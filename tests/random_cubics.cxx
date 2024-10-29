@@ -8,7 +8,7 @@
 #include <array>
 #include "debug.h"
 
-constexpr int number_of_cubics = 10000;
+constexpr int number_of_cubics = 10000000;
 
 void transform(std::array<double, 4>&c, double x_scale, double y_scale, double x_shift, double y_shift)
 {
@@ -26,8 +26,13 @@ int main(int argc, char* argv[])
   Debug(NAMESPACE_DEBUG::init());
 
 #if 0
-  // 17.296348 x^2 + 99.720970 x + 10.350319
-  math::CubicPolynomial p(10.350319, 99.720970, 17.296348, 1.0);
+  // x^3 + 17.296348 x^2 + 99.720970 x + 10.350319  --> u^3 - 3 u - 6658
+  //math::CubicPolynomial p(10.350319, 99.720970, 17.296348, 1.0);
+  //math::CubicPolynomial p(-0.94205445425959384546676294432323, -3.0, 0.0, 1.0);
+  // 61087 + 2567⋅x - 151⋅x² + x³
+  //math::CubicPolynomial p(61087, 2567, -151, 1);
+  // (-3652139/3) + (37901/3)⋅x - 151⋅x² + x³
+  math::CubicPolynomial p(-3652139.0 / 3.0, 37901.0 / 3.0, -151, 1);
   std::array<double, 3> roots2;
   int n = p.get_roots(roots2);
   Dout(dc::notice, "The roots of " << p << " are:");
@@ -50,9 +55,9 @@ int main(int argc, char* argv[])
   // Use the mersenne twister engine.
   std::mt19937 engine(seed);
 
-  // Keep all numbers such that their cube still fits in a double.
-  double const max_value = std::cbrt(std::numeric_limits<double>::max());
-  double const min_value = std::cbrt(std::numeric_limits<double>::min());
+  // Keep all numbers within a reasonable range.
+  double const max_value = 1e50;
+  double const min_value = 1e-50;
   Dout(dc::notice, "min_value = " << min_value << "; max_value = " << max_value);
 
   // We'll deal with all numbers logarithmicly, because of their huge spread.
@@ -102,7 +107,7 @@ int main(int argc, char* argv[])
   std::array<double, 3> roots;
   std::cout << "Calculating roots..." << std::endl;
   int max_iterations = 0;
-//  Debug(libcw_do.off());
+  Debug(libcw_do.off());
   unsigned long total_iterations = 0;
   for (math::CubicPolynomial const& cubic : cubics)
   {
@@ -113,7 +118,7 @@ int main(int argc, char* argv[])
     if (iterations == 12 || (iterations < 100 && iterations > max_iterations))
     {
       max_iterations = iterations;
-//      Debug(libcw_do.on());
+      Debug(libcw_do.on());
 
       bool inflection_point_y_larger_than_zero =
         13.5 * cubic[0] + cubic[2] * (utils::square(cubic[2] / cubic[3]) - 4.5 * (cubic[1] / cubic[3])) > 0.0;
@@ -141,9 +146,9 @@ int main(int argc, char* argv[])
       if (cubic_has_local_extrema)
         Dout(dc::continued, ", extreme: " << acubic.get_extreme());
       Dout(dc::finish, ", starting point: " << x);
-//      Debug(libcw_do.off());
+      Debug(libcw_do.off());
     }
   }
-//  Debug(libcw_do.on());
+  Debug(libcw_do.on());
   Dout(dc::notice, "Average number of iterations per cubic: " << (total_iterations / number_of_cubics));
 }

@@ -155,6 +155,8 @@ void Cubic::print_on(std::ostream& os) const
 
 Cubic Cubic::transform(Expression const& x_scale, Expression const& y_scale, Expression const& x_shift, Expression const& y_shift, Symbol const& xp)
 {
+  DoutEntering(dc::notice, "Cubic::transform(" << x_scale << ", " << y_scale << ", " << x_shift << ", " << y_shift << ", " << xp << ")");
+
   // First apply the scaling:
   Expression const& c0_scaled = *coefficients_[0] * y_scale;
   Expression const& c1_scaled = *coefficients_[1] * y_scale / x_scale;
