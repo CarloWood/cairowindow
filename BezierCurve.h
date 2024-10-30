@@ -1,7 +1,9 @@
 #pragma once
 
 #include "Vector.h"
+#include "Direction.h"
 #include "Rectangle.h"
+#include "Point.h"
 #include "utils/square.h"
 #include <array>
 #include <memory>

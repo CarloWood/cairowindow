@@ -1,30 +1,10 @@
 #pragma once
 
-#include "Point.h"
-#include "utils/square.h"
-#include <cmath>
+#include "math/LinePiece.h"
 #include <memory>
 
 namespace cairowindow {
-
-class Direction;
-
-class LinePiece
-{
- private:
-  Point from_;
-  Point to_;
-
- public:
-  LinePiece() = default;
-  LinePiece(Point const& from, Point const& to) : from_(from), to_(to) { }
-
-  Point const& from() const { return from_; }
-  Point const& to() const { return to_; }
-  double length() const { return std::sqrt(utils::square(from_.x() - to_.x()) + utils::square(from_.y() - to_.y())); };
-
-  Direction direction() const;
-};
+using LinePiece = math::LinePiece;
 
 namespace draw {
 class Line;
@@ -36,11 +16,11 @@ class Plot;
 //--------------------------------------------------------------------------
 // LinePiece
 
-class LinePiece : public cairowindow::LinePiece
+class LinePiece : public math::LinePiece
 {
  public:
-  using cairowindow::LinePiece::LinePiece;
-  LinePiece(cairowindow::LinePiece const& line_piece) : cairowindow::LinePiece(line_piece) { }
+  using math::LinePiece::LinePiece;
+  LinePiece(math::LinePiece const& line_piece) : math::LinePiece(line_piece) { }
 
  private:
   friend class Plot;

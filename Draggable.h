@@ -3,10 +3,14 @@
 #include "utils/VectorIndex.h"
 #include "debug.h"
 
+namespace math {
+class Point;
+}
+
 namespace cairowindow {
+using Point = math::Point;
 
 class Rectangle;
-class Point;
 
 using ClickableIndex = utils::VectorIndex<Rectangle>;
 
