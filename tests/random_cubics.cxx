@@ -15,11 +15,22 @@
 
 constexpr int number_of_cubics = 1000000;
 
-bool stop = false;
+bool stop = true;
+
+double guess(double C0)
+{
+  double cbrtC0 = std::cbrt(C0);
+  // Excellent guess for large C0:
+  //return -(cbrtC0 + 1.0 / cbrtC0);
+  // Best guess for small C0:
+  //return -std::sqrt(3.0);
+
+  return -std::sqrt(3.0);
+}
 
 // THIS IS CODE DUPLICATION FROM CubicPolynomial::get_roots!
 int get_roots(cairowindow::plot::Plot& plot, boost::intrusive_ptr<cairowindow::Layer>& layer,
-    cairowindow::draw::LineStyle& line_style, cairowindow::plot::BezierFitter& plot_fitter,
+    cairowindow::draw::LineStyle& line_style, cairowindow::plot::BezierFitter* plot_fitter,
     math::CubicPolynomial& cubic, std::array<double, 3>& roots_out, int& iterations)
 {
   DoutEntering(dc::notice, "get_roots() for " << cubic);
@@ -125,18 +136,22 @@ int get_roots(cairowindow::plot::Plot& plot, boost::intrusive_ptr<cairowindow::L
   bool const inflection_point_y_larger_than_zero = C0 > 0.0;
 
   // Special case for if zero is a root (i.e. Q(u) = u⋅(u² ± 3)).
-  double u = 0.0;
+  double u = cubic_has_local_extrema ? -std::sqrt(3.0) : 0.0;
 
-  // Plot the cubic.
-  plot_fitter.solve(
-      [=](double u) -> cairowindow::Point { return {u, C0 + u * (C1 + utils::square(u))}; },
-      plot.viewport());
-  plot.add_bezier_fitter(layer, line_style({.line_color = cairowindow::color::green}), plot_fitter);
+  if (plot_fitter)
+  {
+    // Plot the cubic.
+    plot_fitter->solve(
+        [=](double u) -> cairowindow::Point { return {u, C0 + u * (C1 + utils::square(u))}; },
+        plot.viewport());
+    plot.add_bezier_fitter(layer, line_style({.line_color = cairowindow::color::green}), *plot_fitter);
+  }
 
   if (AI_LIKELY(C0 != 0.0))       // Is 0 not a root of the cubic?
   {
     // Avoid the local extrema and the inflection point because the derivative might be zero there too.
-    u = inflection_point_y_larger_than_zero ? -2.0 : 2.0;
+    u = guess(C0);
+    Dout(dc::notice, "Initial guess: " << u);
 
     int limit = 100;
     double prev_u;
@@ -155,13 +170,13 @@ int get_roots(cairowindow::plot::Plot& plot, boost::intrusive_ptr<cairowindow::L
       // Apply Halley's method.
       step = -Q_u * Qp_u / (utils::square(Qp_u) - Q_u * half_Qpp_u);
       u += step;                                                                // uₙ₊₁ = uₙ - Q(u)Q'(u) / (Q'(u)² - ½Q(u)Q"(u))
-//      Dout(dc::notice, "Halley: u = " << std::setprecision(15) << u << "; Δu = " << step);
+      Dout(dc::notice, "Halley: u = " << std::setprecision(15) << u << "; Δu = " << step);
     }
     while (step != 0.0 /*&& std::abs(step) < std::abs(prev_step)*/ && --limit);
     iterations = 100 - limit;
   }
 
-  Dout(dc::notice, "Root found: " << u);
+  Dout(dc::notice, "Root found: " << u << "; guess: " << guess(C0));
   stop = std::abs(u) > 15.0;
 
   roots_out[0] = u * scale + Ix;
@@ -194,6 +209,7 @@ int main(int argc, char* argv[])
   Debug(NAMESPACE_DEBUG::init());
   Dout(dc::notice, "Entering main()");
 
+#if 0
   // Handle random seed.
   unsigned int seed;
   if (argc > 1)
@@ -256,6 +272,7 @@ int main(int argc, char* argv[])
 
     cubics.emplace_back(c[0], c[1], c[2], c[3]);
   }
+#endif
 
   try
   {
@@ -263,48 +280,179 @@ int main(int argc, char* argv[])
     using Window = cairowindow::Window;
 
     // Create a window.
-    Window window("random_cubics", 1600, 1200);
+    Window window("random_cubics", 1200, 900);
+    Window window2("difference", 1200, 900);
+    Window window3("S(C0)", 1200, 900);
 
     // Create a new layer with a gray background.
     auto background_layer = window.create_background_layer<Layer>(color::white COMMA_DEBUG_ONLY("background_layer"));
+    auto background_layer2 = window2.create_background_layer<Layer>(color::white COMMA_DEBUG_ONLY("background_layer"));
+    auto background_layer3 = window3.create_background_layer<Layer>(color::white COMMA_DEBUG_ONLY("background_layer"));
 
     // Create another layer.
     auto second_layer = window.create_layer<Layer>({} COMMA_DEBUG_ONLY("second_layer"));
+    auto second_layer2 = window2.create_layer<Layer>({} COMMA_DEBUG_ONLY("second_layer"));
+    auto second_layer3 = window3.create_layer<Layer>({} COMMA_DEBUG_ONLY("second_layer"));
 
     // Open the window and start drawing.
     std::thread event_loop([&](){
       Debug(NAMESPACE_DEBUG::init_thread("event_loop"));
-      // Open window, handle event loop. This must be constructed after the draw stuff, so that it is destructed first!
-      // Upon destruction it blocks until the event loop thread finished (aka, the window was closed).
       EventLoop event_loop = window.run();
+      event_loop.set_cleanly_terminated();
+    });
+
+    // Open window2 and start drawing.
+    std::thread event_loop2([&](){
+      Debug(NAMESPACE_DEBUG::init_thread("event_loop2"));
+      EventLoop event_loop = window2.run();
+      event_loop.set_cleanly_terminated();
+    });
+
+    // Open window3 and start drawing.
+    std::thread event_loop3([&](){
+      Debug(NAMESPACE_DEBUG::init_thread("event_loop3"));
+      EventLoop event_loop = window3.run();
       event_loop.set_cleanly_terminated();
     });
 
     plot::Plot plot(window.geometry(), { .grid = {.color = color::orange} },
         "Transformed cubic to calculate roots", {},
         "u", {},
-        "v", {});
-    plot.set_xrange({-15.0, 15.0});
-    plot.set_yrange({-100.0, 100.0});
+        "C0 - 3u + u^3", {});
+    plot.set_xrange({-5.0, 5.0});
+    plot.set_yrange({-10.0, 10.0});
     plot.add_to(background_layer, false);
 
+    draw::LineStyle line_style({.line_color = color::red, .line_width = 1.0, .dashes = {10.0, 5.0}});
+
+    auto diff_lambda = [&](double log10C0) -> cairowindow::Point
+    {
+      double C0 = std::pow(10.0, log10C0);
+      math::CubicPolynomial p(C0, -3, 0, 1);
+      std::array<double, 3> roots;
+      int iterations;
+      int n = get_roots(plot, second_layer, line_style, nullptr, p, roots, iterations);
+      return {log10C0, log10(std::abs(roots[0] - guess(C0)))};
+    };
+
+    plot::Plot plot2(window2.geometry(), { .grid = {.color = color::orange} },
+        "guess offset near zero", {},
+        "log10(C0)", {},
+        "log10(root - guess)", {});
+    plot2.set_xrange({-3.0, 3.0});
+
+    Debug(libcw_do.off());
+    double ymin = 1e100;
+    double ymax = -1e100;
+    for (int i = 1; i <= 100; i += 2)
+    {
+      double log10C0 = plot2.xrange().min() + i * plot2.xrange().size() / 100;
+      double y = diff_lambda(log10C0).y();
+      ymax = std::max(ymax, y);
+      ymin = std::clamp(ymin, -12.0, y);
+    }
+    Debug(libcw_do.on());
+
+    plot2.set_yrange({ymin, ymax});
+    plot2.add_to(background_layer2, false);
+
+    plot::Plot plot3(window3.geometry(), { .grid = {.color = color::orange} },
+        "Smoothing function", {},
+        "C0", {},
+        "S(C0)", {});
+    plot3.set_xrange({0.0, 1.0});
+    plot3.set_yrange({0.0, 1.0});
+    plot3.add_to(background_layer3, false);
+
     draw::LineStyle curve_line_style({.line_width = 1.0});
+    draw::TextStyle slider_style({.position = draw::centered_below, .font_size = 18.0, .offset = 10});
+
+    auto slider_c0 = plot.create_slider(second_layer, {928, 83, 7, 400}, 0.0, plot2.xrange().min(), plot2.xrange().max());
+    auto slider_c0_label = plot.create_text(second_layer, slider_style, Pixel{928, 483}, "log10(C0)");
+
+    auto slider_s = plot3.create_slider(second_layer3, {928, 83, 7, 400}, 0.0, -1.0, 1.0);
+    auto slider_s_label = plot3.create_text(second_layer3, slider_style, Pixel{928, 483}, "s");
+
+    auto SC0_lambda = [&](double C0) -> cairowindow::Point
+    {
+//      double C0 = std::pow(10.0, log10C0);
+      math::CubicPolynomial p(C0, -3, 0, 1);
+      std::array<double, 3> roots;
+      int iterations;
+      int n = get_roots(plot, second_layer, line_style, nullptr, p, roots, iterations);
+      double root = roots[0];
+      // root = (1 - S(C0)) * (-sqrt(3)) + S(C0) * (-(c + 1/c)) =
+      //      = -sqrt(3) + (sqrt(3) - (c + 1/c)) * S(C0) -->
+      // S(C0) = (root + sqrt(3)) / (sqrt(3) - (c + 1/c))
+      double c = std::cbrt(C0);
+      double SC0 = (std::sqrt(3.0) + root) / (std::sqrt(3.0) - (c + 1.0 / c));
+      return {C0, utils::square(SC0 / C0 + slider_s.value())};
+    };
+
+#if 0
+    //---------------------
+    double x_min = -1.0;
+    double x_max = 1.0;
+    double y_min = SC0_lambda(x_min).y();
+    double y_max = SC0_lambda(x_max).y();
+
+    // Check if the solution is bracketed
+    if (y_min > 0.5 || y_max < 0.5) {
+        throw std::runtime_error("y = 0.5 is not bracketed within x_min and x_max.");
+    }
+
+    double tol = 1e-12;
+    while ((x_max - x_min) > tol) {
+        double x_mid = 0.5 * (x_min + x_max);
+        double y_mid = SC0_lambda(x_mid).y();
+
+        if (y_mid < 0.5) {
+            x_min = x_mid;
+        } else {
+            x_max = x_mid;
+        }
+    }
+
+    Dout(dc::notice, std::setprecision(12) << "Center = " << (0.5 * (x_min + x_max)) << "; aka " << std::pow(10.0, 0.5 * (x_min + x_max)));
+    return 0;
+    //---------------------
+    // Center = -0.0439481247927
+#endif
+    constexpr double center = -0.0439481247927;
 
     std::array<double, 3> roots;
     std::cout << "Calculating roots..." << std::endl;
     int max_iterations = 0;
 //    Debug(libcw_do.off());
     unsigned long total_iterations = 0;
-    for (math::CubicPolynomial& cubic : cubics)
+//    for (math::CubicPolynomial& cubic : cubics)
+    while(1)
     {
       // Suppress immediate updating of the window for each created item, in order to avoid flickering.
-      window.set_send_expose_events(false);
+      window.set_send_expose_events(true);
 
-      int iterations;
+      double C0_s = std::pow(10.0, slider_c0.value());
+      math::CubicPolynomial cubic(C0_s, -3, 0, 1);
+
       plot::BezierFitter plot_bezier_fitter;
-      int n = get_roots(plot, second_layer, curve_line_style, plot_bezier_fitter, cubic, roots, iterations);
+      int iterations;
+      int n = get_roots(plot, second_layer, curve_line_style, &plot_bezier_fitter, cubic, roots, iterations);
       total_iterations += iterations;
 
+      std::array<double, 3> real_roots;
+      math::CubicPolynomial cubic_real(C0_s, -3, 0, 1);
+      cubic_real.get_roots(real_roots, iterations);
+      Dout(dc::notice, "Real root found: " << real_roots[0]);
+
+      // Draw a vertical line at the first found root.
+      auto plot_root_line = plot.create_line(second_layer, line_style({.line_color = color::green}), Point{roots[0], 0.0}, Direction::up);
+
+      // Draw a line at the guess.
+      auto plot_guess_line = plot.create_line(second_layer, line_style, Point{guess(C0_s), 0.0}, Direction::up);
+      auto plot_guess2_line = plot2.create_line(second_layer2, line_style, Point{slider_c0.value(), 0.0}, Direction::up);
+      auto plot_guess3_line = plot2.create_line(second_layer2, line_style, Point{0.0, diff_lambda(slider_c0.value()).y()}, Direction::right);
+
+#if 0
       if (iterations == 12 || (iterations < 100 && iterations > max_iterations))
       {
         max_iterations = iterations;
@@ -338,17 +486,38 @@ int main(int argc, char* argv[])
         Dout(dc::finish, ", starting point: " << x);
 //        Debug(libcw_do.off());
       }
+#endif
+
+      Debug(libcw_do.off());
+      plot::BezierFitter plot_curve;
+      plot_curve.solve(
+          diff_lambda,
+          plot2.viewport());
+      plot2.add_bezier_fitter(second_layer2, curve_line_style, plot_curve);
+      Debug(libcw_do.on());
+
+      Debug(libcw_do.off());
+      plot::BezierFitter plot_curve3;
+      plot_curve3.solve(
+          SC0_lambda,
+          plot3.viewport());
+      plot3.add_bezier_fitter(second_layer3, curve_line_style, plot_curve3);
+#if 0
+      plot::BezierFitter plot_curve3m;
+      plot_curve3m.solve(
+          [&](double log10C0) -> Point { return {log10C0, 1.0 - SC0_lambda(2.0 * center - log10C0).y()}; },
+          plot3.viewport());
+      plot3.add_bezier_fitter(second_layer3, curve_line_style({.line_color = color::red}), plot_curve3m);
+#endif
+      Debug(libcw_do.on());
 
       // Flush all expose events related to the drawing done above.
       window.set_send_expose_events(true);
 
-      if (stop)
-      {
-        // Block until a redraw is necessary (for example because the user moved a draggable object,
-        // or wants to print the current drawing) then go to the top of loop for a redraw.
-        if (!window.handle_input_events())
-          break;          // Program must be terminated.
-      }
+      // Block until a redraw is necessary (for example because the user moved a draggable object,
+      // or wants to print the current drawing) then go to the top of loop for a redraw.
+      if (!window3.handle_input_events())
+        break;          // Program must be terminated.
     }
 //    Debug(libcw_do.on());
     Dout(dc::notice, "Average number of iterations per cubic: " << (total_iterations / number_of_cubics));
