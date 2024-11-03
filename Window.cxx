@@ -339,6 +339,8 @@ void Window::event_loop()
   }
   Message msg{InputEvent::terminate_program};
   push_message(msg);
+
+  destroyed_ = true;
 }
 
 void Window::send_close_event()

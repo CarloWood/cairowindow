@@ -1,0 +1,3 @@
+[submodule "tests/mpreal"]
+	path = tests/mpreal
+	url = https://github.com/advanpix/mpreal.git

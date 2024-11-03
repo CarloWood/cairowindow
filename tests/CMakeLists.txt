@@ -114,3 +114,12 @@ target_link_libraries(random_cubics AICxx::cairowindow AICxx::symbolic AICxx::ma
 
 add_executable(cubic_roots cubic_roots.cxx)
 target_link_libraries(cubic_roots AICxx::symbolic AICxx::math ${AICXX_OBJECTS_LIST})
+
+find_library(GMP_LIBRARY gmp)
+find_library(MPFR_LIBRARY mpfr)
+find_library(GLPK_LIBRARY glpk REQUIRED)
+
+if (GMP_LIBRARY AND MPFR_LIBRARY AND GLPK_LIBRARY)
+add_executable(smoothing_function smoothing_function.cxx)
+target_link_libraries(smoothing_function AICxx::cairowindow AICxx::symbolic AICxx::math ${AICXX_OBJECTS_LIST} ${GMP_LIBRARY} ${MPFR_LIBRARY} ${GLPK_LIBRARY} Eigen3::Eigen)
+endif ()

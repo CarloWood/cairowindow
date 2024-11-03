@@ -6,6 +6,7 @@ include(AICxxProject)
 # OPTIONS
 
 # Option 'EnableSymbolicPrinting' is ${OptionEnableLibcwd} by default.
+message(STATUS "OptionEnableLibcwd = \"${OptionEnableLibcwd}\"")
 cw_option(EnableSymbolicPrinting
   "Enable printing of symbolic expressions to an ostream" ${OptionEnableLibcwd}
   "" OFF

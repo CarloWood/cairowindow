@@ -386,7 +386,7 @@ int main(int argc, char* argv[])
       // S(C0) = (root + sqrt(3)) / (sqrt(3) - (c + 1/c))
       double c = std::cbrt(C0);
       double SC0 = (std::sqrt(3.0) + root) / (std::sqrt(3.0) - (c + 1.0 / c));
-      return {C0, utils::square(SC0 / C0 + slider_s.value())};
+      return {C0, SC0};
     };
 
 #if 0
@@ -429,7 +429,7 @@ int main(int argc, char* argv[])
     while(1)
     {
       // Suppress immediate updating of the window for each created item, in order to avoid flickering.
-      window.set_send_expose_events(true);
+      window.set_send_expose_events(false);
 
       double C0_s = std::pow(10.0, slider_c0.value());
       math::CubicPolynomial cubic(C0_s, -3, 0, 1);

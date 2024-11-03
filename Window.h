@@ -63,6 +63,7 @@ class Window
   std::mutex offscreen_surface_mutex_;
 
   std::atomic_bool running_;
+  std::atomic_bool destroyed_{false};
   Atom wm_delete_window_;
   Atom custom_mouse_event_;
 
@@ -107,6 +108,7 @@ class Window
   void event_loop();
 
   void close();
+  bool destroyed() const { return destroyed_; }
 
   Rectangle geometry() const { return {0, 0, static_cast<double>(width_), static_cast<double>(height_)}; }
 

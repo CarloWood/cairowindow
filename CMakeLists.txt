@@ -97,6 +97,7 @@ target_sources(cairowindow_ObjLib
     "Plot.cxx"
     "Printable.cxx"
     "QuadraticEnergy.cxx"
+    "QuickGraph.cxx"
     "Window.cxx"
     "draw/ArrowHead.cxx"
     "draw/BezierFitter.cxx"
