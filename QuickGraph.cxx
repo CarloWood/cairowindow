@@ -5,8 +5,8 @@
 
 namespace cairowindow {
 
-QuickGraph::QuickGraph(std::string const& title, std::string const& x_label, std::string const& y_label, Range x_range) :
-  title_(title), x_label_(x_label), y_label_(y_label), x_range_(x_range),
+QuickGraph::QuickGraph(std::string const& title, std::string const& x_label, std::string const& y_label, Range x_range, Range y_range) :
+  title_(title), x_label_(x_label), y_label_(y_label), x_range_(x_range), y_range_(y_range),
   window_(title, 1200, 900),
   background_layer_(window_.create_background_layer<Layer>(color::white COMMA_DEBUG_ONLY("QuickGraph::background_layer_"))),
   second_layer_(window_.create_layer<Layer>({} COMMA_DEBUG_ONLY("QuickGraph::second_layer_"))),
@@ -21,34 +21,46 @@ QuickGraph::QuickGraph(std::string const& title, std::string const& x_label, std
       y_label, {})
 {
   DoutEntering(dc::notice, "QuickGraph::QuickGraph(\"" <<
-      title << "\", \"" << x_label << "\", \"" << y_label << "\", " << x_range << ") [" << this << "]");
+      title << "\", \"" << x_label << "\", \"" << y_label << "\", " << x_range << ", " << y_range << ") [" << this << "]");
 }
 
 void QuickGraph::add_function(std::function<double(double)> const& f, draw::LineStyle const& line_style)
 {
   DoutEntering(dc::notice, "QuickGraph::add_function(f, " << line_style << ") [" << this << "]");
 
+  // Only used if still empty_.
+  bool const yrange_provided = y_range_.size() > 0.0;
+
   Rectangle viewport;
   if (empty_)
   {
-    // Make a very rough estimate of the y-axis range by evaluating the function f at a few points.
     double const width = x_range_.size();
     double y_min, y_max;
-    y_min = y_max = f(x_range_.min());
-    for (int i = 1; i <= 8; ++i)
+    if (yrange_provided)
     {
-      double x_probe = i * x_range_.size() / 8 + x_range_.min();
-      double y_probe = f(x_probe);
-      if (y_probe < y_min)
-        y_min = y_probe;
-      if (y_probe > y_max)
-        y_max = y_probe;
+      // Use manually provided y range.
+      y_min = y_range_.min();
+      y_max = y_range_.max();
+    }
+    else
+    {
+      // Make a very rough estimate of the y-axis range by evaluating the function f at a few points.
+      y_min = y_max = f(x_range_.min());
+      for (int i = 1; i <= 8; ++i)
+      {
+        double x_probe = i * x_range_.size() / 8 + x_range_.min();
+        double y_probe = f(x_probe);
+        if (y_probe < y_min)
+          y_min = y_probe;
+        if (y_probe > y_max)
+          y_max = y_probe;
+      }
     }
 
     // Construct a reasonable viewport from this (things outside the viewport are not drawn).
-    double probed_height = y_max - y_min;
-    y_min -= 0.5 * probed_height;
-    viewport = Rectangle{x_range_.min(), y_min, width, 2 * probed_height};
+    double height = y_max - y_min;
+    y_min -= 0.5 * height;
+    viewport = Rectangle{x_range_.min(), y_min, width, 2 * height};
   }
   else
     viewport = plot_.viewport();
@@ -58,23 +70,25 @@ void QuickGraph::add_function(std::function<double(double)> const& f, draw::Line
 
   if (empty_)
   {
-    // Get a much more accurate estimate of the y-axis range from the fitted Bezier curves.
-    Range y_range;
-    std::vector<BezierCurve> const& bezier_curves = plot_bezier_fitter_.back().result();
-    bool first = true;
-    for (BezierCurve const& bezier_curve : bezier_curves)
+    if (!yrange_provided)
     {
-      Rectangle extents = bezier_curve.extents();
-      if (first)
-        y_range = Range{extents.offset_y(), extents.offset_y() + extents.height()};
-      else
-        y_range = Range{std::min(y_range.min(), extents.offset_y()), std::max(y_range.max(), extents.offset_y() + extents.height())};
-      first = false;
+      // Get a much more accurate estimate of the y-axis range from the fitted Bezier curves.
+      std::vector<BezierCurve> const& bezier_curves = plot_bezier_fitter_.back().result();
+      bool first = true;
+      for (BezierCurve const& bezier_curve : bezier_curves)
+      {
+        Rectangle extents = bezier_curve.extents();
+        if (first)
+          y_range_ = Range{extents.offset_y(), extents.offset_y() + extents.height()};
+        else
+          y_range_ = Range{std::min(y_range_.min(), extents.offset_y()), std::max(y_range_.max(), extents.offset_y() + extents.height())};
+        first = false;
+      }
+      Dout(dc::notice, "y_range_ = " << y_range_);
     }
-    Dout(dc::notice, "y_range = " << y_range);
 
     plot_.set_xrange(x_range_);
-    plot_.set_yrange(y_range);
+    plot_.set_yrange(y_range_);
     plot_.add_to(background_layer_, false);
 
     empty_ = false;
@@ -99,8 +113,8 @@ void QuickGraph::add_point(Point P, draw::PointStyle const& point_style)
 void QuickGraph::wait_for_keypress()
 {
   // Block until a key press.
-  window_.handle_input_events();
-  event_loop_.join();
+  if (window_.handle_input_events())
+    event_loop_.join();
 }
 
 QuickGraph::~QuickGraph()

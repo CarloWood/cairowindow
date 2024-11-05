@@ -164,3 +164,27 @@ Multiply with 40.9606857581:
 Shift back by adding 50.333333 :
 
   127
+
+
+---------------------------------
+
+P(x) = C0 - 3x + x^3
+
+r(C0) = (S(C0) - 1) * sqrt(3) - S(C0) * (cbrt(C0) + 1/cbrt(C0)) =
+
+Let W be the approximation (polynomial) of S, and r0 the initial guess for the root r(C0).
+
+ r(C0) = -sqrt(3) + S(C0) * (sqrt(3) - cbrt(C0) - 1/cbrt(C0))           (1)
+r0(C0) = -sqrt(3) + W(C0) * (sqrt(3) - cbrt(C0) - 1/cbrt(C0))           (2)
+
+            r(C0) - r0(C0) 
+Erel(C0) = ----------------, where we want that |Erel(C0)| <= 0.012
+               |r(C0)|     
+
+Subtract (2) from (1) and divide by |r(C0)|:
+
+          r(C0) - r0(C0)     (S(C0) - W(C0)) * (sqrt(3) - cbrt(C0) - 1/cbrt(C0))  
+         ---------------- = ----------------------------------------------------- = Erel(C0)
+             |r(C0)|                           |r(C0)|                            
+
+
