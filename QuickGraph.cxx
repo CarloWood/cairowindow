@@ -113,7 +113,7 @@ void QuickGraph::add_point(Point P, draw::PointStyle const& point_style)
 void QuickGraph::wait_for_keypress()
 {
   // Block until a key press.
-  if (window_.handle_input_events())
+  if (!window_.handle_input_events())
     event_loop_.join();
 }
 

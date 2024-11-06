@@ -2,6 +2,7 @@
 #include "mpreal/mpreal.h"
 #include "cairowindow/QuickGraph.h"
 #include "cairowindow/Line.h"
+#include "math/Polynomial.h"
 #include "utils/ColorPool.h"
 #include <glpk.h>
 #include <boost/math/tools/polynomial.hpp>
@@ -10,6 +11,8 @@
 #include <iostream>
 #include <cassert>
 #include "debug.h"
+
+#define SHOW_POLYNOMIAL_BASIS 1
 
 using namespace mpfr;
 
@@ -173,6 +176,56 @@ mpreal jacobiP(int N, mpreal alpha, mpreal beta, mpreal t)
   }
 
   return Pn;
+}
+
+math::Polynomial jacobiP_sym(int N, double alpha, double beta)
+{
+  // The constructor takes the number of coefficients, thus - the degree plus one.
+  math::Polynomial P_N{N + 1 COMMA_CWDEBUG_ONLY("t")};                  // The result.
+
+  // Special case.
+  if (N == 0)
+    P_N[0] = 1.0;
+  else
+  {
+    // Initialize as-if N=1, thus as P_1.
+    P_N[0] = 0.5 * (alpha - beta);
+    P_N[1] = 0.5 * (alpha + beta) + 1.0;
+
+    math::Polynomial P_N_minus_one{N + 1 COMMA_CWDEBUG_ONLY("t")};      // Initialize as-if N=1, thus as P_0.
+    P_N_minus_one[0] = 1.0;
+
+    math::Polynomial P_N_minus_two{N + 1 COMMA_CWDEBUG_ONLY("t")};
+
+    for (int n = 2; n <= N; ++n)
+    {
+      // Update P_N_minus_two and P_N_minus_one.
+      P_N_minus_two = std::move(P_N_minus_one);
+      P_N_minus_one = std::move(P_N);
+      P_N = math::Polynomial{N + 1 COMMA_CWDEBUG_ONLY("t")};
+
+      double const a = n + alpha;
+      double const b = n + beta;
+      double const c = 2 * n + alpha + beta;
+
+      double a1 = (c - 1) * c * (c - 2);
+      double a2 = (c - 1) * (a - b) * (c - 2 * n);
+      double a3 = 2 * n * (c - n) * (c - 2);
+      double a4 = 2 * (a - 1) * (b - 1) * c;
+
+      a1 = a1 / a3;
+      a2 = a2 / a3;
+      a4 = a4 / a3;
+
+      // Assign P_N = a1 * P_N_minus_one * t.
+      for (int i = 0; i < n; ++i)
+        P_N[i + 1] = P_N_minus_one[i] * a1;
+
+      P_N += a2 * P_N_minus_one - a4 * P_N_minus_two;
+    }
+  }
+
+  return P_N;
 }
 
 #if 0
@@ -423,23 +476,53 @@ int main()
   // Set the default floating-point precision.
   mpfr_set_default_prec(precision_in_bits);
 
-  // Print everything with 30 digits precision.
+  // Print everything with 38 digits precision.
   std::streamsize const old_precision = std::cout.precision(38);
   std::ios::fmtflags const old_flags = std::cout.setf(std::ios::fixed);
 
+#if SHOW_POLYNOMIAL_BASIS
   // Jacobi polynomials test.
-  cairowindow::QuickGraph graph_jacobi("Jacobi polynomials", "t", "J_N^{0,0}", {-1.0, 1.0}, {-6.0, 6.0});
+  cairowindow::QuickGraph graph_jacobi("Jacobi polynomials", "t", "J_N^{0,1}", {-1.0, 1.0}, {-1.0, 2.0});
   cairowindow::draw::LineStyle jacobi_style({.line_width = 1.0});
   namespace color = cairowindow::color;
 
   std::array<cairowindow::Color, 6> colors = {{ color::darkcyan, color::orange, color::green, color::red, color::purple, color::brown }};
+#endif
 
+  // Define the weight function.
+  math::Polynomial sqrt_w(2 COMMA_CWDEBUG_ONLY("t"));   // 1 + t.
+  sqrt_w[0] = 1.0;
+  sqrt_w[1] = 1.0;
+  math::Polynomial w = utils::square(sqrt_w);           // (1 - t)^alpha * (1 + t)^beta = (1 + t)^2.
+
+  std::vector<math::Polynomial> polynomial_basis;
   for (int N = 0; N <= 5; ++N)
-    graph_jacobi.add_function([N](double t) -> double { return jacobiP(N, 0.0, 1.0, t).toDouble(); },
-        jacobi_style({.line_color = colors[N]}));
+  {
+    polynomial_basis.push_back(sqrt_w * jacobiP_sym(N, 0.0, 2.0));
+#if SHOW_POLYNOMIAL_BASIS
+    graph_jacobi.add_function([&, N](double t) -> double { return polynomial_basis[N](t); }, jacobi_style({.line_color = colors[N]}));
+#endif
+  }
 
+  // Make sure the basis is orthogonal.
+  for (int N1 = 0; N1 < 5; ++N1)
+    for (int N2 = N1 + 1; N2 <= 5; ++N2)
+    {
+      auto product = polynomial_basis[N1] * polynomial_basis[N2];       // J_{N1}^{0,2}(t) J_{N2}^{0,2}(t) w(t)
+      auto indefinite_integral = product.integrate();
+      double definite_integral = indefinite_integral(1.0) - indefinite_integral(-1.0);
+      ASSERT(std::abs(definite_integral) < 1e-15);
+    }
+
+#if SHOW_POLYNOMIAL_BASIS
+  {
+    Dout(dc::notice, "Orthogonal polynomial basis:");
+    debug::Indent indent(2);
+    for (math::Polynomial const& polynomial : polynomial_basis)
+      Dout(dc::notice, "1/8 * (" << (8.0 * polynomial) << ")");
+  }
   graph_jacobi.wait_for_keypress();
-  return 0;
+#endif
 
   // Loop over all values of C0 between 0 and 1 in steps of 1/128th.
   mpreal C0(0);
@@ -661,4 +744,6 @@ int main()
   }
   while (true);
 #endif
+
+  graph1.wait_for_keypress();
 }
