@@ -104,6 +104,15 @@ void QuickGraph::add_function(std::function<double(double)> const& f, draw::Line
   window_.set_send_expose_events(true);
 }
 
+void QuickGraph::add_line(Line const& L, draw::LineStyle const& line_style)
+{
+  plot_lines_.emplace_back(L);
+
+  window_.set_send_expose_events(false);
+  plot_.add_line(second_layer_, line_style, plot_lines_.back());
+  window_.set_send_expose_events(true);
+}
+
 void QuickGraph::add_point(Point P, draw::PointStyle const& point_style)
 {
   plot_points_.emplace_back(P);

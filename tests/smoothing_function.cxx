@@ -13,6 +13,8 @@
 #include "debug.h"
 
 #define SHOW_POLYNOMIAL_BASIS 1
+#define SHOW_SMOOTHING_FUNCTION 1
+#define SHOW_ERROR_FUNCTION 0
 
 using namespace mpfr;
 
@@ -24,7 +26,7 @@ void print(mpreal const& val)
 // Define a few constants.
 constexpr mp_prec_t precision_in_bits = 128;
 constexpr double tolerance_dbl = 1e-30;
-constexpr int polynomial_degree = 3;
+constexpr int polynomial_degree = 5;
 
 // Make Eigen work with mpreal.
 namespace Eigen {
@@ -131,54 +133,14 @@ mpreal bracket_S(mpreal x_min, mpreal x_max, mpreal const& target, mpreal const&
 }
 
 // Function to compute the Jacobi polynomial P_N^{(alpha, beta)}(t)
+//
 // Jacobi polynomials are a family of orthogonal polynomials on the interval
 // [−1,1] with respect to the weight function: w(t) = (1 - t)^alpha (1 + t)^beta
 // where alpha, beta > -1.
+//
 // In our case we need an orthogonal basis that is zero in t = -1, which maps
 // to our C0 = 0. Therefore we need beta > 0.
-mpreal jacobiP(int N, mpreal alpha, mpreal beta, mpreal t)
-{
-  mpreal const P_0{1};
-  mpreal const P_1{alpha + 1.0 + (alpha + beta + 2.0) * (t - 1.0) / 2.0};
-
-  // Special cases.
-  if (N == 0)
-    return P_0;
-  if (N == 1)
-    return P_1;
-
-  // Initialize previous two values (where n = 2).
-  mpreal Pnm2 = P_0;    // P_{n-2}
-  mpreal Pnm1 = P_1;    // P_{n-1}
-  mpreal Pn = 0;
-
-  for (int n = 2; n <= N; ++n)
-  {
-                                                        // Legendre (alpha = beta = 0):
-    mpreal const a = n + alpha;                         // a = n
-    mpreal const b = n + beta;                          // b = n
-    mpreal const c = 2 * n + alpha + beta;              // c = 2n
-
-    mpreal a1 = (c - 1) * c * (c - 2);                  // 2n (2n - 1) (2n - 2)
-    mpreal a2 = (c - 1) * (a - b) * (c - 2 * n);
-    mpreal a3 = 2 * n * (c - n) * (c - 2);              // 2n * n * (2n - 2)
-    mpreal a4 = 2 * (a - 1) * (b - 1) * c;
-
-    a1 = a1 / a3;
-    a2 = a2 / a3;
-    a4 = a4 / a3;
-
-    Pn = (a1 * t + a2) * Pnm1 - a4 * Pnm2;
-
-    // Update Pnm2 and Pnm1 for next iteration.
-    Pnm2 = Pnm1;
-    Pnm1 = Pn;
-  }
-
-  return Pn;
-}
-
-math::Polynomial jacobiP_sym(int N, double alpha, double beta)
+math::Polynomial jacobiP(int N, double alpha, double beta)
 {
   // The constructor takes the number of coefficients, thus - the degree plus one.
   math::Polynomial P_N{N + 1 COMMA_CWDEBUG_ONLY("t")};                  // The result.
@@ -228,6 +190,8 @@ math::Polynomial jacobiP_sym(int N, double alpha, double beta)
   return P_N;
 }
 
+using Polynomial = boost::math::tools::polynomial<mpreal>;
+
 #if 0
 // Compute Chebyshev zeroes in the interval [a, b].
 std::vector<mpreal> compute_chebyshev_zeros(int n, mpreal a, mpreal b)
@@ -263,9 +227,6 @@ std::vector<mpreal> compute_newton_coefficients(std::vector<mpreal> const& x, st
 
   return coef;
 }
-#endif
-
-using Polynomial = boost::math::tools::polynomial<mpreal>;
 
 // Expand Newton's polynomial into monomial form.
 Polynomial compute_newton_polynomial(std::vector<mpreal> const& x, std::vector<mpreal> const& coef)
@@ -286,6 +247,7 @@ Polynomial compute_newton_polynomial(std::vector<mpreal> const& x, std::vector<m
 
   return P;
 }
+#endif
 
 // Access coefficients from the polynomial
 void print_polynomial_coefficients(Polynomial const& P)
@@ -482,7 +444,7 @@ int main()
 
 #if SHOW_POLYNOMIAL_BASIS
   // Jacobi polynomials test.
-  cairowindow::QuickGraph graph_jacobi("Jacobi polynomials", "t", "J_N^{0,1}", {-1.0, 1.0}, {-1.0, 2.0});
+  cairowindow::QuickGraph graph_jacobi("Jacobi polynomials", "t", "J_N^{0,2}(t) (1 + t)", {-1.0, 1.0}, {-1.0, 2.0});
   cairowindow::draw::LineStyle jacobi_style({.line_width = 1.0});
   namespace color = cairowindow::color;
 
@@ -493,12 +455,12 @@ int main()
   math::Polynomial sqrt_w(2 COMMA_CWDEBUG_ONLY("t"));   // 1 + t.
   sqrt_w[0] = 1.0;
   sqrt_w[1] = 1.0;
-  math::Polynomial w = utils::square(sqrt_w);           // (1 - t)^alpha * (1 + t)^beta = (1 + t)^2.
+  math::Polynomial w = utils::square(sqrt_w);           // w(t) = (1 - t)^alpha * (1 + t)^beta = (1 + t)^2.
 
   std::vector<math::Polynomial> polynomial_basis;
   for (int N = 0; N <= 5; ++N)
   {
-    polynomial_basis.push_back(sqrt_w * jacobiP_sym(N, 0.0, 2.0));
+    polynomial_basis.push_back(sqrt_w * jacobiP(N, 0.0, 2.0));
 #if SHOW_POLYNOMIAL_BASIS
     graph_jacobi.add_function([&, N](double t) -> double { return polynomial_basis[N](t); }, jacobi_style({.line_color = colors[N]}));
 #endif
@@ -524,22 +486,19 @@ int main()
   graph_jacobi.wait_for_keypress();
 #endif
 
-  // Loop over all values of C0 between 0 and 1 in steps of 1/128th.
-  mpreal C0(0);
-  mpreal const step(1.0 / 128.0);
-
   // Find the value of C0 for which S(C0) returns 0.5.
   long double const C0_half_approximation = 0.90375741845959156233304814223072905692L;
   mpreal const C0_half = bracket_S(std::nextafter(C0_half_approximation, 0.0L), std::nextafter(C0_half_approximation, 1.0L), 0.5, tolerance_dbl);
 
-  std::cout << "C0_half = " << C0_half << std::endl;
+  std::cout << "0.5 = S(" << C0_half << ")" << std::endl;
 
   // Draw S(C0) on the interval [0, 0.9038].
   mpreal root_dummy;
+#if SHOW_SMOOTHING_FUNCTION
   cairowindow::QuickGraph graph1("The smoothing function S(C0)", "C0", "S",
       {0.0, C0_half.toDouble()}, [&root_dummy](double C0) -> double { return S(C0, root_dummy).toDouble(); });
+#endif
 
-#if 0
   // Define zero.
   mpreal const zero(0);
   mpreal const sqrt_3(sqrt(3));
@@ -551,39 +510,73 @@ int main()
   // Initialize a vector to store extrema of E.
   std::vector<Extremum> extrema;
 
+#if SHOW_ERROR_FUNCTION
   // Draw E(C0) on the interval [0, 0.9038].
   cairowindow::QuickGraph graph2("The error function E(C0)", "C0", "E", {0.0, C0_half.toDouble()});
 
   utils::ColorPool<32> color_pool;
   namespace color = cairowindow::color;
+#endif
 
   {
-    // We will use an orthogal polynomial basis that is zero in x = 0; therefore we
+    // We use an orthogonal polynomial basis that is zero in x = 0; therefore we
     // don't need to fit through the point (0, 0) as that is already guaranteed.
-    // However, we do want more density near zero. Lets use a distribution like
-    // Chebyshev–Gauss–Lobatto nodes on the interval [0, 2 * C0_half] and then
-    // only use the nodes on the interval [0, C0_half]. To guarantee that a node
-    // at C0_half exists, there should be an odd number of Chebyshev–Gauss–Lobatto
-    // nodes on the interval [0, 2 * C0_half]. Moreover, we need N+1 nodes to fit
-    // an N-degree polynomial and we'll be ignoring the node at 0.
-    // Therefore, the number of nodes on the [0, 2 * C0_half] must be 2(N+2)+1 = 2N+5.
+    // However, we do want more density near zero.
+    // Lets use a distribution like Gauss–Lobatto-Chebyshev nodes on the interval
+    // [0, 2 * C0_half] and then only use the nodes on the interval [0, C0_half].
+    // To guarantee that a node at C0_half exists, there should be an odd number
+    // of Gauss–Lobatto-Chebyshev nodes on the interval [0, 2 * C0_half].
+    // Moreover, we need N+1 nodes to fit an N-degree polynomial and we'll be
+    // ignoring the node at x=0. Therefore, the number of nodes on the [0, 2 * C0_half]
+    // interval must be 2(N+2)-1 = 2N+3 (minus one because the center node is shared).
 
-    // Compute N+1 Chebyshev zeroes, where N is the degree of the polynomial that we want to fit to S.
-    std::vector<mpreal> zeroes = compute_chebyshev_zeros(polynomial_degree + 1, 0, C0_half);
-    zeroes[0] = 0.0;
+    // Compute N+1 nodes, where N is the degree of the polynomial that we want to fit to S.
+    int const N = polynomial_degree;
+    std::vector<mpreal> nodes;          // The x-coordinates of the nodes, in the interval (0, C0_half].
+
+    // Example with N = 4:
+    // t:  -1              0              1
+    //      ↓              ↓              ↓
+    // i = 10  9  8  7  6  5  4  3  2  1  0     The GLC indices.
+    //         ^  ^  ^  ^  ^
+    //         ↑           ↑`-- the i values used (N + 1 in total).
+    //       2N+1         N+1
+    // x:   0            C0_half
+    //
+    // The spacing around the center is larger than the spacing at the edges.
+    //
+    int const number_of_GLC_nodes = 2 * N + 3;                  // Total number of Gauss–Lobatto-Chebyshev nodes.
+    mpreal const pi = const_pi();
+
+    // Generate the nodes in the GLC interval (-1, 0].
+    for (int i = 2 * N + 1; i >= N + 1; --i)                    // Index of the GLC node.
+    {
+      mpreal t_i = cos(pi * i / (number_of_GLC_nodes - 1));     // Compute the GLC node.
+
+      // Map the node from (-1, 0] to (0, C0_half].
+      mpreal x = (t_i + 1) * C0_half;
+
+      // Store the mapped node.
+      nodes.push_back(x);
+#if SHOW_SMOOTHING_FUNCTION
+      math::Line line({nodes.back().toDouble(), 0.0}, math::Direction::up);
+      graph1.add_line(line);
+#endif
+    }
 
     // Evaluate S(c) at the mapped nodes.
     std::vector<mpreal> S_values;
-    for (mpreal c : zeroes)
+    for (mpreal c : nodes)
       S_values.push_back(S(c, root_dummy));
 
     // Define our initial polynomial approximation.
-    auto coefficients = compute_newton_coefficients(zeroes, S_values);
-    Polynomial P = compute_newton_polynomial(zeroes, coefficients);
+    auto coefficients = compute_newton_coefficients(nodes, S_values);
+    Polynomial P = compute_newton_polynomial(nodes, coefficients);
 
+#if SHOW_SMOOTHING_FUNCTION
     graph1.add_function([&P](double C0) -> double { return (P.evaluate(C0) * C0).toDouble(); }, color::red);
 
-    cairowindow::QuickGraph graph1_zoom("The smoothing function S(C0)", "C0", "S",
+    cairowindow::QuickGraph graph1_zoom("S(C0) + zoomed in approximation", "C0", "S and S + 100 E",
         {0.0, C0_half.toDouble()},
         [&root_dummy](double C0) -> double { return S(C0, root_dummy).toDouble(); });
     graph1_zoom.add_function([&P, &root_dummy](double C0) -> double
@@ -592,7 +585,9 @@ int main()
           mpreal diff = P.evaluate(C0) - SC0;
           return (SC0 + 100 * diff).toDouble();
         }, color::red);
+#endif
 
+#if 0
     {
       // Define the error function E(c) = S(c) - c * P(c).
       mpreal root_value;
@@ -618,10 +613,12 @@ int main()
       // Draw E(C0) on the interval [0, 0.9038].
       graph2.add_function([&E](double C0) -> double { return E(C0).toDouble(); });
 
-      find_extrema(E, zero, C0_half, zeroes, tolerance, extrema, graph2, color_pool);
+      find_extrema(E, zero, C0_half, nodes, tolerance, extrema, graph2, color_pool);
     }
+#endif
   }
 
+#if 0
   do
   {
     // Lets define M = N+Z, so that M=N if we didn't find any extra zeroes.
