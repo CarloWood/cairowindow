@@ -12,9 +12,10 @@
 #include <cassert>
 #include "debug.h"
 
-#define SHOW_POLYNOMIAL_BASIS 1
-#define SHOW_SMOOTHING_FUNCTION 1
-#define SHOW_ERROR_FUNCTION 0
+#define SHOW_POLYNOMIAL_BASIS 0
+#define SHOW_SMOOTHING_FUNCTION 0
+#define SHOW_SMOOTHING_FUNCTION_ZOOM 1
+#define SHOW_ERROR_FUNCTION 1
 
 using namespace mpfr;
 
@@ -26,7 +27,7 @@ void print(mpreal const& val)
 // Define a few constants.
 constexpr mp_prec_t precision_in_bits = 128;
 constexpr double tolerance_dbl = 1e-30;
-constexpr int polynomial_degree = 5;
+constexpr int polynomial_degree = 3;
 
 // Make Eigen work with mpreal.
 namespace Eigen {
@@ -132,6 +133,8 @@ mpreal bracket_S(mpreal x_min, mpreal x_max, mpreal const& target, mpreal const&
   return 0.5 * (x_min + x_max);
 }
 
+using Polynomial = boost::math::tools::polynomial<mpreal>;
+
 // Function to compute the Jacobi polynomial P_N^{(alpha, beta)}(t)
 //
 // Jacobi polynomials are a family of orthogonal polynomials on the interval
@@ -140,31 +143,28 @@ mpreal bracket_S(mpreal x_min, mpreal x_max, mpreal const& target, mpreal const&
 //
 // In our case we need an orthogonal basis that is zero in t = -1, which maps
 // to our C0 = 0. Therefore we need beta > 0.
-math::Polynomial jacobiP(int N, double alpha, double beta)
+Polynomial jacobiP(int N, double alpha, double beta)
 {
   // The constructor takes the number of coefficients, thus - the degree plus one.
-  math::Polynomial P_N{N + 1 COMMA_CWDEBUG_ONLY("t")};                  // The result.
+  Polynomial P_N;                               // The result.
 
   // Special case.
   if (N == 0)
-    P_N[0] = 1.0;
+    P_N = Polynomial({1});
   else
   {
     // Initialize as-if N=1, thus as P_1.
-    P_N[0] = 0.5 * (alpha - beta);
-    P_N[1] = 0.5 * (alpha + beta) + 1.0;
+    P_N = Polynomial({0.5 * (alpha - beta), 0.5 * (alpha + beta) + 1.0});
 
-    math::Polynomial P_N_minus_one{N + 1 COMMA_CWDEBUG_ONLY("t")};      // Initialize as-if N=1, thus as P_0.
-    P_N_minus_one[0] = 1.0;
-
-    math::Polynomial P_N_minus_two{N + 1 COMMA_CWDEBUG_ONLY("t")};
+    Polynomial P_N_minus_one({1});              // Initialize as-if N=1, thus as P_0.
+    Polynomial P_N_minus_two;
 
     for (int n = 2; n <= N; ++n)
     {
       // Update P_N_minus_two and P_N_minus_one.
       P_N_minus_two = std::move(P_N_minus_one);
       P_N_minus_one = std::move(P_N);
-      P_N = math::Polynomial{N + 1 COMMA_CWDEBUG_ONLY("t")};
+      P_N = Polynomial(0);
 
       double const a = n + alpha;
       double const b = n + beta;
@@ -179,20 +179,13 @@ math::Polynomial jacobiP(int N, double alpha, double beta)
       a2 = a2 / a3;
       a4 = a4 / a3;
 
-      // Assign P_N = a1 * P_N_minus_one * t.
-      for (int i = 0; i < n; ++i)
-        P_N[i + 1] = P_N_minus_one[i] * a1;
-
-      P_N += a2 * P_N_minus_one - a4 * P_N_minus_two;
+      P_N = P_N_minus_one * Polynomial({0, a1}) + a2 * P_N_minus_one - a4 * P_N_minus_two;
     }
   }
 
   return P_N;
 }
 
-using Polynomial = boost::math::tools::polynomial<mpreal>;
-
-#if 0
 // Compute Chebyshev zeroes in the interval [a, b].
 std::vector<mpreal> compute_chebyshev_zeros(int n, mpreal a, mpreal b)
 {
@@ -215,6 +208,7 @@ std::vector<mpreal> compute_chebyshev_zeros(int n, mpreal a, mpreal b)
   return zeroes;
 }
 
+#if 0
 // Compute Newton's divided differences coefficients.
 std::vector<mpreal> compute_newton_coefficients(std::vector<mpreal> const& x, std::vector<mpreal> const& y)
 {
@@ -380,8 +374,11 @@ double find_zero(std::function<mpreal(mpreal)> const& f, double x_min, double x_
 }
 
 void find_extrema(std::function<mpreal(mpreal)> const& E, mpreal const& zero, mpreal const& C0_half,
-    std::vector<mpreal> const& zeroes, mpreal const& tolerance, std::vector<Extremum>& extrema,
-    cairowindow::QuickGraph& graph2, utils::ColorPool<32>& color_pool)
+    std::vector<mpreal> const& zeroes, mpreal const& tolerance, std::vector<Extremum>& extrema
+#if SHOW_ERROR_FUNCTION
+    , cairowindow::QuickGraph& error_function_graph, utils::ColorPool<32>& color_pool
+#endif
+    )
 {
   cairowindow::draw::PointStyle min_style({.color_index = color_pool.get_and_use_color(), .filled_shape = 1});
   cairowindow::draw::PointStyle max_style({.color_index = color_pool.get_and_use_color(), .filled_shape = 7});
@@ -396,8 +393,10 @@ void find_extrema(std::function<mpreal(mpreal)> const& E, mpreal const& zero, mp
     mpreal c_max = i == zeroes.size() ? C0_half : zeroes[i];
 
     // Find the extremum in the interval.
-    graph2.add_point({c_min.toDouble(), E(c_min).toDouble()}, min_style);
-    graph2.add_point({c_max.toDouble(), E(c_max).toDouble()}, max_style);
+#if SHOW_ERROR_FUNCTION
+    error_function_graph.add_point({c_min.toDouble(), E(c_min).toDouble()}, min_style);
+    error_function_graph.add_point({c_max.toDouble(), E(c_max).toDouble()}, max_style);
+#endif
     Extremum extremum = find_extremum(E, c_min, c_max, tolerance);
 
     if (extremum.sign_ != expected_sign)
@@ -426,9 +425,43 @@ void find_extrema(std::function<mpreal(mpreal)> const& E, mpreal const& zero, mp
     expected_sign = -expected_sign;
   }
 
+#if SHOW_ERROR_FUNCTION
   // Show the extrema. If found Z extra zeroes, we now have N+2+Z extrema.
   for (auto const& extremum : extrema)
-    graph2.add_point({extremum.x_.toDouble(), extremum.y_.toDouble()});
+    error_function_graph.add_point({extremum.x_.toDouble(), extremum.y_.toDouble()});
+#endif
+}
+
+// Function to compose two polynomials: Q(x) = P(t(x))
+Polynomial compose(Polynomial const& P, Polynomial const& t)
+{
+  Polynomial Q(0);              // Initialize Q(x) = 0.
+  Polynomial t_power(1);        // Start with t(x)^0 = 1.
+
+  for (std::size_t k = 0; k <= P.degree(); ++k)
+  {
+    if (k > 0)
+      t_power = t_power * t;    // Compute t(x)^k.
+    Q += P[k] * t_power;        // Accumulate Q(x) += p_k * t(x)^k.
+  }
+
+  return Q;
+}
+
+// Function to transform P(t) to Q(x) where t = (2 * x / C0_half) - 1.
+Polynomial transform_Pt_to_Qx(Polynomial const& Pt, mpreal const& C0_half)
+{
+  // Define the coefficients a and b for t(x).
+  mpreal const a = 2 / C0_half;
+  mpreal const b = -1;
+
+  // Create t(x) = b + a x.
+  Polynomial t({b, a});
+
+  // Compose P(t(x)) to get Q(x).
+  Polynomial Qx = compose(Pt, t);
+
+  return Qx;
 }
 
 int main()
@@ -442,60 +475,60 @@ int main()
   std::streamsize const old_precision = std::cout.precision(38);
   std::ios::fmtflags const old_flags = std::cout.setf(std::ios::fixed);
 
-#if SHOW_POLYNOMIAL_BASIS
-  // Jacobi polynomials test.
-  cairowindow::QuickGraph graph_jacobi("Jacobi polynomials", "t", "J_N^{0,2}(t) (1 + t)", {-1.0, 1.0}, {-1.0, 2.0});
-  cairowindow::draw::LineStyle jacobi_style({.line_width = 1.0});
-  namespace color = cairowindow::color;
-
-  std::array<cairowindow::Color, 6> colors = {{ color::darkcyan, color::orange, color::green, color::red, color::purple, color::brown }};
-#endif
-
-  // Define the weight function.
-  math::Polynomial sqrt_w(2 COMMA_CWDEBUG_ONLY("t"));   // 1 + t.
-  sqrt_w[0] = 1.0;
-  sqrt_w[1] = 1.0;
-  math::Polynomial w = utils::square(sqrt_w);           // w(t) = (1 - t)^alpha * (1 + t)^beta = (1 + t)^2.
-
-  std::vector<math::Polynomial> polynomial_basis;
-  for (int N = 0; N <= 5; ++N)
-  {
-    polynomial_basis.push_back(sqrt_w * jacobiP(N, 0.0, 2.0));
-#if SHOW_POLYNOMIAL_BASIS
-    graph_jacobi.add_function([&, N](double t) -> double { return polynomial_basis[N](t); }, jacobi_style({.line_color = colors[N]}));
-#endif
-  }
-
-  // Make sure the basis is orthogonal.
-  for (int N1 = 0; N1 < 5; ++N1)
-    for (int N2 = N1 + 1; N2 <= 5; ++N2)
-    {
-      auto product = polynomial_basis[N1] * polynomial_basis[N2];       // J_{N1}^{0,2}(t) J_{N2}^{0,2}(t) w(t)
-      auto indefinite_integral = product.integrate();
-      double definite_integral = indefinite_integral(1.0) - indefinite_integral(-1.0);
-      ASSERT(std::abs(definite_integral) < 1e-15);
-    }
-
-#if SHOW_POLYNOMIAL_BASIS
-  {
-    Dout(dc::notice, "Orthogonal polynomial basis:");
-    debug::Indent indent(2);
-    for (math::Polynomial const& polynomial : polynomial_basis)
-      Dout(dc::notice, "1/8 * (" << (8.0 * polynomial) << ")");
-  }
-  graph_jacobi.wait_for_keypress();
-#endif
-
   // Find the value of C0 for which S(C0) returns 0.5.
   long double const C0_half_approximation = 0.90375741845959156233304814223072905692L;
   mpreal const C0_half = bracket_S(std::nextafter(C0_half_approximation, 0.0L), std::nextafter(C0_half_approximation, 1.0L), 0.5, tolerance_dbl);
 
   std::cout << "0.5 = S(" << C0_half << ")" << std::endl;
 
+#if SHOW_POLYNOMIAL_BASIS
+  // Jacobi polynomials test.
+  cairowindow::QuickGraph orthogonal_basis_graph("Jacobi polynomials", "t", "J_N^{0,2}(t) (1 + t)", {0.0, 1.0}, {-1.0, 2.0});
+  cairowindow::draw::LineStyle orthogonal_basis_style({.line_width = 1.0});
+  namespace color = cairowindow::color;
+
+  std::array<cairowindow::Color, 6> colors = {{ color::darkcyan, color::orange, color::green, color::red, color::purple, color::brown }};
+#endif
+
+  // Define the weight function.
+  Polynomial sqrt_w({1, 1});                            // 1 + t.
+  Polynomial w = utils::square(sqrt_w);                 // w(t) = (1 - t)^alpha * (1 + t)^beta = (1 + t)^2.
+
+  std::vector<Polynomial> polynomial_basis;
+  for (int N = 0; N <= polynomial_degree; ++N)
+  {
+    polynomial_basis.push_back(transform_Pt_to_Qx(sqrt_w * jacobiP(N, 0.0, 2.0), C0_half));
+#if SHOW_POLYNOMIAL_BASIS
+    orthogonal_basis_graph.add_function(
+        [&, N](double t) -> double { return polynomial_basis[N](t).toDouble(); },
+        orthogonal_basis_style({.line_color = colors[N]}));
+#endif
+  }
+
+  // Make sure the basis is orthogonal.
+  for (int N1 = 0; N1 < polynomial_degree; ++N1)
+    for (int N2 = N1 + 1; N2 <= polynomial_degree; ++N2)
+    {
+      auto product = polynomial_basis[N1] * polynomial_basis[N2];       // J_{N1}^{0,2}(t) J_{N2}^{0,2}(t) w(t)
+      auto indefinite_integral = product.integrate();
+      mpreal definite_integral = indefinite_integral(C0_half) - indefinite_integral(0.0);
+      ASSERT(std::abs(definite_integral.toDouble()) < 1e-15);
+    }
+
+#if SHOW_POLYNOMIAL_BASIS
+  {
+    Dout(dc::notice, "Orthogonal polynomial basis:");
+    debug::Indent indent(2);
+    for (Polynomial const& polynomial : polynomial_basis)
+      Dout(dc::notice, polynomial);
+  }
+  orthogonal_basis_graph.wait_for_keypress();
+#endif
+
   // Draw S(C0) on the interval [0, 0.9038].
   mpreal root_dummy;
 #if SHOW_SMOOTHING_FUNCTION
-  cairowindow::QuickGraph graph1("The smoothing function S(C0)", "C0", "S",
+  cairowindow::QuickGraph smoothing_function_graph("The smoothing function S(C0)", "C0", "S",
       {0.0, C0_half.toDouble()}, [&root_dummy](double C0) -> double { return S(C0, root_dummy).toDouble(); });
 #endif
 
@@ -512,115 +545,106 @@ int main()
 
 #if SHOW_ERROR_FUNCTION
   // Draw E(C0) on the interval [0, 0.9038].
-  cairowindow::QuickGraph graph2("The error function E(C0)", "C0", "E", {0.0, C0_half.toDouble()});
+  cairowindow::QuickGraph error_function_graph("The error function E(C0)", "C0", "E", {0.0, C0_half.toDouble()}, {-0.00025, 0.00025});
 
   utils::ColorPool<32> color_pool;
   namespace color = cairowindow::color;
 #endif
 
   {
-    // We use an orthogonal polynomial basis that is zero in x = 0; therefore we
-    // don't need to fit through the point (0, 0) as that is already guaranteed.
-    // However, we do want more density near zero.
-    // Lets use a distribution like Gauss–Lobatto-Chebyshev nodes on the interval
-    // [0, 2 * C0_half] and then only use the nodes on the interval [0, C0_half].
-    // To guarantee that a node at C0_half exists, there should be an odd number
-    // of Gauss–Lobatto-Chebyshev nodes on the interval [0, 2 * C0_half].
-    // Moreover, we need N+1 nodes to fit an N-degree polynomial and we'll be
-    // ignoring the node at x=0. Therefore, the number of nodes on the [0, 2 * C0_half]
-    // interval must be 2(N+2)-1 = 2N+3 (minus one because the center node is shared).
-
     // Compute N+1 nodes, where N is the degree of the polynomial that we want to fit to S.
     int const N = polynomial_degree;
-    std::vector<mpreal> nodes;          // The x-coordinates of the nodes, in the interval (0, C0_half].
-
-    // Example with N = 4:
-    // t:  -1              0              1
-    //      ↓              ↓              ↓
-    // i = 10  9  8  7  6  5  4  3  2  1  0     The GLC indices.
-    //         ^  ^  ^  ^  ^
-    //         ↑           ↑`-- the i values used (N + 1 in total).
-    //       2N+1         N+1
-    // x:   0            C0_half
-    //
-    // The spacing around the center is larger than the spacing at the edges.
-    //
-    int const number_of_GLC_nodes = 2 * N + 3;                  // Total number of Gauss–Lobatto-Chebyshev nodes.
-    mpreal const pi = const_pi();
-
-    // Generate the nodes in the GLC interval (-1, 0].
-    for (int i = 2 * N + 1; i >= N + 1; --i)                    // Index of the GLC node.
-    {
-      mpreal t_i = cos(pi * i / (number_of_GLC_nodes - 1));     // Compute the GLC node.
-
-      // Map the node from (-1, 0] to (0, C0_half].
-      mpreal x = (t_i + 1) * C0_half;
-
-      // Store the mapped node.
-      nodes.push_back(x);
-#if SHOW_SMOOTHING_FUNCTION
-      math::Line line({nodes.back().toDouble(), 0.0}, math::Direction::up);
-      graph1.add_line(line);
-#endif
-    }
+    // The x-coordinates of the nodes, in the interval (0, C0_half].
+    std::vector<mpreal> nodes = compute_chebyshev_zeros(N + 1, 0.0, C0_half);
 
     // Evaluate S(c) at the mapped nodes.
     std::vector<mpreal> S_values;
     for (mpreal c : nodes)
       S_values.push_back(S(c, root_dummy));
 
+    // Set up the system using Eigen matrices and vectors.
+    using MatrixXmp = Eigen::Matrix<mpreal, Eigen::Dynamic, Eigen::Dynamic>;
+    using VectorXmp = Eigen::Matrix<mpreal, Eigen::Dynamic, 1>;
+    int const num_equations = N + 1;
+    MatrixXmp A(num_equations, num_equations);
+    VectorXmp b(num_equations);
+
+    // Fill vector b with S_values.
+    for (int i = 0; i <= N; ++i)
+      b(i) = S_values[i];
+
+    // Fill matrix A with P_j(x_i).
+    for (int i = 0; i <= N; ++i)
+      for (int j = 0; j <= N; ++j)
+        A(i, j) = polynomial_basis[j](nodes[i]);
+
+    // Solve the Linear System.
+    VectorXmp c = A.colPivHouseholderQr().solve(b);
+
     // Define our initial polynomial approximation.
-    auto coefficients = compute_newton_coefficients(nodes, S_values);
-    Polynomial P = compute_newton_polynomial(nodes, coefficients);
+    Polynomial P({0});
+
+    for (int i = 0; i <= N; ++i)
+      P += c(i) * polynomial_basis[i];
 
 #if SHOW_SMOOTHING_FUNCTION
-    graph1.add_function([&P](double C0) -> double { return (P.evaluate(C0) * C0).toDouble(); }, color::red);
+    smoothing_function_graph.add_function([&](double C0) -> double { return P.evaluate(C0).toDouble(); }, color::red);
+#endif
 
-    cairowindow::QuickGraph graph1_zoom("S(C0) + zoomed in approximation", "C0", "S and S + 100 E",
-        {0.0, C0_half.toDouble()},
-        [&root_dummy](double C0) -> double { return S(C0, root_dummy).toDouble(); });
-    graph1_zoom.add_function([&P, &root_dummy](double C0) -> double
+#if SHOW_SMOOTHING_FUNCTION_ZOOM
+    cairowindow::QuickGraph smoothing_function_graph_zoom("S(C0) + zoomed in approximation", "C0", "S and S + 100 E",
+        {0.0, C0_half.toDouble()}, {-0.05, 0.5},
+        [&](double C0) -> double { return S(C0, root_dummy).toDouble(); });
+    smoothing_function_graph_zoom.add_function([&](double C0) -> double
         {
           mpreal SC0 = S(C0, root_dummy);
           mpreal diff = P.evaluate(C0) - SC0;
           return (SC0 + 100 * diff).toDouble();
         }, color::red);
+    for (mpreal const& node : nodes)
+    {
+      math::Line line({node.toDouble(), 0.0}, math::Direction::up);
+      smoothing_function_graph_zoom.add_line(line);
+    }
+    smoothing_function_graph_zoom.wait_for_keypress();
 #endif
 
-#if 0
     {
-      // Define the error function E(c) = S(c) - c * P(c).
+      // Define the error function E(c) = P(c) - S(c).
       mpreal root_value;
-      auto E = [&P, &root_value, &sqrt_3, &eps](mpreal const& c)
+      auto E = [&](mpreal const& c)
         {
           mpreal Sc = S(c, root_value);
           mpreal Pc = P.evaluate(c);
           mpreal cbrtc = cbrt(c);
           if (cbrtc < 1e-6)
             cbrtc = 1e-6;
-          if (abs(Pc) < 1e-30)
-          {
-            if (Pc < 0.0)
-              Pc = -1e-30;
-            else
-              Pc = 1e-30;
-          }
-          mpreal result = (Sc - Pc) * ((sqrt_3 - cbrtc) * cbrtc - 1) / abs(Pc * cbrtc);
+          mpreal root_S = (Sc - 1) * sqrt_3 - Sc * (cbrtc + 1 / cbrtc);
+          mpreal root_P = (Pc - 1) * sqrt_3 - Pc * (cbrtc + 1 / cbrtc);
+          mpreal result = (root_P - root_S) / abs(root_S);
           ASSERT(std::isfinite(result.toDouble()));
           return result;
         };
 
+#if SHOW_ERROR_FUNCTION
       // Draw E(C0) on the interval [0, 0.9038].
-      graph2.add_function([&E](double C0) -> double { return E(C0).toDouble(); });
-
-      find_extrema(E, zero, C0_half, nodes, tolerance, extrema, graph2, color_pool);
-    }
+      error_function_graph.add_function([&E](double C0) -> double { return E(C0).toDouble(); });
 #endif
+
+      find_extrema(E, zero, C0_half, nodes, tolerance, extrema
+#if SHOW_ERROR_FUNCTION
+          , error_function_graph, color_pool
+#endif
+          );
+    }
   }
 
-#if 0
   do
   {
+    std::cout << "Extrema found:\n";
+    for (Extremum const& extremum : extrema)
+      std::cout << "  " << extremum.x_ << std::endl;
+
     // Lets define M = N+Z, so that M=N if we didn't find any extra zeroes.
     int const M = extrema.size() - 2;
 
@@ -634,9 +658,34 @@ int main()
       extrema_root_values.push_back(extrema_root);
     }
 
+    // Implement the Remez algorithm.
+
     // Find the next polynomial P(x) = c0 + c1 x + c2 x^2 + ... + c_M x^M
-    // such that P(extrema[i].x_) + extrema[i].sign_ * E = extrema[i].y_,
+    // such that P(extrema[i].x_) + extrema[i].sign_ * E * abs(w(extrema[i].x_)) = extrema[i].y_,
     // with unknowns c_i and E.
+    //
+    // Here w(x) is a weight that adjusts the height of the error term in order to make
+    // the relative error in the corresponding root the same.
+    //
+    // Since P(c) approximates S(c), the approximation of the root corresponding to P(c),
+    // for c > 0, is:
+    //
+    //     root(c) = (P(c) - 1) * sqrt_3 - P(c) * (cbrt(c) + 1 / cbrt(c))
+    //
+    // thus the sensitivity of root(c) to changes in P(c) is
+    //
+    //     ∂root(c)/∂P = sqrt_3 - (cbrt(c) + 1 / cbrt(c))
+    //
+    // Note that root(c) = -sqrt_3 + ∂root(c)/∂P ⋅ P(c)
+    //
+    // To ensure that Δroot(c)/root(c) is constant across all extrema (for some ΔP(c)),
+    // we must set:
+    //
+    //              root(c)                   sqrt_3
+    //     w(c) = ------------ = -------------------------------- + P(c)
+    //             ∂root(c)/∂P    cbrt(c) + 1 / cbrt(c) - sqrt_3
+    //
+
     int const num_equations = M + 2;
 
     // Set up the system using Eigen matrices and vectors.
@@ -648,19 +697,18 @@ int main()
     // Fill in the matrix A and vector b.
     for (int i = 0; i < num_equations; ++i)
     {
-      mpreal x_i = extrema[i].x_;
+      mpreal c = extrema[i].x_;
       mpreal sign = extrema[i].sign_;
 
-      // The value of C0 at point i is x_i.
-      mpreal cbrt_C0 = cbrt(x_i);
-      mpreal scaling = abs(extrema_root_values[i] / (sqrt_3 - cbrt_C0 - 1 / cbrt_C0));
+      mpreal cbrt_c = cbrt(c);
+      mpreal w = extrema_root_values[i] / (sqrt_3 - cbrt_c - 1 / cbrt_c);
 
       // Fill in the polynomial terms.
       for (int j = 0; j <= M; ++j)
-        A(i, j) = pow(x_i, j);
+        A(i, j) = pow(c, j);
 
       // Fill in the term for E.
-      A(i, M + 1) = sign * scaling;
+      A(i, M + 1) = sign * abs(w);
 
       // Fill in b_i.
       b(i) = extrema_S_values[i];
@@ -681,20 +729,30 @@ int main()
     for (int i = 0; i <= M; ++i)
       std::cout << "  " << coefficients[i] << " * x^" << i << std::endl;
 
-    graph1.add_function([&P](double C0) -> double { return P.evaluate(C0).toDouble(); }, color::green);
+#if SHOW_SMOOTHING_FUNCTION
+    smoothing_function_graph.add_function([&P](double C0) -> double { return P.evaluate(C0).toDouble(); }, color::green);
+#endif
 
     // Define the error function E(c) = S(c) - P(c).
     mpreal root_value;
-    auto E = [&P, &root_value, &sqrt_3, &eps](mpreal const& c)
+    auto E = [&](mpreal const& c)
       {
         mpreal Sc = S(c, root_value);
         mpreal Pc = P.evaluate(c);
         mpreal cbrtc = cbrt(c);
-        return (Sc - Pc) * ((sqrt_3 - cbrtc) * cbrtc - 1) / max(abs(Pc * cbrtc), eps);
+        if (cbrtc < 1e-6)
+          cbrtc = 1e-6;
+        mpreal root_S = (Sc - 1) * sqrt_3 - Sc * (cbrtc + 1 / cbrtc);
+        mpreal root_P = (Pc - 1) * sqrt_3 - Pc * (cbrtc + 1 / cbrtc);
+        mpreal result = (root_P - root_S) / abs(root_S);
+        ASSERT(std::isfinite(result.toDouble()));
+        return result;
       };
 
+#if SHOW_ERROR_FUNCTION
     // Draw E(C0) on the interval [0, 0.9038].
-    graph2.add_function([&E](double C0) -> double { return E(C0).toDouble(); }, color::blue);
+    error_function_graph.add_function([&E](double C0) -> double { return E(C0).toDouble(); }, color::blue);
+#endif
 
     // Find the roots of E.
     std::vector<mpreal> roots;
@@ -727,20 +785,31 @@ int main()
       if (std::copysign(1.0, points[i].y()) != std::copysign(1.0, points[i + 1].y()))
       {
         zeroes.emplace_back(find_zero(E, points[i].x(), points[i + 1].x(), 1e-6));
-        graph2.add_point({zeroes.back().toDouble(), 0.0}, zero_style);
+#if SHOW_ERROR_FUNCTION
+        error_function_graph.add_point({zeroes.back().toDouble(), 0.0}, zero_style);
+#endif
       }
     }
 
     // Find and store all extrema.
     extrema.clear();
-    find_extrema(E, zero, C0_half, zeroes, tolerance, extrema, graph2, color_pool);
+    find_extrema(E, zero, C0_half, zeroes, tolerance, extrema
+#if SHOW_ERROR_FUNCTION
+        , error_function_graph, color_pool
+#endif
+        );
 
     // Give a chance to view the graphs before clearing.
     std::cin.get();
-    graph2.clear();
+#if SHOW_ERROR_FUNCTION
+    error_function_graph.clear();
+#endif
   }
   while (true);
-#endif
 
-  graph1.wait_for_keypress();
+#if SHOW_ERROR_FUNCTION
+  error_function_graph.wait_for_keypress();
+#elif SHOW_SMOOTHING_FUNCTION
+  smoothing_function_graph.wait_for_keypress();
+#endif
 }
