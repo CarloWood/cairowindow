@@ -12,11 +12,12 @@
 #include <cassert>
 #include "debug.h"
 
-#define SHOW_POLYNOMIAL_BASIS 0
+#define SHOW_POLYNOMIAL_BASIS 1
 #define SHOW_SMOOTHING_FUNCTION 1
-#define SHOW_SMOOTHING_FUNCTION_ZOOM 0
+#define SHOW_SMOOTHING_FUNCTION_ZOOM 1
 #define SHOW_ERROR_FUNCTION 1
-#define SHOW_WEIGH_FUNCTION 0
+#define SHOW_WEIGH_FUNCTION 1
+#define TILL_C0_half 0
 
 using namespace mpfr;
 
@@ -537,7 +538,12 @@ int main()
   mpreal root_dummy;
 #if SHOW_SMOOTHING_FUNCTION
   cairowindow::QuickGraph smoothing_function_graph("The smoothing function S(C0)", "C0", "S",
-      {0.0, C0_half.toDouble()}, [&root_dummy](double C0) -> double { return S(C0, root_dummy).toDouble(); });
+#if TILL_C0_half
+      {0.0, C0_half.toDouble()},
+#else
+      {0.0, 4.0},
+#endif
+      [&root_dummy](double C0) -> double { return S(C0, root_dummy).toDouble(); });
 #endif
 
   // Define zero.
@@ -554,7 +560,13 @@ int main()
 #if SHOW_ERROR_FUNCTION
   // Draw E(C0) on the interval [0, 0.9038].
   // If the absolute value stays under 0.012 then we can find the actual root to the full resolution of a double in only two Halley iterations.
-  cairowindow::QuickGraph error_function_graph("Relative error in the root", "C0", "E", {0.0, C0_half.toDouble()}, {-0.002, 0.002});
+  cairowindow::QuickGraph error_function_graph("Relative error in the root", "C0", "E",
+#if TILL_C0_half
+      {0.0, C0_half.toDouble()},
+#else
+      {0.0, 4.0},
+#endif
+      {-0.002, 0.002});
 
   utils::ColorPool<32> color_pool;
   namespace color = cairowindow::color;
@@ -603,7 +615,12 @@ int main()
 #if SHOW_SMOOTHING_FUNCTION_ZOOM
     // The initial approximation is already so accurate that we also show a graph where the difference is magnified.
     cairowindow::QuickGraph smoothing_function_graph_zoom("S(C0) + zoomed in approximation", "C0", "S and S + 100 E",
-        {0.0, C0_half.toDouble()}, {-0.05, 0.5},
+#if TILL_C0_half
+        {0.0, C0_half.toDouble()},
+#else
+        {0.0, 4.0},
+#endif
+        {-0.05, 0.5},
         [&](double C0) -> double { return S(C0, root_dummy).toDouble(); });
     smoothing_function_graph_zoom.add_function([&](double C0) -> double
         {

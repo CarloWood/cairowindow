@@ -52,53 +52,11 @@ int MaxRelerr::iterations(double relerr, double C0, double r) const
     double u = r0[minus_plus];
     int iterations;
     ASSERT(u < -1.0);
-
-    //--------------------------------------------------------
-    // CODE DUPLICATION FROM math::CubicPolynomial::get_roots!
-
     Dout(dc::notice, "Initial u = " << std::setprecision(18) << u);
-    // Since the initial guess is already very accurate, it is more than sufficient to
-    // determine the resolution of a double around the value of the root (nextafter(u) - u).
-    // If we add less than 1.5 times that to u (but more than 0.5 times that) then u will
-    // be incremented with more than this resolution delta, which is when another iteration
-    // can still improve the result.
-    double const epsilon = 1.5 * (std::nextafter(u, std::numeric_limits<double>::infinity()) - u);
-    ASSERT(epsilon > 0.0);
-    Dout(dc::notice, "epsilon = " << std::setprecision(18) << epsilon);
-    int limit = 100;
-    double prev_u;
-    double step = std::numeric_limits<double>::infinity();
-    double prev_step;
-    debug::Indent indent_(2);
-    do
-    {
-      prev_u = u;
-      prev_step = step;
-      // Calculate Q(u) = C0 + C1 * u + u^3.
-      double Q_u = C0 + u * (utils::square(u) + C1);
-      // Calculate Q''(u) = 6 * u;
-      double half_Qpp_u = 3.0 * u;
-      // Calculate Q'(u) = C1 + 3 * u^2.
-      double Qp_u = half_Qpp_u * u + C1;
-      // Apply Halley's method.
-      step = -Q_u * Qp_u / (utils::square(Qp_u) - Q_u * half_Qpp_u);
-      u += step;                                                                // uₙ₊₁ = uₙ - Q(u)Q'(u) / (Q'(u)² - ½Q(u)Q"(u))
-#ifdef CWDEBUG
-      Dout(dc::notice, "prev_u = " << std::setprecision(18) << prev_u);
-      Dout(dc::notice, "Halley: u = " << std::setprecision(18) << u << " (" <<
-          std::nextafter(u, std::numeric_limits<double>::infinity()) << "); step = " << step << "; Δu = " << (u - prev_u));
-      // Make sure that comparing with epsilon doesn't do worse than detecting that u only changed by a single resolution delta.
-      double near = step > 0.0 ? std::nextafter(prev_u, std::numeric_limits<double>::infinity())
-                               : std::nextafter(prev_u, -std::numeric_limits<double>::infinity());
-      // If u only changed a single bit, then step should NOT be larger than epsilon!
-      if (u == near)
-        ASSERT(!(std::abs(step) > epsilon));
-#endif
-    }
-    while (std::abs(step) > epsilon && --limit);
-    ASSERT(limit > 0);
-    iterations = 100 - limit;
-    //--------------------------------------------------------
+
+#define HALLEY_ITERATIONS_TEST
+#   include "math/CubicPolynomial_get_roots.cpp"
+#undef HALLEY_ITERATIONS_TEST
 
     N[minus_plus] = iterations;
   }
@@ -106,6 +64,7 @@ int MaxRelerr::iterations(double relerr, double C0, double r) const
   // Return the worst cases.
   int max_iterations = std::max(N[0], N[1]);
   Dout(dc::notice, "Number of iterations: " << max_iterations);
+
   return max_iterations;
 }
 
@@ -116,9 +75,9 @@ double MaxRelerr::operator()(double const C0) const
   math::CubicPolynomial cubic(C0, -3.0, 0.0, 1.0);
 
   std::array<double, 3> roots;
-  Debug(dc::notice.off());
+//  Debug(dc::notice.off());
   cubic.get_roots(roots);
-  Debug(dc::notice.on());
+//  Debug(dc::notice.on());
 
   double r = roots[0];
 
@@ -162,19 +121,17 @@ int main()
 
   using namespace cairowindow;
 
-  constexpr int N = 2;
+  QuickGraph graph("Maximum relative error in initial guess to get 2 iterations",
+      "C0", "relerr₀", {0.0, /*0.90375741845*/ 100.0});
 
-  QuickGraph graph("Maximum relative error in initial guess to get " + std::to_string(N) + " iterations",
-      "C0", "relerr₀", {0.0, 0.90375741845});
-  std::array<Color, 4> colors = {{ color::black, color::red, color::green, color::blue }};
-
-//  for (int N = 4; N >= 1; --N)
-  Debug(dc::notice.off());
+//  Debug(dc::notice.off());
   {
-    MaxRelerr max_relerr(N, 1e-9);
-    graph.add_function(max_relerr, colors[N - 1]);
+    MaxRelerr max_relerr2(2, 1e-9);
+//    MaxRelerr max_relerr3(3, 1e-9);
+//    graph.add_function(max_relerr3, color::red);
+    graph.add_function(max_relerr2, color::blue);
   }
-  Debug(dc::notice.on());
+//  Debug(dc::notice.on());
 
   graph.wait_for_keypress();
 }
