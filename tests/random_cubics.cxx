@@ -17,180 +17,20 @@ constexpr int number_of_cubics = 1000000;
 
 bool stop = true;
 
-double guess(double C0)
-{
-  double cbrtC0 = std::cbrt(C0);
-  // Excellent guess for large C0:
-  //return -(cbrtC0 + 1.0 / cbrtC0);
-  // Best guess for small C0:
-  //return -std::sqrt(3.0);
-
-  return -std::sqrt(3.0);
-}
-
-// THIS IS CODE DUPLICATION FROM CubicPolynomial::get_roots!
 int get_roots(cairowindow::plot::Plot& plot, boost::intrusive_ptr<cairowindow::Layer>& layer,
     cairowindow::draw::LineStyle& line_style, cairowindow::plot::BezierFitter* plot_fitter,
-    math::CubicPolynomial& cubic, std::array<double, 3>& roots_out, int& iterations)
+    math::CubicPolynomial& cubic, std::array<double, 3>& roots_out, double& initial_guess, int& iterations)
 {
   DoutEntering(dc::notice, "get_roots() for " << cubic);
 
-  double& coefficients_0 = cubic[0];
-  std::array<double, 4>& coefficients_ = reinterpret_cast<std::array<double, 4>&>(coefficients_0);
+  // Define a coefficients_ for use by math/CubicPolynomial_get_roots.cpp.
+  std::array<double, 4>& coefficients_ = reinterpret_cast<std::array<double, 4>&>(cubic[0]);
 
-  if (coefficients_[3] == 0.0)
-  {
-    // The cubic is actually a quadratic.
-    math::QuadraticPolynomial qp(coefficients_[0], coefficients_[1], coefficients_[2]);
-    return qp.get_roots(*reinterpret_cast<std::array<double, 2>*>(&roots_out[0]));
-  }
-
-  // Step one: divide all coefficients by coefficients_[3]. This does not change the roots.
-  double const c0 = coefficients_[0] / coefficients_[3];
-  double const c1 = coefficients_[1] / coefficients_[3];
-  double const c2 = coefficients_[2] / coefficients_[3];
-  double const d = utils::square(c2) - 3.0 * c1;
-
-  // The cubic is now monic:
-  //
-  //   p(x) = c0 + c1 x + c2 x² + x³
-  //
-  // The first derivative is,
-  //
-  //   p'(x) = c1 + 2 c2 x + 3 x²
-  //
-  // Setting this to zero gives:
-  //                                  -c2 +/- sqrt(c2^2 - 3c1)   -c2 +/- sqrt(d)
-  //   0 = c1 + 2 c2 x + 3 x² --> x = ------------------------ = ---------------
-  //                                             3                     3
-  // Remember if we have local extrema or not.
-  bool const cubic_has_local_extrema = d > 0.0;
-
-  // Calculate the inflection point (where the second derivative is zero).
-  double const Ix = -c2 / 3.0;
-  // Magic (took me several days to find this).
-  double const M = 27.0 * c0 + (2.0 * d - 3.0 * c1) * c2;
-
-  double C0, C1;
-  double scale;
-
-  if (cubic_has_local_extrema)
-  {
-    // Transform the cubic into
-    //
-    //   Q(u) = C0 - 3u + u³
-    //
-    // After transforming the cubic we have the following four possibilities:
-    //
-    //          starting point
-    //                ↓
-    //  --------------+--O--> u-axis (for example)
-    //      .-.         /
-    //     /   \       /
-    //    /     \←----/----- Inflection point
-    //   /       \   /
-    //            `-´←------ The extreme with the largest absolute y value.
-    //       ↑  ↑  ↑  ↑
-    //      -1  0  1  2
-    //
-    // The starting point is set on the positive slope on the side of the local extreme that is the furthest away from the x-axis.
-    //
-    double const sqrt_d = std::sqrt(d);
-    C0 = M / (d * sqrt_d);
-    C1 = -3.0;
-
-    // The applied transform means that any root found must be scaled back by multiplying with
-    scale = sqrt_d / 3.0;
-    // and then adding Ix back.
-  }
-  else
-  {
-    // Transform the cubic into
-    //
-    //   Q(u) = C0 + 3u + u³
-    //
-    //          starting point
-    //                ↓
-    //                /
-    //  -------------O+-> u-axis (for example)
-    //              /
-    //             /
-    //            /
-    //         .⋅´←--------- Inflection point
-    //        /
-    //       /
-    //      /
-    //       ↑  ↑  ↑  ↑
-    //      -1  0  1  2
-
-    double const sqrt_md = std::sqrt(-d);
-    C0 = M / (-d * sqrt_md);
-    C1 = 3.0;
-
-    // The applied transform means that any root found must be scaled back by multiplying with
-    scale = sqrt_md / 3.0;
-    // and then adding Ix back.
-  }
-
-  // Determine if the inflection point is above or below the x-axis.
-  bool const inflection_point_y_larger_than_zero = C0 > 0.0;
-
-  // Special case for if zero is a root (i.e. Q(u) = u⋅(u² ± 3)).
-  double u = cubic_has_local_extrema ? -std::sqrt(3.0) : 0.0;
-
-  if (plot_fitter)
-  {
-    // Plot the cubic.
-    plot_fitter->solve(
-        [=](double u) -> cairowindow::Point { return {u, C0 + u * (C1 + utils::square(u))}; },
-        plot.viewport());
-    plot.add_bezier_fitter(layer, line_style({.line_color = cairowindow::color::green}), *plot_fitter);
-  }
-
-  if (AI_LIKELY(C0 != 0.0))       // Is 0 not a root of the cubic?
-  {
-    // Avoid the local extrema and the inflection point because the derivative might be zero there too.
-    u = guess(C0);
-    Dout(dc::notice, "Initial guess: " << u);
-
-    int limit = 100;
-    double prev_u;
-    double step = std::numeric_limits<double>::infinity();
-    double prev_step;
-    do
-    {
-      prev_u = u;
-      prev_step = step;
-      // Calculate Q(u) = C0 + C1 * u + u^3.
-      double Q_u = C0 + u * (utils::square(u) + C1);
-      // Calculate Q''(u) = 6 * u;
-      double half_Qpp_u = 3.0 * u;
-      // Calculate Q'(u) = C1 + 3 * u^2.
-      double Qp_u = half_Qpp_u * u + C1;
-      // Apply Halley's method.
-      step = -Q_u * Qp_u / (utils::square(Qp_u) - Q_u * half_Qpp_u);
-      u += step;                                                                // uₙ₊₁ = uₙ - Q(u)Q'(u) / (Q'(u)² - ½Q(u)Q"(u))
-      Dout(dc::notice, "Halley: u = " << std::setprecision(15) << u << "; Δu = " << step);
-    }
-    while (step != 0.0 /*&& std::abs(step) < std::abs(prev_step)*/ && --limit);
-    iterations = 100 - limit;
-  }
-
-  Dout(dc::notice, "Root found: " << u << "; guess: " << guess(C0));
-  stop = std::abs(u) > 15.0;
-
-  roots_out[0] = u * scale + Ix;
-  int number_of_roots = 1;
-
-  if (cubic_has_local_extrema)
-  {
-    // Find the other two roots, if any.
-    [[maybe_unused]] double remainder;
-    math::QuadraticPolynomial qp = cubic.long_division(roots_out[0], remainder);
-    number_of_roots += qp.get_roots(*reinterpret_cast<std::array<double, 2>*>(&roots_out[1]));
-  }
-
-  return number_of_roots;
+  using math::QuadraticPolynomial;
+  // Include the body of the function.
+# define RANDOM_CUBICS_TEST
+# include "math/CubicPolynomial_get_roots.cpp"
+# undef RANDOM_CUBICS_TEST
 }
 
 void transform(std::array<double, 4>&c, double x_scale, double y_scale, double x_shift, double y_shift)
@@ -325,31 +165,31 @@ int main(int argc, char* argv[])
 
     draw::LineStyle line_style({.line_color = color::red, .line_width = 1.0, .dashes = {10.0, 5.0}});
 
-    auto diff_lambda = [&](double log10C0) -> cairowindow::Point
+    auto diff_lambda = [&](double C0) -> cairowindow::Point
     {
-      double C0 = std::pow(10.0, log10C0);
       math::CubicPolynomial p(C0, -3, 0, 1);
       std::array<double, 3> roots;
       int iterations;
-      int n = get_roots(plot, second_layer, line_style, nullptr, p, roots, iterations);
-      return {log10C0, log10(std::abs(roots[0] - guess(C0)))};
+      double initial_guess;
+      int n = get_roots(plot, second_layer, line_style, nullptr, p, roots, initial_guess, iterations);
+      return {C0, initial_guess - roots[0]};
     };
 
     plot::Plot plot2(window2.geometry(), { .grid = {.color = color::orange} },
         "guess offset near zero", {},
-        "log10(C0)", {},
+        "C0", {},
         "log10(root - guess)", {});
-    plot2.set_xrange({-3.0, 3.0});
+    plot2.set_xrange({-1.0, 1.0});
 
     Debug(libcw_do.off());
     double ymin = 1e100;
     double ymax = -1e100;
     for (int i = 1; i <= 100; i += 2)
     {
-      double log10C0 = plot2.xrange().min() + i * plot2.xrange().size() / 100;
-      double y = diff_lambda(log10C0).y();
+      double C0 = plot2.xrange().min() + i * plot2.xrange().size() / 100;
+      double y = diff_lambda(C0).y();
       ymax = std::max(ymax, y);
-      ymin = std::clamp(ymin, -12.0, y);
+      ymin = std::min(ymin, y);
     }
     Debug(libcw_do.on());
 
@@ -360,7 +200,7 @@ int main(int argc, char* argv[])
         "Smoothing function", {},
         "C0", {},
         "S(C0)", {});
-    plot3.set_xrange({0.0, 1.0});
+    plot3.set_xrange({-1.0, 1.0});
     plot3.set_yrange({0.0, 1.0});
     plot3.add_to(background_layer3, false);
 
@@ -368,24 +208,35 @@ int main(int argc, char* argv[])
     draw::TextStyle slider_style({.position = draw::centered_below, .font_size = 18.0, .offset = 10});
 
     auto slider_c0 = plot.create_slider(second_layer, {928, 83, 7, 400}, 0.0, plot2.xrange().min(), plot2.xrange().max());
-    auto slider_c0_label = plot.create_text(second_layer, slider_style, Pixel{928, 483}, "log10(C0)");
+    auto slider_c0_label = plot.create_text(second_layer, slider_style, Pixel{928, 483}, "C0");
 
     auto slider_s = plot3.create_slider(second_layer3, {928, 83, 7, 400}, 0.0, -1.0, 1.0);
     auto slider_s_label = plot3.create_text(second_layer3, slider_style, Pixel{928, 483}, "s");
 
     auto SC0_lambda = [&](double C0) -> cairowindow::Point
     {
-//      double C0 = std::pow(10.0, log10C0);
       math::CubicPolynomial p(C0, -3, 0, 1);
       std::array<double, 3> roots;
       int iterations;
-      int n = get_roots(plot, second_layer, line_style, nullptr, p, roots, iterations);
+      double initial_guess;
+      int n = get_roots(plot, second_layer, line_style, nullptr, p, roots, initial_guess, iterations);
       double root = roots[0];
-      // root = (1 - S(C0)) * (-sqrt(3)) + S(C0) * (-(c + 1/c)) =
-      //      = -sqrt(3) + (sqrt(3) - (c + 1/c)) * S(C0) -->
-      // S(C0) = (root + sqrt(3)) / (sqrt(3) - (c + 1/c))
-      double c = std::cbrt(C0);
-      double SC0 = (std::sqrt(3.0) + root) / (std::sqrt(3.0) - (c + 1.0 / c));
+
+      //---------------------------------------------------------------
+      // Copied from math/CubicPolynomial_get_roots.cpp
+      static constexpr double sqrt3 = 1.7320508075688773;    // -√3
+      // Define the value of the root in the case that C0 is zero.
+      double root0 = std::copysign(sqrt3, -C0);
+
+      // We need the cube root of C0.
+      double const cbrtC0 = std::cbrt(C0);
+
+      // Define the value of the root in the case that C0 is large.
+      double const root1 = -(cbrtC0 + 1.0 / cbrtC0);
+      //---------------------------------------------------------------
+
+      // root = (1 - S(C0)) * root0 + S(C0) * root1 -->
+      double SC0 = (root - root0) / (root1 - root0);
       return {C0, SC0};
     };
 
@@ -431,24 +282,25 @@ int main(int argc, char* argv[])
       // Suppress immediate updating of the window for each created item, in order to avoid flickering.
       window.set_send_expose_events(false);
 
-      double C0_s = std::pow(10.0, slider_c0.value());
+      double C0_s = slider_c0.value();
       math::CubicPolynomial cubic(C0_s, -3, 0, 1);
 
       plot::BezierFitter plot_bezier_fitter;
       int iterations;
-      int n = get_roots(plot, second_layer, curve_line_style, &plot_bezier_fitter, cubic, roots, iterations);
+      double initial_guess;
+      int n = get_roots(plot, second_layer, curve_line_style, &plot_bezier_fitter, cubic, roots, initial_guess, iterations);
       total_iterations += iterations;
 
       std::array<double, 3> real_roots;
       math::CubicPolynomial cubic_real(C0_s, -3, 0, 1);
       cubic_real.get_roots(real_roots, iterations);
-      Dout(dc::notice, "Real root found: " << real_roots[0]);
+      Dout(dc::notice, "Real root found: " << real_roots[0] << "; initial guess: " << initial_guess);
 
       // Draw a vertical line at the first found root.
       auto plot_root_line = plot.create_line(second_layer, line_style({.line_color = color::green}), Point{roots[0], 0.0}, Direction::up);
 
       // Draw a line at the guess.
-      auto plot_guess_line = plot.create_line(second_layer, line_style, Point{guess(C0_s), 0.0}, Direction::up);
+      auto plot_guess_line = plot.create_line(second_layer, line_style, Point{initial_guess, 0.0}, Direction::up);
       auto plot_guess2_line = plot2.create_line(second_layer2, line_style, Point{slider_c0.value(), 0.0}, Direction::up);
       auto plot_guess3_line = plot2.create_line(second_layer2, line_style, Point{0.0, diff_lambda(slider_c0.value()).y()}, Direction::right);
 
@@ -502,13 +354,6 @@ int main(int argc, char* argv[])
           SC0_lambda,
           plot3.viewport());
       plot3.add_bezier_fitter(second_layer3, curve_line_style, plot_curve3);
-#if 0
-      plot::BezierFitter plot_curve3m;
-      plot_curve3m.solve(
-          [&](double log10C0) -> Point { return {log10C0, 1.0 - SC0_lambda(2.0 * center - log10C0).y()}; },
-          plot3.viewport());
-      plot3.add_bezier_fitter(second_layer3, curve_line_style({.line_color = color::red}), plot_curve3m);
-#endif
       Debug(libcw_do.on());
 
       // Flush all expose events related to the drawing done above.
@@ -516,7 +361,7 @@ int main(int argc, char* argv[])
 
       // Block until a redraw is necessary (for example because the user moved a draggable object,
       // or wants to print the current drawing) then go to the top of loop for a redraw.
-      if (!window3.handle_input_events())
+      if (!window.handle_input_events())
         break;          // Program must be terminated.
     }
 //    Debug(libcw_do.on());

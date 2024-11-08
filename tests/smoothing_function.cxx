@@ -13,9 +13,10 @@
 #include "debug.h"
 
 #define SHOW_POLYNOMIAL_BASIS 0
-#define SHOW_SMOOTHING_FUNCTION 0
-#define SHOW_SMOOTHING_FUNCTION_ZOOM 1
+#define SHOW_SMOOTHING_FUNCTION 1
+#define SHOW_SMOOTHING_FUNCTION_ZOOM 0
 #define SHOW_ERROR_FUNCTION 1
+#define SHOW_WEIGH_FUNCTION 0
 
 using namespace mpfr;
 
@@ -98,7 +99,8 @@ mpfr::mpreal S(mpfr::mpreal const& C0, mpfr::mpreal& root_out)
 
   // Calculate the smoothing value S(C0).
   mpreal c = cbrt(C0);
-  mpreal SC0 = (sqrt_3 + u) / (sqrt_3 - (c + 1.0 / c));
+  mpreal SC0 = (sqrt_3 + u) * c / (c * (sqrt_3 - c) - 1.0);
+  root_out = u;
 
   return SC0;
 }
@@ -483,7 +485,8 @@ int main()
 
 #if SHOW_POLYNOMIAL_BASIS
   // Jacobi polynomials test.
-  cairowindow::QuickGraph orthogonal_basis_graph("Jacobi polynomials", "t", "J_N^{0,2}(t) (1 + t)", {0.0, 1.0}, {-1.0, 2.0});
+  cairowindow::QuickGraph orthogonal_basis_graph("Orthogonal basis", "t", "JacobiP_n^{0,2}(t) (1 + t)",
+      {0.0, static_cast<double>(C0_half_approximation)}, {-1.0, 2.0});
   cairowindow::draw::LineStyle orthogonal_basis_style({.line_width = 1.0});
   namespace color = cairowindow::color;
 
@@ -495,7 +498,10 @@ int main()
   Polynomial w = utils::square(sqrt_w);                 // w(t) = (1 - t)^alpha * (1 + t)^beta = (1 + t)^2.
 
   std::vector<Polynomial> polynomial_basis;
-  for (int N = 0; N <= polynomial_degree; ++N)
+  // N is the degree of the jacobi polynomials, which are multiplied with 1+t to get
+  // the orthogonal basis, which is thus one degree higher.
+  // Therefore here N runs from 0 till (but not including) polynomial_degree.
+  for (int N = 0; N < polynomial_degree; ++N)
   {
     polynomial_basis.push_back(transform_Pt_to_Qx(sqrt_w * jacobiP(N, 0.0, 2.0), C0_half));
 #if SHOW_POLYNOMIAL_BASIS
@@ -506,8 +512,10 @@ int main()
   }
 
   // Make sure the basis is orthogonal.
-  for (int N1 = 0; N1 < polynomial_degree; ++N1)
-    for (int N2 = N1 + 1; N2 <= polynomial_degree; ++N2)
+  // N1 and N2 are the indices into polynomial_basis and therefore the degree of the Jacobi polynomial.
+  // Hence, again, N2 only runs till (but not including) polynomial_degree.
+  for (int N1 = 0; N1 < polynomial_degree - 1; ++N1)
+    for (int N2 = N1 + 1; N2 < polynomial_degree; ++N2)
     {
       auto product = polynomial_basis[N1] * polynomial_basis[N2];       // J_{N1}^{0,2}(t) J_{N2}^{0,2}(t) w(t)
       auto indefinite_integral = product.integrate();
@@ -545,17 +553,18 @@ int main()
 
 #if SHOW_ERROR_FUNCTION
   // Draw E(C0) on the interval [0, 0.9038].
-  cairowindow::QuickGraph error_function_graph("The error function E(C0)", "C0", "E", {0.0, C0_half.toDouble()}, {-0.00025, 0.00025});
+  // If the absolute value stays under 0.012 then we can find the actual root to the full resolution of a double in only two Halley iterations.
+  cairowindow::QuickGraph error_function_graph("Relative error in the root", "C0", "E", {0.0, C0_half.toDouble()}, {-0.002, 0.002});
 
   utils::ColorPool<32> color_pool;
   namespace color = cairowindow::color;
 #endif
 
   {
-    // Compute N+1 nodes, where N is the degree of the polynomial that we want to fit to S.
+    // Compute N nodes, where N is the degree of the polynomial that we want to fit to S.
     int const N = polynomial_degree;
     // The x-coordinates of the nodes, in the interval (0, C0_half].
-    std::vector<mpreal> nodes = compute_chebyshev_zeros(N + 1, 0.0, C0_half);
+    std::vector<mpreal> nodes = compute_chebyshev_zeros(N, 0.0, C0_half);
 
     // Evaluate S(c) at the mapped nodes.
     std::vector<mpreal> S_values;
@@ -565,40 +574,41 @@ int main()
     // Set up the system using Eigen matrices and vectors.
     using MatrixXmp = Eigen::Matrix<mpreal, Eigen::Dynamic, Eigen::Dynamic>;
     using VectorXmp = Eigen::Matrix<mpreal, Eigen::Dynamic, 1>;
-    int const num_equations = N + 1;
+    int const num_equations = N;
     MatrixXmp A(num_equations, num_equations);
     VectorXmp b(num_equations);
 
     // Fill vector b with S_values.
-    for (int i = 0; i <= N; ++i)
+    for (int i = 0; i < N; ++i)
       b(i) = S_values[i];
 
     // Fill matrix A with P_j(x_i).
-    for (int i = 0; i <= N; ++i)
-      for (int j = 0; j <= N; ++j)
+    for (int i = 0; i < N; ++i)
+      for (int j = 0; j < N; ++j)
         A(i, j) = polynomial_basis[j](nodes[i]);
 
     // Solve the Linear System.
     VectorXmp c = A.colPivHouseholderQr().solve(b);
 
     // Define our initial polynomial approximation.
-    Polynomial P({0});
-
-    for (int i = 0; i <= N; ++i)
-      P += c(i) * polynomial_basis[i];
+    Polynomial P_initial({0});
+    for (int i = 0; i < N; ++i)
+      P_initial += c(i) * polynomial_basis[i];
 
 #if SHOW_SMOOTHING_FUNCTION
-    smoothing_function_graph.add_function([&](double C0) -> double { return P.evaluate(C0).toDouble(); }, color::red);
+    // Add this initial approximation to the graph.
+    smoothing_function_graph.add_function([&](double C0) -> double { return P_initial.evaluate(C0).toDouble(); }, color::red);
 #endif
 
 #if SHOW_SMOOTHING_FUNCTION_ZOOM
+    // The initial approximation is already so accurate that we also show a graph where the difference is magnified.
     cairowindow::QuickGraph smoothing_function_graph_zoom("S(C0) + zoomed in approximation", "C0", "S and S + 100 E",
         {0.0, C0_half.toDouble()}, {-0.05, 0.5},
         [&](double C0) -> double { return S(C0, root_dummy).toDouble(); });
     smoothing_function_graph_zoom.add_function([&](double C0) -> double
         {
           mpreal SC0 = S(C0, root_dummy);
-          mpreal diff = P.evaluate(C0) - SC0;
+          mpreal diff = P_initial.evaluate(C0) - SC0;
           return (SC0 + 100 * diff).toDouble();
         }, color::red);
     for (mpreal const& node : nodes)
@@ -615,7 +625,7 @@ int main()
       auto E = [&](mpreal const& c)
         {
           mpreal Sc = S(c, root_value);
-          mpreal Pc = P.evaluate(c);
+          mpreal Pc = P_initial.evaluate(c);
           mpreal cbrtc = cbrt(c);
           if (cbrtc < 1e-6)
             cbrtc = 1e-6;
@@ -646,9 +656,9 @@ int main()
       std::cout << "  " << extremum.x_ << std::endl;
 
     // Lets define M = N+Z, so that M=N if we didn't find any extra zeroes.
-    int const M = extrema.size() - 2;
+    int const M = extrema.size() - 1;
 
-    // Calculate the initial M+2, or more, Chebyshev control points.
+    // Calculate the initial M+1, Chebyshev control points.
     std::vector<mpreal> extrema_S_values;
     std::vector<mpreal> extrema_root_values;
     mpreal extrema_root;
@@ -660,9 +670,9 @@ int main()
 
     // Implement the Remez algorithm.
 
-    // Find the next polynomial P(x) = c0 + c1 x + c2 x^2 + ... + c_M x^M
-    // such that P(extrema[i].x_) + extrema[i].sign_ * E * abs(w(extrema[i].x_)) = extrema[i].y_,
-    // with unknowns c_i and E.
+    // Find the next polynomial P(x) = c1 x + c2 x^2 + ... + c_M x^M
+    // such that P(extrema[i].x_) + extrema[i].sign_ * abs(w(extrema[i].x_)) * E = extrema[i].y_,
+    // with unknowns c_i and E (a total of M+1 unknowns).
     //
     // Here w(x) is a weight that adjusts the height of the error term in order to make
     // the relative error in the corresponding root the same.
@@ -670,23 +680,40 @@ int main()
     // Since P(c) approximates S(c), the approximation of the root corresponding to P(c),
     // for c > 0, is:
     //
-    //     root(c) = (P(c) - 1) * sqrt_3 - P(c) * (cbrt(c) + 1 / cbrt(c))
+    //     root_P(c) = (P(c) - 1) * sqrt_3 - P(c) * (cbrt(c) + 1 / cbrt(c))
     //
-    // thus the sensitivity of root(c) to changes in P(c) is
+    // thus the sensitivity of root_P(c) to changes in P(c) is
     //
-    //     ∂root(c)/∂P = sqrt_3 - (cbrt(c) + 1 / cbrt(c))
+    //     ∂root_P(c)/∂P = sqrt_3 - (cbrt(c) + 1 / cbrt(c))
     //
-    // Note that root(c) = -sqrt_3 + ∂root(c)/∂P ⋅ P(c)
-    //
-    // To ensure that Δroot(c)/root(c) is constant across all extrema (for some ΔP(c)),
+    // To ensure that Δroot_P(c)/root(c) is constant across all extrema (for some ΔP(c)),
     // we must set:
     //
-    //              root(c)                   sqrt_3
-    //     w(c) = ------------ = -------------------------------- + P(c)
-    //             ∂root(c)/∂P    cbrt(c) + 1 / cbrt(c) - sqrt_3
+    //                root(c)               root(c) cbrt(c)
+    //     w(c) = --------------- = ---------------------------------
+    //             ∂root_P(c)/∂P     cbrt(c) (sqrt_3 - cbrt(c)) - 1
     //
+    // Note that the denominator never reaches zero (its maximum value is -0.25 at c ≈ 0.64951891).
 
-    int const num_equations = M + 2;
+    mpreal root_value;
+    auto w = [&](double c) -> double {
+      mpreal Sc = S(c, root_value);
+      mpreal cbrtc = cbrt(c);
+      mpreal root = (c > 0.0) ? (Sc - 1) * sqrt_3 - Sc * (cbrtc + 1 / cbrtc) : -sqrt_3;
+      mpreal w = root * cbrtc / (cbrtc * (sqrt_3 - cbrtc) - 1);
+      return w.toDouble();
+    };
+#if SHOW_WEIGH_FUNCTION
+    static bool weigh_function_shown = false;
+    if (!weigh_function_shown)
+    {
+      weigh_function_shown = true;
+      cairowindow::QuickGraph weigh_function_graph("Weight function", "c", "w(c)", {0.0, 1.0}, w);
+      weigh_function_graph.wait_for_keypress();
+    }
+#endif
+
+    int const num_equations = M + 1;
 
     // Set up the system using Eigen matrices and vectors.
     using MatrixXmp = Eigen::Matrix<mpreal, Eigen::Dynamic, Eigen::Dynamic>;
@@ -701,14 +728,14 @@ int main()
       mpreal sign = extrema[i].sign_;
 
       mpreal cbrt_c = cbrt(c);
-      mpreal w = extrema_root_values[i] / (sqrt_3 - cbrt_c - 1 / cbrt_c);
+      mpreal w = extrema_root_values[i] * cbrt_c / (cbrt_c * (sqrt_3 - cbrt_c) - 1);
 
       // Fill in the polynomial terms.
-      for (int j = 0; j <= M; ++j)
-        A(i, j) = pow(c, j);
+      for (int j = 0; j < M; ++j)
+        A(i, j) = pow(c, j + 1);
 
       // Fill in the term for E.
-      A(i, M + 1) = sign * abs(w);
+      A(i, M) = sign * abs(w);
 
       // Fill in b_i.
       b(i) = extrema_S_values[i];
@@ -717,11 +744,11 @@ int main()
     // Solve the equation A⋅x = b.
     VectorXmp x = A.colPivHouseholderQr().solve(b);
 
-    // Extract coefficients c0 to cM and E.
+    // Extract coefficients c_1 to c_{M} and E.
     std::vector<mpreal> coefficients(M + 1);
-    for (int i = 0; i <= M; ++i)
-      coefficients[i] = x(i);
-    mpreal Err = x(M + 1);
+    for (int i = 0; i < M; ++i)
+      coefficients[i + 1] = x(i);
+    mpreal Err = x(M);
 
     Polynomial P{coefficients};
     std::cout << "Err = " << Err << std::endl;
@@ -729,12 +756,36 @@ int main()
     for (int i = 0; i <= M; ++i)
       std::cout << "  " << coefficients[i] << " * x^" << i << std::endl;
 
+#if SHOW_ERROR_FUNCTION
+    error_function_graph.add_function(
+        [&](double c) -> double
+        {
+          mpreal Sc = S(c, root_value);
+          mpreal cbrtc = cbrt(c);
+          mpreal droot_dP = sqrt_3 - (cbrtc + 1 / cbrtc);       // ∂root_P(c)/∂P = sqrt_3 - (cbrt(c) + 1 / cbrt(c))
+          mpreal delta_P = abs(Err * w(c));
+          mpreal delta_root = droot_dP * delta_P;
+          mpreal rel_err = abs(delta_root / root_value);
+          return rel_err.toDouble();
+        }, color::red);
+    error_function_graph.add_function(
+        [&](double c) -> double
+        {
+          mpreal Sc = S(c, root_value);
+          mpreal cbrtc = cbrt(c);
+          mpreal droot_dP = sqrt_3 - (cbrtc + 1 / cbrtc);       // ∂root_P(c)/∂P = sqrt_3 - (cbrt(c) + 1 / cbrt(c))
+          mpreal delta_P = abs(Err * w(c));
+          mpreal delta_root = droot_dP * delta_P;
+          mpreal rel_err = -abs(delta_root / root_value);
+          return rel_err.toDouble();
+        }, color::red);
+#endif
+
 #if SHOW_SMOOTHING_FUNCTION
     smoothing_function_graph.add_function([&P](double C0) -> double { return P.evaluate(C0).toDouble(); }, color::green);
 #endif
 
     // Define the error function E(c) = S(c) - P(c).
-    mpreal root_value;
     auto E = [&](mpreal const& c)
       {
         mpreal Sc = S(c, root_value);
@@ -757,9 +808,9 @@ int main()
     // Find the roots of E.
     std::vector<mpreal> roots;
 
-    // Run over the M+1 intervals between the previously found extrema and store the value of the new E.
+    // Run over the M intervals between the previously found extrema and store the value of the new E.
     std::vector<math::Point> points;
-    for (int i  = 0; i < M + 1; ++i)
+    for (int i  = 0; i < M; ++i)
     {
       // The begin and end of interval i.
       double x_min = extrema[i].x_.toDouble();
@@ -773,7 +824,7 @@ int main()
     }
     // add the last extremum too.
     {
-      double x = extrema[M + 1].x_.toDouble();
+      double x = extrema[M].x_.toDouble();
       points.emplace_back(x, E(x).toDouble());
     }
 
