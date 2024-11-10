@@ -12,13 +12,31 @@
 #include <cassert>
 #include "debug.h"
 
-#define SHOW_POLYNOMIAL_BASIS 0
-#define SHOW_SMOOTHING_FUNCTION 1
-#define SHOW_SMOOTHING_FUNCTION_ZOOM 0
-#define SHOW_ERROR_FUNCTION 1
-#define SHOW_WEIGH_FUNCTION 0
-#define SHOW_REL_ERROR_ROOT 1
-#define TILL_C0_half 1
+// This file analyses P(u) = C0 - 3u + u^3 and its roots.
+//
+// If C0 = 0 then the roots of P are 0 and +/-sqrt(3).
+// Let the smallest root, root0 = -sqrt(3).
+//
+// If (C0 > 0) then the smallest root (r) is less than -sqrt(3): r < -sqrt(3)
+// and we can write r = (1 - S(C0)) root0 + S(C0) root1, where
+// root1 = -cbrt(C0) - 1/cbrt(C0).
+//
+// Here S is called the smoothing function and continuously and monotically
+// moves from 0 at C0 = 0 to 1 at C0 is +inf.
+//
+// It is determined that S(0.903757418459591...) = 0.5.
+// An approximation for S(u) is found for the interval [0, 0.903757418459591]
+// and for the interval [0.903757418459591, 6.82], respectively a second degree
+// polynomial and a third degree polynomial, that result in an absolute relative
+// error in r of less than 0.005 for all C0 >= 0.
+//
+#define SHOW_POLYNOMIAL_BASIS 0                 // Show polynomial basis used for initial polynomial fit (before Remez algorithm).
+#define SHOW_SMOOTHING_FUNCTION 1               // Show S(C0) (red is the initial approximation, green after one or more a Remez iterations).
+#define SHOW_SMOOTHING_FUNCTION_ZOOM 0          // Same, but enhance the error between S and its approximation.
+#define SHOW_ERROR_FUNCTION 1                   // Show the relative error in the approximated root (using the approximation for S).
+#define SHOW_WEIGH_FUNCTION 0                   // Show the error weight function used in Remez algorithm.
+#define SHOW_REL_ERROR_ROOT1 1                  // Show the relative error of root1 with respect to the real root.
+#define TILL_C0_half 1                          // 1: [0, 0.903757], 0: [0.903757, 6.82]
 
 using namespace mpfr;
 
@@ -247,41 +265,6 @@ std::vector<mpreal> compute_chebyshev_zeros(int n, mpreal a, mpreal b)
 
   return zeroes;
 }
-
-#if 0
-// Compute Newton's divided differences coefficients.
-std::vector<mpreal> compute_newton_coefficients(std::vector<mpreal> const& x, std::vector<mpreal> const& y)
-{
-  int n = x.size();
-  std::vector<mpreal> coef = y; // Divided difference coefficients.
-
-  for (int j = 1; j < n; ++j)
-    for (int i = n - 1; i >= j; --i)
-      coef[i] = (coef[i] - coef[i - 1]) / (x[i] - x[i - j]);
-
-  return coef;
-}
-
-// Expand Newton's polynomial into monomial form.
-Polynomial compute_newton_polynomial(std::vector<mpreal> const& x, std::vector<mpreal> const& coef)
-{
-  int n = coef.size();
-  Polynomial P(coef[0]);        // Start with constant term c0.
-
-  Polynomial term(1.0);         // Initialize term to 1
-  for (int k = 1; k < n; ++k)
-  {
-    // Multiply term by (x - x_{k-1}).
-    Polynomial factor({-x[k - 1], 1});  // Represents (x - x_{k-1}).
-    term *= factor;
-
-    // Add c_k * term to polynomial P.
-    P += term * coef[k];
-  }
-
-  return P;
-}
-#endif
 
 // Access coefficients from the polynomial
 void print_polynomial_coefficients(Polynomial const& P)
@@ -634,7 +617,7 @@ int main()
 
   utils::ColorPool<32> color_pool;
   namespace color = cairowindow::color;
-#if SHOW_REL_ERROR_ROOT
+#if SHOW_REL_ERROR_ROOT1
 //  cairowindow::QuickGraph rel_error_root_graph("Relative error of cbrt(C0) + 1/cbrt(C0) vs real root", "C0", "rel err",
 //      {0.0, 10.0}, {-0.02, 0.005});
   error_function_graph.add_function([&](double c) -> double {
