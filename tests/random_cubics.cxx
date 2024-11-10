@@ -175,11 +175,21 @@ int main(int argc, char* argv[])
       return {C0, initial_guess - roots[0]};
     };
 
+    auto rel_err_lambda = [&](double C0) -> cairowindow::Point
+    {
+      math::CubicPolynomial p(C0, -3, 0, 1);
+      std::array<double, 3> roots;
+      int iterations;
+      double initial_guess;
+      int n = get_roots(plot, second_layer, line_style, nullptr, p, roots, initial_guess, iterations);
+      return {C0, (initial_guess - roots[0]) / std::abs(roots[0])};
+    };
+
     plot::Plot plot2(window2.geometry(), { .grid = {.color = color::orange} },
         "guess offset near zero", {},
         "C0", {},
-        "log10(root - guess)", {});
-    plot2.set_xrange({-1.0, 1.0});
+        "(initial_guess - root) / |root|", {});
+    plot2.set_xrange({-10.0, 10.0});
 
     Debug(libcw_do.off());
     double ymin = 1e100;
@@ -343,7 +353,7 @@ int main(int argc, char* argv[])
       Debug(libcw_do.off());
       plot::BezierFitter plot_curve;
       plot_curve.solve(
-          diff_lambda,
+          rel_err_lambda,
           plot2.viewport());
       plot2.add_bezier_fitter(second_layer2, curve_line_style, plot_curve);
       Debug(libcw_do.on());

@@ -122,7 +122,7 @@ int main()
   using namespace cairowindow;
 
   QuickGraph graph("Maximum relative error in initial guess to get 2 iterations",
-      "C0", "relerr₀", {0.0, /*0.90375741845*/ 100.0});
+      "C0", "relerr₀", {0.0, 6.82});
 
 //  Debug(dc::notice.off());
   {
