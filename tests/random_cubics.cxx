@@ -13,6 +13,8 @@
 #include <array>
 #include "debug.h"
 
+#define INTERACTIVE 0
+
 constexpr int number_of_cubics = 1000000;
 
 bool stop = true;
@@ -49,7 +51,7 @@ int main(int argc, char* argv[])
   Debug(NAMESPACE_DEBUG::init());
   Dout(dc::notice, "Entering main()");
 
-#if 0
+#if 1
   // Handle random seed.
   unsigned int seed;
   if (argc > 1)
@@ -114,6 +116,7 @@ int main(int argc, char* argv[])
   }
 #endif
 
+#if INTERACTIVE
   try
   {
     using namespace cairowindow;
@@ -186,7 +189,7 @@ int main(int argc, char* argv[])
     };
 
     plot::Plot plot2(window2.geometry(), { .grid = {.color = color::orange} },
-        "guess offset near zero", {},
+        "Relative error of initial guess of root", {},
         "C0", {},
         "(initial_guess - root) / |root|", {});
     plot2.set_xrange({-10.0, 10.0});
@@ -249,6 +252,7 @@ int main(int argc, char* argv[])
       double SC0 = (root - root0) / (root1 - root0);
       return {C0, SC0};
     };
+#endif
 
 #if 0
     //---------------------
@@ -284,11 +288,16 @@ int main(int argc, char* argv[])
     std::array<double, 3> roots;
     std::cout << "Calculating roots..." << std::endl;
     int max_iterations = 0;
-//    Debug(libcw_do.off());
     unsigned long total_iterations = 0;
-//    for (math::CubicPolynomial& cubic : cubics)
+    int count = 0;
+#if INTERACTIVE
     while(1)
+#else
+    Debug(libcw_do.off());
+    for (math::CubicPolynomial& cubic : cubics)
+#endif
     {
+#if INTERACTIVE
       // Suppress immediate updating of the window for each created item, in order to avoid flickering.
       window.set_send_expose_events(false);
 
@@ -296,11 +305,19 @@ int main(int argc, char* argv[])
       math::CubicPolynomial cubic(C0_s, -3, 0, 1);
 
       plot::BezierFitter plot_bezier_fitter;
+#endif
       int iterations;
       double initial_guess;
+#if INTERACTIVE
       int n = get_roots(plot, second_layer, curve_line_style, &plot_bezier_fitter, cubic, roots, initial_guess, iterations);
+#else
+      int n = cubic.get_roots(roots, iterations);
+#endif
       total_iterations += iterations;
+      ++count;
+      std::cout << "iterations = " << iterations << "; " << (total_iterations / count) << std::endl;
 
+#if INTERACTIVE
       std::array<double, 3> real_roots;
       math::CubicPolynomial cubic_real(C0_s, -3, 0, 1);
       cubic_real.get_roots(real_roots, iterations);
@@ -313,6 +330,7 @@ int main(int argc, char* argv[])
       auto plot_guess_line = plot.create_line(second_layer, line_style, Point{initial_guess, 0.0}, Direction::up);
       auto plot_guess2_line = plot2.create_line(second_layer2, line_style, Point{slider_c0.value(), 0.0}, Direction::up);
       auto plot_guess3_line = plot2.create_line(second_layer2, line_style, Point{0.0, diff_lambda(slider_c0.value()).y()}, Direction::right);
+#endif
 
 #if 0
       if (iterations == 12 || (iterations < 100 && iterations > max_iterations))
@@ -350,6 +368,7 @@ int main(int argc, char* argv[])
       }
 #endif
 
+#if INTERACTIVE
       Debug(libcw_do.off());
       plot::BezierFitter plot_curve;
       plot_curve.solve(
@@ -373,16 +392,22 @@ int main(int argc, char* argv[])
       // or wants to print the current drawing) then go to the top of loop for a redraw.
       if (!window.handle_input_events())
         break;          // Program must be terminated.
+#endif
     }
-//    Debug(libcw_do.on());
+#if !INTERACTIVE
+    Debug(libcw_do.on());
+    ASSERT(count == number_of_cubics);
     Dout(dc::notice, "Average number of iterations per cubic: " << (total_iterations / number_of_cubics));
+#endif
 
+#if INTERACTIVE
     event_loop.join();
   }
   catch (AIAlert::Error const& error)
   {
     Dout(dc::warning, error);
   }
+#endif
 
   Dout(dc::notice, "Leaving main()");
 }
