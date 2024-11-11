@@ -120,9 +120,12 @@ find_library(MPFR_LIBRARY mpfr)
 find_library(GLPK_LIBRARY glpk REQUIRED)
 
 if (GMP_LIBRARY AND MPFR_LIBRARY AND GLPK_LIBRARY)
-add_executable(smoothing_function smoothing_function.cxx)
-target_link_libraries(smoothing_function AICxx::cairowindow AICxx::symbolic AICxx::math ${AICXX_OBJECTS_LIST} ${GMP_LIBRARY} ${MPFR_LIBRARY} ${GLPK_LIBRARY} Eigen3::Eigen)
+add_executable(minus_three_case minus_three_case.cxx)
+target_link_libraries(minus_three_case AICxx::cairowindow AICxx::symbolic AICxx::math ${AICXX_OBJECTS_LIST} ${GMP_LIBRARY} ${MPFR_LIBRARY} ${GLPK_LIBRARY} Eigen3::Eigen)
 
 add_executable(Halley_iterations Halley_iterations.cxx)
 target_link_libraries(Halley_iterations AICxx::cairowindow AICxx::symbolic AICxx::math ${AICXX_OBJECTS_LIST} ${GMP_LIBRARY} ${MPFR_LIBRARY} ${GLPK_LIBRARY} Eigen3::Eigen)
+
+add_executable(plus_three_case plus_three_case.cxx)
+target_link_libraries(plus_three_case AICxx::cairowindow AICxx::symbolic AICxx::math ${AICXX_OBJECTS_LIST} ${GMP_LIBRARY} ${MPFR_LIBRARY} ${GLPK_LIBRARY} Eigen3::Eigen)
 endif ()

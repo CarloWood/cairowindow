@@ -36,7 +36,8 @@
 #define SHOW_ERROR_FUNCTION 1                   // Show the relative error in the approximated root (using the approximation for S).
 #define SHOW_WEIGH_FUNCTION 0                   // Show the error weight function used in Remez algorithm.
 #define SHOW_REL_ERROR_ROOT1 1                  // Show the relative error of root1 with respect to the real root.
-#define TILL_C0_half 1                          // 1: [0, 0.903757], 0: [0.903757, 6.82]
+#define TILL_C0_half 0                          // 1: [0, 0.903757], 0: [0.903757, 6.82]
+#define WAIT_FOR_ENTER 0
 
 using namespace mpfr;
 
@@ -578,6 +579,7 @@ int main()
     for (Polynomial const& polynomial : polynomial_basis)
       Dout(dc::notice, polynomial);
   }
+  Dout(dc::notice, "Press a key in orthogonal_basis_graph.");
   orthogonal_basis_graph.wait_for_keypress();
 #endif
 
@@ -618,15 +620,12 @@ int main()
   utils::ColorPool<32> color_pool;
   namespace color = cairowindow::color;
 #if SHOW_REL_ERROR_ROOT1
-//  cairowindow::QuickGraph rel_error_root_graph("Relative error of cbrt(C0) + 1/cbrt(C0) vs real root", "C0", "rel err",
-//      {0.0, 10.0}, {-0.02, 0.005});
   error_function_graph.add_function([&](double c) -> double {
       mpreal root_value;
       mpreal Sc = S(c, root_value);
       mpreal cbrtc = cbrt(c);
       return ((-(cbrtc + 1/cbrtc) - root_value) / abs(root_value)).toDouble();
     }, color::blue);
-//  rel_error_root_graph.wait_for_keypress();
 #endif
 #endif
 
@@ -702,6 +701,7 @@ int main()
       math::Line line({node.toDouble(), 0.0}, math::Direction::up);
       smoothing_function_graph_zoom.add_line(line);
     }
+    Dout(dc::notice, "Press key in smoothing_function_graph_zoom.");
     smoothing_function_graph_zoom.wait_for_keypress();
 #endif // SHOW_SMOOTHING_FUNCTION_ZOOM
 
@@ -735,6 +735,8 @@ int main()
     }
   }
 
+  std::vector<mpreal> prev_coefficients;
+  int again = 2;
   do
   {
     std::cout << "Extrema found:\n";
@@ -799,6 +801,7 @@ int main()
     {
       weigh_function_shown = true;
       cairowindow::QuickGraph weigh_function_graph("Weight function", "c", "w(c)", {0.0, 1.0}, w);
+      Dout(dc::notice, "Press key in weigh_function_graph.");
       weigh_function_graph.wait_for_keypress();
     }
 #endif
@@ -857,10 +860,17 @@ int main()
     mpreal Err = x(number_of_equations - 1);
 
     Polynomial P{coefficients};
-    std::cout << "Err = " << Err << std::endl;
     std::cout << "Polynomial:\n";
     for (int i = 0; i <= M; ++i)
       std::cout << "  " << coefficients[i] << " * x^" << i << std::endl;
+    std::cout << "Maximum relative error: " << Err << std::endl;
+
+    mpreal dbl_epsilon("1e-20");
+    bool almost_equal = prev_coefficients.size() == coefficients.size();
+    for (int i = 0; almost_equal && i < coefficients.size(); ++i)
+      if (abs(coefficients[i] - prev_coefficients[i]) > dbl_epsilon)
+        almost_equal = false;
+    prev_coefficients = std::move(coefficients);
 
 #if SHOW_ERROR_FUNCTION
     error_function_graph.add_function(
@@ -964,16 +974,24 @@ int main()
         );
 
     // Give a chance to view the graphs before clearing.
+#if WAIT_FOR_ENTER
+    std::cout << "Hit Enter in this window..." << std::endl;
     std::cin.get();
+#endif
+    if (almost_equal)
+      --again;
 #if SHOW_ERROR_FUNCTION
-    error_function_graph.clear();
+    if (again > 0)
+      error_function_graph.clear();
 #endif
   }
-  while (true);
+  while (again > 0);
 
 #if SHOW_ERROR_FUNCTION
+  Dout(dc::notice, "Press a key in error_function_graph.");
   error_function_graph.wait_for_keypress();
 #elif SHOW_SMOOTHING_FUNCTION
+  Dout(dc::notice, "Press a key in smoothing_function_graph.");
   smoothing_function_graph.wait_for_keypress();
 #endif
 }
