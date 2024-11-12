@@ -176,6 +176,10 @@ StrokeExtents Shape::do_draw(cairo_t* cr)
     case circle_arrow_shape:
       cairo_arc(cr, -0.5, 0.0, 0.5, 0.0, 2 * M_PI);
       break;
+    case dot:
+      cairo_move_to(cr, -0.05, 0.0);
+      cairo_line_to(cr, 0.05, 0.0);
+      break;
   }
   cairo_restore(cr);
 

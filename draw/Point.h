@@ -39,23 +39,24 @@ struct PointStyle : public PointBaseStyle
     bool filled;
   };
 
-  static constexpr int number_of_shapes = 15;
+  static constexpr int number_of_shapes = 16;
   static constexpr std::array<FilledShape, number_of_shapes> filled_shapes = {{
-    { rectangle, false },
+    { rectangle, false },               // 0
     { plus, false },
     { triangle, true },
     { ellipse, true },
     { rhombus, false },
-    { cross, false },
+    { cross, false },                   // 5
     { diamond, true, },
     { triangle_down, false },
     { rectangle, true },
     { triangle, false },
-    { ellipse, false },
+    { ellipse, false },                 // 10
     { rhombus, true },
     { diamond, false },
     { triangle_down, true },
-    { star, false }
+    { star, false },
+    { dot, false }                      // 15
   }};
 
  public:

@@ -29,7 +29,9 @@ enum ShapeEnum
   open_arrow_shape,
   filled_arrow_shape,
   diamond_arrow_shape,
-  circle_arrow_shape
+  circle_arrow_shape,
+  // Shape used for a single pixel.
+  dot
 };
 
 static constexpr int number_of_shapes = star + 1;
