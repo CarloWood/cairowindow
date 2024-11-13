@@ -1,4 +1,5 @@
 #include "sys.h"
+#include "cwds/Restart.h"
 #include "math/CubicPolynomial.h"
 #include "math/AnalyzedCubic.h"
 #include "cairowindow/Window.h"
@@ -315,7 +316,7 @@ int main(int argc, char* argv[])
 #endif
       total_iterations += iterations;
       ++count;
-      std::cout << "iterations = " << iterations << "; " << (total_iterations / count) << std::endl;
+      std::cout << "iterations = " << iterations << "; " << (static_cast<double>(total_iterations) / count) << std::endl;
 
 #if INTERACTIVE
       std::array<double, 3> real_roots;

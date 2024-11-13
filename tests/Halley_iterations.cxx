@@ -1,6 +1,7 @@
 #include "sys.h"
 #include "utils/square.h"
 #include "cairowindow/QuickGraph.h"
+#include "math/CubicPolynomial.h"
 #include "mpreal/mpreal.h"
 #include <array>
 #include <vector>
@@ -203,10 +204,52 @@ std::array<double, 2> MaxRelerr::max_relerr(double C0, double C1) const
 }
 
 // Function to calculate the approximate root0 = -C0/3 + C0^3/81.
-double approximate_root(double C0)
+double approximate_root0(double C0)
 {
   return -C0 / 3.0 + C0 * C0 * C0 / 81.0;
 }
+
+// Function to calculate the approximate root0 = -C0/3 + C0^3/81.
+double approximate_root1(double C0)
+{
+  double cbrtC0 = std::cbrt(C0);
+  return -cbrtC0 + 1.0 / cbrtC0;
+}
+
+namespace math {
+
+// The function must be monotonically rising.
+double bracket_zero(double left, double right, std::function<double(double)> const& f, double tolerance)
+{
+  if (left > right)
+    std::swap(left, right);
+
+  double value_left = f(left);
+  double value_right = f(right);
+
+  if (value_left == value_right)
+    return 0.5 * (left + right);
+
+  // The function must be monotonically rising.
+  ASSERT(value_left < value_right);
+
+  // Check if the solution is bracketed.
+  if (value_left > 0.0 || value_right < 0.0)
+    throw std::runtime_error("math::bracket_zero: there is no zero bracketed within left and right.");
+
+  while (right - left > tolerance)
+  {
+    double middle = 0.5 * (left + right);
+    if (f(middle) < 0.0)
+      left = middle;
+    else
+      right = middle;
+  }
+
+  return 0.5 * (left + right);
+}
+
+} // namespace math
 
 int main()
 {
@@ -219,6 +262,24 @@ int main()
   // Print everything with 38 digits precision.
   std::streamsize const old_precision = std::cout.precision(38);
   std::ios::fmtflags const old_flags = std::cout.setf(std::ios::fixed);
+
+#if 0
+  // Test one specific value.
+  double C0 = -8.36572063703884261;
+  std::cout << "Real root = " << exact_root(C0, 3.0) << std::endl;
+  double u = -std::cbrt(C0) + 1.0 / std::cbrt(C0);
+  std::cout << "Initial guess = " << u << std::endl;
+  std::cout << "Number of iterations = " << iterations(C0, 3.0, u) << std::endl;
+
+  math::CubicPolynomial cubic(C0, 3.0, 0.0, 1.0);
+  std::array<double, 3> roots;
+  int iterations;
+  cubic.get_roots(roots, iterations);
+  std::cout << "get_roots: " << roots[0] << std::endl;
+  std::cout << "Number of iterations: " << iterations << std::endl;
+
+  return 0;
+#endif
 
   using namespace cairowindow;
 
@@ -246,14 +307,28 @@ int main()
   graph.add_function([](double C0) -> double { return C0 < 1e-9 ? 1e6 : 0.075 * std::pow(C0, -0.75); });
   graph.add_function([](double C0) -> double { return C0 < 1e-9 ? -1e6 : -0.075 * std::pow(C0, -0.75); });
 
+  auto relerr0 = [](double C0){
+    double root = exact_root(C0, 3.0);
+    double root0 = approximate_root0(C0);
+    return (root0 - root) / std::abs(root);
+  };
+
+  auto relerr1 = [](double C0){
+    double root = exact_root(C0, 3.0);
+    double root1 = approximate_root1(C0);
+    return (root1 - root) / std::abs(root);
+  };
+
   // Add function to plot the relative error for the approximation of root0 near zero.
-  graph.add_function(
-    [](double C0) -> double {
-      double root = exact_root(C0, 3.0);
-      double root0 = approximate_root(C0);
-      return (root0 - root) / std::abs(root);
-    }
-  );
+  graph.add_function(relerr0, color::blue);
+  // Add function to plot the relative error for the approximation of root1 for large C0.
+  graph.add_function(relerr1, color::purple);
+
+  // Find the point where relerr0 and relerr1 are equal.
+  double cross_point = math::bracket_zero(2.0, 3.0, [&](double C0){ return relerr0(C0) - relerr1(C0); }, 1e-9);
+  Dout(dc::notice, "cross_point = " << cross_point << "; real root = " << exact_root(cross_point, 3.0));
+  Line cross_point_line({cross_point, 0.0}, Direction::up);
+  graph.add_line(cross_point_line);
 #endif
 
   draw::PointStyle point_style0({.color_index = 0, .filled_shape = 15});
