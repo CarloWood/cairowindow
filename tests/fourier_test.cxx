@@ -96,10 +96,12 @@ class TestFunctionGenerator : public enable_drawing::Function
     return derivative(x) < 0.0 ? -1 : 1;
   }
 
+#ifdef CWDEBUG
   std::string to_string() const override
   {
     return "test function (seed: " + std::to_string(seed_) + ")";
   }
+#endif
 
   void normalize_amplitude(Range desired_amplitude_range, Range x_range, int num_samples = 1000)
   {

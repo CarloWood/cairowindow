@@ -1,6 +1,7 @@
 #include "sys.h"
 #include "AlgorithmEvent2.h"
 
+#ifdef CWDEBUG
 //static
 cairowindow::draw::TextStyle const AlgorithmEvent::s_label_style{{ .position = cairowindow::draw::centered_left_of, .font_size = 18.0,
   .offset = 10}};
@@ -276,3 +277,4 @@ void AlgorithmEvent::callback(gradient_descent::AlgorithmEventType const& event)
     // Missing implementation.
     ASSERT(false);
 }
+#endif

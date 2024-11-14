@@ -36,7 +36,7 @@ class KineticEnergy
 
  public:
   KineticEnergy(double Lw COMMA_CWDEBUG_ONLY(events::Server<AlgorithmEventType>& event_server)) :
-    max_Lw_(Lw), Lw_(Lw), event_server_(event_server) { }
+    max_Lw_(Lw), Lw_(Lw) COMMA_CWDEBUG_ONLY(event_server_(event_server)) { }
 
   void set(double max_Lw, double Lw)
   {

@@ -9,7 +9,13 @@ namespace color = cairowindow::color;
 
 EnableDrawing::EnableDrawing(gradient_descent::Algorithm* algorithm, Function const& L,
     double w_min, double w_max, double L_min, double L_max) :
-  window("Gradient descent of " + L.to_string(), 2*600, 2*450),
+  window("Gradient descent of "
+#ifdef CWDEBUG
+      + L.to_string(),
+#else
+      "L",
+#endif
+      2*600, 2*450),
   background_layer(window.create_background_layer<cairowindow::Layer>(color::silver COMMA_DEBUG_ONLY("background_layer"))),
   second_layer_(window.create_layer<cairowindow::Layer>({} COMMA_DEBUG_ONLY("second_layer"))),
   event_loop([&](){
@@ -20,9 +26,14 @@ EnableDrawing::EnableDrawing(gradient_descent::Algorithm* algorithm, Function co
     }),
   L_min_max(get_L_min_max(L, w_min, w_max)),
   plot_(window.geometry(), { .grid = {.color = color::gray} },
-        L.to_string(), {}, "w", {}, "L", {}),
-  algorithm_event(plot_, second_layer_),
-  algorithm_event_handle(algorithm->event_server().request(algorithm_event, &AlgorithmEvent::callback))
+#ifdef CWDEBUG
+        L.to_string(),
+#else
+        "L",
+#endif
+        {}, "w", {}, "L", {})
+        COMMA_DEBUG_ONLY(algorithm_event(plot_, second_layer_),
+            algorithm_event_handle(algorithm->event_server().request(algorithm_event, &AlgorithmEvent::callback)))
 {
   plot_.set_xrange({w_min, w_max});
   plot_.set_yrange(
@@ -36,7 +47,9 @@ EnableDrawing::EnableDrawing(gradient_descent::Algorithm* algorithm, Function co
 
 EnableDrawing::~EnableDrawing()
 {
+#ifdef CWDEBUG
   algorithm_event_handle.cancel();
+#endif
   window.close();
   event_loop.join();
 }

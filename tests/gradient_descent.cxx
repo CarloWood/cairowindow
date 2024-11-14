@@ -227,7 +227,7 @@ int main()
         Dout(dc::notice, "Found global minimum " << gda.minimum());
 #endif
 
-      algorithm_event_handle.cancel();
+      Debug(algorithm_event_handle.cancel());
     }
 
     window.close();

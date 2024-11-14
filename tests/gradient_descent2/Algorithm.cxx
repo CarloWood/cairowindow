@@ -8,8 +8,8 @@
 #ifdef CWDEBUG
 #include "utils/at_scope_end.h"
 #include "utils/print_using.h"
-#include "cwds/Restart.h"
 #endif
+#include "cwds/Restart.h"
 
 namespace gradient_descent {
 
@@ -134,7 +134,7 @@ bool Algorithm::operator()(WeightRef w, double Lw, double dLdw)
       // We should only get here the first time.
       ASSERT(chain_.empty());
 
-      DEBUG_ONLY(bool success =) update_energy(Lw);
+      [[maybe_unused]] bool success = update_energy(Lw);
       // Can never want to abort on energy when still initializing.
       ASSERT(success);
 

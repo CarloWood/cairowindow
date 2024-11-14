@@ -32,10 +32,12 @@ struct Function : enable_drawing::Function
     return function_.derivative(symbol_).evaluate();
   }
 
+#ifdef CWDEBUG
   void print_on(std::ostream& os) const
   {
     function_.print_on(os);
   }
+#endif
 
  private:
   friend class Algorithm;
@@ -46,10 +48,12 @@ struct Function : enable_drawing::Function
       dep->reset_evaluation();
   }
 
+#ifdef CWDEBUG
   std::string to_string() const override
   {
     return function_.to_string();
   }
+#endif
 };
 
 class Algorithm : public enable_drawing::Algorithm

@@ -3,6 +3,7 @@
 #include "Sample.h"
 #include "Approximation.h"
 #include "HorizontalDirection.h"
+#include <list>
 #include "debug.h"
 
 namespace gradient_descent {

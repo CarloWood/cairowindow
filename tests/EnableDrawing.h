@@ -33,9 +33,11 @@ class EnableDrawing
   std::thread event_loop;
   cairowindow::Range L_min_max;
   cairowindow::plot::Plot plot_;
+  cairowindow::plot::BezierFitter plot_curve_;
+#ifdef CWDEBUG
   AlgorithmEvent algorithm_event;
   events::RequestHandle<gradient_descent::AlgorithmEventType> algorithm_event_handle;
-  cairowindow::plot::BezierFitter plot_curve_;
+#endif
 
  public:
   EnableDrawing(gradient_descent::Algorithm* algorithm, Function const& L,

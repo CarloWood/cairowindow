@@ -14,7 +14,9 @@ Interval::Interval(XSignPair begin, XSignPair end, utils::UniqueIDContext<int>& 
 
 void IntervalList::print_list(std::ostream& os) const
 {
+#ifdef CWDEBUG
   sanity_check_successful_ = true;
+#endif
   bool first = true;
   Interval const* prev_interval = nullptr;
   bool printing_end_was_suppressed = false;

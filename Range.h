@@ -1,16 +1,11 @@
 #pragma once
 
 #include <cmath>
-
-#ifdef CWDEBUG
 #include "utils/has_print_on.h"
 #include <iostream>
-#endif
 
 namespace cairowindow {
-#ifdef CWDEBUG
 using utils::has_print_on::operator<<;
-#endif
 
 class Range
 {
@@ -36,12 +31,10 @@ class Range
   double size() const { return max_ - min_; }
   double center() const { return 0.5 * (min_ + max_); }
 
-#ifdef CWDEBUG
   void print_on(std::ostream& os) const
   {
     os << '[' << min_ << ", " << max_ << ']';
   }
-#endif
 };
 
 } // namespace cairowindow

@@ -19,9 +19,7 @@ class ExtremeChain
   SampleNode::list_type sample_node_list_;      // Sorted list with all samples.
   SampleNode::const_iterator last_;             // Points to the last sample that was added (or reused).
   SampleNode::const_iterator larger_;           // Points to the first sample that is larger than the w value passed to find_larger (or end()).
-#ifdef CWDEBUG
   double new_w_;                                // Copy of the value passed to the last call to find_larger.
-#endif
 
  public:
   void initialize(Sample&& first_sample);

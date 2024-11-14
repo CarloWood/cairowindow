@@ -20,6 +20,7 @@
 
 int main()
 {
+#ifdef CWDEBUG
   Debug(NAMESPACE_DEBUG::init());
   Dout(dc::notice, "Entering main()");
 
@@ -366,4 +367,7 @@ int main()
   }
 
   Dout(dc::notice, "Leaving main()");
+#else
+  std::cerr << "Requires Debug mode." << std::endl;
+#endif
 }

@@ -3,6 +3,7 @@
 #include "Scale.h"
 #include "ExtremeType.h"
 #include "math/QuadraticPolynomial.h"
+#include <list>
 #ifdef CWDEBUG
 #include "utils/has_print_on.h"
 #endif
@@ -76,7 +77,9 @@ class LocalExtreme
   double extreme_Lw() const { return extreme_Lw_; }
   const_iterator left_neighbor() const { return left_neighbor_; }
   const_iterator right_neighbor() const { return right_neighbor_; }
+#ifdef CWDEBUG
   std::string const& label() const { return label_; }
+#endif
 
   void set_opposite_direction(bool opposite_direction_is_fourth_degree_extreme, double opposite_direction_w, double opposite_direction_Lw)
   {

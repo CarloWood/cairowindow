@@ -14,7 +14,7 @@
 #include <array>
 #include "debug.h"
 
-#define INTERACTIVE 0
+#define INTERACTIVE 1
 
 constexpr int number_of_cubics = 1000000;
 
@@ -22,7 +22,9 @@ bool stop = true;
 
 int get_roots(cairowindow::plot::Plot& plot, boost::intrusive_ptr<cairowindow::Layer>& layer,
     cairowindow::draw::LineStyle& line_style, cairowindow::plot::BezierFitter* plot_fitter,
-    math::CubicPolynomial& cubic, std::array<double, 3>& roots_out, double& initial_guess, int& iterations)
+    math::CubicPolynomial& cubic, std::array<double, 3>& roots_out,
+    // These two are only assigned when CWDEBUG and/or RANDOM_CUBICS_TEST are defined.
+    double& initial_guess, int& iterations)
 {
   DoutEntering(dc::notice, "get_roots() for " << cubic);
 
@@ -34,6 +36,20 @@ int get_roots(cairowindow::plot::Plot& plot, boost::intrusive_ptr<cairowindow::L
 # define RANDOM_CUBICS_TEST
 # include "math/CubicPolynomial_get_roots.cpp"
 # undef RANDOM_CUBICS_TEST
+}
+
+int get_roots(math::CubicPolynomial& cubic, std::array<double, 3>& roots_out, int& iterations)
+{
+  DoutEntering(dc::notice, "get_roots() for " << cubic);
+
+  // Define a coefficients_ for use by math/CubicPolynomial_get_roots.cpp.
+  std::array<double, 4>& coefficients_ = reinterpret_cast<std::array<double, 4>&>(cubic[0]);
+
+  using math::QuadraticPolynomial;
+  // Include the body of the function.
+# define GETROOTS_ASSIGN_ITERATIONS
+# include "math/CubicPolynomial_get_roots.cpp"
+# undef GETROOTS_ASSIGN_ITERATIONS
 }
 
 void transform(std::array<double, 4>&c, double x_scale, double y_scale, double x_shift, double y_shift)
@@ -52,7 +68,6 @@ int main(int argc, char* argv[])
   Debug(NAMESPACE_DEBUG::init());
   Dout(dc::notice, "Entering main()");
 
-#if 1
   // Handle random seed.
   unsigned int seed;
   if (argc > 1)
@@ -115,7 +130,7 @@ int main(int argc, char* argv[])
 
     cubics.emplace_back(c[0], c[1], c[2], c[3]);
   }
-#endif
+  std::cout << "Done (" << cubics.size() << " cubics)." << std::endl;
 
 #if INTERACTIVE
   try
@@ -207,6 +222,7 @@ int main(int argc, char* argv[])
     }
     Debug(libcw_do.on());
 
+    std::cout << "ymin = " << ymin << "; ymax = " << ymax << std::endl;
     plot2.set_yrange({ymin, ymax});
     plot2.add_to(background_layer2, false);
 
@@ -253,38 +269,7 @@ int main(int argc, char* argv[])
       double SC0 = (root - root0) / (root1 - root0);
       return {C0, SC0};
     };
-#endif
-
-#if 0
-    //---------------------
-    double x_min = -1.0;
-    double x_max = 1.0;
-    double y_min = SC0_lambda(x_min).y();
-    double y_max = SC0_lambda(x_max).y();
-
-    // Check if the solution is bracketed
-    if (y_min > 0.5 || y_max < 0.5) {
-        throw std::runtime_error("y = 0.5 is not bracketed within x_min and x_max.");
-    }
-
-    double tol = 1e-12;
-    while ((x_max - x_min) > tol) {
-        double x_mid = 0.5 * (x_min + x_max);
-        double y_mid = SC0_lambda(x_mid).y();
-
-        if (y_mid < 0.5) {
-            x_min = x_mid;
-        } else {
-            x_max = x_mid;
-        }
-    }
-
-    Dout(dc::notice, std::setprecision(12) << "Center = " << (0.5 * (x_min + x_max)) << "; aka " << std::pow(10.0, 0.5 * (x_min + x_max)));
-    return 0;
-    //---------------------
-    // Center = -0.0439481247927
-#endif
-    constexpr double center = -0.0439481247927;
+#endif  // INTERACTIVE
 
     std::array<double, 3> roots;
     std::cout << "Calculating roots..." << std::endl;
@@ -312,16 +297,16 @@ int main(int argc, char* argv[])
 #if INTERACTIVE
       int n = get_roots(plot, second_layer, curve_line_style, &plot_bezier_fitter, cubic, roots, initial_guess, iterations);
 #else
-      int n = cubic.get_roots(roots, iterations);
+      int n = get_roots(cubic, roots, iterations);
 #endif
       total_iterations += iterations;
       ++count;
-      std::cout << "iterations = " << iterations << "; " << (static_cast<double>(total_iterations) / count) << std::endl;
+      Dout(dc::notice, "iterations = " << iterations << "; " << (static_cast<double>(total_iterations) / count));
 
 #if INTERACTIVE
       std::array<double, 3> real_roots;
       math::CubicPolynomial cubic_real(C0_s, -3, 0, 1);
-      cubic_real.get_roots(real_roots, iterations);
+      get_roots(cubic_real, real_roots, iterations);
       Dout(dc::notice, "Real root found: " << real_roots[0] << "; initial guess: " << initial_guess);
 
       // Draw a vertical line at the first found root.
@@ -331,45 +316,7 @@ int main(int argc, char* argv[])
       auto plot_guess_line = plot.create_line(second_layer, line_style, Point{initial_guess, 0.0}, Direction::up);
       auto plot_guess2_line = plot2.create_line(second_layer2, line_style, Point{slider_c0.value(), 0.0}, Direction::up);
       auto plot_guess3_line = plot2.create_line(second_layer2, line_style, Point{0.0, diff_lambda(slider_c0.value()).y()}, Direction::right);
-#endif
 
-#if 0
-      if (iterations == 12 || (iterations < 100 && iterations > max_iterations))
-      {
-        max_iterations = iterations;
-//        Debug(libcw_do.on());
-
-        bool inflection_point_y_larger_than_zero =
-          13.5 * cubic[0] + cubic[2] * (utils::square(cubic[2] / cubic[3]) - 4.5 * (cubic[1] / cubic[3])) > 0.0;
-
-        math::AnalyzedCubic acubic;
-        // Calculate the minimum (-1) if the inflection point lays above the x-axis, and the maximum otherwise.
-        // This way acubic.get_extreme() (E above) becomes the extreme that is the closest to the x-axis.
-        acubic.initialize(cubic, inflection_point_y_larger_than_zero ? -1 : 1);
-
-        // Obtain the calculated inflection point.
-        double const inflection_point_x = acubic.inflection_point();
-
-        // Remember if we have local extrema or not.
-        bool const cubic_has_local_extrema = acubic.has_extrema();
-
-        // Avoid the local extrema and the inflection point because the derivative might be zero there too.
-        double x = cubic_has_local_extrema ?
-            3 * inflection_point_x - 2 * acubic.get_extreme() :
-            inflection_point_x + (((cubic[3] > 0.0) == inflection_point_y_larger_than_zero) ? -1.0 : 1.0);
-
-        Dout(dc::notice|continued_cf, cubic << " roots: ");
-        for (int r = 0; r < n; ++r)
-          Dout(dc::continued, roots[r] << ", ");
-        Dout(dc::continued, "inflection point: " << inflection_point_x);
-        if (cubic_has_local_extrema)
-          Dout(dc::continued, ", extreme: " << acubic.get_extreme());
-        Dout(dc::finish, ", starting point: " << x);
-//        Debug(libcw_do.off());
-      }
-#endif
-
-#if INTERACTIVE
       Debug(libcw_do.off());
       plot::BezierFitter plot_curve;
       plot_curve.solve(
@@ -393,12 +340,12 @@ int main(int argc, char* argv[])
       // or wants to print the current drawing) then go to the top of loop for a redraw.
       if (!window.handle_input_events())
         break;          // Program must be terminated.
-#endif
+#endif  // INTERACTIVE
     }
 #if !INTERACTIVE
     Debug(libcw_do.on());
     ASSERT(count == number_of_cubics);
-    Dout(dc::notice, "Average number of iterations per cubic: " << (total_iterations / number_of_cubics));
+    std::cout << "Average number of iterations per cubic: " << (static_cast<double>(total_iterations) / number_of_cubics) << std::endl;
 #endif
 
 #if INTERACTIVE

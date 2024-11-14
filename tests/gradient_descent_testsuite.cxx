@@ -39,10 +39,12 @@ struct Function
     return function_.derivative(symbol_).evaluate();
   }
 
+#ifdef CWDEBUG
   void print_on(std::ostream& os) const
   {
     function_.print_on(os);
   }
+#endif
 
  private:
   friend struct EnableDrawing;
@@ -53,10 +55,12 @@ struct Function
       dep->reset_evaluation();
   }
 
+#ifdef CWDEBUG
   std::string to_string() const
   {
     return function_.to_string();
   }
+#endif
 };
 
 class EnableDrawing
@@ -71,9 +75,11 @@ class EnableDrawing
   std::thread event_loop;
   Range L_min_max;
   plot::Plot plot;
+  plot::BezierFitter plot_curve;
+#ifdef CWDEBUG
   AlgorithmEvent algorithm_event;
   events::RequestHandle<gradient_descent::AlgorithmEventType> algorithm_event_handle;
-  plot::BezierFitter plot_curve;
+#endif
 
  public:
   EnableDrawing(gradient_descent::Algorithm* algorithm, Function const& L, double w_min, double w_max);
@@ -107,7 +113,13 @@ class EnableDrawing
 };
 
 EnableDrawing::EnableDrawing(gradient_descent::Algorithm* algorithm, Function const& L, double w_min, double w_max) :
-  window("Gradient descent of " + L.to_string(), 2*600, 2*450),
+  window("Gradient descent of "
+#ifdef CWDEBUG
+      + L.to_string(),
+#else
+      "L",
+#endif
+      2*600, 2*450),
   background_layer(window.create_background_layer<Layer>(color::white COMMA_DEBUG_ONLY("background_layer"))),
   second_layer(window.create_layer<Layer>({} COMMA_DEBUG_ONLY("second_layer"))),
   event_loop([&](){
@@ -118,9 +130,14 @@ EnableDrawing::EnableDrawing(gradient_descent::Algorithm* algorithm, Function co
     }),
   L_min_max(get_L_min_max(L, w_min, w_max)),
   plot(window.geometry(), { .grid = {.color = color::orange} },
-        L.to_string(), {}, "w", {}, "L", {}),
-  algorithm_event(plot, second_layer),
-  algorithm_event_handle(algorithm->event_server().request(algorithm_event, &AlgorithmEvent::callback))
+#ifdef CWDEBUG
+        L.to_string(),
+#else
+        "L",
+#endif
+        {}, "w", {}, "L", {})
+        COMMA_DEBUG_ONLY(algorithm_event(plot, second_layer),
+            algorithm_event_handle(algorithm->event_server().request(algorithm_event, &AlgorithmEvent::callback)))
 {
   plot.set_xrange({w_min, w_max});
   plot.set_yrange(L_min_max);
@@ -134,7 +151,9 @@ EnableDrawing::EnableDrawing(gradient_descent::Algorithm* algorithm, Function co
 
 EnableDrawing::~EnableDrawing()
 {
+#ifdef CWDEBUG
   algorithm_event_handle.cancel();
+#endif
   window.close();
   event_loop.join();
 }

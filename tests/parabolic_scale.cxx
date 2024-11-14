@@ -157,9 +157,11 @@ std::vector<double> generate_brute_force(std::mt19937& gen, std::array<math::Qua
       out_parabolas[1][1] = P2[b];
       out_parabolas[1][2] = P2[c];
 
+#ifdef CWDEBUG
       // Display the generated coefficients.
       for (int i = 0; i < 2; ++i)
         std::cout << out_parabolas[i] << std::endl;
+#endif
 
       return xs;
     }

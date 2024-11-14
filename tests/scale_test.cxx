@@ -12,6 +12,7 @@
 #include "utils/debug_ostream_operators.h"
 #include "utils/ColorPool.h"
 #include "utils/square.h"
+#include "utils/UniqueID.h"
 #include <thread>
 #include "debug.h"
 
@@ -45,10 +46,10 @@ int main()
 
     utils::UniqueIDContext<int> label_context;
 
-    Sample const s1{9.29867, 45.6027, 0.00234467, label_context};
-    Sample const s2{9.73483, 45.8303, 0.951923, label_context};
-    Sample const s3{9.87073, 45.9883, 1.26854, label_context};
-    Sample const s4{10.9106, 47.4864, 2.46341, label_context};
+    Sample const s1{9.29867, 45.6027, 0.00234467 COMMA_CWDEBUG_ONLY(label_context)};
+    Sample const s2{9.73483, 45.8303, 0.951923 COMMA_CWDEBUG_ONLY(label_context)};
+    Sample const s3{9.87073, 45.9883, 1.26854 COMMA_CWDEBUG_ONLY(label_context)};
+    Sample const s4{10.9106, 47.4864, 2.46341 COMMA_CWDEBUG_ONLY(label_context)};
 
     double w1 = std::min(s1.w(), s2.w());
     double w2 = std::max(s1.w(), s2.w());

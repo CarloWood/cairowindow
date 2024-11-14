@@ -25,7 +25,11 @@ class Algorithm : public gradient_descent::Algorithm
   bool operator()(double& w, double Lw, double dLdw)
   {
     bool result = gradient_descent::Algorithm::operator()(w, Lw, dLdw);
-    if (enable_drawing_ && !debug::Restart<0>::s_restarting)
+    if (enable_drawing_
+#ifdef CWDEBUG
+        && !debug::Restart<0>::s_restarting
+#endif
+        )
       enable_drawing_->wait();
     return result;
   }

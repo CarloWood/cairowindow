@@ -1,11 +1,15 @@
 #include "sys.h"
 #include "cairowindow/symbolic/symbolic.h"
+#ifdef SYMBOLIC_PRINTING
 #include "utils/has_print_on.h"
+#endif
 
 using namespace symbolic;
 
+#ifdef SYMBOLIC_PRINTING
 // This class defines a print_on method.
 using utils::has_print_on::operator<<;
+#endif
 
 class Cubic
 {
@@ -117,9 +121,12 @@ class Cubic
 
   Cubic transform(Expression const& x_scale, Expression const& y_scale, Expression const& x_shift, Expression const& y_shift, Symbol const& xp);
 
+#ifdef SYMBOLIC_PRINTING
   void print_on(std::ostream& os) const;
+#endif
 };
 
+#ifdef SYMBOLIC_PRINTING
 void Cubic::print_on(std::ostream& os) const
 {
   bool saw_term = false;
@@ -152,6 +159,7 @@ void Cubic::print_on(std::ostream& os) const
   if (!saw_term)
     os << "0";
 }
+#endif
 
 Cubic Cubic::transform(Expression const& x_scale, Expression const& y_scale, Expression const& x_shift, Expression const& y_shift, Symbol const& xp)
 {

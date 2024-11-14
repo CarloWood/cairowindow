@@ -48,7 +48,7 @@ void ExtremeChain::find_larger(double const new_w)
   // Sanity check for the above code.
   ASSERT(larger_ == sample_node_list_.end() || larger_->w() > new_w);
   ASSERT(larger_ == sample_node_list_.begin() || std::prev(larger_)->w() <= new_w);
-  Debug(new_w_ = new_w);
+  new_w_ = new_w;
 
 #ifdef CWDEBUG
   if (larger_ == sample_node_list_.end())
