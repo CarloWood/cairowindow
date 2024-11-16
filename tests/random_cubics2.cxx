@@ -1,5 +1,6 @@
 #include "sys.h"
 #include "math/CubicPolynomial.h"
+#include "math/bracket_zero.h"
 #include <random>
 #include <chrono>
 #include <sstream>
@@ -20,6 +21,49 @@ int get_roots(math::CubicPolynomial& cubic, std::array<double, 3>& roots_out, in
 # define GETROOTS_ASSIGN_ITERATIONS
 # include "math/CubicPolynomial_get_roots.cpp"
 # undef GETROOTS_ASSIGN_ITERATIONS
+}
+
+void sanity_check(math::CubicPolynomial const& cubic, double root)
+{
+  // Course check.
+  double fr = cubic(root);
+
+  double root_small = root < 0 ? root * 1.000000001 : root * 0.999999999;
+  double root_large = root < 0 ? root * 0.999999999 : root * 1.000000001;
+
+  double frm = cubic(root_small);
+  double frp = cubic(root_large);
+
+  ASSERT(std::abs(fr) < std::abs(frm) && std::abs(fr) < std::abs(frp));
+
+  try
+  {
+    double real_root = math::bracket_zero(root_small, root_large, [&](double r){ return cubic(r); });
+    Dout(dc::notice, "Real root: " << std::setprecision(18) << real_root << "; root found: " << root);
+
+    int steps = 0;
+    if (root != real_root)
+    {
+      double direction = real_root > root ? +INFINITY : -INFINITY;
+      do
+      {
+        root = std::nextafter(root, direction);
+        ++steps;
+      }
+      while (root != real_root);
+    }
+    Dout(dc::notice, "Distance: " << steps);
+  }
+  catch (std::runtime_error const& error)
+  {
+    Dout(dc::warning, error.what());
+  }
+}
+
+void sanity_check(math::CubicPolynomial const& cubic, std::array<double, 3> const& roots, int number_of_roots)
+{
+  for (int r = 0; r < number_of_roots; ++r)
+    sanity_check(cubic, roots[0]);
 }
 
 int main(int argc, char* argv[])
@@ -56,6 +100,7 @@ int main(int argc, char* argv[])
     int iterations;
     std::array<double, 3> roots;
     int n = get_roots(cubics[i], roots, iterations);
+    sanity_check(cubics[i], roots, n);
     Dout(dc::notice, "Cubic: " << cubics[i] << " has " << n << " roots; which we found in " << iterations << " iterations.");
     total_number_of_iterations += iterations;
   }

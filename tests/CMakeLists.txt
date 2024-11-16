@@ -132,3 +132,6 @@ target_link_libraries(Halley_iterations AICxx::cairowindow AICxx::symbolic AICxx
 add_executable(plus_three_case plus_three_case.cxx)
 target_link_libraries(plus_three_case AICxx::cairowindow AICxx::symbolic AICxx::math ${AICXX_OBJECTS_LIST} ${GMP_LIBRARY} ${MPFR_LIBRARY} ${GLPK_LIBRARY} Eigen3::Eigen)
 endif ()
+
+add_executable(bracket_zero_test bracket_zero_test.cxx)
+target_link_libraries(bracket_zero_test AICxx::math ${AICXX_OBJECTS_LIST})

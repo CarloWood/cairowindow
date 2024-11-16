@@ -2,6 +2,7 @@
 #include "utils/square.h"
 #include "cairowindow/QuickGraph.h"
 #include "math/CubicPolynomial.h"
+#include "math/bracket_zero.h"
 #include "mpreal/mpreal.h"
 #include <array>
 #include <vector>
@@ -216,41 +217,6 @@ double approximate_root1(double C0)
   return -cbrtC0 + 1.0 / cbrtC0;
 }
 
-namespace math {
-
-// The function must be monotonically rising.
-double bracket_zero(double left, double right, std::function<double(double)> const& f, double tolerance)
-{
-  if (left > right)
-    std::swap(left, right);
-
-  double value_left = f(left);
-  double value_right = f(right);
-
-  if (value_left == value_right)
-    return 0.5 * (left + right);
-
-  // The function must be monotonically rising.
-  ASSERT(value_left < value_right);
-
-  // Check if the solution is bracketed.
-  if (value_left > 0.0 || value_right < 0.0)
-    throw std::runtime_error("math::bracket_zero: there is no zero bracketed within left and right.");
-
-  while (right - left > tolerance)
-  {
-    double middle = 0.5 * (left + right);
-    if (f(middle) < 0.0)
-      left = middle;
-    else
-      right = middle;
-  }
-
-  return 0.5 * (left + right);
-}
-
-} // namespace math
-
 int main()
 {
   Debug(NAMESPACE_DEBUG::init());
@@ -265,7 +231,7 @@ int main()
 
 #if 0
   // Test one specific value.
-  double C0 = -8.36572063703884261;
+  double C0 = -1.31033975694175364;
   std::cout << "Real root = " << exact_root(C0, 3.0) << std::endl;
   double u = -std::cbrt(C0) + 1.0 / std::cbrt(C0);
   std::cout << "Initial guess = " << u << std::endl;
@@ -274,9 +240,10 @@ int main()
   math::CubicPolynomial cubic(C0, 3.0, 0.0, 1.0);
   std::array<double, 3> roots;
   int iterations;
-  cubic.get_roots(roots, iterations);
+  cubic.get_roots(roots);
   std::cout << "get_roots: " << roots[0] << std::endl;
-  std::cout << "Number of iterations: " << iterations << std::endl;
+  double real_root = math::bracket_zero(-1e-6, -1.2e-6, cubic);
+  std::cout << "real root: " << real_root << std::endl;
 
   return 0;
 #endif
@@ -325,7 +292,7 @@ int main()
   graph.add_function(relerr1, color::purple);
 
   // Find the point where relerr0 and relerr1 are equal.
-  double cross_point = math::bracket_zero(2.0, 3.0, [&](double C0){ return relerr0(C0) - relerr1(C0); }, 1e-9);
+  double cross_point = math::bracket_zero(2.0, 3.0, [&](double C0){ return relerr0(C0) - relerr1(C0); });
   Dout(dc::notice, "cross_point = " << cross_point << "; real root = " << exact_root(cross_point, 3.0));
   Line cross_point_line({cross_point, 0.0}, Direction::up);
   graph.add_line(cross_point_line);
