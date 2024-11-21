@@ -8,6 +8,9 @@
 #include <Eigen/Dense>
 #include <boost/math/quadrature/gauss_kronrod.hpp>
 
+#include "QuickGraph.h"
+#include "cwds/Restart.h"
+
 namespace cairowindow {
 
 Rectangle BezierCurve::extents() const
@@ -823,20 +826,37 @@ int BezierCurve::calculate_intersection_points(Point Q, Vector direction, std::a
 
 double BezierCurve::distance_squared(Point Q, Vector direction) const
 {
+  RESTART
+
   // There are at most three intersection points.
   std::array<double, 3> intersection_point_t_values;
   int n = calculate_intersection_points(Q, direction, intersection_point_t_values);
+  double min_distance_squared = std::numeric_limits<double>::infinity();
 
   if (AI_UNLIKELY(n == 0))
-    return false;
+    return min_distance_squared;
 
-  double min_distance_squared = std::numeric_limits<double>::infinity();
   for (int i = 0; i < n; ++i)
   {
     double t = intersection_point_t_values[i];
     if (t <= 0.0 || t >= 1.0)
       continue;
     min_distance_squared = std::min(min_distance_squared, (Q - this->P(t)).length_squared());
+  }
+
+  if (min_distance_squared == std::numeric_limits<double>::infinity())
+  {
+    Rectangle ext = extents();
+    QuickGraph qg("No intersection points", "x", "y",
+        {ext.offset_x(), ext.offset_x() + ext.width()}, {ext.offset_y(), ext.offset_y() + ext.width()});
+    qg.add_function([&](double x) -> double { return ext.offset_y(); }, color::cornsilk);
+    for (double t = 0.0; t <= 1.0; t += 0.001)
+    {
+      Point p = P(t);
+      qg.add_point(p, draw::PointStyle{}({.filled_shape = 15}));
+    }
+    qg.add_point(Q, draw::PointStyle{}({.filled_shape = 5}));
+    qg.wait_for_keypress();
   }
 
   // Returns infinity if no intersection point for a t in the range <0, 1> existed.

@@ -65,11 +65,12 @@ int main()
     draw::ConnectorStyle connector_style(line_style({.line_color = color::coral, .dashes = {3.0, 3.0}}));
 
     // Initial values.
-    Point const P0{-14.8121, 13.6755}; //{-14.6654, 14.5188};
-    Point const P1{-10, 15};
-    Point const P2{10.5591, -14.9588};
-    Point const P3{2 * P1.x() - P0.x(), 0};
-    Point const P4{P2.x(), 0};
+    // P0 = {x_:-9.60586617781851615, y_:7.91934005499541627}, P1 = {x_:-3.37305224564619621, y_:7.22273143904674519}, P2 = {x_:16.3153070577451871, y_:-3.84967919340054721}, P3 = {x_:1.24655675527039378, y_:0}, P4 = {x_:16.3153070577451871, y_:5.9395050412465622}
+    Point const P0{-9.60586617781851615, 7.91934005499541627}; //{-14.8121, 13.6755}; //{-14.6654, 14.5188};
+    Point const P1{-3.37305224564619621, 7.22273143904674519}; //{-10, 15};
+    Point const P2{16.3153070577451871, -3.84967919340054721};
+    Point const P3{1.24655675527039378, 0.0}; //{2 * P1.x() - P0.x(), 0};
+    Point const P4{16.3153070577451871, 5.9395050412465622}; //{P2.x(), 0};
 
     // Create a point P₀.
     auto plot_P0 = plot.create_point(second_layer, point_style, P0);
@@ -240,13 +241,28 @@ int main()
           plot.viewport());
       auto old_plot_cubic = plot.create_bezier_fitter(second_layer, curve_line_style({.line_color = color::green}), std::move(fitter3_old));
 
+#if 1
+      std::vector<plot::Connector> plot_T0;
+      auto draw_line = [&](Point P0, Vector V0){
+        plot_T0.emplace_back(P0, P0 + V0.direction());
+        plot.add_connector(second_layer, {}, plot_T0.back());
+      };
+
       BezierFitter fitter3;
       Rectangle viewport{-20, -20, 40, 40};
       fitter3.solve(
+          draw_line,
           [&, x1](double w) -> Point { return {w, cubic(w - x1)}; },
           [&, x1](double w) -> Vector { return {1.0, cubic.derivative(w - x1)}; },
           {viewport.offset_x(), viewport.offset_x() + viewport.width()},
-          viewport, 1e-5, Orientation::vertical);
+          viewport, 1e-3, Orientation::vertical);
+
+      if (fitter3.result().size() > 100)
+      {
+        Dout(dc::notice, std::setprecision(18) << "P0 = " << plot_P0 << ", P1 = " << plot_P1 << ", P2 = " << plot_P2 <<
+            ", P3 = " << plot_P3 << ", P4 = " << plot_P4);
+      }
+
       auto plot_cubic = plot.create_bezier_fitter(second_layer, curve_line_style({.line_color = color::red}), std::move(fitter3));
 
       math::CubicPolynomial cubic2;
@@ -255,6 +271,7 @@ int main()
       // Plot the cubic2.
 //      BezierFitter fitter4([&](double w) -> Point{ return {w, cubic2(w)}; }, plot.viewport());
 //      auto plot_cubic2 = plot.create_bezier_fitter(second_layer, curve_line_style({.line_color = color::green}), std::move(fitter4));
+#endif
 
       // Flush all expose events related to the drawing done above.
       window.set_send_expose_events(true);

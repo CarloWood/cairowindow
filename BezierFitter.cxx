@@ -2,8 +2,24 @@
 #include "BezierFitter.h"
 #include "Vector.h"
 #include <array>
+#ifdef CWDEBUG
+#include "utils/macros.h"
+#endif
 
 namespace cairowindow {
+
+#ifdef CWDEBUG
+std::string to_string(Orientation orientation)
+{
+  switch (orientation)
+  {
+    AI_CASE_RETURN(Orientation::horizontal);
+    AI_CASE_RETURN(Orientation::vertical);
+    AI_CASE_RETURN(Orientation::perpendicular);
+  }
+  AI_NEVER_REACHED
+}
+#endif
 
 namespace {
 
@@ -119,10 +135,14 @@ void BezierFitter::solve(std::function<Point(double)>&& func, Range const& domai
   solve(func, viewport, tolerance, t0, t6, Vector{func(t0)}, Vector{func(0.5 * (t0 + t6))}, Vector{func(t6)});
 }
 
-void BezierFitter::solve(std::function<Point(double)> const& P, std::function<Vector(double)> const& T,
+void BezierFitter::solve(std::function<void(Point p, Vector v)> const& draw_line,
+    std::function<Point(double)> const& P, std::function<Vector(double)> const& T,
     IntersectRectangle const& viewport, double fraction, Orientation orientation,
     double t0, double t4, Point P0, Vector T0, Point P2, Point P4, Vector T4)
 {
+  DoutEntering(dc::notice, "BezierFitter::solve(P, T, " << viewport << ", " << fraction << ", " << orientation << ", " <<
+      t0 << ", " << t4 << ", " << P0 << ", " << T0 << ", " << P2 << ", " << P4 << ", " << T4 << ")");
+
   // 0 --1-- 2 --3-- 4
   // ↑       ↑       ↑
   // t0  ↑   |   ↑   t4
@@ -138,6 +158,7 @@ void BezierFitter::solve(std::function<Point(double)> const& P, std::function<Ve
   {
     result_.emplace_back(P0, P4);
     Vector S = result_.back().cubic_from(T0, T4, P2);
+    draw_line(P0, result_.back().V0());
 
     Vector D1 =
       orientation == Orientation::horizontal ? Direction::right
@@ -168,12 +189,13 @@ void BezierFitter::solve(std::function<Point(double)> const& P, std::function<Ve
   }
 
   ++depth_;
-  solve(P, T, viewport, fraction, orientation, t0, t2, P0, T0, P1, P2, T2);
-  solve(P, T, viewport, fraction, orientation, t2, t4, P2, T2, P3, P4, T4);
+  solve(draw_line, P, T, viewport, fraction, orientation, t0, t2, P0, T0, P1, P2, T2);
+  solve(draw_line, P, T, viewport, fraction, orientation, t2, t4, P2, T2, P3, P4, T4);
   --depth_;
 }
 
-void BezierFitter::solve(std::function<Point(double)>&& P, std::function<Vector(double)>&& T,
+void BezierFitter::solve(std::function<void(Point p, Vector v)> const& draw_line,
+    std::function<Point(double)>&& P, std::function<Vector(double)>&& T,
     Range const& domain, Rectangle const& viewport, double fraction, Orientation orientation)
 {
   // Clear result data, in case this object is being re-used.
@@ -182,7 +204,7 @@ void BezierFitter::solve(std::function<Point(double)>&& P, std::function<Vector(
   double t0 = domain.min();
   double t1 = domain.max();
   depth_ = 0;
-  solve(P, T, viewport, fraction, orientation, t0, t1, P(t0), T(t0), P(0.5 * (t0 + t1)), P(t1), T(t1));
+  solve(draw_line, P, T, viewport, fraction, orientation, t0, t1, P(t0), T(t0), P(0.5 * (t0 + t1)), P(t1), T(t1));
 }
 
 } // namespace cairowindow

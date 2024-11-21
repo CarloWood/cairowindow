@@ -18,6 +18,14 @@ enum class Orientation
   perpendicular // This should only be used when rotations of the curve make sense (x and y are interchangable and the draw ratio is 1:1).
 };
 
+#ifdef CWDEBUG
+std::string to_string(Orientation orientation);
+inline std::ostream& operator<<(std::ostream& os, Orientation orientation)
+{
+  return os << to_string(orientation);
+}
+#endif
+
 class BezierFitter
 {
  private:
@@ -27,7 +35,8 @@ class BezierFitter
  public:
   BezierFitter() = default;
 
-  void solve(std::function<Point(double)>&& P, std::function<Vector(double)>&& V,
+  void solve(std::function<void(Point p, Vector v)> const& draw_line,
+      std::function<Point(double)>&& P, std::function<Vector(double)>&& V,
       Range const& domain, Rectangle const& viewport, double fraction, Orientation orientation);
 
   // func     : the parametric function that must be fitted: takes the parameter (t) and returns a Point.
@@ -38,16 +47,16 @@ class BezierFitter
   //            when -1.0 is passed the default 1e-5 * viewport.height() will be used.
   void solve(std::function<Point(double)>&& func, Range const& domain, Rectangle const& viewport, double tolerance = -1.0);
 
-  // This signature can be used, for example, when `func` returns a Point that simply passes its argument back as the x-coordinate of the Point.
-  void solve(std::function<Point(double)>&& func, Rectangle const& viewport, double tolerance = -1.0)
-  {
-    solve(std::move(func), {viewport.offset_x(), viewport.offset_x() + viewport.width()}, viewport, tolerance);
-  }
-
   // Convenience constructor that combine the construction with the call to solve.
   BezierFitter(std::function<Point(double)>&& func, Range const& domain, Rectangle const& viewport, double tolerance = -1.0)
   {
     solve(std::move(func), domain, viewport, tolerance);
+  }
+
+  // This signature can be used, for example, when `func` returns a Point that simply passes its argument back as the x-coordinate of the Point.
+  void solve(std::function<Point(double)>&& func, Rectangle const& viewport, double tolerance = -1.0)
+  {
+    solve(std::move(func), {viewport.offset_x(), viewport.offset_x() + viewport.width()}, viewport, tolerance);
   }
 
   // Same
@@ -60,7 +69,8 @@ class BezierFitter
   std::vector<BezierCurve> const& result() const { return result_; }
 
  private:
-  void solve(std::function<Point(double)> const& P, std::function<Vector(double)> const& V,
+  void solve(std::function<void(Point p, Vector v)> const& draw_line,
+      std::function<Point(double)> const& P, std::function<Vector(double)> const& V,
       IntersectRectangle const& viewport, double fraction, Orientation orientation,
       double t0, double t1, Point P0, Vector T0, Point Pg, Point P1, Vector T1);
 

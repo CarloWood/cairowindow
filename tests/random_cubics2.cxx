@@ -52,7 +52,8 @@ void sanity_check(math::CubicPolynomial const& cubic, double root)
       }
       while (root != real_root);
     }
-    Dout(dc::notice, "Distance: " << steps);
+    double first_order = -cubic[0] / cubic[1];
+    std::cout << steps << " ; " << std::abs((first_order - real_root) / real_root) << " ; " << real_root << std::endl;
   }
   catch (std::runtime_error const& error)
   {
@@ -62,7 +63,7 @@ void sanity_check(math::CubicPolynomial const& cubic, double root)
 
 void sanity_check(math::CubicPolynomial const& cubic, std::array<double, 3> const& roots, int number_of_roots)
 {
-  for (int r = 0; r < number_of_roots; ++r)
+  //  for (int r = 0; r < number_of_roots; ++r)
     sanity_check(cubic, roots[0]);
 }
 

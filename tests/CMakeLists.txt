@@ -135,3 +135,9 @@ endif ()
 
 add_executable(bracket_zero_test bracket_zero_test.cxx)
 target_link_libraries(bracket_zero_test AICxx::math ${AICXX_OBJECTS_LIST})
+
+add_executable(small_root small_root.cxx)
+target_link_libraries(small_root AICxx::cairowindow AICxx::symbolic AICxx::math ${AICXX_OBJECTS_LIST} Eigen3::Eigen)
+
+add_executable(cubic_roots2 cubic_roots2.cxx)
+target_link_libraries(cubic_roots2 AICxx::cairowindow AICxx::symbolic AICxx::math ${AICXX_OBJECTS_LIST} Eigen3::Eigen)
