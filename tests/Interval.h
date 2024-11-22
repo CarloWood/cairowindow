@@ -91,7 +91,7 @@ class IntervalSpan : public AIRefCount
 
   Range const& range() const { return range_; }
   int number_of_intervals() const { return number_of_intervals_; }
-  char id() const { return 'A' + id_; }
+  char id() const { return 'A' + static_cast<int>(id_); }
 
   double interval_size() const
   {
