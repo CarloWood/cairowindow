@@ -101,6 +101,7 @@ class TestFunctionGenerator : public enable_drawing::Function
   {
     return "test function (seed: " + std::to_string(seed_) + ")";
   }
+
 #endif
 
   void normalize_amplitude(Range desired_amplitude_range, Range x_range, int num_samples = 1000)

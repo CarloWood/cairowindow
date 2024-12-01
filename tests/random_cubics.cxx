@@ -31,6 +31,10 @@ int get_roots(cairowindow::plot::Plot& plot, boost::intrusive_ptr<cairowindow::L
   // Define a coefficients_ for use by math/CubicPolynomial_get_roots.cpp.
   std::array<double, 4>& coefficients_ = reinterpret_cast<std::array<double, 4>&>(cubic[0]);
 
+  auto evaluate = [&](double x){ return coefficients_[0] + (coefficients_[1] + (coefficients_[2] + coefficients_[3] * x) * x) * x; };
+  auto derivative = [&](double x){ return coefficients_[1] + (2.0 * coefficients_[2] + 3.0 * coefficients_[3] * x) * x; };
+  auto half_second_derivative = [&](double x){ return 2.0 * coefficients_[2] + 3.0 * coefficients_[3] * x; };
+
   using math::QuadraticPolynomial;
   // Include the body of the function.
 # define RANDOM_CUBICS_TEST
@@ -44,6 +48,10 @@ int get_roots(math::CubicPolynomial& cubic, std::array<double, 3>& roots_out, in
 
   // Define a coefficients_ for use by math/CubicPolynomial_get_roots.cpp.
   std::array<double, 4>& coefficients_ = reinterpret_cast<std::array<double, 4>&>(cubic[0]);
+
+  auto evaluate = [&](double x){ return coefficients_[0] + (coefficients_[1] + (coefficients_[2] + coefficients_[3] * x) * x) * x; };
+  auto derivative = [&](double x){ return coefficients_[1] + (2.0 * coefficients_[2] + 3.0 * coefficients_[3] * x) * x; };
+  auto half_second_derivative = [&](double x){ return coefficients_[2] + 3.0 * coefficients_[3] * x; };
 
   using math::QuadraticPolynomial;
   // Include the body of the function.

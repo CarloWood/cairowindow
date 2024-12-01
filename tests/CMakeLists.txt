@@ -141,3 +141,6 @@ target_link_libraries(small_root AICxx::cairowindow AICxx::symbolic AICxx::math 
 
 add_executable(cubic_roots2 cubic_roots2.cxx)
 target_link_libraries(cubic_roots2 AICxx::cairowindow AICxx::symbolic AICxx::math ${AICXX_OBJECTS_LIST} Eigen3::Eigen)
+
+add_executable(print_roots print_roots.cxx)
+target_link_libraries(print_roots AICxx::cairowindow AICxx::symbolic AICxx::math ${AICXX_OBJECTS_LIST} ${MPFR_LIBRARY} Eigen3::Eigen)

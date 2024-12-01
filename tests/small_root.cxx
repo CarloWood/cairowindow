@@ -1,4 +1,7 @@
 #include "sys.h"
+#include "cairowindow/QuickGraph.h"
+#include "utils/square.h"
+#include "utils/macros.h"
 #include <iostream>
 #include <cmath>
 #include <iomanip>
@@ -8,60 +11,125 @@
 #include <cassert>
 #include <random>
 #include <array>
-#include "cairowindow/QuickGraph.h"
+#include <bitset>
 #include "debug.h"
 
+#if 0
 void roots(std::complex<double> r0, std::complex<double> r1, std::complex<double> r2, cairowindow::QuickGraph& graph, std::array<cairowindow::draw::PointStyle, 35> const& point_styles)
 {
   double c2 = std::real(-(r0 + r1 + r2));
   double c1 = std::real(r0 * r1 + r0 * r2 + r1 * r2);
   double c0 = std::real(-r0 * r1 * r2);
+  double d = utils::square(c2) - 3.0 * c1;
 
-  double f2m30 = std::sqrt(std::abs(c0 * c0 / (c1 * c1 * c1)));
+//  double f2m30 = std::sqrt(std::abs(c0 * c0 / (c1 * c1 * c1)));
 
-  double y = std::log10(std::abs(r0) / std::abs(r1));
-
-  if (!std::isfinite(y) || y < -4.0)
-    return;
-
-  //      |
-  //  Q0  |  Q1
-  //------+------ <-- y=-2
-  //  Q2  |  Q3
-  //      |
-  //      ^
-  //      |
-  //     x=-2
-
-  int quadrant = (f2m30 > 0.01 ? 1 : 0) | (y < -2 ? 2 : 0);
-
-#if 0
-  if (quadrant == 1 || quadrant == 3)
+  if (d >= 0.0)
   {
-    int count = 0;
-    for (int e0 = -3; e0 <= 3; ++e0)
-      for (int e1 = -3; e1 <= 3; ++e1)
-      {
-        int e2 = -(3 * e0 + 2 * e1);
-        if (e2 < -3 || e2 > 3)
-          continue;
-//        if (e0 == 2 && e1 == -3)
-//          continue;
-        double f = std::pow(c0, e0) * std::pow(c1, e1) * std::pow(c2, e2);
-        double x = 0.5 * std::log10(f);
+    double sqrt_d = std::sqrt(d);
+    double x_max = (-c2 - sqrt_d) / 3.0;
+    double x_min = (-c2 + sqrt_d) / 3.0;
 
-        if (std::isfinite(x) && -8.0 < x && x < 4.0)
-          graph.add_point({x, -4.0 * count / 17.0 - quadrant / 40.0}, point_styles[count + 9 * (quadrant - 1)]);
+    double rr0 = std::real(r0);
+    double rr1 = std::real(r1);
+    double rr2 = std::real(r2);
 
-        ++count;
-      }
+    if (x_min < 0.0)
+      ASSERT(rr2 < rr1 && rr1 < rr0);
+    else if (0.0 < x_max)
+      ASSERT(rr0 < rr1 && rr1 < rr2);
+    else if (c2 < 0)
+      ASSERT(rr1 < rr0 && rr0 < rr2);
+    else
+      ASSERT(rr2 < rr0 && rr0 < rr1);
+
+//  if (std::isfinite(x) && -8.0 < x && x < 4.0)
+//    graph.add_point({x, y}, point_styles[0]);
   }
-#else
-  double x = std::log10(f2m30);
-  if (std::isfinite(x) && -8.0 < x && x < 4.0)
-    graph.add_point({x, y}, point_styles[0]);
-#endif
 }
+#else
+
+enum Order
+{
+  A,
+  B,
+  C,
+  D
+};
+
+std::string to_string(Order order)
+{
+  switch (order)
+  {
+    AI_CASE_RETURN(A);
+    AI_CASE_RETURN(B);
+    AI_CASE_RETURN(C);
+    AI_CASE_RETURN(D);
+  }
+  AI_NEVER_REACHED
+}
+
+std::ostream& operator<<(std::ostream& os, Order order)
+{
+  return os << to_string(order);
+}
+
+constexpr int A_bit = 1;
+constexpr int B_bit = 2;
+constexpr int C_bit = 4;
+constexpr int D_bit = 8;
+std::array<int, 64> table;
+
+void roots(double r0, double r1, double r2)
+{
+  ASSERT(std::abs(r0) <= std::abs(r1) && std::abs(r1) <= std::abs(r2));
+
+  // Coefficients of the monic cubic polynomial.
+  double c2 = -(r0 + r1 + r2);
+  double c1 = r0 * r1 + r0 * r2 + r1 * r2;
+  double c0 = -r0 * r1 * r2;
+
+  // Discriminant of the derivative
+  double d = c2 * c2 - 3.0 * c1;
+  ASSERT(d >= 0.0);
+
+  double sqrt_d = std::sqrt(d);
+
+  // Correct calculation of critical points
+  double x_max = (-c2 - sqrt_d) / 3.0;
+  double x_min = (-c2 + sqrt_d) / 3.0;
+
+  // Determine which root to approximate.
+  double ratio = 1.0;   // |root|/|r0|
+  if (x_max > 0.0)
+  {
+    // Calculate the root that is less than x_max.
+    int m = (r0 < x_max ? 1 : 0) | (r1 < x_max ? 2 : 0) | (r2 < x_max ? 4 : 0);
+    ASSERT(m == 1);
+  }
+  else if (x_min < 0.0)
+  {
+    // Calculate the root that is larger than x_min.
+    int m = (r0 > x_min ? 1 : 0) | (r1 > x_min ? 2 : 0) | (r2 > x_min ? 4 : 0);
+    ASSERT(m == 1);
+  }
+  else
+  {
+    // Calculate the root that is larger than x_max but less than x_min.
+    int m = (x_max < r0 && r0 < x_min ? 1 : 0) | (x_max < r1 && r1 < x_min ? 2 : 0) | (x_max < r2 && r2 < x_min ? 4 : 0);
+    ASSERT(m == 1 || m == 2);
+    if (m == 2)
+      ratio = std::abs(r1) / std::abs(r0);
+  }
+
+  static double worst_case = 0.0;
+  if (ratio > worst_case)
+  {
+    worst_case = ratio;
+    Dout(dc::notice, worst_case << " : " << r0 << ", " << r1 << ", " << r2);
+  }
+}
+#endif
 
 // b = r₀⋅r₁ + r₀⋅r₂ + r₁⋅r₂
 // c = - r₀⋅r₁⋅r₂
@@ -115,27 +183,34 @@ int main()
   Dout(dc::notice, "seed = " << seed);
   std::mt19937 engine(seed);
 
-  std::uniform_real_distribution<double> dist(-1.0, 1.0);
-  std::uniform_real_distribution<double> dist_less_than_one(0.0001, 1.0);
+  std::uniform_real_distribution<double> dist_less_than_ten(0.0001, 10.0);
 
-  for (;;)
-  for (int case_abc = 1; case_abc < 3; ++case_abc)
+  for (int case_abc = 0; case_abc < 1; ++case_abc)
   {
     switch (case_abc)
     {
       case 0:   // a
       {
-        for (int i = 0; i < 100000; ++i)
+        for (int i = 0; i < 100000000; ++i)
         {
-          // All three roots are reals.
-          double r1_div_r2 = dist(engine);
-          double r0_div_r1 = dist(engine);
-          if (std::abs(r1_div_r2) < 0.0001)
-            continue;
-          roots(r0_div_r1, 1.0, 1.0 / r1_div_r2, graph, point_styles);
+//          if (i % 10000 == 0)
+//            std::cout << i << '\n';
+          double ar2 = dist_less_than_ten(engine);
+          std::uniform_real_distribution<double> dist1(0.0001, ar2);
+          double ar1 = dist1(engine);
+          std::uniform_real_distribution<double> dist0(0.0001, ar1);
+          double ar0 = dist0(engine);
+          for (int signs = 0; signs <= 7; ++signs)
+          {
+            double r0 = (signs & 1) ? -ar0 : ar0;
+            double r1 = (signs & 2) ? -ar1 : ar1;
+            double r2 = (signs & 4) ? -ar2 : ar2;
+            roots(r0, r1, r2 /*, graph, point_styles*/);
+          }
         }
         break;
       }
+#if 0
       case 1:   // b
         // r₀ is real, r₁ = α - 𝕚 β, r₂ = α + 𝕚 β.
         for (int i = 0; i < 100000; ++i)
@@ -162,6 +237,7 @@ int main()
           roots({alpha, -beta}, {alpha, beta}, 1.0, graph, point_styles);
         }
         break;
+#endif
     }
   }
 

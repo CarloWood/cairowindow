@@ -11,6 +11,11 @@
 #include <cmath>
 #include "debug.h"
 
+bool almost_equal(double x1, double x2)
+{
+  return std::abs(x1 - x2) < 1e-6;
+}
+
 int main()
 {
   Debug(NAMESPACE_DEBUG::init());
@@ -56,9 +61,11 @@ int main()
     draw::PointStyle root0_style({.color_index = 12, .filled_shape = 3});
     draw::PointStyle root1_style({.color_index = 2, .filled_shape = 3});
     draw::PointStyle root2_style({.color_index = 10, .filled_shape = 3});
+    draw::PointStyle inflection_style({.color_index = 13, .filled_shape = 5});
+    draw::CircleStyle circle_style({.position = draw::at_center});
 
     // Draw a slider for r₀.
-    auto slider_r0 = plot.create_slider(second_layer, {1028, 83, 7, 400}, 0.0001, -1.0, 1.0);
+    auto slider_r0 = plot.create_slider(second_layer, {1028, 83, 7, 400}, 0.0001, -10.0, 10.0);
     auto slider_r0_label = plot.create_text(second_layer, slider_style, Pixel{1028, 483}, "r₀");
 
     // Draw a slider for r₁.
@@ -68,6 +75,10 @@ int main()
     // Draw a slider for r₂.
     auto slider_r2 = plot.create_slider(second_layer, {1128, 83, 7, 400}, 2.5, -10.0, 10.0);
     auto slider_r2_label = plot.create_text(second_layer, slider_style, Pixel{1128, 483}, "r₂");
+
+    // Draw x and y axis.
+    auto x_axis = plot.create_line(background_layer, solid_line_style({.line_color = color::slategrey}), Point{0.0, 0.0}, Direction::left);
+    auto y_axis = plot.create_line(background_layer, solid_line_style({.line_color = color::slategrey}), Point{0.0, 0.0}, Direction::up);
 
     while (true)
     {
@@ -96,13 +107,15 @@ int main()
       double c1 = r0 * r1 + r0 * r2 + r1 * r2;
       double c2 = -(r0 + r1 + r2);
       math::CubicPolynomial cubic(c0, c1, c2, 1.0);
+      Dout(dc::notice, cubic);
 
-      double const d = utils::square(c2) - 3.0 * c1;
+      double const d = std::max(0.0, utils::square(c2) - 3.0 * c1);     // Prevent floating-point round off errors to result in a negative d.
       double x_max = (-c2 - std::sqrt(d)) / 3.0;
       double x_min = (-c2 + std::sqrt(d)) / 3.0;
-      ASSERT(x_max < x_min);
+      ASSERT(x_max <= x_min);
       double P0 = cubic(0.0);
       double Pxmax = cubic(x_max);
+#if 0
       if (x_max > 0)
       {
         if (2 * Pxmax > (3 * std::abs(P0) + P0))
@@ -117,6 +130,7 @@ int main()
         else
           Dout(dc::notice, "Class C");
       }
+#endif
 
       // Draw the cubic.
       plot::BezierFitter plot_cubic;
@@ -131,10 +145,68 @@ int main()
       auto plot_r2 = plot.create_point(second_layer, root2_style, {r2, 0.0});
 
       // Draw a vertical line at x_max and x_min.
-      auto plot_x_max = plot.create_line(second_layer, dashed_line_style, Point{x_max, 0.0}, Direction::up);
-      auto plot_x_min = plot.create_line(second_layer, dashed_line_style, Point{x_min, 0.0}, Direction::up);
+      auto plot_x_max = plot.create_line(second_layer, dashed_line_style({.line_color = x_max < 0.0 ? color::brown : color::lime}),
+          Point{x_max, 0.0}, Direction::up);
+      auto plot_x_min = plot.create_line(second_layer, dashed_line_style({.line_color = x_min < 0.0 ? color::brown : color::lime}),
+          Point{x_min, 0.0}, Direction::up);
+      // Draw a vertical line at the inflection point.
+      double x_inflection_point = -c2 / 3.0;
+      auto plot_inflection = plot.create_line(second_layer, dashed_line_style, Point{x_inflection_point, 0.0}, Direction::up);
+      // Evaluate the cubic at the inflection point.
+      double y_inflection_point = cubic(x_inflection_point);
+      auto plot_inflection_point = plot.create_point(second_layer, inflection_style, {x_inflection_point, y_inflection_point});
 
       Dout(dc::notice, "x_max = " << x_max << ", x_min = " << x_min << ", r0 = " << r0 << ", r1 = " << r1 << ", r2 = " << r2);
+
+      // Sort the known roots to what we can choose an algorithm for:
+      // * left: left than x_max.
+      // * middle: in between x_max and x_min.
+      // * right: right of x_min.
+      std::array<double, 3> roots{{r0, r1, r2}};
+      std::sort(roots.begin(), roots.end());
+      constexpr int left = 0;
+      constexpr int middle = 1;
+      constexpr int right = 2;
+
+      // Which root would we calculate?
+      // If inflection point is in the upper-right or lower-left quadrant
+      // we'll pick the same root as if 0 < x_max < x_min or x_max < x_min < 0 respectively.
+      //  2 | 0
+      //  --+--
+      //  3 | 1
+      int inflection_quadrant = (x_inflection_point < 0.0 ? 2 : 0) | (y_inflection_point < 0.0 ? 1 : 0);
+      bool changed = false;
+      double root;
+      if (0.0 < x_max)
+      {
+        // Calculate the root that is less than x_max.
+        root = roots[left];
+      }
+      else if (x_min < 0.0)
+      {
+        // Calculate the root that is larger than x_min.
+        root = roots[right];
+      }
+      else if (inflection_quadrant == 0 || inflection_quadrant == 3)
+      {
+        changed = true;
+        // Pick the root that is on the outer side of the local extreme that is closest to 0.
+        if (std::abs(x_max) < std::abs(x_min) && std::abs(x_max) < std::abs(x_inflection_point))
+          root = roots[left];
+        else if (std::abs(x_min) < std::abs(x_inflection_point))
+          root = roots[right];
+        else
+          root = roots[middle];
+      }
+      else
+      {
+        ASSERT(x_max <= 0.0 && 0.0 <= x_min);
+        // Calculate the root that is larger than x_max but less than x_min.
+        root = roots[middle];
+      }
+      auto plot_root = plot.create_connector(second_layer,
+          solid_line_style({.line_color = changed ? color::red : color::black, .line_width = 2.0}),
+          Point{root, cubic(root) + 10.0}, Point{root, cubic(root) + 2.0});
 
       // Flush all expose events related to the drawing done above.
       window.set_send_expose_events(true);
