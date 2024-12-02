@@ -124,6 +124,9 @@ int main(int argc, char* argv[])
   // Print the string.
   std::cout << "The input argument is: \"" << input << "\"." << std::endl;
 
+  using namespace cairowindow;
+  draw::LineStyle solid_line_style({.line_color = color::black, .line_width = 1.0});
+
   try
   {
     math::CubicPolynomial cubic(parse_string<double>(input));
@@ -177,7 +180,7 @@ int main(int argc, char* argv[])
 
     std::ostringstream title;
     title << cubic;
-    cairowindow::QuickGraph qg(title.str(), "x", "y", {-10.0, 10.0}, {-10.0, 10.0});
+    cairowindow::QuickGraph qg(title.str(), "x", "y", {-2.0, 0.0}, {-2.0, 2.0});
     qg.add_function([&](double x){ return cubic(x); });
 
     std::array<mpreal, 4> coefficients = parse_string<mpreal>(input);
@@ -187,13 +190,36 @@ int main(int argc, char* argv[])
     std::array<double, 3> roots;
     int n = cubic.get_roots(roots);
     std::cout << "This cubic has " << n << " root" << (n != 1 ? "s" : "") << ":\n";
+    mpreal root;
+    double derivative;
     for (int i = 0; i < n; ++i)
     {
-      mpreal root = exact_root(roots[i], coefficients);
-      std::cout << "  " << root << " (as double: " << root.toDouble() << ")" << '\n';
+      mpreal root_i = exact_root(roots[i], coefficients);
+      double derivative_i = cubic.derivative(root_i.toDouble());
+      std::cout << "  " << root_i << " (as double: " << root_i.toDouble() << "; with derivative " << derivative_i << ")" << '\n';
+      if (i == 0 || std::abs(derivative_i) < std::abs(derivative))
+      {
+        root = root_i;
+        derivative = derivative_i;
+      }
     }
+    // Draw a vertical line where this root is.
+    qg.add_line({{root.toDouble(), 0.0}, Direction::up}, solid_line_style({.line_color = color::lime}));
 
-    qg.wait_for_keypress();
+    cairowindow::QuickGraph qgll("log - log graph", "log10(x - root)", "log10(y)", {-10.0, 2.0}, {-10.0, 2.0});
+    qgll.add_function([&](double log10x){
+      double x = root.toDouble() + std::pow(10.0, log10x);
+      double y = cubic(x);
+      return std::log10(std::abs(y));
+    });
+    qgll.add_function([&](double log10x){
+      double x = root.toDouble() - std::pow(10.0, log10x);
+      double y = cubic(x);
+      return std::log10(std::abs(y));
+    }, solid_line_style({.line_color = color::red}));
+
+    qgll.wait_for_keypress();
+    //qg.wait_for_keypress();
   }
   catch (AIAlert::Error const& error)
   {
