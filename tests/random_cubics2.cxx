@@ -100,10 +100,12 @@ void sanity_check(math::CubicPolynomial const& cubic, double const root)
       }
     }
 
+    static int count = 0;
+    ++count;
     if (!special_case1 && !special_case2)
     {
       Dout(dc::notice(D >= 0), "epsilon = " << epsilon);
-      if (steps > 9)
+      if (count == 1000 || steps > 9)
       {
         std::ostringstream title;
         title << cubic;

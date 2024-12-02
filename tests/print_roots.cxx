@@ -124,9 +124,6 @@ int main(int argc, char* argv[])
   // Print the string.
   std::cout << "The input argument is: \"" << input << "\"." << std::endl;
 
-  using namespace cairowindow;
-  draw::LineStyle solid_line_style({.line_color = color::black, .line_width = 1.0});
-
   try
   {
     math::CubicPolynomial cubic(parse_string<double>(input));
@@ -203,23 +200,120 @@ int main(int argc, char* argv[])
         derivative = derivative_i;
       }
     }
+
+    using namespace cairowindow;
+    using Window = cairowindow::Window;
+
+    draw::LineStyle solid_line_style({.line_color = color::black, .line_width = 1.0});
+
     // Draw a vertical line where this root is.
     qg.add_line({{root.toDouble(), 0.0}, Direction::up}, solid_line_style({.line_color = color::lime}));
 
-    cairowindow::QuickGraph qgll("log - log graph", "log10(x - root)", "log10(y)", {-10.0, 2.0}, {-10.0, 2.0});
-    qgll.add_function([&](double log10x){
-      double x = root.toDouble() + std::pow(10.0, log10x);
-      double y = cubic(x);
-      return std::log10(std::abs(y));
-    });
-    qgll.add_function([&](double log10x){
-      double x = root.toDouble() - std::pow(10.0, log10x);
-      double y = cubic(x);
-      return std::log10(std::abs(y));
-    }, solid_line_style({.line_color = color::red}));
+    // Create a window.
+    Window window("log/log graph " + title.str(), 1200, 900);
+    auto background_layer = window.create_background_layer<Layer>(color::white COMMA_DEBUG_ONLY("background_layer"));
+    auto second_layer = window.create_layer<Layer>({} COMMA_DEBUG_ONLY("second_layer"));
 
-    qgll.wait_for_keypress();
-    //qg.wait_for_keypress();
+    // Open the window and start drawing.
+    std::thread event_loop([&](){
+      Debug(NAMESPACE_DEBUG::init_thread("event_loop"));
+      EventLoop event_loop = window.run();
+      event_loop.set_cleanly_terminated();
+    });
+
+    plot::Plot plot(window.geometry(), { .grid = {.color = color::orange} },
+        "Log/log of cubic", {},
+        "log₁₀(x - root)", {},
+        "log₁₀(y)", {});
+    plot.set_xrange({-17.0, -12.0});
+    plot.set_yrange({-17.0, -12.0});
+    plot.add_to(background_layer, false);
+
+    draw::TextStyle slider_style({.position = draw::centered_below, .font_size = 18.0, .offset = 10});
+
+    auto slider_xn = plot.create_slider(second_layer, {1028, 283, 7, 400}, -2.0, plot.xrange().min(), plot.xrange().max());
+    auto slider_xn_label = plot.create_text(second_layer, slider_style, Pixel{928, 483}, "xₙ");
+
+    while(1)
+    {
+      window.set_send_expose_events(false);
+
+      // Draw the cubic.
+      plot::BezierFitter plot_curve1;
+      plot_curve1.solve(
+          [&](double log10x) -> cairowindow::Point {
+            double x = root.toDouble() + std::pow(10.0, log10x);
+            double y = cubic(x);
+            return {log10x, std::log10(std::abs(y))};
+          },
+          plot.viewport());
+      plot.add_bezier_fitter(second_layer, solid_line_style, plot_curve1);
+      plot::BezierFitter plot_curve2;
+      plot_curve2.solve(
+          [&](double log10x) -> cairowindow::Point {
+            double x = root.toDouble() - std::pow(10.0, log10x);
+            double y = cubic(x);
+            return {log10x, std::log10(std::abs(y))};
+          },
+          plot.viewport());
+      plot.add_bezier_fitter(second_layer, solid_line_style({.line_color = color::red}), plot_curve2);
+
+      // Pick some value for x_n.
+      double offset = std::pow(10.0, slider_xn.value());
+      double x_n = root.toDouble() + offset;
+      x_n = -0.704834894166908255; //-1.80140695179720201;
+      offset = x_n - root.toDouble();
+
+      double x_n_plus_1 = -0.704834894166908255; //-1.80140695179720201
+      double real_root = root.toDouble(); // -1.80140695179721597
+
+      // Draw a vertical line at x_n.
+      plot::Line plot_vertical_line{{slider_xn.value(), 0.0}, Direction::up};
+      plot.add_line(second_layer, solid_line_style, plot_vertical_line);
+
+      plot::Line plot_initial_root_found{{std::log10(std::abs(x_n - real_root)), 0.0}, Direction::up};
+      plot.add_line(second_layer, solid_line_style({.line_color = color::lime}), plot_initial_root_found);
+
+      plot::Line plot_root_found{{std::log10(std::abs(x_n_plus_1 - real_root)), 0.0}, Direction::up};
+      plot.add_line(second_layer, solid_line_style({.line_color = color::red}), plot_root_found);
+
+      // Draw the Halley "approach" curve (cuts the x-axis at x_{n+1}).
+      plot::BezierFitter plot_curve3;
+      plot_curve3.solve(
+          [&](double log10x) -> cairowindow::Point {
+            double delta_x = std::pow(10.0, log10x);
+            double x = root.toDouble() + delta_x;
+            double x_minus_x_n = delta_x - offset;
+            double gn = cubic(x_n) + utils::square(cubic.derivative(x_n)) * x_minus_x_n /
+                (cubic.derivative(x_n) - cubic.half_second_derivative(x_n) * x_minus_x_n);
+            //double gn = cubic(x_n) + cubic.derivative(x_n) * x_minus_x_n;
+            return {log10x, std::log10(std::abs(gn))};
+          },
+          plot.viewport());
+      plot.add_bezier_fitter(second_layer, solid_line_style({.line_color = color::blue}), plot_curve3);
+      plot::BezierFitter plot_curve4;
+      plot_curve4.solve(
+          [&](double log10x) -> cairowindow::Point {
+            double delta_x = -std::pow(10.0, log10x);
+            double x = root.toDouble() + delta_x;
+            double x_minus_x_n = delta_x - offset;
+            double gn = cubic(x_n) + utils::square(cubic.derivative(x_n)) * x_minus_x_n /
+                (cubic.derivative(x_n) - cubic.half_second_derivative(x_n) * x_minus_x_n);
+            //double gn = cubic(x_n) + cubic.derivative(x_n) * x_minus_x_n;
+            return {log10x, std::log10(std::abs(gn))};
+          },
+          plot.viewport());
+      plot.add_bezier_fitter(second_layer, solid_line_style({.line_color = color::purple}), plot_curve4);
+
+      // Flush all expose events related to the drawing done above.
+      window.set_send_expose_events(true);
+
+      // Block until a redraw is necessary (for example because the user moved a draggable object,
+      // or wants to print the current drawing) then go to the top of loop for a redraw.
+      if (!window.handle_input_events())
+        break;          // Program must be terminated.
+    }
+    event_loop.join();
   }
   catch (AIAlert::Error const& error)
   {

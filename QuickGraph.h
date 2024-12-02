@@ -61,6 +61,9 @@ class QuickGraph
 
   ~QuickGraph();
 
+  Range const& xrange() const { return x_range_; }
+  Range const& yrange() const { return y_range_; }
+
   void add_function(std::function<double(double)> const& f, draw::LineStyle const& line_style);
 
   void add_function(std::function<double(double)> const& f, Color line_color = color::black)
