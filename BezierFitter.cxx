@@ -100,7 +100,7 @@ void BezierFitter::solve(std::function<Point(double)> const& func, IntersectRect
   // If we hit the desired tolerance, return a single bezier segment:
   if ((xresid < tolerance && yresid < tolerance) || depth_ == 10)
   {
-    Dout(dc::warning(depth_ == 10), "Reached max. depth!");
+//    Dout(dc::warning(depth_ == 10), "Reached max. depth!");
 
     // Alias degree 6 polynomial to degree 3:
     coeffs[0] += coeffs[6];

@@ -144,3 +144,6 @@ target_link_libraries(cubic_roots2 AICxx::cairowindow AICxx::symbolic AICxx::mat
 
 add_executable(print_roots print_roots.cxx)
 target_link_libraries(print_roots AICxx::cairowindow AICxx::symbolic AICxx::math ${AICXX_OBJECTS_LIST} ${MPFR_LIBRARY} Eigen3::Eigen)
+
+add_executable(IEEE754_test IEEE754_test.cxx)
+target_link_libraries(IEEE754_test ${AICXX_OBJECTS_LIST} ${MPFR_LIBRARY})

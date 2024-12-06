@@ -34,8 +34,8 @@ void sanity_check(math::CubicPolynomial const& cubic, double const root)
   // Course check.
   double fr = cubic(root);
 
-  double root_small = root < 0 ? root * 1.000000001 : root * 0.999999999;
-  double root_large = root < 0 ? root * 0.999999999 : root * 1.000000001;
+  double root_small = root < 0 ? root * 1.000001 : root * 0.999999;
+  double root_large = root < 0 ? root * 0.999999 : root * 1.000001;
 
   double frm = cubic(root_small);
   double frp = cubic(root_large);

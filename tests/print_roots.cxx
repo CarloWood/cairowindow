@@ -1,10 +1,11 @@
 #include "sys.h"
-#include "utils/square.h"
-#include "utils/split.h"
+#include "IEEE754.h"
 #include "cairowindow/QuickGraph.h"
 #include "math/CubicPolynomial.h"
 #include "math/bracket_zero.h"
 #include "mpreal/mpreal.h"
+#include "utils/square.h"
+#include "utils/split.h"
 #include <array>
 #include <string>
 #include <regex>
@@ -20,6 +21,11 @@ using namespace mpfr;
 constexpr mp_prec_t precision_in_bits = 256;
 constexpr int mpprecision = precision_in_bits * std::log10(2.0);
 constexpr double rel_err_threshold = std::pow(10.0, -0.5 * mpprecision);
+
+void print(mpreal const& val)
+{
+  std::cout << val << std::endl;
+}
 
 // Update the concept definition to correctly check the streamability.
 template<typename T>
@@ -100,6 +106,30 @@ mpreal exact_root(double guess, std::array<mpreal, 4> coefficients)
   return u;
 }
 
+mpreal next_offset(mpreal root, double offset, std::array<mpreal, 4> coefficients)
+{
+  DoutEntering(dc::notice, std::setprecision(60) << "next_offset(" << root << ", " << offset << ", coefficients)");
+  mpreal offset_n{offset};
+  mpreal x_n = root * (1 + offset_n);
+
+  Dout(dc::notice, std::setprecision(60) << "offset_n = " << offset_n);
+  Dout(dc::notice, std::setprecision(60) << "x_n = " << x_n);
+
+  auto evaluate = [&](mpreal u) -> mpreal { return coefficients[0] + (coefficients[1] + (coefficients[2] + coefficients[3] * u) * u) * u; };
+  auto derivative = [&](mpreal u) -> mpreal { return coefficients[1] + (2 * coefficients[2] + 3 * coefficients[3] * u) * u; };
+  auto half_second_derivative = [&](mpreal u) -> mpreal { return coefficients[2] + 3 * coefficients[3] * u; };
+
+  mpreal Q_x = evaluate(x_n);
+  mpreal dQ_x = derivative(x_n);
+  mpreal half_ddQ_x = half_second_derivative(x_n);
+  mpreal step = Q_x * dQ_x / (utils::square(dQ_x) - Q_x * half_ddQ_x);
+  mpreal x_n_plus_1 = x_n - step;
+
+  Dout(dc::notice, std::setprecision(60) << "x_n_plus_1 = " << x_n_plus_1 << "; returning " << (x_n_plus_1 / root - 1));
+
+  return x_n_plus_1 / root - 1;
+}
+
 int main(int argc, char* argv[])
 {
   Debug(NAMESPACE_DEBUG::init());
@@ -126,7 +156,8 @@ int main(int argc, char* argv[])
 
   try
   {
-    math::CubicPolynomial cubic(parse_string<double>(input));
+    auto double_coefficients = parse_string<double>(input);
+    math::CubicPolynomial cubic(double_coefficients);
     std::cout << std::setprecision(18) << cubic << '\n';
 
     double c0 = cubic[0];
@@ -225,14 +256,16 @@ int main(int argc, char* argv[])
         "Log/log of cubic", {},
         "log₁₀(x - root)", {},
         "log₁₀(y)", {});
-    plot.set_xrange({-17.0, -12.0});
-    plot.set_yrange({-17.0, -12.0});
+//    plot.set_xrange({-17.0, -12.0});
+//    plot.set_yrange({-17.0, -12.0});
+    plot.set_xrange({-17.0, 0.0});
+    plot.set_yrange({-17.0, 0.0});
     plot.add_to(background_layer, false);
 
     draw::TextStyle slider_style({.position = draw::centered_below, .font_size = 18.0, .offset = 10});
 
     auto slider_xn = plot.create_slider(second_layer, {1028, 283, 7, 400}, -2.0, plot.xrange().min(), plot.xrange().max());
-    auto slider_xn_label = plot.create_text(second_layer, slider_style, Pixel{928, 483}, "xₙ");
+    auto slider_xn_label = plot.create_text(second_layer, slider_style, Pixel{1028, 683}, "xₙ");
 
     while(1)
     {
@@ -241,66 +274,75 @@ int main(int argc, char* argv[])
       // Draw the cubic.
       plot::BezierFitter plot_curve1;
       plot_curve1.solve(
-          [&](double log10x) -> cairowindow::Point {
-            double x = root.toDouble() + std::pow(10.0, log10x);
+          [&](double log10_offset) -> cairowindow::Point {
+            double offset = std::pow(10.0, log10_offset);
+            double x = root.toDouble() * (1.0 + offset);
             double y = cubic(x);
-            return {log10x, std::log10(std::abs(y))};
+            return {log10_offset, std::log10(std::abs(y))};
           },
           plot.viewport());
       plot.add_bezier_fitter(second_layer, solid_line_style, plot_curve1);
       plot::BezierFitter plot_curve2;
       plot_curve2.solve(
-          [&](double log10x) -> cairowindow::Point {
-            double x = root.toDouble() - std::pow(10.0, log10x);
+          [&](double log10_offset) -> cairowindow::Point {
+            double offset = std::pow(10.0, log10_offset);
+            double x = root.toDouble() * (1.0 - offset);
             double y = cubic(x);
-            return {log10x, std::log10(std::abs(y))};
+            return {log10_offset, std::log10(std::abs(y))};
           },
           plot.viewport());
       plot.add_bezier_fitter(second_layer, solid_line_style({.line_color = color::red}), plot_curve2);
 
       // Pick some value for x_n.
-      double offset = std::pow(10.0, slider_xn.value());
-      double x_n = root.toDouble() + offset;
-      x_n = -0.704834894166908255; //-1.80140695179720201;
-      offset = x_n - root.toDouble();
+      double offset_n = std::pow(10.0, slider_xn.value());
+      double x_n = root.toDouble() * (1.0 + offset_n);
 
-      double x_n_plus_1 = -0.704834894166908255; //-1.80140695179720201
-      double real_root = root.toDouble(); // -1.80140695179721597
+      double offset_n_plus_1 = next_offset(root, offset_n, coefficients).toDouble();
+      double real_root = root.toDouble();
+      // offset_n_plus_1 = x_minus_x_n - root.toDouble() -->
+      // x_minus_x_n = offset_n_plus_1 + root.toDouble()
 
       // Draw a vertical line at x_n.
       plot::Line plot_vertical_line{{slider_xn.value(), 0.0}, Direction::up};
       plot.add_line(second_layer, solid_line_style, plot_vertical_line);
 
-      plot::Line plot_initial_root_found{{std::log10(std::abs(x_n - real_root)), 0.0}, Direction::up};
+      plot::Line plot_initial_root_found{{std::log10(std::abs(x_n / real_root - 1.0)), 0.0}, Direction::up};
       plot.add_line(second_layer, solid_line_style({.line_color = color::lime}), plot_initial_root_found);
 
-      plot::Line plot_root_found{{std::log10(std::abs(x_n_plus_1 - real_root)), 0.0}, Direction::up};
+      double x_n_plus_1 = root.toDouble() * (1.0 + offset_n_plus_1);
+      plot::Line plot_root_found{{std::log10(std::abs(offset_n_plus_1)), 0.0}, Direction::up};
       plot.add_line(second_layer, solid_line_style({.line_color = color::red}), plot_root_found);
 
       // Draw the Halley "approach" curve (cuts the x-axis at x_{n+1}).
       plot::BezierFitter plot_curve3;
       plot_curve3.solve(
-          [&](double log10x) -> cairowindow::Point {
-            double delta_x = std::pow(10.0, log10x);
-            double x = root.toDouble() + delta_x;
-            double x_minus_x_n = delta_x - offset;
+          [&](double log10_offset) -> cairowindow::Point {
+            double offset = std::pow(10.0, log10_offset);
+            double x = root.toDouble() * (1.0 + offset);                // x   = root * (1 + offset)
+                                                                        // x_n = root * (1 + offset_n)
+            double x_minus_x_n = root.toDouble() * (offset - offset_n); // x - x_n = root * (offset - offset_n)
+            // Halley:
             double gn = cubic(x_n) + utils::square(cubic.derivative(x_n)) * x_minus_x_n /
                 (cubic.derivative(x_n) - cubic.half_second_derivative(x_n) * x_minus_x_n);
+            // Newton-Raphson:
             //double gn = cubic(x_n) + cubic.derivative(x_n) * x_minus_x_n;
-            return {log10x, std::log10(std::abs(gn))};
+            return {log10_offset, std::log10(std::abs(gn))};
           },
           plot.viewport());
       plot.add_bezier_fitter(second_layer, solid_line_style({.line_color = color::blue}), plot_curve3);
       plot::BezierFitter plot_curve4;
       plot_curve4.solve(
-          [&](double log10x) -> cairowindow::Point {
-            double delta_x = -std::pow(10.0, log10x);
-            double x = root.toDouble() + delta_x;
-            double x_minus_x_n = delta_x - offset;
+          [&](double log10_offset) -> cairowindow::Point {
+            double offset = -std::pow(10.0, log10_offset);
+            double x = root.toDouble() * (1.0 + offset);                // x   = root * (1 + offset)
+                                                                        // x_n = root * (1 + offset_n)
+            double x_minus_x_n = root.toDouble() * (offset - offset_n); // x - x_n = root * (offset - offset_n)
+            // Halley:
             double gn = cubic(x_n) + utils::square(cubic.derivative(x_n)) * x_minus_x_n /
                 (cubic.derivative(x_n) - cubic.half_second_derivative(x_n) * x_minus_x_n);
+            // Newton-Raphson:
             //double gn = cubic(x_n) + cubic.derivative(x_n) * x_minus_x_n;
-            return {log10x, std::log10(std::abs(gn))};
+            return {log10_offset, std::log10(std::abs(gn))};
           },
           plot.viewport());
       plot.add_bezier_fitter(second_layer, solid_line_style({.line_color = color::purple}), plot_curve4);
