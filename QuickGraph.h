@@ -26,6 +26,7 @@ class QuickGraph
   plot::Plot plot_;
   std::vector<plot::BezierFitter> plot_bezier_fitter_;
   std::vector<plot::Line> plot_lines_;
+  std::vector<plot::LinePiece> plot_line_pieces_;
   std::vector<plot::Point> plot_points_;
 
  public:
@@ -80,6 +81,14 @@ class QuickGraph
     add_line(L, line_style({.line_color = line_color, .line_width = 1.0}));
   }
 
+  void add_line(LinePiece const& L, draw::LineStyle const& line_style);
+
+  void add_line(LinePiece const& L, Color line_color = color::black)
+  {
+    draw::LineStyle line_style;
+    add_line(L, line_style({.line_color = line_color, .line_width = 1.0}));
+  }
+
   void add_point(Point P, draw::PointStyle const& point_style);
 
   void add_point(Point P)
@@ -96,6 +105,9 @@ class QuickGraph
   }
 
   void wait_for_keypress();
+
+ private:
+  void initialize();
 };
 
 } // namespace cairowindow
