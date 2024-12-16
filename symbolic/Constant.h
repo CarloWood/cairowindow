@@ -57,9 +57,9 @@ class Constant : public Expression
     return static_cast<Constant const&>(get<Constant>(e, d));
   }
 
-  static bool is_zero(Expression const& arg) { return &arg == &s_cached_zero; }
-  static bool is_one(Expression const& arg) { return &arg == &s_cached_one; }
-  static bool is_minus_one(Expression const& arg) { return &arg == &s_cached_minus_one; }
+  static bool is_zero(Expression const& arg) { return &arg == &s_cached_zero || arg.is_zero_function(); }
+  static bool is_one(Expression const& arg) { return &arg == &s_cached_one || arg.is_one_function(); }
+  static bool is_minus_one(Expression const& arg) { return &arg == &s_cached_minus_one || arg.is_minus_one_function(); }
 
   bool is_negative() const { return enumerator_ < 0; }
 

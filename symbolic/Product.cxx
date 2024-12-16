@@ -25,7 +25,7 @@ Expression const& Product::make_product(Expression const& arg1, Expression const
   if (Constant::is_zero(arg1))
   {
     Dout(dc::finish, arg1);
-    return arg1;
+    return Constant::s_cached_zero;
   }
   else if (Constant::is_one(arg1))
   {
@@ -46,11 +46,15 @@ Expression const& Product::combine(Expression const& arg1, Expression const& arg
   Constant const* constant1 = dynamic_cast<Constant const*>(&arg1);
   if (constant1)
   {
+    if (arg2.is_zero_function())
+      return Constant::s_cached_zero;
     ASSERT(arg2.type() == constantT);
     Expression const& result = *constant1 * static_cast<Constant const&>(arg2);
     Dout(dc::finish, result);
     return result;
   }
+  else if (arg1.is_zero_function())
+    return Constant::s_cached_zero;
 
   Expression const& base1 = arg1.get_base();
   Expression const& base2 = arg2.get_base();
@@ -215,7 +219,6 @@ Expression const& Product::negate(Expression const& arg)
 #ifdef SYMBOLIC_PRINTING
 void Product::print_on(std::ostream& os) const
 {
-  Precedence my_precedence = precedence();
   if (Constant::is_minus_one(arg1_))
   {
     bool need_parens = needs_parens(arg2_.precedence(), Precedence::negation);

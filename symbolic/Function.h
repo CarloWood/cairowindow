@@ -84,6 +84,21 @@ class Function : public Expression
     return *derivative_cache_;
   }
 
+  bool is_zero_function() const override final
+  {
+    return Constant::is_zero(definition_);
+  }
+
+  bool is_one_function() const override final
+  {
+    return Constant::is_one(definition_);
+  }
+
+  bool is_minus_one_function() const override final
+  {
+    return Constant::is_minus_one(definition_);
+  }
+
   Expression const& definition() const { return definition_; }
 
   bool operator<(Function const& other) const { return hash() < other.hash(); }
@@ -100,7 +115,7 @@ class Function : public Expression
   void print_on(std::ostream& os) const override final
   {
     if (IOManipFullDef::is_full_def(os))
-      os << '(' << definition_ << ')';
+      os << name_ << ":❲" << definition_ << "❳";
     else
       os << name_;
   }

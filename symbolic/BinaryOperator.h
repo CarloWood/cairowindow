@@ -64,6 +64,20 @@ bool BinaryOperator<OpT>::is_less_exact(Expression const& arg1, Expression const
     ExpressionType type = arg1.type();
     ExpressionType type2 = arg2.type();
 
+    Expression const* arg1p = &arg1;
+    Expression const* arg2p = &arg2;
+
+    if (arg1.is_zero_function())
+    {
+      arg1p = &Constant::s_cached_zero;
+      type = constantT;
+    }
+    if (arg2.is_zero_function())
+    {
+      arg2p = &Constant::s_cached_zero;
+      type2 = constantT;
+    }
+
     if (type != type2)
     {
       if constexpr (std::is_same_v<OpT, Product>)
@@ -78,8 +92,8 @@ bool BinaryOperator<OpT>::is_less_exact(Expression const& arg1, Expression const
 
     if (type == constantT)
     {
-      Constant const& constant1 = static_cast<Constant const&>(arg1);
-      Constant const& constant2 = static_cast<Constant const&>(arg2);
+      Constant const& constant1 = *static_cast<Constant const*>(arg1p);
+      Constant const& constant2 = *static_cast<Constant const*>(arg2p);
       return constant1 < constant2;
     }
     else if (type == symbolT)
