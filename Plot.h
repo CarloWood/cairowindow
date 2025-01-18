@@ -256,6 +256,13 @@ class Plot : public Printable
       draw::PointStyle const& point_style,
       Point const& plot_point);
 
+ private:
+  void add_point( // Do not pass a cairowindow::Point to this function! It must be a plot::Point.
+      boost::intrusive_ptr<Layer> const& layer,
+      draw::PointStyle const& point_style,
+      Point&& plot_point);
+
+ public:
   // Create and draw a point on layer at x,y using point_style.
   [[nodiscard]] Point create_point(boost::intrusive_ptr<Layer> const& layer,
       draw::PointStyle const& point_style,
@@ -274,6 +281,13 @@ class Plot : public Printable
       draw::LineStyle const& line_style, LineExtend line_extend,
       LinePiece const& plot_line_piece);
 
+ private:
+  void add_line( // Do not pass a cairowindow::LinePiece to this function! It must be a plot::LinePiece.
+      boost::intrusive_ptr<Layer> const& layer,
+      draw::LineStyle const& line_style, LineExtend line_extend,
+      LinePiece&& plot_line_piece);
+
+ public:
   // Create and draw a line piece between points from and to using line_style and line_extend.
   template<typename... Args>
   [[nodiscard]] LinePiece create_line(boost::intrusive_ptr<Layer> const& layer,
@@ -304,6 +318,11 @@ class Plot : public Printable
   // Add and draw plot_connector on layer, using line_style, fill_color, arrow_head_shape_from and arrow_head_shape_to.
   void add_connector(boost::intrusive_ptr<Layer> const& layer,
       draw::ConnectorStyle const& style, Connector const& plot_connector);
+
+ private:
+  void add_connector( // Do not pass a cairowindow::Connector to this function! It must be a plot::Connector.
+      boost::intrusive_ptr<Layer> const& layer,
+      draw::ConnectorStyle const& style, Connector&& plot_connector);
 
  private:
   template<typename... Args>
@@ -356,6 +375,13 @@ class Plot : public Printable
       draw::LineStyle const& line_style,
       Line const& plot_line);
 
+ private:
+  void add_line( // Do not pass a cairowindow::Line to this function! It must be a plot::Line.
+      boost::intrusive_ptr<Layer> const& layer,
+      draw::LineStyle const& line_style,
+      Line&& plot_line);
+
+ public:
   // Create and draw a line through point in direction using line_style.
   template<typename... Args>
   [[nodiscard]] Line create_line(boost::intrusive_ptr<Layer> const& layer,
@@ -373,6 +399,11 @@ class Plot : public Printable
   // Add and draw plot_rectangle on layer, using rectangle_style.
   void add_rectangle(boost::intrusive_ptr<Layer> const& layer, draw::RectangleStyle const& rectangle_style, Rectangle const& plot_rectangle);
 
+ private:
+  void add_rectangle( // Do not pass a cairowindow::Rectangle to this function! It must be a plot::Rectangle.
+      boost::intrusive_ptr<Layer> const& layer, draw::RectangleStyle const& rectangle_style, Rectangle&& plot_rectangle);
+
+ public:
   // Create and draw a rectangle on layer, using args... and rectangle_style.
   template<typename... Args>
   [[nodiscard]] Rectangle create_rectangle(boost::intrusive_ptr<Layer> const& layer,
@@ -391,6 +422,13 @@ class Plot : public Printable
       draw::CircleStyle const& circle_style,
       Circle const& plot_circle);
 
+ private:
+  void add_circle( // Do not pass a cairowindow::Circle to this function! It must be a plot::Circle.
+      boost::intrusive_ptr<Layer> const& layer,
+      draw::CircleStyle const& circle_style,
+      Circle&& plot_circle);
+
+ public:
   // Create and draw a circle on layer with center and radius using circle_style.
   template<typename... Args>
   [[nodiscard]] Circle create_circle(boost::intrusive_ptr<Layer> const& layer,
@@ -420,6 +458,13 @@ class Plot : public Printable
       draw::ArcStyle const& arc_style,
       Arc const& plot_arc);
 
+ private:
+  void add_arc( // Do not pass a cairowindow::Arc to this function! It must be a plot::Arc.
+      boost::intrusive_ptr<Layer> const& layer,
+      draw::ArcStyle const& arc_style,
+      Arc&& plot_arc);
+
+ public:
   // Create and draw an arc on layer width center, radius and start- and end_angle, using arc_style.
   template<typename... Args>
   [[nodiscard]] Arc create_arc(boost::intrusive_ptr<Layer> const& layer,
@@ -439,6 +484,13 @@ class Plot : public Printable
       draw::BezierCurveStyle const& bezier_style,
       BezierCurve const& plot_bezier_curve);
 
+ private:
+  void add_bezier_curve( // Do not pass a cairowindow::BezierCurve to this function! It must be a plot::BezierCurve.
+      boost::intrusive_ptr<Layer> const& layer,
+      draw::BezierCurveStyle const& bezier_style,
+      BezierCurve&& plot_bezier_curve);
+
+ public:
   // Add and draw plot_bezier_curve on layer using bezier_style.
   // The difference with the previous one is that in this case it is assumed that the x and y coordinates
   // of the Bezier curve are in pixels already, and no conversion will take place.
@@ -446,6 +498,13 @@ class Plot : public Printable
       draw::BezierCurveStyle const& bezier_style,
       BezierCurve const& plot_bezier_curve_in_px);
 
+ private:
+  void add_bezier_curve_in_px( // Do not pass a cairowindow::BezierCurve to this function! It must be a plot::BezierCurve.
+      boost::intrusive_ptr<Layer> const& layer,
+      draw::BezierCurveStyle const& bezier_style,
+      BezierCurve&& plot_bezier_curve_in_px);
+
+ public:
   // Create and draw a Bezier curve on layer using bezier_style.
   template<typename... Args>
   [[nodiscard]] BezierCurve create_bezier_curve(boost::intrusive_ptr<Layer> const& layer,
@@ -480,6 +539,16 @@ class Plot : public Printable
 #endif
       BezierFitter const& plot_bezier_fitter);
 
+ private:
+  void add_bezier_fitter( // Do not pass a cairowindow::BezierFitter to this function! It must be a plot::BezierFitter.
+      boost::intrusive_ptr<Layer> const& layer,
+      draw::LineStyle const& line_style,
+#if CAIROWINDOW_SHOW_BEZIER_CURVE_POINTS
+      draw::PointStyle const& point_style,
+#endif
+      BezierFitter&& plot_bezier_fitter);
+
+ public:
 #if CAIROWINDOW_SHOW_BEZIER_CURVE_POINTS
   void add_bezier_fitter(boost::intrusive_ptr<Layer> const& layer,
       draw::LineStyle const& line_style,
@@ -487,6 +556,12 @@ class Plot : public Printable
   {
     add_bezier_fitter(layer, line_style, draw::PointStyle{}, plot_bezier_fitter);
   }
+
+ private:
+  void add_bezier_fitter( // Do not pass a cairowindow::BezierFitter to this function! It must be a plot::BezierFitter.
+      boost::intrusive_ptr<Layer> const& layer,
+      draw::LineStyle const& line_style,
+      BezierFitter&& plot_bezier_fitter);
 #endif
 
   [[nodiscard]] BezierFitter create_bezier_fitter(boost::intrusive_ptr<Layer> const& layer,
@@ -506,6 +581,13 @@ class Plot : public Printable
       draw::TextStyle const& text_style,
       Text const& plot_text);
 
+ private:
+  void add_text( // Do not pass a cairowindow::Text to this function! It must be a plot::Text.
+      boost::intrusive_ptr<Layer> const& layer,
+      draw::TextStyle const& text_style,
+      Text&& plot_text);
+
+ public:
   // Create and draw text on layer at position using text_style.
   [[nodiscard]] Text create_text(boost::intrusive_ptr<Layer> const& layer,
       draw::TextStyle const& text_style,

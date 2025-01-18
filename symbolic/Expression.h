@@ -74,6 +74,9 @@ class Expression
   virtual Precedence precedence() const = 0;
   virtual double evaluate() const = 0;
   virtual Expression const& derivative(Symbol const& symbol) const = 0;
+  virtual bool is_zero_function() const { return false; }
+  virtual bool is_one_function() const { return false; }
+  virtual bool is_minus_one_function() const { return false; }
 
   static void dump_database();
 
@@ -83,7 +86,7 @@ class Expression
   bool is_unary_op() const { return (type() & unary_op) != 0; }
   bool is_binary_op() const { return (type() & binary_op) != 0; }
 
-  bool is_constant() const { return type() == constantT; }
+  bool is_constant() const { return type() == constantT || is_zero_function(); }
   bool is_symbol() const { return type() == symbolT; }
   bool is_function() const { return type() == functionT; }
   bool is_power() const { return type() == powerT; }

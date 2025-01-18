@@ -87,11 +87,7 @@ void QuickGraph::add_function(std::function<double(double)> const& f, draw::Line
       Dout(dc::notice, "y_range_ = " << y_range_);
     }
 
-    plot_.set_xrange(x_range_);
-    plot_.set_yrange(y_range_);
-    plot_.add_to(background_layer_, false);
-
-    empty_ = false;
+    initialize();
   }
 
   // Suppress immediate updating of the window for each created item, in order to avoid flickering.
@@ -104,17 +100,56 @@ void QuickGraph::add_function(std::function<double(double)> const& f, draw::Line
   window_.set_send_expose_events(true);
 }
 
+void QuickGraph::initialize()
+{
+  plot_.set_xrange(x_range_);
+  plot_.set_yrange(y_range_);
+  plot_.add_to(background_layer_, false);
+
+  empty_ = false;
+}
+
 void QuickGraph::add_line(Line const& L, draw::LineStyle const& line_style)
 {
   plot_lines_.emplace_back(L);
+
+  if (empty_)
+  {
+    // You must either add a function or specify a y-range manually.
+    ASSERT(y_range_.size() > 0.0);
+    initialize();
+  }
 
   window_.set_send_expose_events(false);
   plot_.add_line(second_layer_, line_style, plot_lines_.back());
   window_.set_send_expose_events(true);
 }
 
+void QuickGraph::add_line(LinePiece const& L, draw::LineStyle const& line_style)
+{
+  plot_line_pieces_.emplace_back(L);
+
+  if (empty_)
+  {
+    // You must either add a function or specify a y-range manually.
+    ASSERT(y_range_.size() > 0.0);
+    initialize();
+  }
+
+  window_.set_send_expose_events(false);
+  plot_.add_line(second_layer_, line_style, plot::LineExtend::none, plot_line_pieces_.back());
+  window_.set_send_expose_events(true);
+}
+
 void QuickGraph::add_point(Point P, draw::PointStyle const& point_style)
 {
+  if (empty_)
+  {
+    // You must either add a function or specify a y-range manually.
+    ASSERT(y_range_.size() > 0.0);
+    initialize();
+  }
+
   plot_points_.emplace_back(P);
   plot_.add_point(second_layer_, point_style, plot_points_.back());
 }
