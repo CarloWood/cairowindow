@@ -14,6 +14,11 @@ NAMESPACE_DEBUG_CHANNELS_END
 
 namespace symbolic {
 
+#ifdef SYMBOLIC_PRINTING
+//static
+utils::iomanip::Index UseUtf8::s_index;
+#endif
+
 //static
 std::unordered_set<std::unique_ptr<Expression>, std::hash<std::unique_ptr<Expression>>, KeyEqual> Expression::s_database_;
 

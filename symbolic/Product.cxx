@@ -237,7 +237,10 @@ void Product::print_on(std::ostream& os) const
     arg1_.print_on(os);
     if (need_parens)
       os << ')';
-    os << " * ";
+    if (UseUtf8::get_iword_value(os))
+      os << "⋅";
+    else
+      os << " * ";
     need_parens = needs_parens(arg2_.precedence(), Precedence::product, after);
     if (need_parens)
       os << '(';

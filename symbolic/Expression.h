@@ -6,6 +6,7 @@
 #include "debug.h"
 #ifdef SYMBOLIC_PRINTING
 #include "utils/has_print_on.h"
+#include "utils/iomanip.h"
 #include <iostream>
 #endif
 
@@ -18,6 +19,17 @@ NAMESPACE_DEBUG_CHANNELS_END
 namespace symbolic {
 #ifdef SYMBOLIC_PRINTING
 using utils::has_print_on::operator<<;
+
+class UseUtf8 : public utils::iomanip::Unsticky<>
+{
+ private:
+  static utils::iomanip::Index s_index;
+
+ public:
+  UseUtf8(long iword = 1L) : utils::iomanip::Unsticky<>(s_index, iword) { }
+
+  static long get_iword_value(std::ostream& os) { return get_iword_from(os, s_index); }
+};
 #endif
 
 static constexpr int binary_op = 8;     //   v

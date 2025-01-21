@@ -1,6 +1,7 @@
 #include "sys.h"
 #include "Product.h"
 #include "Power.h"
+#include "utils/to_digits_string.h"
 #include "debug.h"
 
 namespace symbolic {
@@ -95,11 +96,19 @@ void Power::print_on(std::ostream& os) const
   arg1_.print_on(os);
   if (need_parens)
     os << ')';
-  os << '^';
-  need_parens = needs_parens(arg2_.precedence(), Precedence::power, after);
-  if (need_parens)
-    os << '(';
-  arg2_.print_on(os);
+  if (arg2_.is_constant() && UseUtf8::get_iword_value(os) != 0 && static_cast<Constant const&>(arg2_).denominator_ == 1)
+  {
+    Constant const& arg2 = static_cast<Constant const&>(arg2_);
+    os << utils::to_superscript_string(arg2.enumerator_);
+  }
+  else
+  {
+    os << '^';
+    need_parens = needs_parens(arg2_.precedence(), Precedence::power, after);
+    if (need_parens)
+      os << '(';
+    arg2_.print_on(os);
+  }
   if (need_parens)
     os << ')';
 }

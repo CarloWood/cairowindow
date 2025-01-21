@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Constant.h"
+#include "utils/to_digits_string.h"
 
 namespace symbolic {
 
@@ -65,7 +66,19 @@ class Symbol : public Expression
  public:
   void print_on(std::ostream& os) const override final
   {
-    os << name_;
+    if (UseUtf8::get_iword_value(os) != 0)
+    {
+      // Find the last non-digit character in the name.
+      auto last_non_digit = name_.find_last_not_of("0123456789");
+      // Print name up till and including last non-digit character.
+      os << name_.substr(0, last_non_digit + 1);
+      // Convert the trailing digits to an int.
+      int value = std::atoi(name_.c_str() + last_non_digit + 1);
+      // Print the trailing digits as subscript.
+      os << utils::to_subscript_string(value);
+    }
+    else
+      os << name_;
   }
 #endif
 };
