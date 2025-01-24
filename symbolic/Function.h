@@ -84,6 +84,12 @@ class Function : public Expression
     return *derivative_cache_;
   }
 
+  Expression const* substitute(Expression const& replace, Expression const& with) const override final
+  {
+    Expression const* new_definition = definition_.substitute(replace, with);
+    return new_definition ? &realize(name_, *new_definition) : nullptr;
+  }
+
   bool is_zero_function() const override final
   {
     return Constant::is_zero(definition_);

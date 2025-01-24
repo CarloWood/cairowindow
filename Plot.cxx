@@ -487,7 +487,8 @@ void Plot::add_bezier_fitter(boost::intrusive_ptr<Layer> const& layer,
   // of cairowindow::BezierCurve in bezier_curves.
   plot_bezier_fitter.draw_object_ = std::make_shared<draw::BezierFitter>(bezier_curves, line_style);
   for (BezierCurve const& plot_bezier_curve : plot_bezier_fitter.draw_object_->plot_bezier_curves())
-    add_bezier_curve(layer, line_style, plot_bezier_curve);
+    if (plot_bezier_curve.isfinite())
+      add_bezier_curve(layer, line_style, plot_bezier_curve);
 #if CAIROWINDOW_SHOW_BEZIER_CURVE_POINTS
   for (Point const& plot_bezier_curve_point : plot_bezier_fitter.draw_object_->plot_bezier_curve_points())
     add_point(layer, point_style, plot_bezier_curve_point);

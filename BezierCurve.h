@@ -101,6 +101,12 @@ class BezierCurve
   BezierCurveMatrix const& M() const { return m_; }
   BezierCurveMatrix& M() { return m_; }
 
+  // Return true iff all vectors in the matrix are finite.
+  bool isfinite() const
+  {
+    return m_.coefficient[0].isfinite() && m_.coefficient[1].isfinite() && m_.coefficient[2].isfinite() && m_.coefficient[3].isfinite();
+  }
+
   // Velocity at t=0.
   Vector V0() const
   {

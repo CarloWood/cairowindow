@@ -35,6 +35,12 @@ class UnaryOperator : public Expression
   Expression const& arg1() const override final { return arg_; }
 
   bool equals(Expression const& other) const override final;
+
+  Expression const* substitute(Expression const& replace, Expression const& with) const override final
+  {
+    Expression const* new_arg = arg_.substitute(replace, with);
+    return new_arg ? &realize(*new_arg) : nullptr;
+  }
 };
 
 } // namespace symbolic

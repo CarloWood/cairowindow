@@ -52,6 +52,11 @@ class Symbol : public Expression
     return &symbol == this ? Constant::s_cached_one : Constant::s_cached_zero;
   }
 
+  Expression const* substitute(Expression const& replace, Expression const& with) const override final
+  {
+    return this == &replace ? &with : nullptr;
+  }
+
   std::string const& name() const { return name_; }
 
   Symbol const& operator=(double value) const
@@ -70,15 +75,18 @@ class Symbol : public Expression
     {
       // Find the last non-digit character in the name.
       auto last_non_digit = name_.find_last_not_of("0123456789");
-      // Print name up till and including last non-digit character.
-      os << name_.substr(0, last_non_digit + 1);
-      // Convert the trailing digits to an int.
-      int value = std::atoi(name_.c_str() + last_non_digit + 1);
-      // Print the trailing digits as subscript.
-      os << utils::to_subscript_string(value);
+      if (last_non_digit != name_.length() - 1) // Are there any trailing digits?
+      {
+        // Print name up till and including last non-digit character.
+        os << name_.substr(0, last_non_digit + 1);
+        // Convert the trailing digits to an int.
+        int value = std::atoi(name_.c_str() + last_non_digit + 1);
+        // Print the trailing digits as subscript.
+        os << utils::to_subscript_string(value);
+        return;
+      }
     }
-    else
-      os << name_;
+    os << name_;
   }
 #endif
 };

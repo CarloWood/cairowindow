@@ -48,6 +48,13 @@ class BinaryOperator : public Expression
   Expression const& arg2() const override final { return arg2_; }
 
   bool equals(Expression const& other) const override final;
+
+  Expression const* substitute(Expression const& replace, Expression const& with) const override final
+  {
+    Expression const* new_arg1 = arg1_.substitute(replace, with);
+    Expression const* new_arg2 = arg2_.substitute(replace, with);
+    return (new_arg1 || new_arg2) ? &realize(new_arg1 ? *new_arg1 : arg1_, new_arg2 ? *new_arg2 : arg2_) : nullptr;
+  }
 };
 
 template<BinaryOp OpT>

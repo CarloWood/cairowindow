@@ -89,6 +89,7 @@ class Expression
   virtual bool is_zero_function() const { return false; }
   virtual bool is_one_function() const { return false; }
   virtual bool is_minus_one_function() const { return false; }
+  virtual Expression const* substitute(Expression const& replace, Expression const& with) const = 0;
 
   static void dump_database();
 
@@ -104,6 +105,12 @@ class Expression
   bool is_power() const { return type() == powerT; }
   bool is_product() const { return type() == productT; }
   bool is_sum() const { return type() == sumT; }
+
+  Expression const& subs(Expression const& replace, Expression const& with) const
+  {
+    Expression const* new_expression = substitute(replace, with);
+    return new_expression ? *new_expression : *this;
+  }
 
  protected:
   template<typename T, typename... Args>

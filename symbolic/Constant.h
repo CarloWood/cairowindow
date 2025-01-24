@@ -77,16 +77,23 @@ class Constant : public Expression
     return cached_hash_;
   }
 
-  bool equals(Expression const& other) const override;
+  bool equals(Expression const& other) const override final;
 
-  double evaluate() const override
+  double evaluate() const override final
   {
     return static_cast<double>(enumerator_) / denominator_;
   }
 
-  Expression const& derivative(Symbol const&) const override
+  Expression const& derivative(Symbol const&) const override final
   {
     return s_cached_zero;
+  }
+
+  Expression const* substitute(Expression const& replace, Expression const& with) const override final
+  {
+    if (&replace != this)       // Do we want to replace this constant?
+      return nullptr;
+    return &with;
   }
 
   bool operator<(Constant const& other) const { return enumerator_ * other.denominator_ < other.enumerator_ * denominator_; }
