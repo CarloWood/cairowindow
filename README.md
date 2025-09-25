@@ -120,7 +120,7 @@ with the content:
       GIT_TAG
         "master"
       CMAKE_ARGS
-        "-DEnableLibcwdAlloc:BOOL=OFF -DEnableLibcwdLocation:BOOL=ON"
+        "-DEnableLibcwdLocation:BOOL=ON"
     )
 
 Add the variable ``GITACHE_ROOT`` to your environment,
