@@ -45,8 +45,8 @@
 
 #ifdef CWDEBUG
 // Used for debug purposes; print members of the ostream `os`.
-#define CAIROWINDOW_PRINT_ON(type, member, ...) os << #member ":" << member << "; ";
-#define CAIROWINDOW_PRINT_m_ON(type, member, ...) os << #member ":" << m_##member << "; ";
+#define CAIROWINDOW_PRINT_ON(type, member, ...) LIBCWD_USING_OSTREAM_PRELUDE os << #member ":" << member << "; ";
+#define CAIROWINDOW_PRINT_m_ON(type, member, ...) LIBCWD_USING_OSTREAM_PRELUDE os << #member ":" << m_##member << "; ";
 #endif
 
 // Macro used by DECLARE_STYLE and DECLARE_STYLE_WITH_BASE to declare the structs Class##StyleParams and Class##StyleParamsDelta.
