@@ -142,7 +142,7 @@ root of the project (directly under the ``project`` line):
     include(cwm4/cmake/AICxxProject)
     include(AICxxSubmodules)
 
-``add_subdirectory`` is not necessary for ``cwds``, ``cwm4``, ``utils`` or ``cairowindow``.
+``add_subdirectory`` is not necessary for ``cwds``, ``cwm4``, ``utils``, ``threadsafe``, ``math`` or ``cairowindow``.
 
 See for example the root [MakeLists.txt](https://github.com/CarloWood/machine-learning/blob/master/CMakeLists.txt) of machine-learning.
 
@@ -158,6 +158,12 @@ For example,
 
 See this [MakeLists.txt](https://github.com/CarloWood/machine-learning/blob/master/src/CMakeLists.txt)
 of machine-learning for a complete example.
+
+Note that Boost filesystems is required as well as ``cairowindow`` uses [utils/generate_unique_filename.h](https://github.com/CarloWood/ai-utils/blob/master/generate_unique_filename.h#L12), so add
+
+    find_package(Boost REQUIRED COMPONENTS filesystem)
+
+to your CMakeLists.txt.
 
 Finally, run
 
