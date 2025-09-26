@@ -156,14 +156,14 @@ For example,
     add_executable(register_test register_test.cxx)
     target_link_libraries(register_test PRIVATE ${AICXX_OBJECTS_LIST})
 
-See this [MakeLists.txt](https://github.com/CarloWood/machine-learning/blob/master/src/CMakeLists.txt)
-of machine-learning for a complete example.
-
 Note that Boost filesystems is required as well as ``cairowindow`` uses [utils/generate_unique_filename.h](https://github.com/CarloWood/ai-utils/blob/master/generate_unique_filename.h#L12), so add
 
     find_package(Boost REQUIRED COMPONENTS filesystem)
 
-to your CMakeLists.txt.
+to the CMakeLists.txt.
+
+See this [MakeLists.txt](https://github.com/CarloWood/transform/blob/master/CMakeLists.txt) of ``transform`` for a complete example, or look at the [MakeLists.txt](https://github.com/CarloWood/machine-learning/blob/master/src/CMakeLists.txt)
+of ``machine-learning`` as another project that uses cairowindow.
 
 Finally, run
 
