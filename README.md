@@ -102,11 +102,13 @@ if you already cloned it there, it should add it.
 ### Using cmake
 
 Check out the submodules [cwds](https://github.com/CarloWood/cwds), [cwm4](https://github.com/CarloWood/cwm4),
-[ai-utils](https://github.com/CarloWood/ai-utils) and [math](https://github.com/CarloWood/math) in the root of the project:
+[ai-utils](https://github.com/CarloWood/ai-utils), [threadsafe](https://github.com/CarloWood/threadsafe) and 
+[math](https://github.com/CarloWood/math) in the root of the project:
 
     git submodule add https://github.com/CarloWood/cwds.git
     git submodule add https://github.com/CarloWood/cwm4.git
     git submodule add https://github.com/CarloWood/ai-utils.git utils
+    git submodule add https://github.com/CarloWood/threadsafe.git
     git submodule add https://github.com/CarloWood/math.git
 
 The easiest way to use libcwd is by using [gitache](https://github.com/CarloWood/gitache).
