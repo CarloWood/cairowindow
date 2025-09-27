@@ -25,7 +25,7 @@ EnableDrawing::EnableDrawing(gradient_descent::Algorithm* algorithm, Function co
       event_loop.set_cleanly_terminated();
     }),
   L_min_max(get_L_min_max(L, w_min, w_max)),
-  plot_(window.geometry(), { .grid = {.color = color::gray} },
+  plot_(window.geometry(), cairowindow::draw::PlotAreaStyle({.color = color::gray}),
 #ifdef CWDEBUG
         L.to_string(),
 #else

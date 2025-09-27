@@ -43,7 +43,7 @@ class SampleNode : public Sample
  private:
   const_iterator next_node_;                            // The right-sample, if any, used for cubic_,
                                                         // copy of what was passed to initialize_cubic.
-  math::CubicPolynomial cubic_;                         // The cubic that fits this and next_node_, if the latter isn't chain_.end().
+  math::CubicPolynomial<double> cubic_;                         // The cubic that fits this and next_node_, if the latter isn't chain_.end().
 #if CW_DEBUG
   bool cubic_initialized_{false};                       // Set to true after cubic_ was initialized.
 #endif
@@ -80,7 +80,7 @@ class SampleNode : public Sample
   // Accessors for the cubic.
 
   // Returns the cubic that was fitted between this and the next sample.
-  math::CubicPolynomial const& cubic() const { ASSERT(cubic_initialized_); return cubic_; }
+  math::CubicPolynomial<double> const& cubic() const { ASSERT(cubic_initialized_); return cubic_; }
 
   // Returns the type of the cubic that was fitted between this and the next sample.
   CubicToNextSampleType type() const { return type_; }

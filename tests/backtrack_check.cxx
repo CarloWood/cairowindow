@@ -42,7 +42,7 @@ int main()
     });
 
     // Create and draw plot area.
-    plot::Plot plot(window.geometry(), { .grid = {.color = color::orange} },
+    plot::Plot plot(window.geometry(), draw::PlotAreaStyle({.color = color::orange}),
         "Backtrack Check", {},
         "x", {},
         "y", {});
@@ -122,7 +122,7 @@ int main()
       // P'(w₀)  =     b    + 2c w₀ = L'(w₀)    -->  b = L'(w₀) - 2c w₀
       double b = dLdw0 - 2.0 * c * w0;
       double a = Lw0 - b * w0 - c * utils::square(w0);
-      math::QuadraticPolynomial parabola{a, b, c};
+      math::QuadraticPolynomial<double> parabola{a, b, c};
 
       // Plot the parabola.
       BezierFitter fitter([&](double w) -> Point{ return {w, parabola(w)}; }, plot.viewport());
@@ -151,7 +151,7 @@ int main()
 
       // Let Q(w) = d + e w + f w² + g w³ be a cubic that has the same value and first and
       // second derivative in w₀, as well as goes through the point (w₁, L(w₁)).
-      math::Polynomial cubic(4 COMMA_CWDEBUG_ONLY("cubic"));
+      math::Polynomial<double> cubic(4 COMMA_CWDEBUG_ONLY("cubic"));
       // Then (see README.gradient_descent),
       //
       //      L(w₀) - L(w₁) - (w₀ - w₁) L'(w₀) + (w₀ - w₁)² c

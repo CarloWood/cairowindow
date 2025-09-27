@@ -29,7 +29,7 @@ void AnalyzedCubic::initialize_matches(SampleNode const& left_sample, SampleNode
     // but also not if the extreme does not fall within the two samples used for the cubic...
     if (extreme_w < left_w || right_w < extreme_w)
     {
-      math::CubicPolynomial const& cubic = left_sample.cubic();
+      math::CubicPolynomial<double> const& cubic = left_sample.cubic();
       double const left_Lw = left_sample.Lw();
       double const right_Lw = right_sample.Lw();
       double const extreme_Lw = cubic(extreme_w);

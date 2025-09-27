@@ -92,7 +92,7 @@ class Scale
   int left_edge_;                       // Index into samples_ of the left-most sample that still matches the cubic approximation.
   int right_edge_;                      // Index into samples_ of the right-most sample that still matches the cubic approximation.
 
-  math::CubicPolynomial cubic_;         // The last (previous) third degree polynomial fit (passed to update).
+  math::CubicPolynomial<double> cubic_; // The last (previous) third degree polynomial fit (passed to update).
   CriticalPointType type_{CriticalPointType::none};     // Whether distances are measured relative to the minimum, maximum or
                                         // the inflection point (if the cubic has no extrema).
   double critical_point_w_;             // Cached value of the x-coordinate of the critical point.
@@ -113,7 +113,7 @@ class Scale
   bool is_valid() const { return valid_; }
   double value() const { ASSERT(valid_); return value_; }
   double or_zero() const { return valid_ ? value_ : epsilon; }
-  math::CubicPolynomial const& cubic() const { return cubic_; }
+  math::CubicPolynomial<double> const& cubic() const { return cubic_; }
   CriticalPointType type() const { return type_; }
   double inflection_point_w() const { return cubic_.inflection_point(); }
   double critical_point_w() const { return critical_point_w_; }
@@ -336,7 +336,7 @@ class Scale
 
  public:
   ScaleUpdate update(ExtremeType extreme_type, std::array<Sample const*, 2> const& relevant_samples, int current_index,
-      math::CubicPolynomial const& new_cubic, bool saw_more_than_two_relevant_samples, bool local_extreme)
+      math::CubicPolynomial<double> const& new_cubic, bool saw_more_than_two_relevant_samples, bool local_extreme)
   {
     // Note: if this an update of an already found local extreme, then `extreme_type` is
     // the current extreme type (that matches the already found local extreme).

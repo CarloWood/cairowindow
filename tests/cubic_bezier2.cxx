@@ -47,7 +47,7 @@ int main()
     });
 
     // Create and draw plot area.
-    plot::Plot plot(window.geometry(), { .grid = {.color = color::orange} },
+    plot::Plot plot(window.geometry(), draw::PlotAreaStyle({.color = color::orange}),
         "Cubic Bezier test", {},
         "x", {},
         "y", {});
@@ -74,7 +74,7 @@ int main()
     });
 
     // Create and draw plot area.
-    plot::Plot plot_newton_raphson(window_newton_raphson.geometry(), { .grid = {.color = color::orange} },
+    plot::Plot plot_newton_raphson(window_newton_raphson.geometry(), draw::PlotAreaStyle({.color = color::orange}),
         "Newton Raphson test", {},
         "g", {},
         "dJ/dg", {});
@@ -301,7 +301,7 @@ int main()
       //
       // 0 = J² t⁵ + 5 J⋅A0 t⁴ + (8 J⋅V0 + 6 A0²) t³ + (6 J⋅QB + 18 A0⋅V0) t² + (12 A0⋅QB + 12 V0²) t + 12 V0⋅QB
 
-      math::Polynomial polynomial(6 COMMA_CWDEBUG_ONLY("t"));
+      math::Polynomial<double> polynomial(6 COMMA_CWDEBUG_ONLY("t"));
       polynomial[5] = J.length_squared();
       polynomial[4] = 5.0 * J.dot(A0);
       polynomial[3] = 8.0 * J.dot(V0) + 6.0 * A0.length_squared();

@@ -3,7 +3,7 @@
 
 namespace gradient_descent {
 
-void LocalExtreme::set_edge_nodes(math::Polynomial const& fourth_degree_approximation,
+void LocalExtreme::set_edge_nodes(math::Polynomial<double> const& fourth_degree_approximation,
     std::array<LocalExtreme::const_iterator, 7> const& samples, int i0, int i1, int i2)
 {
   int left_index = 0;

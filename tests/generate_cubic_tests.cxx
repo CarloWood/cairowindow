@@ -79,7 +79,7 @@ int main()
     double wr;
     double ll;
     double rl;
-    math::CubicPolynomial cubic;
+    math::CubicPolynomial<double> cubic;
     gradient_descent::Sample sl;
     gradient_descent::Sample sr;
     double minimum;
@@ -241,7 +241,7 @@ int main()
       Dout(dc::notice, "result = " << result << "; region = " << region << "; extreme_type = " << extreme_type);
 
       // Create and draw plot area.
-      plot::Plot plot(window.geometry(), { .grid = {.color = color::orange} },
+      plot::Plot plot(window.geometry(), draw::PlotAreaStyle({.color = color::orange}),
           "Find extreme test", {},
           "x", {},
           "y", {});

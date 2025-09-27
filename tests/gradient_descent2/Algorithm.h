@@ -266,7 +266,7 @@ void Algorithm::handle_get_extra_sample(WeightRef w, double requested_w, utils::
 void Algorithm::handle_divide_last_extreme_cubic(WeightRef w, utils::Badge<Algorithm>)
 {
   DoutEntering(dc::notice, "Algorithm::handle_divide_last_extreme_cubic(" << w << ")");
-  math::CubicPolynomial const& cubic = cubic_used_->cubic();
+  math::CubicPolynomial<double> const& cubic = cubic_used_->cubic();
   w.ref_ = cubic.inflection_point();
   expected_Lw_ = cubic[0] + cubic[2] * (2.0 * utils::square(cubic[2] / 3.0) - cubic[3] * cubic[1]) / (3.0 * utils::square(cubic[3]));
   have_expected_Lw_ = true;

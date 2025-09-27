@@ -24,7 +24,7 @@ class AnalyzedCubic : public math::AnalyzedCubic
  public:
   AnalyzedCubic() = default;
 
-  void initialize(math::CubicPolynomial const& cubic, ExtremeType extreme_type)
+  void initialize(math::CubicPolynomial<double> const& cubic, ExtremeType extreme_type)
   {
     ASSERT(extreme_type != ExtremeType::unknown);
     math::AnalyzedCubic::initialize(cubic, static_cast<int>(extreme_type));
@@ -67,7 +67,7 @@ class AnalyzedCubic : public math::AnalyzedCubic
     return std::abs(h);
   }
 
-  bool matches(double w, double Lw, math::CubicPolynomial const& g)
+  bool matches(double w, double Lw, math::CubicPolynomial<double> const& g)
   {
     // signed_sqrt_D_ has been used for something else.
     double& vertical_scale_ = signed_sqrt_D_;

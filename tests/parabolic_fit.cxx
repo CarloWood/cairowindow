@@ -42,7 +42,7 @@ int main()
     });
 
     // Create and draw plot area.
-    plot::Plot plot(window.geometry(), { .grid = {.color = color::orange} },
+    plot::Plot plot(window.geometry(), draw::PlotAreaStyle({.color = color::orange}),
         "Parabolic fit", {},
         "x", {},
         "y", {});
@@ -174,8 +174,8 @@ int main()
       double b_a = (Lw0 - Lw1) / (w0 - w1) - (w0 + w1) * c_a;
       double a_s = (w1 * Lw0 - w0 * Lw1) / (w1 - w0) + w0 * w1 * c_s;
       double a_a = (w1 * Lw0 - w0 * Lw1) / (w1 - w0) + w0 * w1 * c_a;
-      math::QuadraticPolynomial parabola_s{a_s, b_s, c_s};
-      math::QuadraticPolynomial parabola_a{a_a, b_a, c_a};
+      math::QuadraticPolynomial<double> parabola_s{a_s, b_s, c_s};
+      math::QuadraticPolynomial<double> parabola_a{a_a, b_a, c_a};
 
       // Plot the parabola.
       BezierFitter fitter_s([&](double w) -> Point{ return {w, parabola_s(w)}; }, plot.viewport());

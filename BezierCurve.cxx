@@ -819,7 +819,7 @@ int BezierCurve::calculate_intersection_points(Point Q, Vector direction, std::a
   double c1 = m_.coefficient[1].dot(direction);
   double c2 = m_.coefficient[2].dot(direction);
   double c3 = m_.coefficient[3].dot(direction);
-  math::CubicPolynomial p(c0, c1, c2, c3);
+  math::CubicPolynomial<double> p(c0, c1, c2, c3);
 
   return p.get_roots(intersection_point_t_values_out);
 }

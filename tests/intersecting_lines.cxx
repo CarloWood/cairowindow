@@ -210,7 +210,7 @@ int main()
       double D1y = D1y_hp;
 
       // Create plot object.
-      plot::Plot plot(window.geometry(), { .grid = {.color = color::orange} },
+      plot::Plot plot(window.geometry(), draw::PlotAreaStyle({.color = color::orange}),
           "Intersecting lines", {},
           "x", {},
           "y", {});

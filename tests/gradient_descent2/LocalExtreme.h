@@ -31,7 +31,7 @@ class LocalExtreme
   double extreme_Lw_;                                   // The Lw coordinate of the local extreme (w is stored in the scale_).
   mutable int explored_{0};                             // Bit mask 1: exploration to the left of this extreme has started.
                                                         // Bit mask 2: same, on the right.
-  math::Polynomial fourth_degree_approximation_;        // The fourth degree approximation around this local extreme.
+  math::Polynomial<double> fourth_degree_approximation_;        // The fourth degree approximation around this local extreme.
   std::array<const_iterator, 2> edge_nodes_;            // The left- and right- most samples used for that fit.
 
   // Opposite direction data.
@@ -68,10 +68,10 @@ class LocalExtreme
     right_neighbor_ = right_neighbor;
   }
 
-  void set_edge_nodes(math::Polynomial const& fourth_degree_approximation,
+  void set_edge_nodes(math::Polynomial<double> const& fourth_degree_approximation,
       std::array<LocalExtreme::const_iterator, 7> const& samples, int i0, int i1, int i2);
   const_iterator get_edge_node(HorizontalDirectionToInt dir) const { return edge_nodes_[dir.as_index()]; }
-  math::Polynomial const& get_fourth_degree_approximation() const { return fourth_degree_approximation_; }
+  math::Polynomial<double> const& get_fourth_degree_approximation() const { return fourth_degree_approximation_; }
 
   ExtremeType get_extreme_type() const { return local_extreme_; }
   double extreme_Lw() const { return extreme_Lw_; }

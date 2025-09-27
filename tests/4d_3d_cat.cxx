@@ -43,7 +43,7 @@ int main()
       event_loop.set_cleanly_terminated();
     });
 
-    plot::Plot plot(window.geometry(), { .grid = {.color = color::orange} },
+    plot::Plot plot(window.geometry(), draw::PlotAreaStyle({.color = color::orange}),
         "Cubic extention of a Quartic.", {},
         "x", {},
         "y", {});
@@ -198,7 +198,7 @@ int main()
       double d2 = 0.0;
 
       // Let f(x) be a quartic.
-      math::Polynomial quartic(5 COMMA_CWDEBUG_ONLY("quartic"));
+      math::Polynomial<double> quartic(5 COMMA_CWDEBUG_ONLY("quartic"));
 
       Eigen::MatrixXd A(5, 5);
 
@@ -228,9 +228,9 @@ int main()
 
       double a = quartic[4];
       double s = plot_P3.x() - plot_P1.x();
-      math::CubicPolynomial dP(quartic.derivative());
+      math::CubicPolynomial<double> dP(quartic.derivative());
       double d1 = dP(x1);
-      math::CubicPolynomial cubic(y1, d1,
+      math::CubicPolynomial<double> cubic(y1, d1,
           (dP.derivative(x1) - (15.0 / 14.0) * a * s * s) / 2.0,
           (dP.second_derivative(x1) + 9.0 * a * s) / 6.0);
 
@@ -265,7 +265,7 @@ int main()
 
       auto plot_cubic = plot.create_bezier_fitter(second_layer, curve_line_style({.line_color = color::red}), std::move(fitter3));
 
-      math::CubicPolynomial cubic2;
+      math::CubicPolynomial<double> cubic2;
       cubic2.initialize(plot_P1.x(), plot_P1.y(), d1, plot_P4.x(), plot_P4.y(), d4);
 
       // Plot the cubic2.
