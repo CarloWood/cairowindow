@@ -21,12 +21,25 @@ constexpr int max_range = 1;
 
 namespace cairowindow::draw {
 
-struct PlotAreaStyle
+// List the additional members of PlotAreaStyle.
+#define cairowindow_PlotArea_FOREACH_MEMBER(X, ...) \
+  X(Color, axes_color, Color{}, __VA_ARGS__) \
+  X(double, axes_line_width, -1.0, __VA_ARGS__)
+
+// PlotAreaStyle is derived from GridStyle.
+#define cairowindow_PlotArea_FOREACH_STYLE_MEMBER(X, ...) \
+  cairowindow_Grid_FOREACH_STYLE_MEMBER(X, __VA_ARGS__) \
+  cairowindow_PlotArea_FOREACH_MEMBER(X, __VA_ARGS__)
+
+// Define default values for PlotAreaStyle.
+struct PlotAreaStyleParamsDefault : public GridStyleParamsDefault
 {
-  Color axes_color = color::black;
-  double axes_line_width = 1.0;
-  GridStyle grid{};
+  static constexpr Color axes_color = color::black;
+  static constexpr double axes_line_width = 1.0;
 };
+
+// Declare PlotAreaStyle, derived from GridStyle.
+DECLARE_STYLE_WITH_BASE(PlotArea, Grid, PlotAreaStyleParamsDefault);
 
 class PlotArea : public MultiRegion
 {
@@ -49,8 +62,8 @@ class PlotArea : public MultiRegion
 
  public:
   PlotArea(cairowindow::Rectangle const& geometry, PlotAreaStyle style) :
-    MultiRegion(style.axes_color, style.axes_line_width), geometry_(geometry), tick_length_(geometry.width() / 100.0),
-    draw_grid_(!style.grid.color.is_transparent()), grid_(geometry, style.grid) { }
+    MultiRegion(style.axes_color(), style.axes_line_width()), geometry_(geometry), tick_length_(geometry.width() / 100.0),
+    draw_grid_(!style.color().is_transparent()), grid_(geometry, style) { }
 
   void set_range(int axis, double range_min, double range_max, int ticks);
   void set_geometry(cairowindow::Rectangle const& geometry)

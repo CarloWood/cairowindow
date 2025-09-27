@@ -27,7 +27,7 @@
 // Get some X11 types that we need.
 extern "C" {
 #include <X11/Xdefs.h>                  // For Atom and XID
-typedef XID Window;
+typedef XID X11Window;
 typedef XID Drawable;
 struct _XDisplay;                       // Forward declaration.
 }
@@ -37,8 +37,6 @@ namespace plot {
 class Plot;
 class Draggable;
 } // namespace plot
-
-using X11Window = ::Window;
 
 class Layer;
 class Printable;

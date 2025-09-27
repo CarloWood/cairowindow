@@ -15,7 +15,7 @@ QuickGraph::QuickGraph(std::string const& title, std::string const& x_label, std
     EventLoop event_loop = window_.run();
     event_loop.set_cleanly_terminated();
   }),
-  plot_(window_.geometry(), { .grid = {.color = color::orange} },
+  plot_(window_.geometry(), draw::GridStyle({ .color = color::orange }),
       title, {},
       x_label, {},
       y_label, {})

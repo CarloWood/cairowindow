@@ -187,13 +187,13 @@ class Plot : public Printable
 
  public:
   Plot(cairowindow::Rectangle const& geometry, draw::PlotAreaStyle plot_area_style, std::string title, draw::PlotTitleStyle title_style) :
-    plot_area_(axes_geometry(geometry, plot_area_style.axes_line_width), plot_area_style),
+    plot_area_(axes_geometry(geometry, plot_area_style.axes_line_width()), plot_area_style),
     title_(std::make_shared<draw::Text>(title, plot_area_.geometry().offset_x() + 0.5 * plot_area_.geometry().width(),
         plot_area_.geometry().offset_y() - 0.5 * plot_area_.geometry().offset_y() - title_style.offset(), title_style)) { }
 
   Plot(cairowindow::Rectangle const& geometry, draw::PlotAreaStyle plot_area_style, std::string title, draw::PlotTitleStyle title_style,
       std::string xlabel, draw::XLabelStyle xlabel_style, std::string ylabel, draw::YLabelStyle ylabel_style) :
-    plot_area_(axes_geometry(geometry, plot_area_style.axes_line_width), plot_area_style),
+    plot_area_(axes_geometry(geometry, plot_area_style.axes_line_width()), plot_area_style),
     title_(std::make_shared<draw::Text>(title, plot_area_.geometry().offset_x() + 0.5 * plot_area_.geometry().width(),
         plot_area_.geometry().offset_y() - 0.5 * plot_area_.geometry().offset_y() - title_style.offset(), title_style)),
     xlabel_(std::make_shared<draw::Text>(xlabel, plot_area_.geometry().offset_x() + 0.5 * plot_area_.geometry().width(),
@@ -202,7 +202,7 @@ class Plot : public Printable
         plot_area_.geometry().offset_y() + 0.5 * plot_area_.geometry().height(), ylabel_style)) { }
 
   Plot(cairowindow::Rectangle const& geometry, draw::PlotAreaStyle plot_area_style) :
-    plot_area_(axes_geometry(geometry, plot_area_style.axes_line_width), plot_area_style) { }
+    plot_area_(axes_geometry(geometry, plot_area_style.axes_line_width()), plot_area_style) { }
 
   void set_range(int axis, Range range)
   {

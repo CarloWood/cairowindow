@@ -8,11 +8,22 @@
 
 namespace cairowindow::draw {
 
-struct GridStyle
+#define cairowindow_Grid_FOREACH_MEMBER(X, ...) \
+  X(Color, color, Color{}, __VA_ARGS__) \
+  X(double, line_width, -1.0, __VA_ARGS__)
+
+#define cairowindow_Grid_FOREACH_STYLE_MEMBER(X, ...) \
+  cairowindow_Grid_FOREACH_MEMBER(X, __VA_ARGS__)
+
+// Define default values for GridStyle.
+struct GridStyleParamsDefault
 {
-  Color color = color::transparent;
-  double line_width = 1.0;
+  static constexpr Color color = color::transparent;
+  static constexpr double line_width = 1.0;
 };
+
+// Declare GridStyle.
+DECLARE_STYLE(Grid, GridStyleParamsDefault);
 
 class Grid : public MultiRegion
 {
@@ -30,7 +41,7 @@ class Grid : public MultiRegion
 
  public:
   Grid(cairowindow::Rectangle const& geometry, GridStyle style) :
-    MultiRegion(style.color, style.line_width), geometry_(geometry) { }
+    MultiRegion(style.color(), style.line_width()), geometry_(geometry) { }
 
   void set_ticks(int axis, int ticks)
   {
