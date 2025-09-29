@@ -38,7 +38,7 @@ void LayerRegion::draw(Layer* layer)
   layer_ = layer;
 
   // For now only a single user_draw() call per region is allowed.
-  // The reason for this is that a region is supposed to a single rectangle, so doing
+  // The reason for this is that a region is supposed to be a single rectangle, so doing
   // multiple draw calls could accidently cause large rectangles with a lot of empty space.
   ASSERT(!stroke_extents_.is_defined());
   stroke_extents_ = draw_to(layer->cr(), layer);
