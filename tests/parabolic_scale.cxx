@@ -129,7 +129,7 @@ void print_parabola(std::array<double, 5> const& P, int n)
   std::cout << "\nVertex: " << P[3] << ", " << P[4] << std::endl;
 }
 
-std::vector<double> generate_brute_force(std::mt19937& gen, std::array<math::QuadraticPolynomial, 2>& out_parabolas)
+std::vector<double> generate_brute_force(std::mt19937& gen, std::array<math::QuadraticPolynomial<double>, 2>& out_parabolas)
 {
   for (;;)
   {
@@ -210,7 +210,7 @@ int main()
     double L_max = 6.0;
 
     // Create and draw plot area.
-    plot::Plot plot(window.geometry(), { .grid = {.color = color::orange} },
+    plot::Plot plot(window.geometry(), draw::PlotAreaStyle({.color = color::orange}),
         "Parabolic scale test", {},
         "w", {},
         "L", {});
@@ -245,12 +245,12 @@ int main()
       std::mt19937 gen2(seed);
 
       // Generate two random parabola's.
-      std::array<math::QuadraticPolynomial, 2> parabolas;
+      std::array<math::QuadraticPolynomial<double>, 2> parabolas;
       std::vector<double> xs = generate_brute_force(gen2, parabolas);
 
       // parabolas[0] is the "old" parabola, and parabolas[1] is the "new" parabola.
-      math::QuadraticPolynomial const parabola_(parabolas[0]);
-      math::QuadraticPolynomial const parabola(parabolas[1]);
+      math::QuadraticPolynomial<double> const parabola_(parabolas[0]);
+      math::QuadraticPolynomial<double> const parabola(parabolas[1]);
       double const v_y = parabola.vertex_y();
 
       // Draw both parabola, but offset them relative the y-coordinate of the second parabola.

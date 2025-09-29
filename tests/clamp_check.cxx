@@ -58,7 +58,7 @@ int main()
     double const Lw_max = Lw2 + 0.2 * dLw;
 
     // Create and draw plot area.
-    plot::Plot plot(window.geometry(), { .grid = {.color = color::orange} },
+    plot::Plot plot(window.geometry(), draw::PlotAreaStyle({.color = color::orange}),
         "Clamp Check", {},
         "x", {},
         "y", {});
@@ -173,7 +173,7 @@ int main()
           "; w₁ = " << w1 << "; L(w₁) = " << Lw1 << "; L'(w₁) = " << dLdw1);
 
       // Let Q(w) = a + b w + c w² + d w³ be a cubic that has the same value and first derivative in w₀ and w₁.
-      math::Polynomial cubic(4 COMMA_CWDEBUG_ONLY("cubic"));
+      math::Polynomial<double> cubic(4 COMMA_CWDEBUG_ONLY("cubic"));
 
       // See https://math.stackexchange.com/questions/4926335/
       double dw = w0 - w1;

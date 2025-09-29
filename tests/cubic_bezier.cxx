@@ -43,7 +43,7 @@ int main()
     });
 
     // Create and draw plot area.
-    plot::Plot plot(window.geometry(), { .grid = {.color = color::orange} },
+    plot::Plot plot(window.geometry(), draw::PlotAreaStyle({.color = color::orange}),
         "Cubic Bezier test", {},
         "x", {},
         "y", {});

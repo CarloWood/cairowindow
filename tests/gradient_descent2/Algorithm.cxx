@@ -144,7 +144,7 @@ bool Algorithm::operator()(WeightRef w, double Lw, double dLdw)
 #ifdef CWDEBUG
       {
         // Draw a line through this sample.
-        math::QuadraticPolynomial line{Lw - dLdw * w, dLdw, 0.0};
+        math::QuadraticPolynomial<double> line{Lw - dLdw * w, dLdw, 0.0};
         event_server_.trigger(AlgorithmEventType{quadratic_polynomial_event, line});
       }
 #endif
@@ -294,7 +294,7 @@ bool Algorithm::operator()(WeightRef w, double Lw, double dLdw)
         case IterationState::find_extreme:
         {
 #ifdef CWDEBUG
-          math::CubicPolynomial old_cubic = cubic_used_ != chain_.end() ? cubic_used_->cubic() : math::CubicPolynomial{};
+          math::CubicPolynomial<double> old_cubic = cubic_used_ != chain_.end() ? cubic_used_->cubic() : math::CubicPolynomial<double>{};
 #endif
           AnalyzedCubic right_acubic;       // If right_node != chain_.end() is true then this corresponds to the cubic of std::next(new_node).
           bool right_has_extreme = false;
@@ -550,7 +550,7 @@ bool Algorithm::operator()(WeightRef w, double Lw, double dLdw)
             used_acubic->has_extrema() ? used_acubic->get_extreme()
                                        : used_acubic->inflection_point();
 
-          math::CubicPolynomial const& cubic = cubic_used_->cubic();
+          math::CubicPolynomial<double> const& cubic = cubic_used_->cubic();
 
           // Find the left/right edge sample as far away from the samples used to fit the current cubic, that still matches that cubic.
           //
@@ -779,7 +779,7 @@ bool Algorithm::operator()(WeightRef w, double Lw, double dLdw)
                   if ((hdirection_ == HorizontalDirection::left && x2 < adjacent_cubic->w()) ||
                       (hdirection_ == HorizontalDirection::right && x2 > adjacent_cubic->next_node()->w()))
                     break;
-                  math::Polynomial const& fourth_degree_approximation = last_extreme_cubic_->local_extreme().get_fourth_degree_approximation();
+                  math::Polynomial<double> const& fourth_degree_approximation = last_extreme_cubic_->local_extreme().get_fourth_degree_approximation();
                   // Let Py = P(x2)
                   double Py = fourth_degree_approximation(x2);
                   // Calculate Qy = Q(x2).
@@ -1736,7 +1736,7 @@ bool Algorithm::handle_local_extreme(WeightRef w)
 
   Eigen::Vector4d C = M.colPivHouseholderQr().solve(D);
 
-  math::Polynomial fourth_degree_approximation(5 COMMA_CWDEBUG_ONLY("w"));
+  math::Polynomial<double> fourth_degree_approximation(5 COMMA_CWDEBUG_ONLY("w"));
   fourth_degree_approximation[1] = C[0];
   fourth_degree_approximation[2] = C[1];
   fourth_degree_approximation[3] = C[2];
@@ -1749,7 +1749,7 @@ bool Algorithm::handle_local_extreme(WeightRef w)
   event_server_.trigger(AlgorithmEventType{fourth_degree_approximation_event, fourth_degree_approximation});
 #endif
 
-  math::Polynomial derivative = fourth_degree_approximation.derivative();
+  math::Polynomial<double> derivative = fourth_degree_approximation.derivative();
   Dout(dc::notice, "derivative = " << derivative);
 
 #ifdef CWDEBUG

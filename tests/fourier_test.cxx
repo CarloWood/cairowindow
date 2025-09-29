@@ -260,7 +260,7 @@ class TestFunctionGenerator : public enable_drawing::Function
     };
 
     double const tolerance = 1e-5 * x_range.size();
-    math::CubicPolynomial cubic;
+    math::CubicPolynomial<double> cubic;
 
     lowest_minimum_ = std::numeric_limits<double>::max();
     lowest_maximum_ = std::numeric_limits<double>::max();

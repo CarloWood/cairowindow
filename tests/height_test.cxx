@@ -43,7 +43,7 @@ int main()
     double c = 0.5 * two_ci;
     double d = di;
 
-    math::CubicPolynomial g(a, b, c, d);
+    math::CubicPolynomial<double> g(a, b, c, d);
 
     Dout(dc::notice, "g(x) = " << g);
 

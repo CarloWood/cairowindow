@@ -22,7 +22,7 @@ class Approximation
                                                         // number_of_relevant_samples_ is two then one with the smallest w is stored at index 0.
   Sample back_tracking_pivot_;                          // Copy of a sample that is used while back tracking and might be needed longer than
                                                         // the lifetime of the original in the history.
-  math::CubicPolynomial cubic_;                         // A cubic approximation, only valid if number_of_relevant_samples_ == 2.
+  math::CubicPolynomial<double> cubic_;                 // A cubic approximation, only valid if number_of_relevant_samples_ == 2.
   Scale scale_;                                         // A measure of over what interval the approximation was tested to be correct.
   bool is_extreme_{false};                              // Set when this is a LocalExtreme::approximation_.
   bool already_had_two_relevant_samples_{false};        // Used as carry between add and update_scale.
@@ -88,7 +88,7 @@ class Approximation
   Scale const& scale() const { return scale_; }
   bool is_extreme() const { return is_extreme_; }
   double at(double w) const { return cubic_(w); }
-  math::CubicPolynomial const& cubic() const { return cubic_; }
+  math::CubicPolynomial<double> const& cubic() const { return cubic_; }
   HorizontalDirection prev_to_current() const { return prev().w() > current().w() ? HorizontalDirection::left : HorizontalDirection::right; }
 
   int current_index() const

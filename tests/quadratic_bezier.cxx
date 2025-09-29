@@ -44,7 +44,7 @@ int main()
     });
 
     // Create and draw plot area.
-    plot::Plot plot(window.geometry(), { .grid = {.color = color::orange} },
+    plot::Plot plot(window.geometry(), draw::PlotAreaStyle({.color = color::orange}),
         "Relationship between P₀, P₁, θ, w, v and s", {},
         "x", {},
         "y", {});

@@ -40,7 +40,7 @@ void AlgorithmEvent::callback(gradient_descent::AlgorithmEventType const& event)
   {
     auto const& data = event.get<FourthDegreeApproximationEventData>();
 
-    math::Polynomial const& fourth_degree_approximation = data.polynomial();
+    math::Polynomial<double> const& fourth_degree_approximation = data.polynomial();
     plot_fourth_degree_approximation_curve_.solve(
         [&fourth_degree_approximation](double w) -> Point { return {w, fourth_degree_approximation(w)}; }, plot_.viewport());
     plot_.add_bezier_fitter(layer_, curve_line_style_({.line_color = 0.75 * color::teal}), plot_fourth_degree_approximation_curve_);
@@ -49,7 +49,7 @@ void AlgorithmEvent::callback(gradient_descent::AlgorithmEventType const& event)
   {
     auto const& data = event.get<DerivativeEventData>();
 
-    math::Polynomial const& derivative = data.polynomial();
+    math::Polynomial<double> const& derivative = data.polynomial();
     plot_derivative_curve_.solve([&derivative](double w) -> Point { return {w, derivative(w)}; }, plot_.viewport());
     plot_.add_bezier_fitter(layer_, curve_line_style_({.line_color = color::magenta}), plot_derivative_curve_);
   }
@@ -57,7 +57,7 @@ void AlgorithmEvent::callback(gradient_descent::AlgorithmEventType const& event)
   {
     auto const& data = event.get<QuotientEventData>();
 
-    math::Polynomial const& quotient = data.polynomial();
+    math::Polynomial<double> const& quotient = data.polynomial();
     plot_quotient_curve_.solve([&quotient](double w) -> Point { return {w, 10.0 * quotient(w)}; }, plot_.viewport());
     plot_.add_bezier_fitter(layer_, curve_line_style_({.line_color = color::blue}), plot_quotient_curve_);
   }
@@ -65,7 +65,7 @@ void AlgorithmEvent::callback(gradient_descent::AlgorithmEventType const& event)
   {
     auto const& data = event.get<QuadraticPolynomialEventData>();
 
-    math::QuadraticPolynomial const& approximation = data.quadratic_polynomial();
+    math::QuadraticPolynomial<double> const& approximation = data.quadratic_polynomial();
     plot_quadratic_approximation_curve_.solve([&approximation](double w) -> Point { return {w, approximation(w)}; }, plot_.viewport());
     plot_.add_bezier_fitter(layer_, curve_line_style_({.line_color = color::red}), plot_quadratic_approximation_curve_);
   }
@@ -232,7 +232,7 @@ void AlgorithmEvent::callback(gradient_descent::AlgorithmEventType const& event)
   {
     auto const& data = event.get<CubicPolynomialEventData>();
 
-    math::CubicPolynomial const& cubic_approximation = data.cubic_polynomial();
+    math::CubicPolynomial<double> const& cubic_approximation = data.cubic_polynomial();
     plot_cubic_curve_[data.index()].solve(
         [&cubic_approximation](double w) -> Point { return {w, cubic_approximation(w)}; }, plot_.viewport());
     plot_.add_bezier_fitter(layer_, curve_line_style_({.line_color = (data.index() == 0 ? color::palevioletred : color::magenta)}),

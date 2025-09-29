@@ -64,7 +64,7 @@ int main()
     double const Lw_max = 48.0; //Lw2 + 0.2 * dLw;
 
     // Create and draw plot area.
-    plot::Plot plot(window.geometry(), { .grid = {.color = color::orange} },
+    plot::Plot plot(window.geometry(), draw::PlotAreaStyle({.color = color::orange}),
         "Scale Test", {},
         "x", {},
         "y", {});
@@ -249,7 +249,7 @@ int main()
           "; w₃ = " << w3 << "; L(w₃) = " << Lw3 << "; L'(w₃) = " << dLdw3);
 
       // Let g(w) = a + b w + c w² + d w³ be a cubic that has the same value and first derivative in w₀ and w₁.
-      math::CubicPolynomial g;
+      math::CubicPolynomial<double> g;
       g.initialize(w0, Lw0, dLdw0, w1, Lw1, dLdw1);
 
       // Plot the cubic.
@@ -257,7 +257,7 @@ int main()
       auto plot_g = plot.create_bezier_fitter(second_layer, curve_line_style, std::move(fitter0));
 
       // The cubic through w2 and w3.
-      math::CubicPolynomial h;
+      math::CubicPolynomial<double> h;
       h.initialize(w2, Lw2, dLdw2, w3, Lw3, dLdw3);
 
       // Plot the cubic.
@@ -276,7 +276,7 @@ int main()
       plot.add_line(second_layer, line_style, plot_minimum_line);
 
       // Create and draw 0.9 * g(x) + 0.1 * g(e).
-      math::CubicPolynomial g09 = g;
+      math::CubicPolynomial<double> g09 = g;
       for (int i = 0; i < 4; ++i)
         g09[i] *= 0.9;
       g09[0] += 0.1 * g(e);
@@ -284,7 +284,7 @@ int main()
       auto plot_g09 = plot.create_bezier_fitter(second_layer, curve_line_style({.line_color = color::green}), std::move(fitter09));
 
       // Create and draw 1.1 * g(x) - 0.1 * g(e).
-      math::CubicPolynomial g11 = g;
+      math::CubicPolynomial<double> g11 = g;
       for (int i = 0; i < 4; ++i)
         g11[i] *= 1.1;
       g11[0] -= 0.1 * g(e);

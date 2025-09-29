@@ -38,7 +38,7 @@ class Function
   double w_0_;
   double w_min_;
   double w_max_;
-  math::CubicPolynomial cubic_;
+  math::CubicPolynomial<double> cubic_;
 
  public:
   Function(std::mt19937& engine)
@@ -172,7 +172,7 @@ int main()
       }
 
       // Create and draw plot area.
-      plot::Plot plot(window.geometry(), { .grid = {.color = color::orange} },
+      plot::Plot plot(window.geometry(), draw::PlotAreaStyle({.color = color::orange}),
           L.as_string(), {},
           "w", {},
           "L", {});

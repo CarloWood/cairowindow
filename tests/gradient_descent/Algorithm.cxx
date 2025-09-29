@@ -402,7 +402,7 @@ bool Algorithm::handle_local_extreme(Weight& w)
 
   Eigen::Vector4d C = M.colPivHouseholderQr().solve(D);
 
-  math::Polynomial fourth_degree_approximation(5 COMMA_CWDEBUG_ONLY("w"));
+  math::Polynomial<double> fourth_degree_approximation(5 COMMA_CWDEBUG_ONLY("w"));
   fourth_degree_approximation[1] = C[0];
   fourth_degree_approximation[2] = C[1];
   fourth_degree_approximation[3] = C[2];

@@ -8,6 +8,7 @@
 #include "math/CubicPolynomial.h"
 #include "events/Events.h"
 #include "utils/has_print_on.h"
+#include <variant>
 
 namespace gradient_descent {
 
@@ -63,12 +64,12 @@ class DifferenceEventData
 class PolynomialEventData
 {
  private:
-  math::Polynomial const& polynomial_;
+  math::Polynomial<double> const& polynomial_;
 
  public:
-  PolynomialEventData(math::Polynomial const& polynomial) : polynomial_(polynomial) { }
+  PolynomialEventData(math::Polynomial<double> const& polynomial) : polynomial_(polynomial) { }
 
-  math::Polynomial const& polynomial() const { return polynomial_; }
+  math::Polynomial<double> const& polynomial() const { return polynomial_; }
 
   void print_on(std::ostream& os) const;
 };
@@ -94,12 +95,12 @@ class QuotientEventData : public PolynomialEventData
 class QuadraticPolynomialEventData
 {
  private:
-  math::QuadraticPolynomial const& quadratic_polynomial_;
+  math::QuadraticPolynomial<double> const& quadratic_polynomial_;
 
  public:
-  QuadraticPolynomialEventData(math::QuadraticPolynomial const& quadratic_polynomial) : quadratic_polynomial_(quadratic_polynomial) { }
+  QuadraticPolynomialEventData(math::QuadraticPolynomial<double> const& quadratic_polynomial) : quadratic_polynomial_(quadratic_polynomial) { }
 
-  math::QuadraticPolynomial const& quadratic_polynomial() const { return quadratic_polynomial_; }
+  math::QuadraticPolynomial<double> const& quadratic_polynomial() const { return quadratic_polynomial_; }
 
   void print_on(std::ostream& os) const;
 };
@@ -107,12 +108,12 @@ class QuadraticPolynomialEventData
 class CubicPolynomialEventData
 {
  private:
-  math::CubicPolynomial const& cubic_polynomial_;
+  math::CubicPolynomial<double> const& cubic_polynomial_;
 
  public:
-  CubicPolynomialEventData(math::CubicPolynomial const& cubic_polynomial) : cubic_polynomial_(cubic_polynomial) { }
+  CubicPolynomialEventData(math::CubicPolynomial<double> const& cubic_polynomial) : cubic_polynomial_(cubic_polynomial) { }
 
-  math::CubicPolynomial const& cubic_polynomial() const { return cubic_polynomial_; }
+  math::CubicPolynomial<double> const& cubic_polynomial() const { return cubic_polynomial_; }
 
   void print_on(std::ostream& os) const;
 };
@@ -138,15 +139,15 @@ class ScaleDrawEventData
  protected:
   ScaleUpdate result_;
   Scale const& scale_;
-  math::CubicPolynomial const& old_cubic_;
+  math::CubicPolynomial<double> const& old_cubic_;
 
  public:
-  ScaleDrawEventData(ScaleUpdate result, Scale const& scale, math::CubicPolynomial const& old_cubic) :
+  ScaleDrawEventData(ScaleUpdate result, Scale const& scale, math::CubicPolynomial<double> const& old_cubic) :
     result_(result), scale_(scale), old_cubic_(old_cubic) { }
 
   ScaleUpdate result() const { return result_; }
   Scale const& scale() const { return scale_; }
-  math::CubicPolynomial const& old_cubic() const { return old_cubic_; }
+  math::CubicPolynomial<double> const& old_cubic() const { return old_cubic_; }
 
   void print_on(std::ostream& os) const
   {
@@ -248,7 +249,7 @@ class AlgorithmEventData
     event_data_.emplace<DifferenceEventData>(w, expected_Lw, Lw);
   }
 
-  AlgorithmEventData(event_type type, math::Polynomial const& polynomial)
+  AlgorithmEventData(event_type type, math::Polynomial<double> const& polynomial)
   {
     if (type == fourth_degree_approximation_event)
       event_data_.emplace<FourthDegreeApproximationEventData>(polynomial);
@@ -260,13 +261,13 @@ class AlgorithmEventData
       ASSERT(false);
   }
 
-  AlgorithmEventData(event_type type, math::QuadraticPolynomial const& polynomial)
+  AlgorithmEventData(event_type type, math::QuadraticPolynomial<double> const& polynomial)
   {
     ASSERT(type == quadratic_polynomial_event);
     event_data_.emplace<QuadraticPolynomialEventData>(polynomial);
   }
 
-  AlgorithmEventData(event_type type, math::CubicPolynomial const& polynomial)
+  AlgorithmEventData(event_type type, math::CubicPolynomial<double> const& polynomial)
   {
     ASSERT(type == cubic_polynomial_event);
     event_data_.emplace<CubicPolynomialEventData>(polynomial);
@@ -278,7 +279,7 @@ class AlgorithmEventData
     event_data_.emplace<KineticEnergyEventData>(max_Lw);
   }
 
-  AlgorithmEventData(event_type type, ScaleUpdate result, Scale const& scale, math::CubicPolynomial const& old_cubic)
+  AlgorithmEventData(event_type type, ScaleUpdate result, Scale const& scale, math::CubicPolynomial<double> const& old_cubic)
   {
     ASSERT(type == scale_draw_event);
     event_data_.emplace<ScaleDrawEventData>(result, scale, old_cubic);

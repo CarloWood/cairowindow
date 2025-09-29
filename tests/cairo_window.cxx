@@ -69,7 +69,7 @@ int main()
 //    auto text = std::make_shared<draw::Text>("Hello world", draw::centered_below, 350, 350, draw::TextStyle({.font_size = 24.0}));
 //    second_layer->draw(text);
 
-    plot::Plot plot(window.geometry(), { .grid = {.color = color::orange} },
+    plot::Plot plot(window.geometry(), draw::PlotAreaStyle({.color = color::orange}),
         "Constructing a Bezier curve", {},
         "x", {},
         "y", {});
