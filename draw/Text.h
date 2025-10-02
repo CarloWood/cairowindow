@@ -4,6 +4,7 @@
 #include "cairowindow/Color.h"
 #include "cairowindow/StrokeExtents.h"
 #include "cairowindow/Style.h"
+#include <algorithm>
 #include <string>
 #ifdef CWDEBUG
 #include "cairowindow/debug_channel.h"
@@ -173,22 +174,30 @@ class Text : public LayerRegion
     cairo_translate(cr, tx, ty);
     cairo_show_text(cr, text_.c_str());
     cairo_stroke(cr);
-    double x1 = extents.x_bearing;
-    double y1 = extents.y_bearing;
-    double x2 = extents.x_bearing + extents.width;
-    double y2 = extents.y_bearing + extents.height;
+    double corners[4][2] = {
+      { extents.x_bearing, extents.y_bearing },
+      { extents.x_bearing + extents.width, extents.y_bearing },
+      { extents.x_bearing, extents.y_bearing + extents.height },
+      { extents.x_bearing + extents.width, extents.y_bearing + extents.height }
+    };
     cairo_matrix_t m;
     cairo_get_matrix(cr, &m);
-    cairo_matrix_transform_point(&m, &x1, &y1);
-    cairo_matrix_transform_point(&m, &x2, &y2);
-    // Due to (90 degree) rotation the coordinates are possibly no longer ordered.
-    // The second coordinate must be the largest.
-    if (x2 < x1)
-      std::swap(x1, x2);
-    if (y2 < y1)
-      std::swap(y1, y2);
-    Dout(dc::cairowindow, "Returning (" << x1 << ", " << y1 << ", " << x2 << ", " << y2 << ")");
-    return { x1, y1, x2, y2 };
+    double min_x = corners[0][0];
+    double min_y = corners[0][1];
+    double max_x = corners[0][0];
+    double max_y = corners[0][1];
+    for (auto& corner : corners)
+    {
+      double x = corner[0];
+      double y = corner[1];
+      cairo_matrix_transform_point(&m, &x, &y);
+      min_x = std::min(min_x, x);
+      min_y = std::min(min_y, y);
+      max_x = std::max(max_x, x);
+      max_y = std::max(max_y, y);
+    }
+    Dout(dc::cairowindow, "Returning (" << min_x << ", " << min_y << ", " << max_x << ", " << max_y << ")");
+    return { min_x, min_y, max_x, max_y };
   }
 };
 
