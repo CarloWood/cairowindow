@@ -114,7 +114,7 @@ enum Sign
 // Hyperplane
 //
 // An (n-1)-dimensional hyperplane orthogonal to a given normal vector N,
-// located at signed offset d from the origin in units of normal vectors N.
+// located at the signed offset -b/‖N‖ from the origin.
 //
 // This class follows the convention originally set by Ludwig Otto Hesse, with respect to
 // the signed distance. The Hesse form (https://en.wikipedia.org/wiki/Hesse_normal_form) of
@@ -126,16 +126,17 @@ enum Sign
 // Here ρ is the signed offset of the plane from the origin: ρ is positive iff
 // the plane lies in the direction that the normal points:
 //
+//              hyperplane
 //                 |
-//          N      |
-//        O---->   |
+//          N      |  N
+//        O---->   |---->
 //     origin      |
-//                 |
-//        -------->|
-//           ρ > 0
+//                 P----------->A
+//        -------->|  S(A) > 0
+//           ρ > 0 |
 //
-// However, the signed distance S(A) of a point A to the plane is relative to the plane
-// itself and (also) positive on the side of the plane that N is pointing towards
+// However, the signed distance S(A) from the plane to a point A is relative to the plane
+// itself and positive if A is on the side of the plane that N is pointing towards
 // (e.g. https://courses.csail.mit.edu/6.036/spring_2016/assignments/hw0_final.pdf (2d)).
 //
 // Let a point A be given by its projection P onto the plane and its signed distance s from
@@ -155,17 +156,17 @@ enum Sign
 //
 // and has the opposite sign of the plane offset!
 //
+//              hyperplane
 //                 |
-//          N      |
-//        O---->   |
-//     origin      |
-//                 |
-//         <-------|
-//         S(O) < 0
+//                 |  N
+//     origin      |---->
+//        O<-------Q-.         ∧
+//            /    |  \_ Q = ρ·N
+//   S(O) = -ρ < 0 |
 //
-// The constructor of this class is intended to accept a normal vector N (not
-// necessarily a unit vector) as first argument, and the dot product of N with
-// some point P in the plane (d = N·P).
+// The constructor of this class is accepts the normal vector N (not necessarily
+// a unit vector) as first argument and the negative of the dot product of N with
+// some point P in the plane (b = -N·P).
 //
 // Note that in the literature it is common to write the equation of a hyperplane as:
 //
@@ -173,18 +174,21 @@ enum Sign
 //
 // Hyperplane also stores N and b.
 //
-// Because P is in the plane, we have d = N·P = -b.
+// Because P is in the plane, we have N·P + b = 0 --> b = -N·P.
 // If we write the plane equation in Hesse form, by dividing by ‖N‖,
 //
-//     (N/‖N‖)·X = d/‖N‖ = ρ
+//     (N·X + b)/‖N‖ = 0 -> (N/‖N‖)·X = -b/‖N‖
 //
-// we see that d = ρ ‖N‖, the plane offset multiplied with the length of N.
+// we see that b = -ρ ‖N‖, the plane offset multiplied by -‖N‖.
 //
 // Note:
-// * The point (d/‖N‖²) N lies in the hyperplane.
-// * The perpendicular distance between the origin and the plane is |ρ| = |d|/‖N‖.
-// * The signed offset of the plane from the origin is ρ = d/‖N‖.
-// * The signed distance of the origin from the plane is -ρ = -d/‖N‖ = b/‖N‖.
+// * The signed offset of the plane from the origin is ρ = -b/‖N‖.
+//              ∧
+// * The point ρN = (-b/‖N‖)(N/‖N‖) = (-b/‖N‖²)N is the projection of the origin onto the hyperplane.
+//
+// * The perpendicular distance between the origin and the plane is |ρ| = |b|/‖N‖.
+//
+// * The signed distance of the origin from the plane is -ρ = b/‖N‖.
 //
 template<std::floating_point FloatType, int n>
 struct HyperPlane
@@ -194,8 +198,8 @@ struct HyperPlane
   VectorType N_;                                        // The normal of the hyperplane.
   FloatType b_;                                         // The plane constant where N·X + b = 0.
 
-  // Create a hyperplane that satisfies N·X - d = 0, where d = N·P for some P on the plane.
-  HyperPlane(VectorType const& N, FloatType d) : N_(N), b_(-d) { }
+  // Create a hyperplane that satisfies N·X + b = 0, where b = -N·P for some P on the plane.
+  HyperPlane(VectorType const& N, FloatType b) : N_(N), b_(b) { }
 
   // Return the signed distance in Euclidean units (positive in +N direction).
   FloatType signed_distance(VectorType const& A) const
