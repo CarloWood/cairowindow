@@ -4,6 +4,7 @@
 #include "utils/ulong_to_base.h"
 #include "utils/parity.h"
 #include "utils/Vector.h"
+#include "utils/macros.h"
 #include "cwds/debug_ostream_operators.h"
 #include <array>
 #include <vector>
@@ -103,32 +104,87 @@ struct Vector
 #endif
 };
 
+enum Sign
+{
+  negative = -1,      // The signed distance is negative: the point is on the -N side of the plane.
+  in_plane = 0,       // The signed distance is very small: the point can be considered to be in the plane.
+  positive = 1,       // The signed distance is positive: the point is on the +N side of the plane.
+};
+
+// Hyperplane
+//
 // An (n-1)-dimensional hyperplane orthogonal to a given normal vector N,
-// located at signed "distance" d from the origin in units of normal vectors N.
+// located at signed offset d from the origin in units of normal vectors N.
 //
-// The hyperplane equation is: N·X = d ‖N‖².
+// This class follows the convention originally set by Ludwig Otto Hesse, with respect to
+// the signed distance. The Hesse form (https://en.wikipedia.org/wiki/Hesse_normal_form) of
+// a hyperplane is where N is a unit normal vector (‖N‖ is one), indicated by giving N a hat,
+// and reads:
+//     ∧
+//     N·X = ρ
 //
-// In literature is common to write the equation of a hyperplane as:
+// Here ρ is the signed offset of the plane from the origin: ρ is positive iff
+// the plane lies in the direction that the normal points:
 //
-//      N·X + b = 0,
+//                 |
+//          N      |
+//        O---->   |
+//     origin      |
+//                 |
+//        -------->|
+//           ρ > 0
 //
-// therefore we define b = -d ‖N‖².
+// However, the signed distance S(A) of a point A to the plane is relative to the plane
+// itself and (also) positive on the side of the plane that N is pointing towards
+// (e.g. https://courses.csail.mit.edu/6.036/spring_2016/assignments/hw0_final.pdf (2d)).
+//
+// Let a point A be given by its projection P onto the plane and its signed distance s from
+// the plane:
+//               ∧
+//     A = P + s N
+//                                                 ∧
+// Then the signed distance of A to the hyperplane N·X - ρ = 0 is:
+//            ∧         ∧        ∧         ∧            ∧ ∧
+//     S(A) = N·A - ρ = N·(P + s N) - ρ = (N·P - ρ) + s N·N = s
+//
+// because P is in the plane.
+//
+// Note that the signed distance of the origin itself is:
+//            ∧
+//     S(O) = N·O - ρ = -ρ,
+//
+// and has the opposite sign of the plane offset!
+//
+//                 |
+//          N      |
+//        O---->   |
+//     origin      |
+//                 |
+//         <-------|
+//         S(O) < 0
+//
+// The constructor of this class is intended to accept a normal vector N (not
+// necessarily a unit vector) as first argument, and the dot product of N with
+// some point P in the plane (d = N·P).
+//
+// Note that in the literature it is common to write the equation of a hyperplane as:
+//
+//     N·X + b = 0,
+//
+// Hyperplane also stores N and b.
+//
+// Because P is in the plane, we have d = N·P = -b.
+// If we write the plane equation in Hesse form, by dividing by ‖N‖,
+//
+//     (N/‖N‖)·X = d/‖N‖ = ρ
+//
+// we see that d = ρ ‖N‖, the plane offset multiplied with the length of N.
 //
 // Note:
-// * the point dN lies in the hyperplane.
-// * the perpendicular distance from origin to plane is |d|‖N‖; the variable `d` is the signed distance in terms of N.
-// * the actual signed distance is d ‖N‖.
-//
-// The equation form N·X + b = 0 (as opposed to writing `- b`) follows historical conventions
-// from polynomial equations (ax + b = 0) which carried over into linear algebra (W·X + b = 0)
-// as, for example, seen in machine learning (where W are weights and b is called bias).
-//
-// This creates a sign discrepancy: if we think geometrically, the signed distance from origin
-// is -b/‖N‖, not +b/‖N‖. The positive sign for b is intuitive in function graphing (y = ax + b
-// intercepts the y-axis at b; increasing b moves the graph up) but less so for hyperplane geometry.
-//
-// Here we use the geometrically intuitive `d` that relates directly to signed distance, internally
-// store use linear algebra form.
+// * The point (d/‖N‖²) N lies in the hyperplane.
+// * The perpendicular distance between the origin and the plane is |ρ| = |d|/‖N‖.
+// * The signed offset of the plane from the origin is ρ = d/‖N‖.
+// * The signed distance of the origin from the plane is -ρ = -d/‖N‖ = b/‖N‖.
 //
 template<std::floating_point FloatType, int n>
 struct HyperPlane
@@ -136,25 +192,42 @@ struct HyperPlane
   using VectorType = Vector<FloatType, n>;
 
   VectorType N_;                                        // The normal of the hyperplane.
-  FloatType b_;                                         // The plane constant, sometimes also called offset; N·X + b = 0.
+  FloatType b_;                                         // The plane constant where N·X + b = 0.
 
-  // Create a hyperplane that satisfies N·X - d ‖N‖² = 0.
-  HyperPlane(VectorType const& N, FloatType d) : N_(N), b_(d) { }
+  // Create a hyperplane that satisfies N·X - d = 0, where d = N·P for some P on the plane.
+  HyperPlane(VectorType const& N, FloatType d) : N_(N), b_(-d) { }
 
-  // Return the number of N_'s that have to be subtracted from P to end up on the
-  // HyperPlane, multiplied with the square of the length of N.
-  //
-  // The sign tells you which "side" of the hyperplane the point is on: a positive sign
-  // means it is on the same side as that the normal N is pointing to.
-  //
-  // Let X be the projection of P onto the plane.
-  // Let `h` be the number of N_'s that have to be subtracted from P to end up on the HyperPlane.
-  // Then: P - hN = X -> P = X + hN.
-  // And the returned value is N·P + b = N·(X + hN) + b = N·X + b + h ‖N‖² = h ‖N‖².
-  //
-  FloatType distance(VectorType const& P) const
+  // Return the signed distance in Euclidean units (positive in +N direction).
+  FloatType signed_distance(VectorType const& A) const
   {
-    return -(N_ * P + b_);
+    //        ∧
+    // S(A) = N·A - ρ = (N·A + b) / ‖N‖.
+    return (N_ * A + b_) / std::sqrt(N_ * N_);
+  }
+
+  // Return h such that A_projected = A - h N lies on the plane.
+  FloatType height_along_N(VectorType const& A) const
+  {
+    // 0 = N·A_projected + b = N·(A - h N) + b = N·A + b - h N·N -->
+    // h = (N·A + b) / N·N.
+    return (N_ * A + b_) / (N_ * N_);
+  }
+
+  // Orthogonal projection of A onto the plane.
+  VectorType project(VectorType const& A) const
+  {
+    return A - height_along_N(A) * N_;
+  }
+
+  // Return which side of the plane A is on.
+  Sign side(VectorType const& A) const
+  {
+    FloatType h = height_along_N(A);
+    FloatType ah = std::abs(h);
+    constexpr FloatType abs_relative_error = 1e-6;
+    if (AI_UNLIKELY(ah < abs_relative_error))
+      return in_plane;
+    return h > 0.0 ? positive : negative;
   }
 
   // Return intersection of the line through C1 and C2 with this HyperPlane.
@@ -163,7 +236,7 @@ struct HyperPlane
   VectorType intersection(VectorType const& C1, VectorType const& C2) const
   {
     // Let E be a line through C1 and C2: E: C1 + g(C2 - C1), where g parameterizes the points on E.
-    // Fill that in in the line equation to find the intersection:
+    // Fill that into the line equation to find the intersection:
     // N·(C1 + g(C2 - C1)) + b = 0 --> N·C1 + b + g N·(C2 - C1) = 0 --> g = -(N·C1 + b) / N·(C2 - C1)
     VectorType diff = C2 - C1;
     FloatType g = -(N_ * C1 + b_) / (N_ * diff);
@@ -324,13 +397,13 @@ std::vector<typename HyperBlock<FloatType, n>::VectorType> HyperBlock<FloatType,
   std::vector<VectorType> intersections;
 
 #if 1
-  utils::Vector<bool, CornerIndex> side(number_of_corners);
+  utils::Vector<Sign, CornerIndex> side(number_of_corners);
   for (CornerIndex ci = C_.ibegin(); ci != C_.iend(); ++ci)
-    side[ci] = plane.distance(C_[ci]) <= 0;
+    side[ci] = plane.side(C_[ci]);
 
   Dout(dc::notice|continued_cf, "side = ");
   for (CornerIndex ci = C_.ibegin(); ci != C_.iend(); ++ci)
-    Dout(dc::continued, (side[ci] == false ? "0" : "1"));
+    Dout(dc::continued, (side[ci] == positive ? "+" : side[ci] == in_plane ? "0" : "-"));
   Dout(dc::finish, "");
 
   for (CornerIndex ci = C_.ibegin(); ci != C_.iend(); ++ci)
@@ -338,7 +411,7 @@ std::vector<typename HyperBlock<FloatType, n>::VectorType> HyperBlock<FloatType,
     for (int d = 0; d < n; ++d)
     {
       int bit = 1 << d;
-      CornerIndex ci2(ci.get_value() & ~bit);
+      CornerIndex ci2(ci.get_value() | bit);
       if (side[ci] != side[ci2])
       {
         // Found two corners on opposite sides of the hyperplane.

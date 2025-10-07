@@ -69,17 +69,17 @@ int main()
     draw::ConnectorStyle connector_style(line_style({.line_color = color::coral, .dashes = {3.0, 3.0}}));
 
     // Create a point P₀.
-    auto plot_P0 = plot.create_point(second_layer, point_style, {-2.59924, -1.09229});
+    auto plot_P0 = plot.create_point(second_layer, point_style, {-2.54867, -0.869785});  // NOTICE        : P₀ = {x_:-2.59924, y_:-1.09229}
     // Create a point P₁.
-    auto plot_P1 = plot.create_point(second_layer, point_style, {0.192162, 1.53729});
+    auto plot_P1 = plot.create_point(second_layer, point_style, {0.323641, 0.657396});   // NOTICE        : P₁ = {x_:0.192162, y_:1.53729}
     // Create a point P₂₂.
-    auto plot_P2 = plot.create_point(second_layer, point_style, {2.6397, 0.0});
+    auto plot_P2 = plot.create_point(second_layer, point_style, {2.31606, -0.627054});         // NOTICE        : P₂ = {x_:2.6397, y_:0}
 
     // Create a point Q on the circle.
     double const circle_radius = 1.0;
-    auto plot_Q0 = plot.create_point(second_layer, point_style({.color_index = 2}), plot_P0 + circle_radius * Direction{1.04236});
-    auto plot_Q1 = plot.create_point(second_layer, point_style({.color_index = 2}), plot_P1 + circle_radius * Direction{-1.72993});
-    auto plot_Q2 = plot.create_point(second_layer, point_style({.color_index = 2}), plot_P2 + circle_radius * Direction{0.929324});
+    auto plot_Q0 = plot.create_point(second_layer, point_style({.color_index = 2}), plot_P0 + circle_radius * Direction{1.07548});      // NOTICE        : D₀ = 1.04236
+    auto plot_Q1 = plot.create_point(second_layer, point_style({.color_index = 2}), plot_P1 + circle_radius * Direction{-1.19361});     // NOTICE        : D₁ = -1.72993
+    auto plot_Q2 = plot.create_point(second_layer, point_style({.color_index = 2}), plot_P2 + circle_radius * Direction{0.926264});     // NOTICE        : D₂ = 0.929324
 
     // Make all points draggable.
     window.register_draggable(plot, &plot_P0);
