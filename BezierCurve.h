@@ -167,7 +167,7 @@ class BezierCurve
   {
     Vector v = velocity(t);
     Vector a = acceleration(t);
-    return a.dot(v.rotate_90_degrees()) / utils::square(v.length_squared()) * v.rotate_90_degrees();
+    return a.dot(v.rotate_90_degrees()) / utils::square(v.norm_squared()) * v.rotate_90_degrees();
   }
 
   // Calculate the t values at which the line Q + ξ * direction intersects with the Bezier curve.

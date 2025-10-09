@@ -33,6 +33,8 @@ target_compile_features(chess_ObjLib
 
 # Set link dependencies.
 target_link_libraries(chess_ObjLib
+  PUBLIC
+    AICxx::math
   PRIVATE
     AICxx::utils
 )

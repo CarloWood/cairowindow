@@ -36,8 +36,8 @@ class Point : public cairowindow::Point, public Draggable
   void moved(Plot* plot, cairowindow::Point const& new_position) override;
   void set_position(cairowindow::Point const& new_position) override
   {
-    x_ = new_position.x();
-    y_ = new_position.y();
+    x() = new_position.x();
+    y() = new_position.y();
   }
 
  public:

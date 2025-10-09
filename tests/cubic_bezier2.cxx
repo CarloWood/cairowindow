@@ -302,11 +302,11 @@ int main()
       // 0 = J² t⁵ + 5 J⋅A0 t⁴ + (8 J⋅V0 + 6 A0²) t³ + (6 J⋅QB + 18 A0⋅V0) t² + (12 A0⋅QB + 12 V0²) t + 12 V0⋅QB
 
       math::Polynomial<double> polynomial(6 COMMA_CWDEBUG_ONLY("t"));
-      polynomial[5] = J.length_squared();
+      polynomial[5] = J.norm_squared();
       polynomial[4] = 5.0 * J.dot(A0);
-      polynomial[3] = 8.0 * J.dot(V0) + 6.0 * A0.length_squared();
+      polynomial[3] = 8.0 * J.dot(V0) + 6.0 * A0.norm_squared();
       polynomial[2] = 6.0 * (J.dot(QB) + 3.0 * A0.dot(V0));
-      polynomial[1] = 12.0 * (A0.dot(QB) + V0.length_squared());
+      polynomial[1] = 12.0 * (A0.dot(QB) + V0.norm_squared());
       polynomial[0] = 12.0 * V0.dot(QB);
 
       // Get the real roots of polynomial to find the points Pt on the curve where PtQ makes an angle of 90 degrees with the curve.
@@ -324,7 +324,7 @@ int main()
         double t = roots[r].real();
         if (t < 0.0 || t > 1.0)
           continue;
-        double distance_squared = (bezier_curve.P(t) - plot_Q).length_squared();
+        double distance_squared = (bezier_curve.P(t) - plot_Q).norm_squared();
         if (distance_squared < min_distance_squared)
         {
           min_distance_squared = distance_squared;
@@ -332,8 +332,8 @@ int main()
         }
       }
       // Also calculate the distance to P₀ and P₁.
-      double distance_P0_squared = QB.length_squared();
-      double distance_P1_squared = (plot_P1 - plot_Q).length_squared();
+      double distance_P0_squared = QB.norm_squared();
+      double distance_P1_squared = (plot_P1 - plot_Q).norm_squared();
       // If one of those distances is less than the shortest distance found so far, than
       // this point Q does not belong to this Bezier curve.
       plot::Connector plot_shortest_distance;

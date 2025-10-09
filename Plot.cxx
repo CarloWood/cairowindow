@@ -285,7 +285,7 @@ void Plot::apply_line_extend(double& x1, double& y1, double& x2, double& y2, Lin
     double dy = y2 - y1;
     double normal_x = dy;
     double normal_y = -dx;
-    intersections::HyperPlane<double, 2> line({normal_x, normal_y}, -(normal_x * x1 + normal_y * y1));
+    math::Hyperplane<2> line({normal_x, normal_y}, -(normal_x * x1 + normal_y * y1));
     intersections::HyperBlock<double, 2> rectangle({range_[x_axis].min(), range_[y_axis].min()}, {range_[x_axis].max(), range_[y_axis].max()});
     auto intersections = rectangle.intersection_points(line);
     if (!intersections.empty())
@@ -361,7 +361,7 @@ void Plot::add_line(boost::intrusive_ptr<Layer> const& layer,
 
   double normal_x = -direction.y();
   double normal_y = direction.x();
-  intersections::HyperPlane<double, 2> line({normal_x, normal_y}, -(normal_x * point.x() + normal_y * point.y()));
+  math::Hyperplane<2> line({normal_x, normal_y}, -(normal_x * point.x() + normal_y * point.y()));
   intersections::HyperBlock<double, 2> rectangle({range_[x_axis].min(), range_[y_axis].min()}, {range_[x_axis].max(), range_[y_axis].max()});
   auto intersections = rectangle.intersection_points(line);
 

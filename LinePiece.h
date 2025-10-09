@@ -4,7 +4,7 @@
 #include <memory>
 
 namespace cairowindow {
-using LinePiece = math::LinePiece;
+using LinePiece = math::LinePiece<2>;
 
 namespace draw {
 class Line;
@@ -16,11 +16,11 @@ class Plot;
 //--------------------------------------------------------------------------
 // LinePiece
 
-class LinePiece : public math::LinePiece
+class LinePiece : public math::LinePiece<2>
 {
  public:
-  using math::LinePiece::LinePiece;
-  LinePiece(math::LinePiece const& line_piece) : math::LinePiece(line_piece) { }
+  using math::LinePiece<2>::LinePiece;
+  LinePiece(math::LinePiece<2> const& line_piece) : math::LinePiece<2>(line_piece) { }
 
  private:
   friend class Plot;

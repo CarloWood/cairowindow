@@ -4,11 +4,12 @@
 #include "debug.h"
 
 namespace math {
+template<int N, typename T>
 class Point;
 }
 
 namespace cairowindow {
-using Point = math::Point;
+using Point = math::Point<2, double>;
 
 class Rectangle;
 

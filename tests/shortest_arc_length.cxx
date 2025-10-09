@@ -129,7 +129,7 @@ int main()
 
       // Draw V, the parabola vertex point, which resides at t=v.
       BezierCurveMatrix const& m = plot_bezier_curve.M();
-      double v = -0.5 * m.coefficient[1].dot(m.coefficient[2]) / m.coefficient[2].length_squared();
+      double v = -0.5 * m.coefficient[1].dot(m.coefficient[2]) / m.coefficient[2].norm_squared();
       plot::Point V;
       plot::Text V_label({0, 0}, "");
       if (!std::isnan(v))

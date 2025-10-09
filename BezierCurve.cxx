@@ -248,8 +248,8 @@ bool BezierCurve::quadratic_from(Vector P_gamma, Direction Di, point_nt point, d
   double Di_dot_Q_gamma = Vector{Di}.dot(Q_gamma);
   double Di_dot_S = Vector{Di}.dot(S);
   double S_dot_Q_gamma = S.dot(Q_gamma);
-  double a_enumerator = Di_dot_Q_gamma * S.length_squared() - Di_dot_S * S_dot_Q_gamma;
-  double b_enumerator = Di_dot_S * Q_gamma.length_squared() - Di_dot_Q_gamma * S_dot_Q_gamma;
+  double a_enumerator = Di_dot_Q_gamma * S.norm_squared() - Di_dot_S * S_dot_Q_gamma;
+  double b_enumerator = Di_dot_S * Q_gamma.norm_squared() - Di_dot_Q_gamma * S_dot_Q_gamma;
   double a_div_b = a_enumerator / b_enumerator;
 
   switch (point)
@@ -729,9 +729,9 @@ double BezierCurve::quadratic_arc_length() const
   // Only call this for quadratic Bezier curves.
   ASSERT(m_.coefficient[3].x() == 0.0 && m_.coefficient[3].y() == 0.0);
   // Calculate the length with an algebraic formula for the quadratic Bezier.
-  double v02 = V0().length_squared();
+  double v02 = V0().norm_squared();
   double v0 = std::sqrt(v02);
-  double a02 = A0().length_squared();
+  double a02 = A0().norm_squared();
   double a0 = std::sqrt(a02);
   double z = V0().dot(A0());
   double s = std::sqrt(v02 + 2.0 * z + a02);
@@ -772,10 +772,10 @@ double BezierCurve::quadratic_bending_energy() const
   //                           = ((a₀_x² + a₀_y²)t² + 2(v₀_x a₀_x + v₀_y a₀_y)t + (v₀_x² + v₀_y²))³
   //                           = (|A₀|² t² + 2 V₀·A₀ t + |V₀|²)³
   //
-  double a02 = A0().length_squared();
+  double a02 = A0().norm_squared();
   double z = V0().dot(A0());
   double dz = 2.0 * z;
-  double v02 = V0().length_squared();
+  double v02 = V0().norm_squared();
   double cs = utils::square(V0().cross(A0()));
   double a04 = utils::square(a02);
   double dz2 = utils::square(dz);
@@ -841,7 +841,7 @@ double BezierCurve::distance_squared(Point Q, Vector direction) const
     double t = intersection_point_t_values[i];
     if (t <= 0.0 || t >= 1.0)
       continue;
-    min_distance_squared = std::min(min_distance_squared, (Q - this->P(t)).length_squared());
+    min_distance_squared = std::min(min_distance_squared, (Q - this->P(t)).norm_squared());
   }
 
   if (min_distance_squared == std::numeric_limits<double>::infinity())
@@ -872,7 +872,7 @@ double BezierCurve::stretching_energy(double tolerance) const
 double BezierCurve::bending_energy(double tolerance) const
 {
   auto f = [this](double t){
-    return curvature(t).length_squared();
+    return curvature(t).norm_squared();
   };
   return boost::math::quadrature::gauss_kronrod<double, 31>::integrate(f, 0.0, 1.0, tolerance);
 }
