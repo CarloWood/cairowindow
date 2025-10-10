@@ -1,4 +1,12 @@
-cmake_minimum_required(VERSION 3.12...3.28)
+# return() requires version 3.25.
+cmake_minimum_required(VERSION 3.25...4.1.1)
+
+# Set this to off to avoid compiling this submodule, even if it is there.
+option(EnableCairoWindow "Build and use cairowindow" ON)
+
+if (NOT EnableCairoWindow)
+  return ()
+endif ()
 
 project(cairowindow
   DESCRIPTION "Window to draw in with cairo"
