@@ -1,6 +1,7 @@
 #pragma once
 
 #include "math/Hyperplane.h"
+#include "math/Hyperblock.h"
 #include "utils/has_print_on.h"
 #include "utils/ulong_to_base.h"
 #include "utils/parity.h"
@@ -19,6 +20,8 @@ namespace intersections {
 using utils::has_print_on::operator<<;
 
 using math::Hyperplane;
+using math::Hyperblock;
+using math::CornerIndex;
 
 #if 0
 // An n-dimensional vector (a column vector with n elements).
@@ -108,9 +111,6 @@ struct Vector
 };
 #endif
 
-class Corner;
-using CornerIndex = utils::VectorIndex<Corner>;
-
 // Don't use the most significant bit.
 using value_type = uint32_t;
 
@@ -119,7 +119,7 @@ using value_type = uint32_t;
 class Corner
 {
  private:
-  value_type c_;        // To be used as index into HyperBlock::C_ and Side::s_.
+  value_type c_;        // To be used as index into Hyperblock::C_ and Side::s_.
 
  public:
   // Construct the corner in the origin (0, 0, 0, ...).
@@ -157,58 +157,16 @@ class Corner
 };
 
 template<std::floating_point FloatType, int n>
-struct HyperBlock
-{
-  using VectorType = math::Vector<n, FloatType>;
-  static constexpr int number_of_corners = 1 << n;
-
-  utils::Vector<VectorType, CornerIndex> C_;          // The 2^n corners of the hyperblock.
-
-  // Construct an axis-aligned hyperblock from two opposite corner vectors.
-  HyperBlock(VectorType const& c1, VectorType const& c2) : C_(number_of_corners)
-  {
-    VectorType base = c2 - c1;
-    for (CornerIndex ci = C_.ibegin(); ci != C_.iend(); ++ci)
-    {
-      VectorType c;
-      for (int d = 0; d < n; ++d)
-      {
-        int bit = 1 << d;
-        if ((ci.get_value() & bit))
-          c[d] += base[d];
-      }
-      C_[ci] = c1 + c;
-    }
-  }
-
-  // Return the distance from the corner to the hyperplane.
-  FloatType distance_of(Corner corner, Hyperplane<n, FloatType> const& plane) const
-  {
-    return plane.distance(C_[corner.index()]);
-  }
-
-  std::vector<VectorType> intersection_points(Hyperplane<n, FloatType> const& plane);
-
-#ifdef CWDEBUG
-  void print_on(std::ostream& os) const
-  {
-    LIBCWD_USING_OSTREAM_PRELUDE
-    os << "{C:" << C_ << "}";
-  }
-#endif
-};
-
-template<std::floating_point FloatType, int n>
 class Side
 {
  public:
-  static constexpr int number_of_corners = HyperBlock<FloatType, n>::number_of_corners;
+  static constexpr int number_of_corners = Hyperblock<n, FloatType>::number_of_corners;
 
  private:
   utils::Vector<bool, CornerIndex> s_;        // Encodes which side a corner is on. The index is the corner.
 
  public:
-  Side(HyperBlock<FloatType, n> const& block, Hyperplane<n, FloatType> const& plane) : s_(number_of_corners)
+  Side(Hyperblock<n, FloatType> const& block, Hyperplane<n, FloatType> const& plane) : s_(number_of_corners)
   {
     // Construct the origin corner.
     Corner current_corner;
@@ -246,37 +204,5 @@ class Printer
     os << std::setw(n_) << std::setfill('0') << utils::ulong_to_base(corner.value(), "01");
   }
 };
-
-template<std::floating_point FloatType, int n>
-std::vector<typename HyperBlock<FloatType, n>::VectorType> HyperBlock<FloatType, n>::intersection_points(Hyperplane<n, FloatType> const& plane)
-{
-  DoutEntering(dc::notice, "HyperBlock<" << type_info_of<FloatType>().demangled_name() << ", " << n << ">::intersection_points(" << plane << ")");
-  std::vector<VectorType> intersections;
-
-  utils::Vector<math::Sign, CornerIndex> side(number_of_corners);
-  for (CornerIndex ci = C_.ibegin(); ci != C_.iend(); ++ci)
-    side[ci] = plane.side(C_[ci]);
-
-  Dout(dc::notice|continued_cf, "side = ");
-  for (CornerIndex ci = C_.ibegin(); ci != C_.iend(); ++ci)
-    Dout(dc::continued, (side[ci] == math::positive ? "+" : side[ci] == math::in_plane ? "0" : "-"));
-  Dout(dc::finish, "");
-
-  for (CornerIndex ci = C_.ibegin(); ci != C_.iend(); ++ci)
-  {
-    for (int d = 0; d < n; ++d)
-    {
-      int bit = 1 << d;
-      CornerIndex ci2(ci.get_value() | bit);
-      if (side[ci] != side[ci2])
-      {
-        // Found two corners on opposite sides of the hyperplane.
-        intersections.push_back(plane.intersection(C_[ci], C_[ci2]));
-      }
-    }
-  }
-
-  return intersections;
-}
 
 } // namespace intersections
