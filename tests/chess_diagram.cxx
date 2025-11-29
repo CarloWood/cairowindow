@@ -6,9 +6,9 @@
 #include "utils/AIAlert.h"
 #include "utils/debug_ostream_operators.h"
 #include "utils/u8string_to_filename.h"
-#include <boost/filesystem/path.hpp>
 #include <thread>
 #include <iostream>
+#include <filesystem>
 #include "debug.h"
 
 int main(int argc, char* argv[])
@@ -17,7 +17,7 @@ int main(int argc, char* argv[])
   Dout(dc::notice, "Entering main()");
 
   // Process command line arguments.
-  boost::filesystem::path output_file_name;
+  std::filesystem::path output_file_name;
   std::string title;
   std::string FEN;
   bool overwrite = false;
