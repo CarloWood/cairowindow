@@ -95,6 +95,8 @@ class Point : public Shape
     DoutEntering(dc::cairowindow, "Point(" << x << ", " << y << ", style) [" << this << "]");
   }
 
+  Point(cairowindow::Point const& point, PointStyle style) : Point(point.x(), point.y(), style) { }
+
   ~Point()
   {
     DoutEntering(dc::cairowindow, "~Point() [" << this << "]");

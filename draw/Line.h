@@ -4,6 +4,7 @@
 #include "cairowindow/Color.h"
 #include "cairowindow/StrokeExtents.h"
 #include "cairowindow/Style.h"
+#include "cairowindow/Point.h"
 #ifdef CWDEBUG
 #include "cairowindow/debug_channel.h"
 #include "cairowindow/debugcairo.h"
@@ -55,6 +56,8 @@ class Line : public LayerRegion
   {
     ASSERT(!std::isnan(x1) && !std::isnan(y1) && !std::isnan(x2) && !std::isnan(y2));
   }
+
+  Line(cairowindow::Point const& point1, cairowindow::Point const& point2, LineStyle const& style) : Line(point1.x(), point1.y(), point2.x(), point2.y(), style) { }
 
   double length() const { return std::sqrt((x2_ - x1_) * (x2_ - x1_) + (y2_ - y1_) * (y2_ - y1_)); }
 
