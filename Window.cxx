@@ -379,7 +379,7 @@ void Window::close()
 
 void Window::register_draggable(plot::Plot& plot, plot::Draggable* draggable, std::function<Point (Point const&)> restriction)
 {
-  DoutEntering(dc::notice, "Window::register_draggable(@" << *draggable << ")");
+  DoutEntering(dc::cairowindow, "Window::register_draggable(@" << *draggable << ")");
   clickable_rectangles_.push_back(draggable->geometry());
   clickable_plots_.push_back(&plot);
   plot.register_draggable({}, draggable, std::move(restriction));
@@ -387,7 +387,7 @@ void Window::register_draggable(plot::Plot& plot, plot::Draggable* draggable, st
 
 ClickableIndex Window::grab_draggable(double x, double y)
 {
-  DoutEntering(dc::notice, "Window::grab_draggable(" << x << ", " << y << ")");
+  DoutEntering(dc::cairowindow, "Window::grab_draggable(" << x << ", " << y << ")");
   ClickableIndex found_index;
   double min_dist_squared = std::numeric_limits<double>::max();
   for (ClickableIndex index = clickable_rectangles_.ibegin(); index != clickable_rectangles_.iend(); ++index)
