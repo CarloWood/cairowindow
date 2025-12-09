@@ -288,11 +288,13 @@ void Plot::apply_line_extend(double& x1, double& y1, double& x2, double& y2, Lin
     math::Hyperplane<2> line({normal_x, normal_y}, -(normal_x * x1 + normal_y * y1));
     math::Hyperblock<2> rectangle({range_[x_axis].min(), range_[y_axis].min()}, {range_[x_axis].max(), range_[y_axis].max()});
     auto intersections = rectangle.intersection_points(line);
+    constexpr math::Hyperblock<2>::IntersectionPointIndex first{size_t{0}};
+    constexpr math::Hyperblock<2>::IntersectionPointIndex second{size_t{1}};
     if (!intersections.empty())
     {
       // It is not known which intersection with the bounding rectangle ends up where in the intersections array.
       // Therefore look at the sign of the dot product between the line piece and the line between the two intersections.
-      int index_to = (dx * (intersections[1][0] - intersections[0][0]) + dy * (intersections[1][1] - intersections[0][1])) < 0.0 ? 1 : 0;
+      auto index_to = (dx * (intersections[second][0] - intersections[first][0]) + dy * (intersections[second][1] - intersections[first][1])) < 0.0 ? second : first;
       if (line_extend == LineExtend::from || line_extend == LineExtend::both)
       {
         x1 = intersections[index_to][0];
@@ -300,8 +302,8 @@ void Plot::apply_line_extend(double& x1, double& y1, double& x2, double& y2, Lin
       }
       if (line_extend == LineExtend::to || line_extend == LineExtend::both)
       {
-        x2 = intersections[1 - index_to][0];
-        y2 = intersections[1 - index_to][1];
+        x2 = intersections[size_t{1} - index_to][0];
+        y2 = intersections[size_t{1} - index_to][1];
       }
     }
   }
@@ -369,10 +371,13 @@ void Plot::add_line(boost::intrusive_ptr<Layer> const& layer,
   if (intersections.empty())
     return;
 
-  double x1 = intersections[0][0];
-  double y1 = intersections[0][1];
-  double x2 = intersections[1][0];
-  double y2 = intersections[1][1];
+  constexpr math::Hyperblock<2>::IntersectionPointIndex first{size_t{0}};
+  constexpr math::Hyperblock<2>::IntersectionPointIndex second{size_t{1}};
+
+  double x1 = intersections[first][0];
+  double y1 = intersections[first][1];
+  double x2 = intersections[second][0];
+  double y2 = intersections[second][1];
 
   plot_line.draw_object_ = std::make_shared<draw::Line>(
       convert_x(x1), convert_y(y1), convert_x(x2), convert_y(y2),
