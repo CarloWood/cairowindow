@@ -21,7 +21,6 @@ using utils::has_print_on::operator<<;
 
 using math::Hyperplane;
 using math::Hyperblock;
-using math::CornerIndex;
 
 #if 0
 // An n-dimensional vector (a column vector with n elements).
@@ -111,6 +110,7 @@ struct Vector
 };
 #endif
 
+#if 0
 // Don't use the most significant bit.
 using value_type = uint32_t;
 
@@ -204,5 +204,6 @@ class Printer
     os << std::setw(n_) << std::setfill('0') << utils::ulong_to_base(corner.value(), "01");
   }
 };
+#endif
 
 } // namespace intersections
