@@ -294,16 +294,17 @@ void Plot::apply_line_extend(double& x1, double& y1, double& x2, double& y2, Lin
     {
       // It is not known which intersection with the bounding rectangle ends up where in the intersections array.
       // Therefore look at the sign of the dot product between the line piece and the line between the two intersections.
-      auto index_to = (dx * (intersections[second][0] - intersections[first][0]) + dy * (intersections[second][1] - intersections[first][1])) < 0.0 ? second : first;
+      auto index_to = (dx * (intersections[second].coordinate(0) - intersections[first].coordinate(0)) +
+                       dy * (intersections[second].coordinate(1) - intersections[first].coordinate(1))) < 0.0 ? second : first;
       if (line_extend == LineExtend::from || line_extend == LineExtend::both)
       {
-        x1 = intersections[index_to][0];
-        y1 = intersections[index_to][1];
+        x1 = intersections[index_to].coordinate(0);
+        y1 = intersections[index_to].coordinate(1);
       }
       if (line_extend == LineExtend::to || line_extend == LineExtend::both)
       {
-        x2 = intersections[size_t{1} - index_to][0];
-        y2 = intersections[size_t{1} - index_to][1];
+        x2 = intersections[size_t{1} - index_to].coordinate(0);
+        y2 = intersections[size_t{1} - index_to].coordinate(1);
       }
     }
   }
@@ -374,10 +375,10 @@ void Plot::add_line(boost::intrusive_ptr<Layer> const& layer,
   constexpr math::Hyperblock<2>::IntersectionPointIndex first{size_t{0}};
   constexpr math::Hyperblock<2>::IntersectionPointIndex second{size_t{1}};
 
-  double x1 = intersections[first][0];
-  double y1 = intersections[first][1];
-  double x2 = intersections[second][0];
-  double y2 = intersections[second][1];
+  double x1 = intersections[first].coordinate(0);
+  double y1 = intersections[first].coordinate(1);
+  double x2 = intersections[second].coordinate(0);
+  double y2 = intersections[second].coordinate(1);
 
   plot_line.draw_object_ = std::make_shared<draw::Line>(
       convert_x(x1), convert_y(y1), convert_x(x2), convert_y(y2),
