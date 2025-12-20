@@ -1,7 +1,6 @@
 #pragma once
 
-#include "cairowindow/Point.h"
-#include "cairowindow/Direction.h"
+#include "cairowindow/cs/Direction.h"
 #include "Shape.h"
 #include <array>
 
@@ -41,13 +40,13 @@ class ArrowHead : public Shape
  private:
   double tip_x_;
   double tip_y_;
-  Direction direction_;
+  cs::Direction<CS::pixels> direction_;
 
   struct Size { double width; double height; };         // In pixels.
   static std::array<Size, number_of_arrow_shapes> s_arrow_head_size;
 
  public:
-  ArrowHead(double tip_x, double tip_y, Direction direction, ArrowHeadStyle arrow_head_style) :
+  ArrowHead(double tip_x, double tip_y, cs::Direction<CS::pixels> direction, ArrowHeadStyle arrow_head_style) :
     Shape({tip_x - s_arrow_head_size[arrow_head_style.arrow()].width, tip_y - 0.5 * s_arrow_head_size[arrow_head_style.arrow()].height,
         s_arrow_head_size[arrow_head_style.arrow()].width, s_arrow_head_size[arrow_head_style.arrow()].height}, arrow_head_style,
         direction.as_angle()),

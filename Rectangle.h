@@ -13,6 +13,7 @@ namespace cairowindow {
 using utils::has_print_on::operator<<;
 #endif
 
+//FIXME: shouldn't this be coordinate system aware?
 class Rectangle
 {
  private:
@@ -57,8 +58,8 @@ class Plot;
 class Rectangle : public cairowindow::Rectangle
 {
  public:
+  explicit Rectangle(cairowindow::Rectangle const& rectangle) : cairowindow::Rectangle(rectangle) { }
   using cairowindow::Rectangle::Rectangle;
-  Rectangle(cairowindow::Rectangle const& rectangle) : cairowindow::Rectangle(rectangle) { }
 
  public:
   friend class Plot;

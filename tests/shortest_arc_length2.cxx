@@ -81,6 +81,14 @@ int main()
     auto plot_Q1 = plot.create_point(second_layer, point_style({.color_index = 2}), plot_P1 + circle_radius * Direction{-1.19361});     // NOTICE        : D₁ = -1.72993
     auto plot_Q2 = plot.create_point(second_layer, point_style({.color_index = 2}), plot_P2 + circle_radius * Direction{0.926264});     // NOTICE        : D₂ = 0.929324
 
+    // BezierCurve works with math::Point.
+    auto const& math_P0{plot_P0.raw()};
+    auto const& math_P1{plot_P1.raw()};
+    auto const& math_P2{plot_P2.raw()};
+    auto const& math_Q0{plot_Q0.raw()};
+    auto const& math_Q1{plot_Q1.raw()};
+    auto const& math_Q2{plot_Q2.raw()};
+
     // Make all points draggable.
     window.register_draggable(plot, &plot_P0);
     window.register_draggable(plot, &plot_P1);
@@ -224,7 +232,7 @@ int main()
           {
             double alpha1 = a1 * M_PI / steps_per_pi - plot_line_P0P1.direction().as_angle();
 
-            BezierCurve qbc01(plot_P0, plot_P1);
+            BezierCurve qbc01(math_P0, math_P1);
             if (!qbc01.quadratic_from(alpha0, alpha1))
               continue;
 
@@ -235,7 +243,7 @@ int main()
       }
       else
       {
-        BezierCurve qbc01(plot_P0, plot_P1);
+        BezierCurve qbc01(math_P0, math_P1);
         if (qbc01.quadratic_from(arc01_0, arc01_1))
         {
           quadratic_energy01.init_from_curve(qbc01);
@@ -279,7 +287,7 @@ int main()
           {
             double alpha1 = a1 * M_PI / steps_per_pi - plot_line_P0P1.direction().as_angle();
 
-            BezierCurve qbc12(plot_P1, plot_P2);
+            BezierCurve qbc12(math_P1, math_P2);
             if (!qbc12.quadratic_from(alpha0, alpha1))
               continue;
 
@@ -290,7 +298,7 @@ int main()
       }
       else
       {
-        BezierCurve qbc12(plot_P1, plot_P2);
+        BezierCurve qbc12(math_P1, math_P2);
         if (qbc12.quadratic_from(arc12_1, arc12_2))
         {
           quadratic_energy12.init_from_curve(qbc12);

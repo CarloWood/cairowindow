@@ -55,19 +55,25 @@ int main()
     draw::LineStyle curve_line_style({.line_width = 1.0});
 
     // Create a point P₀.
-    auto P0 = plot.create_point(second_layer, point_style, {-0.3, -0.6});
+    auto plot_P0 = plot.create_point(second_layer, point_style, {-0.3, -0.6});
     // Create a point P₁.
-    auto P1 = plot.create_point(second_layer, point_style, {1.0, 0.4});
+    auto plot_P1 = plot.create_point(second_layer, point_style, {1.0, 0.4});
     // Create a point Pᵦ.
-    auto P_beta = plot.create_point(second_layer, point_style, {-1.0, 2.0});
+    auto plot_P_beta = plot.create_point(second_layer, point_style, {-1.0, 2.0});
     // Create a point Pᵧ.
-    auto P_gamma = plot.create_point(second_layer, point_style, {2.2, 3.3});
+    auto plot_P_gamma = plot.create_point(second_layer, point_style, {2.2, 3.3});
+
+    // BezierCurve uses math:: types.
+    auto const& math_P0{plot_P0.raw()};
+    auto const& math_P1{plot_P1.raw()};
+    auto const& math_P_beta{plot_P_beta.raw()};
+    auto const& math_P_gamma{plot_P_gamma.raw()};
 
     // Make all points draggable.
-    window.register_draggable(plot, &P0);
-    window.register_draggable(plot, &P1);
-    window.register_draggable(plot, &P_beta);
-    window.register_draggable(plot, &P_gamma);
+    window.register_draggable(plot, &plot_P0);
+    window.register_draggable(plot, &plot_P1);
+    window.register_draggable(plot, &plot_P_beta);
+    window.register_draggable(plot, &plot_P_gamma);
 
     while (true)
     {
@@ -75,18 +81,18 @@ int main()
       window.set_send_expose_events(false);
 
       // Draw a label for P₀, P₁, Pᵦ and Pᵧ.
-      auto P0_label = plot.create_text(second_layer, label_style, P0, "P₀");
-      auto P1_label = plot.create_text(second_layer, label_style, P1, "P₁");
-      auto P_beta_label = plot.create_text(second_layer, label_style, P_beta, "Pᵦ");
-      auto P_gamma_label = plot.create_text(second_layer, label_style, P_gamma, "Pᵧ");
+      auto P0_label = plot.create_text(second_layer, label_style, plot_P0, "P₀");
+      auto P1_label = plot.create_text(second_layer, label_style, plot_P1, "P₁");
+      auto P_beta_label = plot.create_text(second_layer, label_style, plot_P_beta, "Pᵦ");
+      auto P_gamma_label = plot.create_text(second_layer, label_style, plot_P_gamma, "Pᵧ");
 
       Eigen::Matrix3d R;
-      R << P0.x(), P0.y(), 1.0,
-           P_beta.x(), P_beta.y(), 1.0,
-           P1.x(), P1.y(), 1.0;
+      R << plot_P0.x(), plot_P0.y(), 1.0,
+           plot_P_beta.x(), plot_P_beta.y(), 1.0,
+           plot_P1.x(), plot_P1.y(), 1.0;
 
       Eigen::RowVector3d P_gamma_1;
-      P_gamma_1 << P_gamma.x(), P_gamma.y(), 1.0;
+      P_gamma_1 << plot_P_gamma.x(), plot_P_gamma.y(), 1.0;
 
       auto q = P_gamma_1 * R.inverse();
 
@@ -114,24 +120,29 @@ int main()
       std::array<plot::Connector, 2> control;
       plot::Curve curve2;
 
-      BezierCurve bc(P0, P1);
-      if (bc.quadratic_from(P_beta, P_gamma))
+      BezierCurve bc(math_P0, math_P1);
+      if (bc.quadratic_from(math_P_beta, math_P_gamma))
       {
         std::vector<Point> curve_points;
         {
           for (int i = -200; i <= 300; ++i)
           {
             double t = i * 0.01;
-            curve_points.push_back(bc.P(t));
+            Point Pt{bc.P(t)};
+            curve_points.push_back(Pt);
           }
         }
         curve2 = plot.create_curve(second_layer, curve_line_style({.line_color = color::red}), std::move(curve_points));
 
-        marker[0] = plot.create_point(second_layer, point_circle_style, bc.P(0.0));
-        marker[1] = plot.create_point(second_layer, point_square_style, bc.P(1.0));
+        Point const P0{bc.P(0.0)};
+        Point const P1{bc.P(1.0)};
+        marker[0] = plot.create_point(second_layer, point_circle_style, P0);
+        marker[1] = plot.create_point(second_layer, point_square_style, P1);
 
-        control[0] = plot.create_connector(second_layer, line_style, P0, bc.C0().as_point());
-        control[1] = plot.create_connector(second_layer, line_style, P1, bc.C1().as_point());
+        Point const C0{bc.C0().as_point()};
+        Point const C1{bc.C1().as_point()};
+        control[0] = plot.create_connector(second_layer, line_style, plot_P0, C0);
+        control[1] = plot.create_connector(second_layer, line_style, plot_P1, C1);
       }
 
       // Flush all expose events related to the drawing done above.

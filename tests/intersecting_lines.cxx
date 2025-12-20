@@ -1,7 +1,6 @@
 #include "sys.h"
 #include "cairowindow/Window.h"
 #include "cairowindow/Plot.h"
-#include "cairowindow/Vector.h"
 #include "utils/AIAlert.h"
 #include "utils/debug_ostream_operators.h"
 #include "utils/ColorPool.h"
@@ -330,7 +329,7 @@ int main()
       auto plot_QP0 = plot.create_connector(second_layer, dashed_line_style, Q, P0);
 
       LinePiece ab(Q, P0);
-      Dout(dc::notice, "|QP0| = " << std::setprecision(std::numeric_limits<double>::max_digits10) << ab.length());
+      Dout(dc::notice, "|QP0| = " << std::setprecision(std::numeric_limits<double>::max_digits10) << ab.norm());
 
       if (std::max(scaled_abs_error_x, scaled_abs_error_y) > 1e-7
           || std::max(real_scaled_abs_error_x, real_scaled_abs_error_y) > 1e-7)

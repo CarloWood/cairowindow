@@ -30,8 +30,8 @@ class Plot;
 class Text : public cairowindow::Text
 {
  public:
+  explicit Text(cairowindow::Text const& text) : cairowindow::Text(text) { }
   using cairowindow::Text::Text;
-  Text(cairowindow::Text const& text) : cairowindow::Text(text) { }
 
   void reset()
   {

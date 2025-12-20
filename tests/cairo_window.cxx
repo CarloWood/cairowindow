@@ -2,7 +2,6 @@
 #include "cairowindow/Window.h"
 #include "cairowindow/Layer.h"
 #include "cairowindow/Plot.h"
-#include "cairowindow/Vector.h"
 #include "cairowindow/draw/Shape.h"
 #include "cairowindow/draw/Line.h"
 #include "cairowindow/draw/Point.h"
@@ -154,7 +153,7 @@ int main()
 
       // Draw a cirle around the midpoint of P₀P₁ with radius |P₀P₁|/2.
       Vector P0P1(P0, P1);
-      auto circle = plot.create_circle(second_layer, line_style, P0 + 0.5 * P0P1, P0P1.length() / 2);
+      auto circle = plot.create_circle(second_layer, line_style, P0 + 0.5 * P0P1, P0P1.norm() / 2);
 
       // Draw a line through P₁ and H (horizontal because H has the same y coordinate as P₁).
 //      auto horizontal_line_through_P1_and_H = plot.create_line(second_layer, line_style, P1, H);

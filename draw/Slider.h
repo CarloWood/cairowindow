@@ -3,6 +3,7 @@
 #include "Shape.h"
 #include "Text.h"
 #include "MultiRegion.h"
+#include "cairowindow/Point.h"
 #include "cairowindow/Color.h"
 #include "cairowindow/Draggable.h"
 #include "cairowindow/debug_channel.h"

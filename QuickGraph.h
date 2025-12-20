@@ -3,6 +3,8 @@
 #include "Range.h"
 #include "Window.h"
 #include "Plot.h"
+#include "Line.h"
+#include "LinePiece.h"
 #include <string>
 #include <functional>
 #include <thread>

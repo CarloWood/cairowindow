@@ -81,7 +81,7 @@ int main()
         {
           Direction D0{plot_P0, new_position};
           if (D0.y() > 0.0)
-            D0 = D0.inverse();
+            D0 = D0.negate();
           if (D0.y() > -10e-6)
             D0 = Direction{Point{1.0, -10e-6}};
           return plot_P0 + circle_radius * D0;

@@ -32,8 +32,8 @@ class Plot;
 class Circle : public cairowindow::Circle
 {
  public:
+  explicit Circle(cairowindow::Circle const& circle) : cairowindow::Circle(circle) { }
   using cairowindow::Circle::Circle;
-  Circle(cairowindow::Circle const& circle) : cairowindow::Circle(circle) { }
 
  private:
   friend class Plot;

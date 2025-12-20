@@ -107,7 +107,6 @@ target_sources(cairowindow_ObjLib
     "Layer.cxx"
     "LayerRegion.cxx"
     "Point.cxx"
-    "Pixel.cxx"
     "Plot.cxx"
     "Printable.cxx"
     "QuadraticEnergy.cxx"

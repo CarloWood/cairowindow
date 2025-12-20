@@ -5,7 +5,6 @@
 #include "cairowindow/Window.h"
 #include "cairowindow/Layer.h"
 #include "cairowindow/Plot.h"
-#include "cairowindow/Vector.h"
 #include "utils/AIAlert.h"
 #include "utils/debug_ostream_operators.h"
 #include "utils/ColorPool.h"
@@ -149,7 +148,7 @@ int main()
         {
           Direction D4{plot_P4, new_position};
           if (D4.x() < 0.0)
-            D4 = D4.inverse();
+            D4 = D4.negate();
           if (D4.x() < 1e-6)
             D4 = Direction{Point{1e-6, 1.0}};
           return plot_P4 + circle_radius * D4;

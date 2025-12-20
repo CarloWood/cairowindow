@@ -1,5 +1,6 @@
 #pragma once
 
+#include "cs/Point.h"
 #include "draw/PlotArea.h"
 #include "draw/Text.h"
 #include "draw/Point.h"
@@ -13,7 +14,6 @@
 #include "draw/Slider.h"
 #include "Printable.h"
 #include "Range.h"
-#include "Point.h"
 #include "Circle.h"
 #include "Text.h"
 #include "LinePiece.h"
@@ -81,11 +81,13 @@ class Slider
 class Curve : public cairowindow::Curve
 {
  public:
-  using cairowindow::Curve::Curve;
   Curve(std::vector<cairowindow::Point> const& points, std::shared_ptr<draw::Curve> const& draw_object) :
     cairowindow::Curve(points), draw_object_(draw_object) { }
   Curve(std::vector<cairowindow::Point>&& points, std::shared_ptr<draw::Curve> const& draw_object) :
     cairowindow::Curve(std::move(points)), draw_object_(draw_object) { }
+
+  explicit Curve(cairowindow::Curve const& curve) : cairowindow::Curve(curve) { }
+  using cairowindow::Curve::Curve;
 
  public:
   friend class Plot;
@@ -171,6 +173,9 @@ namespace plot {
 
 class Plot : public Printable
 {
+ public:
+  using Vector = math::Vector<2>;
+
  private:
   static constexpr int number_of_axes = draw::PlotArea::number_of_axes;
 
@@ -254,21 +259,15 @@ class Plot : public Printable
   // Add and draw plot_point on layer using point_style.
   void add_point(boost::intrusive_ptr<Layer> const& layer,
       draw::PointStyle const& point_style,
-      Point const& plot_point);
-
- private:
-  void add_point( // Do not pass a cairowindow::Point to this function! It must be a plot::Point.
-      boost::intrusive_ptr<Layer> const& layer,
-      draw::PointStyle const& point_style,
-      Point&& plot_point);
+      plot::Point const& plot_point);
 
  public:
   // Create and draw a point on layer at x,y using point_style.
-  [[nodiscard]] Point create_point(boost::intrusive_ptr<Layer> const& layer,
+  [[nodiscard]] plot::Point create_point(boost::intrusive_ptr<Layer> const& layer,
       draw::PointStyle const& point_style,
       cairowindow::Point const& point)
   {
-    Point plot_point(point);
+    plot::Point plot_point(point);
     add_point(layer, point_style, plot_point);
     return plot_point;
   }
@@ -373,13 +372,7 @@ class Plot : public Printable
   // Add and draw plot_line using line_style.
   void add_line(boost::intrusive_ptr<Layer> const& layer,
       draw::LineStyle const& line_style,
-      Line const& plot_line);
-
- private:
-  void add_line( // Do not pass a cairowindow::Line to this function! It must be a plot::Line.
-      boost::intrusive_ptr<Layer> const& layer,
-      draw::LineStyle const& line_style,
-      Line&& plot_line);
+      plot::Line const& plot_line);
 
  public:
   // Create and draw a line through point in direction using line_style.

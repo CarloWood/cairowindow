@@ -68,6 +68,11 @@ int main()
     // Create a point Pᵧ.
     auto plot_P_gamma = plot.create_point(second_layer, point_style({.filled_shape = 10}), {-4.0, 1.0});
 
+    // BezierCurve uses math::Point.
+    auto const& math_P0{plot_P0.raw()};
+    auto const& math_P1{plot_P1.raw()};
+    auto const& math_P_gamma{plot_P_gamma.raw()};
+
     // Make all points draggable.
     window.register_draggable(plot, &plot_P0);
     window.register_draggable(plot, &plot_P1);
@@ -90,6 +95,7 @@ int main()
       auto plot_line_P1Pgamma = plot.create_line(second_layer, line_style, plot::LineExtend::both, plot_P_gamma, plot_P1);
 
       Direction const D_gamma((Vector{plot_line_P0Pgamma.direction()} + Vector{plot_line_P1Pgamma.direction()}).direction());
+      auto const& math_D_gamma{D_gamma.raw()};
 
       plot::BezierCurve plot_bezier_curve;
       plot::Connector plot_velocity_gamma;
@@ -99,22 +105,25 @@ int main()
       plot::Point plot_C;
       do
       {
-        BezierCurve qbc(plot_P0, plot_P1);
+        BezierCurve qbc(math_P0, math_P1);
         double gamma;
-        if (qbc.quadratic_from(plot_P_gamma, D_gamma, point_gamma, gamma) && 0.0 < gamma && gamma < 1.0)
+        if (qbc.quadratic_from(math_P_gamma, math_D_gamma, point_gamma, gamma) && 0.0 < gamma && gamma < 1.0)
         {
           plot_bezier_curve = plot.create_bezier_curve(second_layer, curve_line_style, qbc);
           Dout(dc::notice, "quadratic length = " << qbc.quadratic_arc_length());
 
           // Draw the velocity vector at Pᵧ.
+          Vector v_gamma{plot_bezier_curve.velocity(gamma)};
           plot_velocity_gamma = plot.create_connector(second_layer,
               solid_line_style({.line_color = color::green}),
-              plot_P_gamma, plot_P_gamma + plot_bezier_curve.velocity(gamma));
+              plot_P_gamma, plot_P_gamma + v_gamma);
 
           // Draw a line through P₀ tangent to the curve.
-          plot_tangent_P0 = plot.create_line(second_layer, line_style({.line_color = color::cyan}), plot_P0, qbc.V0().direction());
+          Direction const V0d{qbc.V0().direction()};
+          plot_tangent_P0 = plot.create_line(second_layer, line_style({.line_color = color::cyan}), plot_P0, V0d);
           // Draw a line through P₁ tangent to the curve.
-          plot_tangent_P1 = plot.create_line(second_layer, line_style({.line_color = color::cyan}), plot_P1, qbc.velocity(1.0).direction());
+          Direction const V1d{qbc.velocity(1.0).direction()};
+          plot_tangent_P1 = plot.create_line(second_layer, line_style({.line_color = color::cyan}), plot_P1, V1d);
           // Draw a point at their intersection.
           Point C = plot_tangent_P0.intersection_with(plot_tangent_P1);
           plot_C = plot.create_point(second_layer, point_style({.color_index = 4}), C);
@@ -134,7 +143,8 @@ int main()
       plot::Text V_label({0, 0}, "");
       if (!std::isnan(v))
       {
-        V = plot.create_point(second_layer, point_style, plot_bezier_curve.P(v));
+        Point const Pv{plot_bezier_curve.P(v)};
+        V = plot.create_point(second_layer, point_style, Pv);
         V_label = plot.create_text(second_layer, label_style({.position = draw::centered_below}), V, "V");
       }
 

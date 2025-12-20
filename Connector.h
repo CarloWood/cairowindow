@@ -47,8 +47,8 @@ class Plot;
 class Connector : public cairowindow::Connector
 {
  public:
+  explicit Connector(cairowindow::Connector const& connector) : cairowindow::Connector(connector) { }
   using cairowindow::Connector::Connector;
-  Connector(cairowindow::Connector const& connector) : cairowindow::Connector(connector) { }
 
   void reset()
   {

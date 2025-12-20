@@ -457,6 +457,10 @@ namespace {
 
 class CubicBezierCurveImpl
 {
+ public:
+  using Point = BezierCurve::Point;
+  using Vector = BezierCurve::Vector;
+
  private:
   BezierCurve* parent_;
   Vector const T0;
@@ -619,7 +623,7 @@ void CubicBezierCurveImpl::calculate_derivatives(double g)
 #endif
 }
 
-Vector CubicBezierCurveImpl::initialize(double g)
+CubicBezierCurveImpl::Vector CubicBezierCurveImpl::initialize(double g)
 {
   using utils::square;
 
@@ -675,7 +679,7 @@ Vector CubicBezierCurveImpl::initialize(double g)
 // approaching P0 and/or P1 from the wrong direction. The caller has to
 // check this themselves.
 //
-Vector BezierCurve::cubic_from(Vector T0, Vector T1, Point Pg)
+BezierCurve::Vector BezierCurve::cubic_from(Vector T0, Vector T1, Point Pg)
 {
   DoutEntering(dc::notice, "BezierCurve::cubic_from(" << T0 << ", " << T1 << ", " << Pg << ")");
 
@@ -826,8 +830,6 @@ int BezierCurve::calculate_intersection_points(Point Q, Vector direction, std::a
 
 double BezierCurve::distance_squared(Point Q, Vector direction) const
 {
-  RESTART
-
   // There are at most three intersection points.
   std::array<double, 3> intersection_point_t_values;
   int n = calculate_intersection_points(Q, direction, intersection_point_t_values);
@@ -852,10 +854,11 @@ double BezierCurve::distance_squared(Point Q, Vector direction) const
     qg.add_function([&](double x) -> double { return ext.offset_y(); }, color::cornsilk);
     for (double t = 0.0; t <= 1.0; t += 0.001)
     {
-      Point p = P(t);
+      cairowindow::Point const p(this->P(t));
       qg.add_point(p, draw::PointStyle{}({.filled_shape = 15}));
     }
-    qg.add_point(Q, draw::PointStyle{}({.filled_shape = 5}));
+    cairowindow::Point const q(Q);
+    qg.add_point(q, draw::PointStyle{}({.filled_shape = 5}));
     qg.wait_for_keypress();
   }
 

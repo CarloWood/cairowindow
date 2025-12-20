@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Line.h"
+#include "LineStyle.h"
 #include "ShapePosition.h"
 #include "cairowindow/LayerRegion.h"
 #include "cairowindow/Color.h"

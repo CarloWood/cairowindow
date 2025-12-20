@@ -1,5 +1,7 @@
 #pragma once
 
+#include "cs/Point.h"
+#include "cs/Vector.h"
 #include "utils/VectorIndex.h"
 #include "debug.h"
 
@@ -9,15 +11,21 @@ class Point;
 }
 
 namespace cairowindow {
-using Point = math::Point<2, double>;
+// Defined here - because this header is included from Plot.h; the most basis types that a user works with in that case are in 'plot' coordinates.
+using Point = cs::Point<CS::plot>;
+using Vector = cs::Vector<CS::plot>;
+using Direction = cs::Direction<CS::plot>;
 
 class Rectangle;
 
 using ClickableIndex = utils::VectorIndex<Rectangle>;
 
 namespace plot {
-
 class Plot;
+
+namespace cs {
+template<CS cs> class Point;            // Forward declaration of plot::cs::Point.
+} // namespace cs
 
 struct Draggable
 {

@@ -7,6 +7,9 @@ namespace cairowindow {
 
 class Arc
 {
+ public:
+  using Line = math::Line<2, double>;
+
  private:
   Point center_;
   double start_angle_ = 0.0;
@@ -37,7 +40,7 @@ class Arc
     double angle_diff = end_angle_ - start_angle_;
     if (angle_diff < 0.0)
       angle_diff += 2 * M_PI;
-    return {start_angle_ + 0.5 * angle_diff};
+    return Direction{start_angle_ + 0.5 * angle_diff};
   }
 };
 
@@ -51,8 +54,8 @@ class Plot;
 class Arc : public cairowindow::Arc
 {
  public:
+  explicit Arc(cairowindow::Arc const& arc) : cairowindow::Arc(arc) { }
   using cairowindow::Arc::Arc;
-  Arc(cairowindow::Arc const& arc) : cairowindow::Arc(arc) { }
 
  public:
   friend class Plot;

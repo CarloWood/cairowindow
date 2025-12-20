@@ -1,10 +1,10 @@
 #pragma once
 
-#include "math/Line.h"
+#include "cs/Line.h"
 #include <memory>
 
 namespace cairowindow {
-using Line = math::Line<2>;
+using Line = cs::Line<CS::plot>;
 
 namespace draw {
 class Line;
@@ -16,11 +16,11 @@ class Plot;
 //--------------------------------------------------------------------------
 // Line
 
-class Line : public math::Line<2>
+class Line : public cairowindow::cs::Line<CS::plot>
 {
  public:
-  using math::Line<2>::Line;
-  Line(math::Line<2> const& line) : math::Line<2>(line) { }
+  explicit Line(cairowindow::cs::Line<CS::plot> const& line) : cairowindow::cs::Line<CS::plot>(line) { }
+  using cairowindow::cs::Line<CS::plot>::Line;
 
   void reset()
   {

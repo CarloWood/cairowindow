@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Vector.h"
-#include "Direction.h"
-#include "Rectangle.h"
 #include "Point.h"
+#include "Rectangle.h"
+#include "math/Vector.h"
+#include "math/Direction.h"
 #include "utils/square.h"
 #include <array>
 #include <memory>
@@ -19,7 +19,7 @@ using utils::has_print_on::operator<<;
 
 struct BezierCurveMatrix
 {
-  std::array<Vector, 4> coefficient;
+  std::array<math::Vector<2>, 4> coefficient;
 };
 
 enum point_nt
@@ -68,6 +68,11 @@ enum point_nt
 //
 class BezierCurve
 {
+ public:
+  using Point = math::Point<2, double>;
+  using Vector = math::Vector<2, double>;
+  using Direction = math::Direction<2, double>;
+
  protected:
   BezierCurveMatrix m_; // A 2x4 matrix where each colum represents a vector, respectively B, V0, A0/2 and J/6,
                         // where B is the position at t=0: P(0), V0 is the velocity at t=0: P'(0),
@@ -261,8 +266,8 @@ class Plot;
 class BezierCurve : public cairowindow::BezierCurve
 {
  public:
+  explicit BezierCurve(cairowindow::BezierCurve const& bezier_curve) : cairowindow::BezierCurve(bezier_curve) { }
   using cairowindow::BezierCurve::BezierCurve;
-  BezierCurve(cairowindow::BezierCurve const& bezier_curve) : cairowindow::BezierCurve(bezier_curve) { }
 
  public:
   friend class Plot;

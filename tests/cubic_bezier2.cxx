@@ -179,7 +179,7 @@ int main()
       Dout(dc::notice, "P0 = " << plot_P0 << "; P1 = " << plot_P1 << "; P_gamma = " << plot_P_gamma);
 
       // Get the distance between P0 and P1.
-      double dist = (plot_P1 - plot_P0).length();
+      double dist = (plot_P1 - plot_P0).norm();
 
       // Calculate the required tangent vectors, normalized wrt the distance between P0 and P1.
       Vector const T0 = plot_Q0 - plot_P0;
@@ -187,8 +187,16 @@ int main()
 
       Dout(dc::notice, "T0 = " << T0 << "; T1 = " << T1);
 
-      BezierCurve bezier_curve(plot_P0, plot_P1);
-      Vector S = bezier_curve.cubic_from(T0, T1, plot_P_gamma);
+      // BezierCurve works with math:: types.
+      auto const& math_P0 = plot_P0.raw();
+      auto const& math_P1 = plot_P1.raw();
+      auto const& math_T0 = T0.raw();
+      auto const& math_T1 = T1.raw();
+      auto const& math_P_gamma = plot_P_gamma.raw();
+      auto const& math_Q = plot_Q.raw();
+
+      BezierCurve bezier_curve(math_P0, math_P1);
+      Vector S{bezier_curve.cubic_from(math_T0, math_T1, math_P_gamma)};
       double const& Sx = S.x();
       double const& Sy = S.y();
 
@@ -208,27 +216,31 @@ int main()
             //Point p{3.0 * std::cos(2.0 * M_PI * t), 3.0 * std::sin(2.0 * M_PI * t)};
             //Dout(dc::notice, "P(" << t << ") = " << p);
             //return p;
-            return bezier_curve.P(t);
+            return Point{bezier_curve.P(t)};
           },
           {0.0, 1.0},           // Domain
           plot.viewport());
 
       Dout(dc::notice, "bezier_curve = " << bezier_curve);
-      Dout(dc::notice, "|J| = " << bezier_curve.J().length());
+      Dout(dc::notice, "|J| = " << bezier_curve.J().norm());
 
       // Draw bezier_fitter.
       plot_bezier_fitter = plot.create_bezier_fitter(second_layer,
           curve_line_style({.line_color = reject ? color::red : color::black}), std::move(bezier_fitter));
 
-      plot::Point plot_C0 = plot.create_point(second_layer, C0_point_style, bezier_curve.C0().as_point());
-      plot::Point plot_C1 = plot.create_point(second_layer, C1_point_style, bezier_curve.C1().as_point());
+      // BezierCurve also return math:: types. Need to convert them to plot coordinate types.
+      Point const C0{bezier_curve.C0().as_point()};
+      Point const C1{bezier_curve.C1().as_point()};
 
-      BezierCurve quadratic_bezier_curve(plot_P0, plot_P1);
-      quadratic_bezier_curve.quadratic_from(T0.direction(), T1.direction());
+      plot::Point plot_C0 = plot.create_point(second_layer, C0_point_style, C0);
+      plot::Point plot_C1 = plot.create_point(second_layer, C1_point_style, C1);
+
+      BezierCurve quadratic_bezier_curve(math_P0, math_P1);
+      quadratic_bezier_curve.quadratic_from(math_T0.direction(), math_T1.direction());
       auto plot_quadratic_bezier_curve = plot.create_bezier_curve(second_layer, line_style, quadratic_bezier_curve);
 
       plot::BezierFitter plot_dJdg;
-      std::unique_ptr<CubicBezierCurve> cubic_bezier_curve = CubicBezierCurve::create(plot_P0, plot_P1, T0, T1, plot_P_gamma);
+      std::unique_ptr<CubicBezierCurve> cubic_bezier_curve = CubicBezierCurve::create(math_P0, math_P1, math_T0, math_T1, math_P_gamma);
       BezierFitter bezier_fitter_dJdg(
           [&](double g) -> Point
           {
@@ -270,9 +282,9 @@ int main()
 #endif
 
 #if 1
-      Vector const J = bezier_curve.J();
-      Vector const A0 = bezier_curve.A0();
-      Vector const V0 = bezier_curve.V0();
+      Vector const J{bezier_curve.J()};
+      Vector const A0{bezier_curve.A0()};
+      Vector const V0{bezier_curve.V0()};
       Vector const B{plot_P0};        // = bezier_curve.B();      // This is the Beginning of the curve, aka P0.
 
       // Solve P'⋅(P - Q) = 0, to find all t such that P(t) is a point on the Bezier curve
@@ -324,7 +336,7 @@ int main()
         double t = roots[r].real();
         if (t < 0.0 || t > 1.0)
           continue;
-        double distance_squared = (bezier_curve.P(t) - plot_Q).norm_squared();
+        double distance_squared = (bezier_curve.P(t) - math_Q).norm_squared();
         if (distance_squared < min_distance_squared)
         {
           min_distance_squared = distance_squared;
@@ -340,8 +352,8 @@ int main()
       if (distance_P0_squared > min_distance_squared && distance_P1_squared > min_distance_squared)
       {
         // Draw a line for the shortest distance found, from Q to P(root[min_r]).
-        plot_shortest_distance = plot.create_connector(second_layer, solid_line_style({.line_color = color::lime}),
-            plot_Q, bezier_curve.P(roots[min_r].real()));
+        Point const P_root_min_r{bezier_curve.P(roots[min_r].real())};
+        plot_shortest_distance = plot.create_connector(second_layer, solid_line_style({.line_color = color::lime}), plot_Q, P_root_min_r);
       }
 #endif
 

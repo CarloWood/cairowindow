@@ -1,6 +1,6 @@
 #include "sys.h"
 #include "BezierFitter.h"
-#include "Vector.h"
+#include "math/Vector.h"
 #include <array>
 #ifdef CWDEBUG
 #include "utils/macros.h"
@@ -28,6 +28,7 @@ constexpr double c0 = sqrt3;
 constexpr double d0 = 0.1666666666666666;       // 1/6
 constexpr double d1 = 0.0833333333333333;       // 1/12
 
+template<typename Vector>
 void vals2coeffs7(std::array<Vector, 7>& out, Vector P0, Vector P1, Vector P2, Vector P3, Vector P4, Vector P5, Vector P6)
 {
   Vector z0 = P6 + P0;
@@ -54,17 +55,18 @@ void vals2coeffs7(std::array<Vector, 7>& out, Vector P0, Vector P1, Vector P2, V
 
 } // namespace
 
-void BezierFitter::solve(std::function<Point(double)> const& func, IntersectRectangle const& viewport, double tolerance,
+void BezierFitter::solve(std::function<cairowindow::Point(double)> const& func, IntersectRectangle const& viewport, double tolerance,
     double const t0, double const t6, Vector const P0, Vector const P3, Vector const P6)
 {
   static constexpr double chebpt7_1 = 0.5 - 0.25 * sqrt3;
   static constexpr double chebpt7_5 = 0.5 + 0.25 * sqrt3;
 
   double td = t6 - t0;
-  Vector P1{func(t0 + td * chebpt7_1)};
-  Vector P2{func(t0 + td * 0.25)};
-  Vector P4{func(t0 + td * 0.75)};
-  Vector P5{func(t0 + td * chebpt7_5)};
+  // Use .raw() here: we drop the knowledge about the fact that this is in CS::plot coordinates, and just work with math:: types.
+  Vector P1{func(t0 + td * chebpt7_1).raw()};
+  Vector P2{func(t0 + td * 0.25).raw()};
+  Vector P4{func(t0 + td * 0.75).raw()};
+  Vector P5{func(t0 + td * chebpt7_5).raw()};
 
   std::array<Vector, 7> coeffs;
   vals2coeffs7(coeffs, P0, P1, P2, P3, P4, P5, P6);
@@ -121,7 +123,7 @@ void BezierFitter::solve(std::function<Point(double)> const& func, IntersectRect
   --depth_;
 }
 
-void BezierFitter::solve(std::function<Point(double)>&& func, Range const& domain, Rectangle const& viewport, double tolerance)
+void BezierFitter::solve(std::function<cairowindow::Point(double)>&& func, Range const& domain, Rectangle const& viewport, double tolerance)
 {
   // Clear result data, in case this object is being re-used.
   result_.clear();
@@ -132,11 +134,11 @@ void BezierFitter::solve(std::function<Point(double)>&& func, Range const& domai
   double t0 = domain.min();
   double t6 = domain.max();
   depth_ = 0;
-  solve(func, viewport, tolerance, t0, t6, Vector{func(t0)}, Vector{func(0.5 * (t0 + t6))}, Vector{func(t6)});
+  solve(func, viewport, tolerance, t0, t6, Vector{func(t0).raw()}, Vector{func(0.5 * (t0 + t6)).raw()}, Vector{func(t6).raw()});
 }
 
-void BezierFitter::solve(std::function<void(Point p, Vector v)> const& draw_line,
-    std::function<Point(double)> const& P, std::function<Vector(double)> const& T,
+void BezierFitter::solve(std::function<void(cairowindow::Point p, cairowindow::Vector v)> const& draw_line,
+    std::function<cairowindow::Point(double)> const& P, std::function<cairowindow::Vector(double)> const& T,
     IntersectRectangle const& viewport, double fraction, Orientation orientation,
     double t0, double t4, Point P0, Vector T0, Point P2, Point P4, Vector T4)
 {
@@ -150,24 +152,29 @@ void BezierFitter::solve(std::function<void(Point p, Vector v)> const& draw_line
   double t1             = 0.5 * (t0 + t2);  // 1 is in between 0 and 2.
   double         t3     = 0.5 * (t2 + t4);  // 3 is in between 2 and 4.
 
-  Point P1{P(t1)};      // The point at t1.
-  Vector T2{T(t2)};     // The tangent of P2 (P2 itself is provided as input).
-  Point P3{P(t3)};      // The point at t3.
+  // Use .raw() here: we drop the knowledge about the fact that this is in CS::plot coordinates, and just work with math:: types.
+  Point P1{P(t1).raw()};        // The point at t1.
+  Vector T2{T(t2).raw()};       // The tangent of P2 (P2 itself is provided as input).
+  Point P3{P(t3).raw()};        // The point at t3.
 
   if (depth_ >= 1)
   {
     result_.emplace_back(P0, P4);
     Vector S = result_.back().cubic_from(T0, T4, P2);
-    draw_line(P0, result_.back().V0());
+
+    // draw_line needs to be called with cairowindow::Point / cairowindow::Vector again.
+    cairowindow::Point const cs_P0{P0};
+    cairowindow::Vector const cs_V0{result_.back().V0()};
+    draw_line(cs_P0, cs_V0);
 
     Vector D1 =
       orientation == Orientation::horizontal ? Direction::right
                                              : orientation == Orientation::vertical ? Direction::up
-                                                                                    : T(t1).rotate_90_degrees();
+                                                                                    : T(t1).raw().rotate_90_degrees();
     Vector D3 =
       orientation == Orientation::horizontal ? Direction::right
                                              : orientation == Orientation::vertical ? Direction::up
-                                                                                    : T(t3).rotate_90_degrees();
+                                                                                    : T(t3).raw().rotate_90_degrees();
     double max_distance_squared =
       utils::square(fraction * (orientation == Orientation::vertical ? viewport.y2() - viewport.y1() : viewport.x2() - viewport.x1()));
 
@@ -194,8 +201,8 @@ void BezierFitter::solve(std::function<void(Point p, Vector v)> const& draw_line
   --depth_;
 }
 
-void BezierFitter::solve(std::function<void(Point p, Vector v)> const& draw_line,
-    std::function<Point(double)>&& P, std::function<Vector(double)>&& T,
+void BezierFitter::solve(std::function<void(cairowindow::Point p, cairowindow::Vector v)> const& draw_line,
+    std::function<cairowindow::Point(double)>&& P, std::function<cairowindow::Vector(double)>&& T,
     Range const& domain, Rectangle const& viewport, double fraction, Orientation orientation)
 {
   // Clear result data, in case this object is being re-used.
@@ -204,7 +211,8 @@ void BezierFitter::solve(std::function<void(Point p, Vector v)> const& draw_line
   double t0 = domain.min();
   double t1 = domain.max();
   depth_ = 0;
-  solve(draw_line, P, T, viewport, fraction, orientation, t0, t1, P(t0), T(t0), P(0.5 * (t0 + t1)), P(t1), T(t1));
+  // Use .raw() here: we drop the knowledge about the fact that this is in CS::plot coordinates, and just work with math:: types.
+  solve(draw_line, P, T, viewport, fraction, orientation, t0, t1, P(t0).raw(), T(t0).raw(), P(0.5 * (t0 + t1)).raw(), P(t1).raw(), T(t1).raw());
 }
 
 } // namespace cairowindow

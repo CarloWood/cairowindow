@@ -425,7 +425,7 @@ bool Window::update_grabbed(ClickableIndex grabbed_point, double pixel_x, double
   return false;
 }
 
-void Window::move_draggable(plot::Draggable* draggable, ClickableIndex clickable_index, cairowindow::Point new_position)
+void Window::move_draggable(plot::Draggable* draggable, ClickableIndex clickable_index, Point new_position)
 {
   // draggable must have been registered as draggable by calling register_draggable first.
   ASSERT(!clickable_index.undefined());

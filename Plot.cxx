@@ -263,15 +263,13 @@ void Plot::convert_to_pixels(cairowindow::Point const* data_in, Pixel* data_out,
 
 void Plot::add_point(boost::intrusive_ptr<Layer> const& layer,
     draw::PointStyle const& point_style,
-    Point const& plot_point)
+    plot::Point const& plot_point)
 {
   double x = plot_point.x();
   double y = plot_point.y();
 
-  plot_point.draw_object_ = std::make_shared<draw::Point>(
-      convert_x(x), convert_y(y),
-      point_style);
-  draw_layer_region_on(layer, plot_point.draw_object_);
+  plot_point.create_draw_object({}, convert_x(x), convert_y(y), point_style);
+  draw_layer_region_on(layer, plot_point.draw_object());
 }
 
 //--------------------------------------------------------------------------
@@ -357,10 +355,10 @@ void Plot::add_connector(boost::intrusive_ptr<Layer> const& layer,
 
 void Plot::add_line(boost::intrusive_ptr<Layer> const& layer,
     draw::LineStyle const& line_style,
-    Line const& plot_line)
+    plot::Line const& plot_line)
 {
-  cairowindow::Direction const& direction = plot_line.direction();
-  cairowindow::Point const& point = plot_line.point();
+  cairowindow::cs::Direction<CS::plot> const& direction = plot_line.direction();
+  cairowindow::cs::Point<CS::plot> const& point = plot_line.point();
 
   double normal_x = -direction.y();
   double normal_y = direction.x();
@@ -538,16 +536,16 @@ Slider Plot::create_slider(boost::intrusive_ptr<Layer> const& layer,
 void Plot::curve_to_bezier_curves(boost::intrusive_ptr<Layer> const& layer,
     Curve const& plot_curve, draw::BezierCurveStyle const& bezier_curve_style)
 {
-  std::vector<cairowindow::Point> const& points = plot_curve.points();
-  if (points.size() < 2)
+  std::vector<cairowindow::Point> const& plot_points = plot_curve.points();
+  if (plot_points.size() < 2)
     return;
   std::vector<std::shared_ptr<draw::BezierCurve>>& bezier_curves = plot_curve.draw_object_->bezier_curves();
-  if (points.size() == 2)
+  if (plot_points.size() == 2)
   {
     // Draw a straight line: P(t) = P0 + t (P1 - P0)
     //   P(t) = B + V0 t + (A0/2) t² + J/6 t³
-    Vector B{points[0]};
-    Vector V0{points[1] - points[0]};
+    Vector B{plot_points[0].raw()};
+    Vector V0{plot_points[1].raw() - plot_points[0].raw()};
     BezierCurve bezier_curve(BezierCurveMatrix{{{B, V0, {}, {}}}});
     // Create and draw the draw object.
     add_bezier_curve(layer, bezier_curve_style, bezier_curve);
@@ -555,7 +553,7 @@ void Plot::curve_to_bezier_curves(boost::intrusive_ptr<Layer> const& layer,
     bezier_curves.emplace_back(std::move(bezier_curve.draw_object_));
     return;
   }
-  if (points.size() == 3)
+  if (plot_points.size() == 3)
   {
     // Implement.
     ASSERT(false);
@@ -564,9 +562,11 @@ void Plot::curve_to_bezier_curves(boost::intrusive_ptr<Layer> const& layer,
 //  cairowindow::Rectangle const& g = plot_area_.geometry();
   cairowindow::Point prev_point;
 
-  for (int i = 1; i < points.size(); ++i)
+  for (int i = 1; i < plot_points.size(); ++i)
   {
-    BezierCurve bezier_curve(BezierCurveMatrix{{{Vector{points[i - 1]}, points[i] - points[i - 1], {}, {}}}});
+    Vector B{plot_points[i - 1].raw()};
+    Vector V0{plot_points[i].raw() - plot_points[i - 1].raw()};
+    BezierCurve bezier_curve(BezierCurveMatrix{{{B, V0, {}, {}}}});
     add_bezier_curve(layer, bezier_curve_style, bezier_curve);
     bezier_curves.emplace_back(std::move(bezier_curve.draw_object_));
   }
@@ -599,19 +599,6 @@ void Plot::apply_restrictions(utils::Badge<Window>, ClickableIndex clickable_ind
 {
   if (draggable_restrictions_[clickable_index])
     new_position = draggable_restrictions_[clickable_index](new_position);
-}
-
-void Point::moved(Plot* plot, cairowindow::Point const& new_position)
-{
-  static_cast<cairowindow::Point&>(*this) = new_position;
-  plot->add_point(draw_object_->layer(), draw_object_->point_style(), *this);
-}
-
-void Point::move(Plot& plot, cairowindow::Point const& new_position)
-{
-  Layer* layer = draw_object_->layer();
-  Window* window = layer->window();
-  window->move_draggable(this, index_, new_position);
 }
 
 void Slider::set_value(double value)

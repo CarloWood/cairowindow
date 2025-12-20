@@ -41,6 +41,7 @@ DECLARE_STYLE_WITH_BASE(Connector, Line, ConnectorStyleParamsDefault);
 class Connector : public Line
 {
  public:
+  using Direction = cs::Direction<CS::pixels>;
   using ArrowHeadShape = cairowindow::Connector::ArrowHeadShape;
   static ShapeEnum to_ShapeEnum(ArrowHeadShape arrow_head_shape) { return static_cast<ShapeEnum>(arrow_head_shape + number_of_shapes); }
 

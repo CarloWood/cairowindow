@@ -1,5 +1,6 @@
 #pragma once
 
+#if 0 // FIXME: this can be removed since it is no longer used apparently.
 #include "Vector.h"
 #ifdef CWDEBUG
 #include "utils/has_print_on.h"
@@ -77,3 +78,4 @@ class Matrix
 };
 
 } // namespace cairowindow
+#endif

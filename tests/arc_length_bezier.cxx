@@ -58,6 +58,12 @@ int main()
     auto plot_C0 = plot.create_point(second_layer, point_style, {0.2, 0.3});
     auto plot_C1 = plot.create_point(second_layer, point_style, {0.6, 0.2});
 
+    // BezierCurve uses math::Point.
+    auto const& math_P0{plot_P0.raw()};
+    auto const& math_P1{plot_P1.raw()};
+    auto const& math_C0{plot_C0.raw()};
+    auto const& math_C1{plot_C1.raw()};
+
     auto P0_label = plot.create_text(second_layer, label_style, plot_P0, "P₀");
     auto P1_label = plot.create_text(second_layer, label_style, plot_P1, "P₁");
 
@@ -78,7 +84,7 @@ int main()
       Dout(dc::notice, "C0 = " << plot_C0.x() << ", " << plot_C0.y());
       Dout(dc::notice, "C1 = " << plot_C1.x() << ", " << plot_C1.y());
 
-      auto plot_bezier = plot.create_bezier_curve(second_layer, line_style, plot_P0, plot_C0, plot_C1, plot_P1);
+      auto plot_bezier = plot.create_bezier_curve(second_layer, line_style, math_P0, math_C0, math_C1, math_P1);
 
 #if 0
       double len0 = 0.0;
@@ -89,9 +95,9 @@ int main()
       for (int i = 0; i <= n; ++i)
       {
         t = i * dt;
-        auto P = plot_bezier.P(t);
+        Point P{plot_bezier.P(t)};
         if (i > 0)
-          len0 += LinePiece{prev_P, P}.length();
+          len0 += LinePiece{prev_P, P}.norm();
         prev_P = P;
       }
       Dout(dc::notice, "len0 = " << std::setprecision(std::numeric_limits<double>::max_digits10) << len0);
@@ -223,11 +229,11 @@ g9 = -3d₄∕(5d₀) ⋆ g5 - 9d₃∕(12d₀) ⋆ g6  - 6d₂∕(7d₀) ⋆ g7
       double len2 = plot_bezier.arc_length(1e-15);
       Dout(dc::notice, "len2 = " << std::setprecision(std::numeric_limits<double>::max_digits10) << len2);
 
-      Vector K0 = plot_bezier.curvature(0.5);
-      Point P05 = plot_bezier.P(0.5);
-      double radius = 1.0 / K0.length();
+      Vector K0{plot_bezier.curvature(0.5)};
+      Point P05{plot_bezier.P(0.5)};
+      double radius = 1.0 / K0.norm();
       plot::Circle plot_curvature_circle;
-      if (K0.length() > 1e-9)
+      if (K0.norm() > 1e-9)
         plot_curvature_circle = plot.create_circle(second_layer, line_style({.line_color = color::gray}),
             P05 + radius * K0.direction(), radius);
 

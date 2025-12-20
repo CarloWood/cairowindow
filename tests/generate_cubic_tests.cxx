@@ -291,14 +291,12 @@ int main()
         if (extreme_type == ExtremeType::minimum)
         {
           // Draw a vertical line where the minimum is.
-          plot_minimum_line = Line{Point{minimum, 0.0}, Direction::up};
-          plot.add_line(second_layer, line_style({.line_color = color::red}), plot_minimum_line);
+          plot_minimum_line = plot.create_line(second_layer, line_style({.line_color = color::red}), Point{minimum, 0.0}, Direction::up);
         }
         else if (extreme_type == ExtremeType::maximum)
         {
           // Draw a vertical line where the maximum is.
-          plot_maximum_line = Line{Point{maximum, 0.0}, Direction::up};
-          plot.add_line(second_layer, line_style({.line_color = color::red}), plot_maximum_line);
+          plot_maximum_line = plot.create_line(second_layer, line_style({.line_color = color::red}), Point{maximum, 0.0}, Direction::up);
         }
       }
       plot::Line plot_center_line;
@@ -306,8 +304,7 @@ int main()
       {
         // Draw a vertical line at the center.
         double center = 0.5 * (wl + wr);
-        plot_center_line = Line{Point{center, 0.0}, Direction::up};
-        plot.add_line(second_layer, line_style, plot_center_line);
+        plot_center_line = plot.create_line(second_layer, line_style, Point{center, 0.0}, Direction::up);
       }
 
       // Flush all expose events related to the drawing done above.

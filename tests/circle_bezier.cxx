@@ -68,7 +68,8 @@ int main()
       int i = 0;
       for (auto&& bezier : result)
       {
-        points0[i] = plot.create_point(second_layer, point_style, result[i].P(0));
+        Point Pi0{result[i].P(0)};      // P(0) returns a math::Point - convert that to the proper CS.
+        points0[i] = plot.create_point(second_layer, point_style, Pi0);
         ++i;
       }
 

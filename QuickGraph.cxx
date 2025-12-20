@@ -109,9 +109,9 @@ void QuickGraph::initialize()
   empty_ = false;
 }
 
-void QuickGraph::add_line(Line const& L, draw::LineStyle const& line_style)
+void QuickGraph::add_line(cs::Line<CS::plot> const& L, draw::LineStyle const& line_style)
 {
-  plot_lines_.emplace_back(L);
+  plot_lines_.emplace_back(L.raw());
 
   if (empty_)
   {
@@ -125,9 +125,9 @@ void QuickGraph::add_line(Line const& L, draw::LineStyle const& line_style)
   window_.set_send_expose_events(true);
 }
 
-void QuickGraph::add_line(LinePiece const& L, draw::LineStyle const& line_style)
+void QuickGraph::add_line(cs::LinePiece<CS::plot> const& L, draw::LineStyle const& line_style)
 {
-  plot_line_pieces_.emplace_back(L);
+  plot_line_pieces_.emplace_back(L.raw());
 
   if (empty_)
   {

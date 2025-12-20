@@ -72,7 +72,7 @@ int main()
 //    auto plot_D1 = plot.create_point(second_layer, point_style({.color_index = 2}), {3.5, -1.5});
 
     // Create a point Pᵧ.
-    auto plot_P_gamma = plot.create_point(second_layer, point_style({.filled_shape = 10}), {-4.0, 1.0});
+    plot::Point plot_P_gamma = plot.create_point(second_layer, point_style({.filled_shape = 10}), {-4.0, 1.0});
 
     // Create a point Q on the circle.
     double phi = 0.3 * M_PI;
@@ -86,7 +86,7 @@ int main()
 //    window.register_draggable(plot, &plot_D1);
     window.register_draggable(plot, &plot_P_gamma);
 
-    window.register_draggable(plot, &plot_Q, [&plot_P_gamma, circle_radius](Point const& new_position)
+    window.register_draggable(plot, &plot_Q, [&plot_P_gamma, circle_radius](Point const& new_position) -> Point
         {
           return plot_P_gamma + circle_radius * Direction{plot_P_gamma, new_position};
         }
@@ -159,7 +159,7 @@ int main()
         //     ⎡Px₀  α·Dx₀  (β·Dx₀ - α²k₀·Dy₀)/2  Px₁-(Px₀+α·Dx₀+(β·Dx₀ - α²k₀·Dy₀)/2)⎤
         // M = ⎣Py₀  α·Dy₀  (β·Dy₀ + α²k₀·Dx₀)/2  Py₁-(Py₀+α·Dy₀+(β·Dy₀ + α²k₀·Dx₀)/2)⎦
 
-        double alpha = V0.length();
+        double alpha = V0.norm();
         Direction D0 = V0.direction();
         Vector V2 = 0.5 * (slider_beta.value() * D0 + alpha * alpha * slider_k0.value() * D0.normal());
         Vector V3 = plot_P1 - plot_P0 - V0 - V2;
@@ -213,9 +213,9 @@ int main()
       auto curve = plot.create_curve(second_layer, curve_line_style, std::move(curve_points));
 
 #if 0
-      double radius = 1.0 / K0.length();
+      double radius = 1.0 / K0.norm();
       plot::Circle plot_curvature_circle;
-      if (K0.length() > 1e-9)
+      if (K0.norm() > 1e-9)
         plot_curvature_circle = plot.create_circle(second_layer, solid_line_style({.line_color = color::gray}),
             plot_P0 + radius * K0.direction(), radius);
 #endif
@@ -231,14 +231,22 @@ int main()
       plot::Connector plot_S;
       plot::Connector plot_Q_gamma;
       plot::Point plot_P_gamma2;
+
+      // BezierCurve works with math:: types.
+      auto const& math_P0{plot_P0.raw()};
+      auto const& math_P1{plot_P1.raw()};
+      auto const& math_P_gamma{plot_P_gamma.raw()};
+      auto const& math_D_gamma{D_gamma.raw()};
+
       do
       {
-        BezierCurve qbc(plot_P0, plot_P1);
+        BezierCurve qbc(math_P0, math_P1);
         double gamma;
-        if (qbc.quadratic_from(plot_P_gamma, D_gamma, point_gamma, gamma) && 0.0 < gamma && gamma < 1.0)
+        if (qbc.quadratic_from(math_P_gamma, math_D_gamma, point_gamma, gamma) && 0.0 < gamma && gamma < 1.0)
         {
           // Lets plot P_gamma using the gamma that was returned.
-          plot_P_gamma2 = plot.create_point(second_layer, point_style({.color_index = 13, .filled_shape = 3}), qbc.P(gamma));
+          Point const P_gamma{qbc.P(gamma)};
+          plot_P_gamma2 = plot.create_point(second_layer, point_style({.color_index = 13, .filled_shape = 3}), P_gamma);
 
           Vector S = plot_P1 - plot_P_gamma;
           Vector Q_gamma = plot_P_gamma - plot_P0;

@@ -1,46 +1,19 @@
-#pragma once
+#ifndef CAIROWINDOW_DRAW_LINE_H
+#define CAIROWINDOW_DRAW_LINE_H
 
+#include "LineStyle.h"
 #include "cairowindow/LayerRegion.h"
-#include "cairowindow/Color.h"
 #include "cairowindow/StrokeExtents.h"
-#include "cairowindow/Style.h"
-#include "cairowindow/Point.h"
+#include "cairowindow/cs/Point.h"
 #ifdef CWDEBUG
 #include "cairowindow/debug_channel.h"
 #include "cairowindow/debugcairo.h"
 #endif
 
-namespace cairowindow::draw {
+namespace cairowindow {
+using Point = cs::Point<CS::plot>;
 
-enum class LineCap
-{
-  undefined, butt, round, square
-};
-
-std::ostream& operator<<(std::ostream& os, LineCap line_cap);
-
-#define cairowindow_Line_FOREACH_MEMBER(X, ...) \
-  X(Color, line_color, Color{}, __VA_ARGS__) \
-  X(double, line_width, -1.0, __VA_ARGS__) \
-  X(std::vector<double>, dashes, std::vector<double>{-1.0}, __VA_ARGS__) \
-  X(double, dashes_offset, 12345678.9, __VA_ARGS__) \
-  X(LineCap, line_cap, LineCap::undefined, __VA_ARGS__)
-
-#define cairowindow_Line_FOREACH_STYLE_MEMBER(X, ...) \
-  cairowindow_Line_FOREACH_MEMBER(X, __VA_ARGS__)
-
-// Define default values for LineStyle.
-struct LineStyleParamsDefault
-{
-  static constexpr Color line_color = color::indigo;
-  static constexpr double line_width = 2.0;
-  static constexpr std::vector<double> dashes = {};
-  static constexpr double dashes_offset = 0.0;
-  static constexpr LineCap line_cap = LineCap::butt;
-};
-
-// Declare LineStyle.
-DECLARE_STYLE(Line, LineStyleParamsDefault);
+namespace draw {
 
 class Line : public LayerRegion
 {
@@ -57,7 +30,7 @@ class Line : public LayerRegion
     ASSERT(!std::isnan(x1) && !std::isnan(y1) && !std::isnan(x2) && !std::isnan(y2));
   }
 
-  Line(cairowindow::Point const& point1, cairowindow::Point const& point2, LineStyle const& style) : Line(point1.x(), point1.y(), point2.x(), point2.y(), style) { }
+  inline Line(cairowindow::cs::Point<CS::pixels> const& point1, cairowindow::cs::Point<CS::pixels> const& point2, LineStyle const& style);
 
   double length() const { return std::sqrt((x2_ - x1_) * (x2_ - x1_) + (y2_ - y1_) * (y2_ - y1_)); }
 
@@ -93,4 +66,24 @@ class Line : public LayerRegion
   }
 };
 
+} // namespace draw
+} // namespace cairowindow
+
+#endif // CAIROWINDOW_DRAW_LINE_H
+
+#include "Point.h"
+
+#ifndef CAIROWINDOW_DRAW_LINE_H_definitions
+#define CAIROWINDOW_DRAW_LINE_H_definitions
+
+namespace cairowindow::draw {
+
+//inline
+Line::Line(cairowindow::cs::Point<CS::pixels> const& point1, cairowindow::cs::Point<CS::pixels> const& point2, LineStyle const& style) :
+  Line(point1.x(), point1.y(), point2.x(), point2.y(), style)
+{
+}
+
 } // namespace cairowindow::draw
+
+#endif // CAIROWINDOW_DRAW_LINE_H_definitions
