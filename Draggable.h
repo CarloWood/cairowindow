@@ -2,6 +2,7 @@
 
 #include "cs/Point.h"
 #include "cs/Vector.h"
+#include "cs/Rectangle.h"
 #include "utils/VectorIndex.h"
 #include "debug.h"
 
@@ -15,8 +16,7 @@ namespace cairowindow {
 using Point = cs::Point<CS::plot>;
 using Vector = cs::Vector<CS::plot>;
 using Direction = cs::Direction<CS::plot>;
-
-class Rectangle;
+using Rectangle = cs::Rectangle<CS::plot>;
 
 using ClickableIndex = utils::VectorIndex<Rectangle>;
 

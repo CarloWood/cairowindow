@@ -1,5 +1,6 @@
 #pragma once
 
+#include "cs/CS.h"
 #include <cairo/cairo.h>
 #include <boost/intrusive_ptr.hpp>
 #include <memory>
@@ -10,10 +11,13 @@ namespace cairowindow {
 
 class Layer;
 class LayerRegion;
-class Rectangle;
 namespace draw {
 class MultiRegion;
 } // namespace draw
+namespace cs {
+template<CS cs> class Rectangle;
+} // namespace cs
+using Rectangle = cs::Rectangle<CS::plot>;
 
 class Printable
 {

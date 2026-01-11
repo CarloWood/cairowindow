@@ -1,6 +1,5 @@
 #include "sys.h"
 #include "ChessDiagram.h"
-#include "Rectangle.h"
 #include "Text.h"
 #include "cairowindow/Layer.h"
 #ifdef CWDEBUG
