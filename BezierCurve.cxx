@@ -111,7 +111,7 @@ bool BezierCurve::quadratic_from(Direction D0, Direction D1)
   Vector const P0{m_.coefficient[0]};
   Vector const P1{m_.coefficient[1]};
 
-  Direction N1 = D1.normal();
+  Direction N1 = D1.rotate_90_degrees();
   double D0_dot_N1 = D0.dot(N1);
 
   if (std::abs(D0_dot_N1) < 10e-9)
