@@ -122,8 +122,8 @@ int main()
         // x = (-2c +/- sqrt(4c^2 - 12d (b - dfdw_aim))) / (6d)
         double D2 = 4.0 * c * c - 12.0 * d * (b - dfdw_aim);
         ASSERT(D2 > 0.0);
-        ll = (-2.0 * c - std::sqrt(D2)) / (6.0 * d);
-        rl = (-2.0 * c + std::sqrt(D2)) / (6.0 * d);
+        ll = (-2.0 * c - std::sqrt(D2)) / (6.0 * std::abs(d));
+        rl = (-2.0 * c + std::sqrt(D2)) / (6.0 * std::abs(d));
 
         std::uniform_real_distribution<double> wrl_dist(ll, rl);
         wl = wrl_dist(engine);
