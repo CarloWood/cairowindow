@@ -2,7 +2,6 @@
 #include "cairowindow/Window.h"
 #include "cairowindow/Layer.h"
 #include "cairowindow/Plot.h"
-#include "cairowindow/Matrix.h"
 #include "cairowindow/draw/Shape.h"
 #include "cairowindow/draw/Line.h"
 #include "cairowindow/draw/Point.h"
@@ -166,7 +165,7 @@ int main()
       double s_times_w = Q_P1.norm();
       Direction perpendicular_to_symmetry_line_dir = (s_times_w > 1e-6) ? Q_P1.direction() : Direction::down;
       if (w_is_negative)
-        perpendicular_to_symmetry_line_dir = perpendicular_to_symmetry_line_dir.negate();
+        perpendicular_to_symmetry_line_dir.negate();
       // Calculate s_squared_times_one_minus_two_v assuming w_is_negative won't change.
       Direction symmetry_line_dir = perpendicular_to_symmetry_line_dir.normal();
       double s_squared_times_one_minus_two_v = P0_Q.dot(symmetry_line_dir);
@@ -190,8 +189,8 @@ int main()
         if (((plot_Q.y() >= 0.0) != (prev_Q.y() >= 0.0)) && plot_Q.x() > 0.5)
         {
           w_is_negative = !w_is_negative;
-          perpendicular_to_symmetry_line_dir = perpendicular_to_symmetry_line_dir.negate();
-          symmetry_line_dir = symmetry_line_dir.negate();
+          perpendicular_to_symmetry_line_dir.negate();
+          symmetry_line_dir.negate();
           s_squared_times_one_minus_two_v = -s_squared_times_one_minus_two_v;
         }
         prev_Q = plot_Q;
@@ -347,9 +346,9 @@ int main()
       // Velocity vector at t=v.
       Vector velocityv{m00 + 2.0 * v * m01, m10 + 2.0 * v * m11};
       Direction velocityv_dir = velocityv.direction();
-      Direction X = w_is_negative ? velocityv_dir.negate() : velocityv_dir;
+      Direction X = w_is_negative ? velocityv_dir.rotate_180_degrees() : velocityv_dir;
       Direction perpendicular_to_symmetry_line_dir = X;
-      Direction symmetry_line_dir = perpendicular_to_symmetry_line_dir.normal();
+      Direction symmetry_line_dir = perpendicular_to_symmetry_line_dir.rotate_90_degrees();
       phi = M_PI - 2.0 * (M_PI - velocityv_dir.as_angle());
       Point new_Q = P0P1_circle_center + 0.5 * Direction{phi};
       static_cast<plot::Draggable&>(plot_Q).moved(&plot, new_Q);
@@ -433,7 +432,7 @@ int main()
       Direction start_dir = perpendicular_to_symmetry_line_dir;
       Direction end_dir{P1, plot_P0};
       if (!w_is_negative)
-        start_dir = start_dir.negate();
+        start_dir.negate();
       auto alpha_arc = plot.create_arc(second_layer, arc_style({.line_color = color::blue}), P1, start_dir, end_dir, 0.1);
       auto alpha_label = plot.create_text(second_layer, label_style({.position = draw::centered, .font_size = 14}),
           P1 + 0.13 * alpha_arc.bisector_direction(), "α");

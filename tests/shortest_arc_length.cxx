@@ -2,7 +2,6 @@
 #include "cairowindow/Window.h"
 #include "cairowindow/Layer.h"
 #include "cairowindow/Plot.h"
-#include "cairowindow/Matrix.h"
 #include "cairowindow/draw/Shape.h"
 #include "cairowindow/draw/Line.h"
 #include "cairowindow/draw/Point.h"
@@ -128,7 +127,7 @@ int main()
           Point C = plot_tangent_P0.intersection_with(plot_tangent_P1);
           plot_C = plot.create_point(second_layer, point_style({.color_index = 4}), C);
           // Draw a line through Pᵧ, perpendicular to the curve.
-          plot_normal_P_gamma = plot.create_line(second_layer, solid_line_style, plot_P_gamma, plot_velocity_gamma.direction().normal());
+          plot_normal_P_gamma = plot.create_line(second_layer, solid_line_style, plot_P_gamma, plot_velocity_gamma.direction().rotate_90_degrees());
         }
       }
       while (false);

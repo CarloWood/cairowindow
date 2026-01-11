@@ -148,7 +148,7 @@ int main()
         {
           Direction D4{plot_P4, new_position};
           if (D4.x() < 0.0)
-            D4 = D4.negate();
+            D4.negate();
           if (D4.x() < 1e-6)
             D4 = Direction{Point{1e-6, 1.0}};
           return plot_P4 + circle_radius * D4;

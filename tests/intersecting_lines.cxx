@@ -248,7 +248,7 @@ int main()
       Point I{Ix, Iy};
       Direction D0(Point{D0x, D0y});
       Direction D1(Point{D1x, D1y});
-      Direction N1 = D1.normal();
+      Direction N1 = D1.rotate_90_degrees();
 
 //      if (D0.dot(N1) >= 0.01)
 //        continue;
