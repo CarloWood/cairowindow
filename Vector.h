@@ -1,7 +1,7 @@
 #pragma once
 
-#include "cs/Point.h"
+#include "cs/Vector.h"
 
 namespace cairowindow {
-using Point = cs::Point<CS::plot>;
+using Vector = cs::Vector<CS::plot>;
 } // namespace cairowindow

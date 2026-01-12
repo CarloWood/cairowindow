@@ -1,16 +1,26 @@
 #pragma once
 
 #include "cairowindow/Rectangle.h"
+#include "utils/Badge.h"
 #include <memory>
 
-namespace cairowindow::draw {
+// Forward declarations.
+namespace cairowindow {
+
+namespace draw {
 // Forward declare the draw object.
 class Rectangle;
-} // namespace cairowindow::draw
+} // namespace draw
+
+template<CS> class CoordinateSystem;
+
+} // namespace cairowindow
 
 namespace cairowindow::plot {
 // Forward declaration.
 class Plot;
+
+namespace cs {
 
 //-----------------------------------------------------------------------------
 // plot::Rectangle
@@ -18,18 +28,39 @@ class Plot;
 // A handle keeping a plotted Rectangle alive.
 // Returned by Plot::create_rectangle(layer, rectangle_style, <args to construct a plot::Rectangle>).
 //
-class Rectangle : public cairowindow::Rectangle
+template<CS cs>
+class Rectangle : public cairowindow::cs::Rectangle<cs>
 {
  public:
-  explicit Rectangle(cairowindow::Rectangle const& rectangle) : cairowindow::Rectangle(rectangle) { }
-  using cairowindow::Rectangle::Rectangle;
+  explicit Rectangle(cairowindow::cs::Rectangle<cs> const& rectangle) : cairowindow::cs::Rectangle<cs>(rectangle) { }
+  using cairowindow::cs::Rectangle<cs>::Rectangle;
 
  public:
   friend class Plot;
   mutable std::shared_ptr<draw::Rectangle> draw_object_;
+
+ public:
+  template<typename... Args>
+  void create_draw_object(utils::Badge<Plot, cairowindow::CoordinateSystem<cs>>, Args&&... args) const
+  {
+    draw_object_ = std::make_shared<cairowindow::draw::Rectangle>(std::forward<Args>(args)...);
+  }
+
+  // Accessor for the draw object; used by Plot and CoordinateSystem.
+
+  std::shared_ptr<cairowindow::draw::Rectangle> const& draw_object() const
+  {
+    return draw_object_;
+  }
 };
+
+} // namespace cs
 
 //
 //-----------------------------------------------------------------------------
+
+// The current namespace is cairowindow::plot!
+//
+using Rectangle = cs::Rectangle<CS::plot>;
 
 } // namespace cairowindow::plot

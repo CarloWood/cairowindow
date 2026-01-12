@@ -11,6 +11,7 @@
 #include "BezierCurve.h"
 #include "BezierFitter.h"
 #include "Draggable.h"
+#include "plot/Point.h"
 #include "plot/Rectangle.h"
 #include "plot/LinePiece.h"
 #include "cs/Point.h"

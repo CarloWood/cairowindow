@@ -18,6 +18,7 @@ class Rectangle
   {
     ASSERT(width >= 0.0 && height >= 0.0);
   }
+  Rectangle(Point<cs> const& top_left, Size<cs> const& size) : geometry_{top_left.x(), top_left.y(), size.width(), size.height()} { }
 
   double offset_x() const { return geometry_.x; }
   double offset_y() const { return geometry_.y; }

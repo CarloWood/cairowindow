@@ -55,9 +55,11 @@ void vals2coeffs7(std::array<Vector, 7>& out, Vector P0, Vector P1, Vector P2, V
 
 } // namespace
 
-void BezierFitter::solve(std::function<cairowindow::Point(double)> const& func, IntersectRectangle const& viewport, double tolerance,
-    double const t0, double const t6, Vector const P0, Vector const P3, Vector const P6)
+void BezierFitter::solve(std::function<Point(double)> const& func, IntersectRectangle const& viewport, double tolerance,
+    double const t0, double const t6, BezierCurve::Vector const P0, BezierCurve::Vector const P3, BezierCurve::Vector const P6)
 {
+  using Vector = BezierCurve::Vector;
+
   static constexpr double chebpt7_1 = 0.5 - 0.25 * sqrt3;
   static constexpr double chebpt7_5 = 0.5 + 0.25 * sqrt3;
 
@@ -123,8 +125,10 @@ void BezierFitter::solve(std::function<cairowindow::Point(double)> const& func, 
   --depth_;
 }
 
-void BezierFitter::solve(std::function<cairowindow::Point(double)>&& func, Range const& domain, Rectangle const& viewport, double tolerance)
+void BezierFitter::solve(std::function<Point(double)>&& func, Range const& domain, Rectangle const& viewport, double tolerance)
 {
+  using Vector = BezierCurve::Vector;
+
   // Clear result data, in case this object is being re-used.
   result_.clear();
 
@@ -137,13 +141,17 @@ void BezierFitter::solve(std::function<cairowindow::Point(double)>&& func, Range
   solve(func, viewport, tolerance, t0, t6, Vector{func(t0).raw()}, Vector{func(0.5 * (t0 + t6)).raw()}, Vector{func(t6).raw()});
 }
 
-void BezierFitter::solve(std::function<void(cairowindow::Point p, cairowindow::Vector v)> const& draw_line,
-    std::function<cairowindow::Point(double)> const& P, std::function<cairowindow::Vector(double)> const& T,
+void BezierFitter::solve(std::function<void(Point p, Vector v)> const& draw_line,
+    std::function<Point(double)> const& P, std::function<Vector(double)> const& T,
     IntersectRectangle const& viewport, double fraction, Orientation orientation,
-    double t0, double t4, Point P0, Vector T0, Point P2, Point P4, Vector T4)
+    double t0, double t4, BezierCurve::Point P0, BezierCurve::Vector T0, BezierCurve::Point P2, BezierCurve::Point P4, BezierCurve::Vector T4)
 {
   DoutEntering(dc::notice, "BezierFitter::solve(P, T, " << viewport << ", " << fraction << ", " << orientation << ", " <<
       t0 << ", " << t4 << ", " << P0 << ", " << T0 << ", " << P2 << ", " << P4 << ", " << T4 << ")");
+
+  using Point = BezierCurve::Point;
+  using Vector = BezierCurve::Vector;
+  using Direction = BezierCurve::Direction;
 
   // 0 --1-- 2 --3-- 4
   // ↑       ↑       ↑
@@ -201,8 +209,8 @@ void BezierFitter::solve(std::function<void(cairowindow::Point p, cairowindow::V
   --depth_;
 }
 
-void BezierFitter::solve(std::function<void(cairowindow::Point p, cairowindow::Vector v)> const& draw_line,
-    std::function<cairowindow::Point(double)>&& P, std::function<cairowindow::Vector(double)>&& T,
+void BezierFitter::solve(std::function<void(Point p, Vector v)> const& draw_line,
+    std::function<Point(double)>&& P, std::function<Vector(double)>&& T,
     Range const& domain, Rectangle const& viewport, double fraction, Orientation orientation)
 {
   // Clear result data, in case this object is being re-used.

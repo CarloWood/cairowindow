@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Line.h"
+#include "Direction.h"
 #include <memory>
 
 namespace cairowindow {

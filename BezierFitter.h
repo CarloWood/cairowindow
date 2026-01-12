@@ -1,8 +1,10 @@
 #pragma once
 
-#include "Point.h"
-#include "Range.h"
 #include "BezierCurve.h"
+#include "Point.h"
+#include "Vector.h"
+#include "Rectangle.h"
+#include "Range.h"
 #include "IntersectRectangle.h"
 #include <functional>
 #include <vector>
@@ -28,11 +30,6 @@ inline std::ostream& operator<<(std::ostream& os, Orientation orientation)
 
 class BezierFitter
 {
- public:
-  using Point = typename BezierCurve::Point;
-  using Vector = typename BezierCurve::Vector;
-  using Direction = typename BezierCurve::Direction;
-
  private:
   std::vector<BezierCurve> result_;
   int depth_;
@@ -40,8 +37,8 @@ class BezierFitter
  public:
   BezierFitter() = default;
 
-  void solve(std::function<void(cairowindow::Point p, cairowindow::Vector v)> const& draw_line,
-      std::function<cairowindow::Point(double)>&& P, std::function<cairowindow::Vector(double)>&& V,
+  void solve(std::function<void(Point p, Vector v)> const& draw_line,
+      std::function<Point(double)>&& P, std::function<Vector(double)>&& V,
       Range const& domain, Rectangle const& viewport, double fraction, Orientation orientation);
 
   // func     : the parametric function that must be fitted: takes the parameter (t) and returns a Point.
@@ -50,22 +47,22 @@ class BezierFitter
   //            Normally you'd pass plot.viewport() here.
   // tolerance: the smallest deviation from the true function value allowed in the Bézier curve output;
   //            when -1.0 is passed the default 1e-5 * viewport.height() will be used.
-  void solve(std::function<cairowindow::Point(double)>&& func, Range const& domain, Rectangle const& viewport, double tolerance = -1.0);
+  void solve(std::function<Point(double)>&& func, Range const& domain, Rectangle const& viewport, double tolerance = -1.0);
 
   // Convenience constructor that combine the construction with the call to solve.
-  BezierFitter(std::function<cairowindow::Point(double)>&& func, Range const& domain, Rectangle const& viewport, double tolerance = -1.0)
+  BezierFitter(std::function<Point(double)>&& func, Range const& domain, Rectangle const& viewport, double tolerance = -1.0)
   {
     solve(std::move(func), domain, viewport, tolerance);
   }
 
   // This signature can be used, for example, when `func` returns a Point that simply passes its argument back as the x-coordinate of the Point.
-  void solve(std::function<cairowindow::Point(double)>&& func, Rectangle const& viewport, double tolerance = -1.0)
+  void solve(std::function<Point(double)>&& func, Rectangle const& viewport, double tolerance = -1.0)
   {
     solve(std::move(func), {viewport.offset_x(), viewport.offset_x() + viewport.width()}, viewport, tolerance);
   }
 
   // Same
-  BezierFitter(std::function<cairowindow::Point(double)>&& func, Rectangle const& viewport, double tolerance = -1.0)
+  BezierFitter(std::function<Point(double)>&& func, Rectangle const& viewport, double tolerance = -1.0)
   {
     solve(std::move(func), viewport, tolerance);
   }
@@ -74,13 +71,13 @@ class BezierFitter
   std::vector<BezierCurve> const& result() const { return result_; }
 
  private:
-  void solve(std::function<void(cairowindow::Point p, cairowindow::Vector v)> const& draw_line,
-      std::function<cairowindow::Point(double)> const& P, std::function<cairowindow::Vector(double)> const& V,
+  void solve(std::function<void(Point p, Vector v)> const& draw_line,
+      std::function<Point(double)> const& P, std::function<Vector(double)> const& V,
       IntersectRectangle const& viewport, double fraction, Orientation orientation,
-      double t0, double t1, Point P0, Vector T0, Point Pg, Point P1, Vector T1);
+      double t0, double t1, BezierCurve::Point P0, BezierCurve::Vector T0, BezierCurve::Point Pg, BezierCurve::Point P1, BezierCurve::Vector T1);
 
-  void solve(std::function<cairowindow::Point(double)> const& func, IntersectRectangle const& viewport,
-      double tolerance, double t0, double t6, Vector P0, Vector P3, Vector P6);
+  void solve(std::function<Point(double)> const& func, IntersectRectangle const& viewport,
+      double tolerance, double t0, double t6, BezierCurve::Vector P0, BezierCurve::Vector P3, BezierCurve::Vector P6);
 };
 
 namespace draw {
