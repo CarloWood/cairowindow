@@ -8,22 +8,22 @@
 
 namespace cairowindow {
 
-Layer::Layer(cairo_surface_t* x11_surface, Rectangle const& rectangle, cairo_content_t content, Color color, Window* window
+Layer::Layer(cairo_surface_t* x11_surface, Geometry const& geometry, cairo_content_t content, Color color, Window* window
     COMMA_DEBUG_ONLY(std::string debug_name)) :
-  color_(color), window_(window), geometry_(rectangle), region_areas_(0.0)
+  color_(color), window_(window), geometry_(geometry), region_areas_(0.0)
 {
-  DoutEntering(dc::cairowindow, "Layer::Layer(" << x11_surface << ", " << rectangle << ", " << content << ", " << color << ", " << window <<
+  DoutEntering(dc::cairowindow, "Layer::Layer(" << x11_surface << ", " << geometry << ", " << content << ", " << color << ", " << window <<
       ", \"" << debug_name << "\") [" << this << "]");
 #ifdef CWDEBUG
   using namespace debugcairo;
 #endif
   // Create an off-screen surface for tripple buffering.
-  surface_ = cairo_surface_create_similar(x11_surface, content, rectangle.width(), rectangle.height()
+  surface_ = cairo_surface_create_similar(x11_surface, content, geometry.width(), geometry.height()
       COMMA_CWDEBUG_ONLY("Layer::surface_:\"" + debug_name + "\""));
   cr_ = cairo_create(surface_
       COMMA_CWDEBUG_ONLY("Layer::cr_:\"" + debug_name + "\""));
 #ifdef CAIROWINDOW_DEBUGWINDOW
-  debug_window_.start(surface_, rectangle.width(), rectangle.height(), debug_name);
+  debug_window_.start(surface_, geometry.width(), geometry.height(), debug_name);
 #endif
 
   if (content == CAIRO_CONTENT_COLOR)

@@ -77,7 +77,7 @@ class Window
   utils::threading::FIFOBuffer<1, Message> message_buffer_{64};
 
   // Dragging.
-  utils::Vector<Rectangle, ClickableIndex> clickable_rectangles_;
+  utils::Vector<Geometry, ClickableIndex> clickable_rectangles_;
   utils::Vector<plot::Plot*, ClickableIndex> clickable_plots_;
   ClickableIndex grab_index_;           // The index of the object (Point) that was grabbed.
   unsigned int grab_button_;            // The mouse button that did the grabbing (only valid when grab_index is not undefined).
@@ -85,7 +85,7 @@ class Window
   // Printing.
   struct PrintableGeometries
   {
-    Rectangle geometry_;
+    Geometry geometry_;
     Printable* printable_;
   };
   std::vector<PrintableGeometries> printable_geometries_;
@@ -108,19 +108,19 @@ class Window
   void close();
   bool destroyed() const { return destroyed_; }
 
-  Rectangle geometry() const { return {0, 0, static_cast<double>(width_), static_cast<double>(height_)}; }
+  Geometry geometry() const { return {0, 0, static_cast<double>(width_), static_cast<double>(height_)}; }
 
   template<LayerType LT, typename... ARGS>
   boost::intrusive_ptr<LT> create_layer(LayerArgs la, ARGS&&... args)
   {
     DoutEntering(dc::cairowindow, "Window::create_layer<" << libcwd::type_info_of<LT>().demangled_name() << ">(" << la <<
         join_more(", ", args...) << ") [" << this << "]");
-    Rectangle rectangle = la.has_rectangle() ? la.rectangle() : geometry();
-    boost::intrusive_ptr<LT> layer = new LT(x11_surface_, rectangle, CAIRO_CONTENT_COLOR_ALPHA,
+    Geometry geometry = la.has_geometry() ? la.geometry() : this->geometry();
+    boost::intrusive_ptr<LT> layer = new LT(x11_surface_, geometry, CAIRO_CONTENT_COLOR_ALPHA,
         Color{0, 0, 0, 0}, this, std::forward<ARGS>(args)...);
     layers_.push_back(layer);
     // Send an update request for the size of the entire layer (because of the background color).
-    update(rectangle);
+    update(geometry);
     return layer;
   }
 
@@ -137,13 +137,13 @@ class Window
         join_more(", ", args...) << ") [" << this << "]");
     if (!la.background_color().is_opaque())
       THROW_FALERT("The background layer can not have transparency.");
-    Rectangle rectangle = la.has_rectangle() ? la.rectangle() : geometry();
-    boost::intrusive_ptr<LT> layer = new LT(x11_surface_, rectangle, CAIRO_CONTENT_COLOR,
+    Geometry geometry = la.has_geometry() ? la.geometry() : this->geometry();
+    boost::intrusive_ptr<LT> layer = new LT(x11_surface_, geometry, CAIRO_CONTENT_COLOR,
         la.background_color(), this, std::forward<ARGS>(args)...);
-    layer->add_area(rectangle.area());
+    layer->add_area(geometry.area());
     layers_.push_back(layer);
     // Send an update request for the size of the entire layer (because of the background color).
-    update(rectangle);
+    update(geometry);
     return layer;
   }
 

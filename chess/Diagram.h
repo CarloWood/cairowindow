@@ -43,15 +43,15 @@ class Diagram : public Printable
   EColor to_move_ = white;
 
  public:
-  Diagram(Rectangle const& geometry, draw::ChessDiagramStyle chess_diagram_style, std::string title, draw::ChessTitleStyle title_style) :
+  Diagram(Geometry const& geometry, draw::ChessDiagramStyle chess_diagram_style, std::string title, draw::ChessTitleStyle title_style) :
     chess_diagram_(calculate_geometry(geometry, chess_diagram_style), chess_diagram_style),
     title_(std::make_shared<draw::Text>(title, chess_diagram_.geometry().offset_x() + 0.5 * chess_diagram_.geometry().width(),
         chess_diagram_.geometry().offset_y() + 0.5 * chess_diagram_style.top_margin() - title_style.offset(), title_style)) { }
 
-  Diagram(Rectangle const& geometry, draw::ChessDiagramStyle chess_diagram_style) :
+  Diagram(Geometry const& geometry, draw::ChessDiagramStyle chess_diagram_style) :
     chess_diagram_(calculate_geometry(geometry, chess_diagram_style), chess_diagram_style) { }
 
-  Rectangle const& geometry() const override { return chess_diagram_.geometry(); }
+  Geometry const& geometry() const override { return chess_diagram_.geometry(); }
   void add_to(boost::intrusive_ptr<Layer> const& layer);
 
   void place_piece(boost::intrusive_ptr<Layer> const& layer, EColor color, EPiece piece, int x, int y, draw::ChessPieceStyle const& style);
@@ -61,7 +61,7 @@ class Diagram : public Printable
   bool load_FEN(boost::intrusive_ptr<Layer> const& layer, std::string const& FEN, draw::ChessPieceStyle const& style);
 
  private:
-  Rectangle calculate_geometry(Rectangle const& geometry, draw::ChessDiagramStyle const& style);
+  Geometry calculate_geometry(Geometry const& geometry, draw::ChessDiagramStyle const& style);
 
   void add_piece(boost::intrusive_ptr<Layer> const& layer, draw::ChessPieceStyle const& style, chess::Piece const& piece);
 };

@@ -34,7 +34,7 @@ void Printable::create_svg_surface(std::string svg_filename, bool overwrite COMM
     // Add 'find_package(Boost COMPONENTS filesystem)' to the CMakeLists.txt file of the root project.
     svg_filename = utils::generate_unique_filename(svg_filename);
   }
-  Rectangle const& geometry = this->geometry();
+  Geometry const& geometry = this->geometry();
   svg_surface_ = cairo_svg_surface_create(svg_filename.c_str(), geometry.width(), geometry.height() COMMA_CWDEBUG_ONLY(debug_name));
   svg_cr_ = cairo_create(svg_surface_ COMMA_CWDEBUG_ONLY("Plot::svg_cr_:\"" + debug_name + "\""));
   // Define a clip path for the whole area.

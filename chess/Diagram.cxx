@@ -40,7 +40,7 @@ namespace cairowindow::chess {
 //   |  |<--specified margin-->| A8 square
 //   |  |                      |
 //
-cairowindow::Rectangle Diagram::calculate_geometry(cairowindow::Rectangle const& geometry, draw::ChessDiagramStyle const& style)
+cairowindow::Geometry Diagram::calculate_geometry(cairowindow::Geometry const& geometry, draw::ChessDiagramStyle const& style)
 {
   DoutEntering(dc::notice, "Diagram::calculate_geometry(" << geometry << ", style)");
 

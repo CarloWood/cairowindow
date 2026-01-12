@@ -8,19 +8,19 @@ namespace cairowindow {
 class LayerArgs
 {
  protected:
-  Rectangle rectangle_;
+  Geometry geometry_;
 
  public:
   LayerArgs() { }
-  LayerArgs(Rectangle rectangle) : rectangle_(rectangle) { }
+  LayerArgs(Geometry geometry) : geometry_(geometry) { }
 
-  bool has_rectangle() const { return rectangle_.is_defined(); }
-  Rectangle const& rectangle() const { return rectangle_; }
+  bool has_geometry() const { return geometry_.is_defined(); }
+  Geometry const& geometry() const { return geometry_; }
 
 #ifdef CWDEBUG
   void print_on(std::ostream& os) const
   {
-    os << "{rectangle_:" << rectangle_ << '}';
+    os << "{geometry_:" << geometry_ << '}';
   }
 #endif
 };
@@ -32,14 +32,14 @@ class BackgroundLayerArgs : public LayerArgs
 
  public:
   BackgroundLayerArgs(Color background_color) : background_color_(background_color) { }
-  BackgroundLayerArgs(Rectangle rectangle, Color background_color) : LayerArgs(rectangle), background_color_(background_color) { }
+  BackgroundLayerArgs(Geometry geometry, Color background_color) : LayerArgs(geometry), background_color_(background_color) { }
 
   Color const& background_color() const { return background_color_; }
 
 #ifdef CWDEBUG
   void print_on(std::ostream& os) const
   {
-    os << "{background_color_:" << background_color_ << ", rectangle_:" << rectangle_ << '}';
+    os << "{background_color_:" << background_color_ << ", geometry_:" << geometry_ << '}';
   }
 #endif
 };

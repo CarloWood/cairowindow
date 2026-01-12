@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cs/CS.h"
+#include "Rectangle.h"
 #include <cairo/cairo.h>
 #include <boost/intrusive_ptr.hpp>
 #include <memory>
@@ -14,10 +15,6 @@ class LayerRegion;
 namespace draw {
 class MultiRegion;
 } // namespace draw
-namespace cs {
-template<CS cs> class Rectangle;
-} // namespace cs
-using Rectangle = cs::Rectangle<CS::plot>;
 
 class Printable
 {
@@ -41,7 +38,7 @@ class Printable
   void draw_layer_region_on(boost::intrusive_ptr<Layer> const& layer, std::shared_ptr<LayerRegion> const& layer_region);
   void draw_multi_region_on(boost::intrusive_ptr<Layer> const& layer, draw::MultiRegion* multi_region);
 
-  virtual Rectangle const& geometry() const = 0;
+  virtual Geometry const& geometry() const = 0;
 };
 
 } // namespace cairowindow

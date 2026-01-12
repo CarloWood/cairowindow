@@ -28,10 +28,10 @@ DECLARE_STYLE(Grid, GridStyleParamsDefault);
 class Grid : public MultiRegion
 {
  public:
-  static constexpr int number_of_axes = 2;
+ static constexpr int number_of_axes = 2;
 
  private:
-  cairowindow::Rectangle geometry_;     // The geometry passed to the constructor.
+  cairowindow::Geometry geometry_;     // The geometry passed to the constructor.
                                         // This is the path used for the large rectangle around the plot area.
   std::array<int, number_of_axes> ticks_;
   std::vector<std::shared_ptr<Line>> lines_;
@@ -40,7 +40,7 @@ class Grid : public MultiRegion
   void draw_regions_on(Layer* layer) override;
 
  public:
-  Grid(cairowindow::Rectangle const& geometry, GridStyle style) :
+  Grid(cairowindow::Geometry const& geometry, GridStyle style) :
     MultiRegion(style.color(), style.line_width()), geometry_(geometry) { }
 
   void set_ticks(int axis, int ticks)
@@ -48,7 +48,7 @@ class Grid : public MultiRegion
     ticks_[axis] = ticks;
   }
 
-  void set_geometry(cairowindow::Rectangle const& geometry)
+  void set_geometry(cairowindow::Geometry const& geometry)
   {
     geometry_ = geometry;
   }

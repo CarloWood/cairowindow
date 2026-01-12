@@ -55,7 +55,7 @@ void vals2coeffs7(std::array<Vector, 7>& out, Vector P0, Vector P1, Vector P2, V
 
 } // namespace
 
-void BezierFitter::solve(std::function<Point(double)> const& func, IntersectRectangle const& viewport, double tolerance,
+void BezierFitter::solve(std::function<Point(double)> const& func, IntersectRectangle<CS::plot> const& viewport, double tolerance,
     double const t0, double const t6, BezierCurve::Vector const P0, BezierCurve::Vector const P3, BezierCurve::Vector const P6)
 {
   using Vector = BezierCurve::Vector;
@@ -143,7 +143,7 @@ void BezierFitter::solve(std::function<Point(double)>&& func, Range const& domai
 
 void BezierFitter::solve(std::function<void(Point p, Vector v)> const& draw_line,
     std::function<Point(double)> const& P, std::function<Vector(double)> const& T,
-    IntersectRectangle const& viewport, double fraction, Orientation orientation,
+    IntersectRectangle<CS::plot> const& viewport, double fraction, Orientation orientation,
     double t0, double t4, BezierCurve::Point P0, BezierCurve::Vector T0, BezierCurve::Point P2, BezierCurve::Point P4, BezierCurve::Vector T4)
 {
   DoutEntering(dc::notice, "BezierFitter::solve(P, T, " << viewport << ", " << fraction << ", " << orientation << ", " <<

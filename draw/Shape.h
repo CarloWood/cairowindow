@@ -74,13 +74,13 @@ DECLARE_STYLE_WITH_BASE(Shape, Line, ShapeStyleParamsDefault);
 class Shape : public LayerRegion
 {
  protected:
-  cairowindow::Rectangle geometry_;
+  cairowindow::Geometry geometry_;
   ShapeStyle style_;
   double rotation_;
   double arrow_overshoot_;
 
  public:
-  Shape(cairowindow::Rectangle const& geometry, ShapeStyle style, double rotation = {}) :
+  Shape(cairowindow::Geometry const& geometry, ShapeStyle style, double rotation = {}) :
     geometry_(geometry), style_(style), rotation_(rotation)
     {
       switch (style.shape())
@@ -100,7 +100,7 @@ class Shape : public LayerRegion
       }
     }
 
-  cairowindow::Rectangle const& geometry() const { return geometry_; }
+  cairowindow::Geometry const& geometry() const { return geometry_; }
   ShapeStyle const& style() const { return style_; }
 
   double arrow_overshoot() const { return arrow_overshoot_; }

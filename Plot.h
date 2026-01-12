@@ -57,15 +57,15 @@ class Plot;
 class Slider
 {
  private:
-  cairowindow::Rectangle geometry_;
+  cairowindow::Geometry geometry_;
   double min_value_;      // The value corresponding to position 0.
   double max_value_;      // The value corresponding to position 1.
 
  public:
-  Slider(cairowindow::Rectangle geometry, double min_value, double max_value) :
+  Slider(cairowindow::Geometry geometry, double min_value, double max_value) :
     geometry_(geometry), min_value_(min_value), max_value_(max_value) { }
 
-  cairowindow::Rectangle const& geometry() const { return geometry_; }
+  cairowindow::Geometry const& geometry() const { return geometry_; }
   double value() const { return min_value_ + draw_object_->rel_value() * (max_value_ - min_value_); }
   double min_value() const { return min_value_; }
   double max_value() const { return max_value_; }
@@ -192,12 +192,12 @@ class Plot : public Printable
   utils::Vector<std::function<cairowindow::Point (cairowindow::Point const&)>, ClickableIndex> draggable_restrictions_;
 
  public:
-  Plot(cairowindow::Rectangle const& geometry, draw::PlotAreaStyle plot_area_style, std::string title, draw::PlotTitleStyle title_style) :
+  Plot(cairowindow::Geometry const& geometry, draw::PlotAreaStyle plot_area_style, std::string title, draw::PlotTitleStyle title_style) :
     plot_area_(axes_geometry(geometry, plot_area_style.axes_line_width()), plot_area_style),
     title_(std::make_shared<draw::Text>(title, plot_area_.geometry().offset_x() + 0.5 * plot_area_.geometry().width(),
         plot_area_.geometry().offset_y() - 0.5 * plot_area_.geometry().offset_y() - title_style.offset(), title_style)) { }
 
-  Plot(cairowindow::Rectangle const& geometry, draw::PlotAreaStyle plot_area_style, std::string title, draw::PlotTitleStyle title_style,
+  Plot(cairowindow::Geometry const& geometry, draw::PlotAreaStyle plot_area_style, std::string title, draw::PlotTitleStyle title_style,
       std::string xlabel, draw::XLabelStyle xlabel_style, std::string ylabel, draw::YLabelStyle ylabel_style) :
     plot_area_(axes_geometry(geometry, plot_area_style.axes_line_width()), plot_area_style),
     title_(std::make_shared<draw::Text>(title, plot_area_.geometry().offset_x() + 0.5 * plot_area_.geometry().width(),
@@ -207,7 +207,7 @@ class Plot : public Printable
     ylabel_(std::make_shared<draw::Text>(ylabel, plot_area_.geometry().offset_x() - YLabelStyleDefaults::offset,
         plot_area_.geometry().offset_y() + 0.5 * plot_area_.geometry().height(), ylabel_style)) { }
 
-  Plot(cairowindow::Rectangle const& geometry, draw::PlotAreaStyle plot_area_style) :
+  Plot(cairowindow::Geometry const& geometry, draw::PlotAreaStyle plot_area_style) :
     plot_area_(axes_geometry(geometry, plot_area_style.axes_line_width()), plot_area_style) { }
 
   void set_range(int axis, Range range)
@@ -606,7 +606,7 @@ class Plot : public Printable
   // Slider
 
   [[nodiscard]] Slider create_slider(boost::intrusive_ptr<Layer> const& layer,
-      cairowindow::Rectangle const& geometry, double start_value, double min_value, double max_value);
+      cairowindow::Geometry const& geometry, double start_value, double min_value, double max_value);
 
   //--------------------------------------------------------------------------
 
@@ -619,7 +619,7 @@ class Plot : public Printable
       draw::BezierCurveStyle const& line_style,
       std::vector<cairowindow::Point>&& points);
 
-  cairowindow::Rectangle const& geometry() const override { return plot_area_.geometry(); }
+  cairowindow::Geometry const& geometry() const override { return plot_area_.geometry(); }
   void add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio = false);
 
   // Called from Window::register_draggable.
@@ -631,11 +631,11 @@ class Plot : public Printable
     draggable->set_index(next_index);
     draggable_restrictions_.emplace_back(std::move(restriction));
   }
-  cairowindow::Rectangle update_grabbed(utils::Badge<Window>, ClickableIndex grabbed_point, double pixel_x, double pixel_y);
+  cairowindow::Geometry update_grabbed(utils::Badge<Window>, ClickableIndex grabbed_point, double pixel_x, double pixel_y);
   void apply_restrictions(utils::Badge<Window>, ClickableIndex clickable_index, cairowindow::Point& new_position);
 
  private:
-  cairowindow::Rectangle axes_geometry(cairowindow::Rectangle const& geometry, double axes_line_width);
+  cairowindow::Geometry axes_geometry(cairowindow::Geometry const& geometry, double axes_line_width);
   void apply_line_extend(double& x1, double& y1, double& x2, double& y2, LineExtend line_extend);
 
  public:

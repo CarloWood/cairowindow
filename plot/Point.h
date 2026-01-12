@@ -46,7 +46,7 @@ class Point : public cairowindow::cs::Point<cs>, public Draggable
 
  private:
   // Implementation of Draggable.
-  cairowindow::Rectangle const& geometry() const override;
+  cairowindow::Geometry const& geometry() const override;
   void moved(Plot* plot, cairowindow::cs::Point<CS::plot> const& new_position) override;
   void set_position(cairowindow::cs::Point<CS::plot> const& new_position) override
   {
@@ -78,9 +78,9 @@ class Point : public cairowindow::cs::Point<cs>, public Draggable
 };
 
 template<CS cs>
-cairowindow::Rectangle const& Point<cs>::geometry() const
+cairowindow::Geometry const& Point<cs>::geometry() const
 {
-  //FIXME: geometry is in CS::pixels no? There seem to be a LOT of mismatches between cairowindow::Rectangle (in CS::plot) and Rectangle's containing CS::pixels?!
+  // Geometry is in CS::pixels.
   return draw_object_->geometry();
 }
 

@@ -392,7 +392,7 @@ ClickableIndex Window::grab_draggable(double x, double y)
   double min_dist_squared = std::numeric_limits<double>::max();
   for (ClickableIndex index = clickable_rectangles_.ibegin(); index != clickable_rectangles_.iend(); ++index)
   {
-    Rectangle const& geometry = clickable_rectangles_[index];
+    Geometry const& geometry = clickable_rectangles_[index];
     // A Point uses ShapePosition::at_corner.
     double center_x = geometry.offset_x();
     double center_y = geometry.offset_y();
@@ -415,11 +415,11 @@ ClickableIndex Window::grab_draggable(double x, double y)
 bool Window::update_grabbed(ClickableIndex grabbed_point, double pixel_x, double pixel_y)
 {
   plot::Plot* plot = clickable_plots_[grabbed_point];
-  Rectangle new_rectangle = plot->update_grabbed({}, grabbed_point, pixel_x, pixel_y);
-  if (new_rectangle.is_defined())
+  Geometry new_geometry = plot->update_grabbed({}, grabbed_point, pixel_x, pixel_y);
+  if (new_geometry.is_defined())
   {
-    // Update the rectangle of a draggable Point, called after it was moved.
-    clickable_rectangles_[grabbed_point] = new_rectangle;
+    // Update the geometry of a draggable Point, called after it was moved.
+    clickable_rectangles_[grabbed_point] = new_geometry;
     return true;
   }
   return false;

@@ -23,7 +23,7 @@ class Layer : public AIRefCount
   Window* window_;
   cairo_surface_t* surface_;
   cairo_t* cr_;
-  Rectangle geometry_;
+  Geometry geometry_;
   std::vector<std::weak_ptr<LayerRegion>> regions_;
   double region_areas_; // Total area of all regions_.
 #ifdef CAIROWINDOW_DEBUGWINDOW
@@ -34,7 +34,7 @@ class Layer : public AIRefCount
   cairo_t* print_cr_ = nullptr;
 
  public:
-  Layer(cairo_surface_t* x11_surface, Rectangle const& rectangle, cairo_content_t content, Color color, Window* window
+  Layer(cairo_surface_t* x11_surface, Geometry const& geometry, cairo_content_t content, Color color, Window* window
       COMMA_DEBUG_ONLY(std::string debug_name));
   ~Layer();
 
@@ -67,7 +67,7 @@ class Layer : public AIRefCount
   double offset_y() const { return geometry_.offset_y(); }
   double area() const { return region_areas_; }
   // Return the geometry of the layer.
-  Rectangle const& geometry() const { return geometry_; }
+  Geometry const& geometry() const { return geometry_; }
 
   void start_printing_to(cairo_t* print_cr)
   {

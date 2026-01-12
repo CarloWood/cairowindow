@@ -10,7 +10,7 @@
 namespace cairowindow::plot {
 
 // Calculate the axes geometry from the full plot geometry.
-cairowindow::Rectangle Plot::axes_geometry(cairowindow::Rectangle const& geometry, double axes_line_width)
+cairowindow::Geometry Plot::axes_geometry(cairowindow::Geometry const& geometry, double axes_line_width)
 {
   // Use fixed-size margins for now.
   constexpr int top_margin = 50;
@@ -50,7 +50,7 @@ void Plot::add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio)
   if (keep_ratio)
   {
     // Fix plot_area_ geometry.
-    cairowindow::Rectangle const& geometry = plot_area_.geometry();
+    cairowindow::Geometry const& geometry = plot_area_.geometry();
     double pixels_per_x_unit = geometry.width() / range_[x_axis].size();
     double pixels_per_y_unit = geometry.height() / range_[y_axis].size();
     double required_scale = pixels_per_y_unit / pixels_per_x_unit;
@@ -136,7 +136,7 @@ void Plot::add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio)
 
 double Plot::convert_x(double x) const
 {
-  cairowindow::Rectangle const& g = plot_area_.geometry();
+  cairowindow::Geometry const& g = plot_area_.geometry();
   x = (x - range_[x_axis].min()) / range_[x_axis].size();
   x *= g.width();
   x += g.offset_x();
@@ -145,7 +145,7 @@ double Plot::convert_x(double x) const
 
 double Plot::convert_y(double y) const
 {
-  cairowindow::Rectangle const& g = plot_area_.geometry();
+  cairowindow::Geometry const& g = plot_area_.geometry();
   y = (range_[y_axis].max() - y) / range_[y_axis].size();
   y *= g.height();
   y += g.offset_y();
@@ -157,7 +157,7 @@ Pixel Plot::convert_to_pixel(cairowindow::Point const& point) const
   double x = point.x();
   double y = point.y();
 
-  cairowindow::Rectangle const& g = plot_area_.geometry();
+  cairowindow::Geometry const& g = plot_area_.geometry();
 
   x -= range_[x_axis].min();
   x /= range_[x_axis].size();
@@ -176,7 +176,7 @@ double Plot::convert_from_pixel_x(double pixel_x) const
 {
   double x = pixel_x;
 
-  cairowindow::Rectangle const& g = plot_area_.geometry();
+  cairowindow::Geometry const& g = plot_area_.geometry();
 
   x -= g.offset_x();
   x /= g.width();
@@ -190,7 +190,7 @@ double Plot::convert_from_pixel_y(double pixel_y) const
 {
   double y = pixel_y;
 
-  cairowindow::Rectangle const& g = plot_area_.geometry();
+  cairowindow::Geometry const& g = plot_area_.geometry();
 
   y -= g.offset_y();
   y /= g.height();
@@ -205,7 +205,7 @@ cairowindow::Point Plot::convert_from_pixel(Pixel const& pixel) const
   double x = pixel.x();
   double y = pixel.y();
 
-  cairowindow::Rectangle const& g = plot_area_.geometry();
+  cairowindow::Geometry const& g = plot_area_.geometry();
 
   x -= g.offset_x();
   x /= g.width();
@@ -222,19 +222,19 @@ cairowindow::Point Plot::convert_from_pixel(Pixel const& pixel) const
 
 double Plot::convert_horizontal_offset_from_pixel(double pixel_offset_x) const
 {
-  cairowindow::Rectangle const& g = plot_area_.geometry();
+  cairowindow::Geometry const& g = plot_area_.geometry();
   return pixel_offset_x / g.width() * range_[x_axis].size();
 }
 
 double Plot::convert_vertical_offset_from_pixel(double pixel_offset_y) const
 {
-  cairowindow::Rectangle const& g = plot_area_.geometry();
+  cairowindow::Geometry const& g = plot_area_.geometry();
   return pixel_offset_y / g.height() * range_[y_axis].size();
 }
 
 void Plot::convert_to_pixels(cairowindow::Point const* data_in, Pixel* data_out, std::size_t size)
 {
-  cairowindow::Rectangle const& g = plot_area_.geometry();
+  cairowindow::Geometry const& g = plot_area_.geometry();
   double const x_offset = -range_[x_axis].min();
   double const y_offset = -range_[y_axis].max();
   double const x_scale = g.width() / range_[x_axis].size();
@@ -412,7 +412,7 @@ void Plot::add_circle(boost::intrusive_ptr<Layer> const& layer,
   double radius = plot_circle.radius();
 
   plot_circle.draw_object_ = std::make_shared<draw::Circle>(
-      cairowindow::Rectangle{convert_x(center.x()), convert_y(center.y()), convert_x(radius) - convert_x(0), convert_y(0) - convert_y(radius)},
+      cairowindow::Geometry{convert_x(center.x()), convert_y(center.y()), convert_x(radius) - convert_x(0), convert_y(0) - convert_y(radius)},
       circle_style);
   draw_layer_region_on(layer, plot_circle.draw_object_);
 }
@@ -519,7 +519,7 @@ void Plot::add_text(boost::intrusive_ptr<Layer> const& layer,
 // Slider
 
 Slider Plot::create_slider(boost::intrusive_ptr<Layer> const& layer,
-    cairowindow::Rectangle const& geometry, double start_value, double min_value, double max_value)
+    cairowindow::Geometry const& geometry, double start_value, double min_value, double max_value)
 {
   Slider plot_slider(geometry, min_value, max_value);
   plot_slider.draw_object_ = std::make_shared<draw::Slider>(geometry.offset_x(), geometry.offset_y(), geometry.width(), geometry.height(),
@@ -581,7 +581,7 @@ Curve Plot::create_curve(boost::intrusive_ptr<Layer> const& layer,
   return plot_curve;
 }
 
-cairowindow::Rectangle Plot::update_grabbed(utils::Badge<Window>, ClickableIndex grabbed_point, double pixel_x, double pixel_y)
+cairowindow::Geometry Plot::update_grabbed(utils::Badge<Window>, ClickableIndex grabbed_point, double pixel_x, double pixel_y)
 {
   Draggable* draggable = draggables_[grabbed_point];
   // If convert is not true then pixel_x, pixel_y are actually Point coordinates.

@@ -42,7 +42,7 @@ class ChessDiagram : public MultiRegion
 {
  private:
   ChessDiagramStyle style_;
-  cairowindow::Rectangle geometry_;             // The geometry passed to the constructor.
+  cairowindow::Geometry geometry_;             // The geometry passed to the constructor.
 
   // These are calculated by the call to Diagram::add_to.
   int top_left_x_;                              // x coordinate of top-left corner of the a8 square.
@@ -50,17 +50,17 @@ class ChessDiagram : public MultiRegion
   int board_size_;                              // The width of the chess board (this is divisible by 8).
   double frame_thickness_{};
   int square_size_{};
-  std::vector<std::shared_ptr<LayerRegion>> regions_;   // The LayerRegion's used, filled by draw_regions_on.
+ std::vector<std::shared_ptr<LayerRegion>> regions_;   // The LayerRegion's used, filled by draw_regions_on.
 
  public:
-  ChessDiagram(cairowindow::Rectangle const& geometry, ChessDiagramStyle const& style) :
+  ChessDiagram(cairowindow::Geometry const& geometry, ChessDiagramStyle const& style) :
     MultiRegion(style.frame_color(), style.shading_line_width()), style_(style), geometry_(geometry)
   {
     DoutEntering(dc::notice, "ChessDiagram::ChessDiagram(" << geometry << ", ...)");
   }
 
   ChessDiagramStyle const& style() const { return style_; }
-  cairowindow::Rectangle const& geometry() const { return geometry_; }
+  cairowindow::Geometry const& geometry() const { return geometry_; }
 
   double frame_thickness() const { ASSERT(frame_thickness_ > 0.0); return frame_thickness_; }
   int square_size() const { ASSERT(square_size_ > 0); return square_size_; }
@@ -82,4 +82,3 @@ class ChessDiagram : public MultiRegion
 };
 
 } // namespace cairowindow::draw
-

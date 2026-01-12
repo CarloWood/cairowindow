@@ -48,31 +48,31 @@ class PlotArea : public MultiRegion
   static constexpr int y_axis = plot::y_axis;
   static constexpr int min_range = plot::min_range;
   static constexpr int max_range = plot::max_range;
-  static constexpr int number_of_axes = Grid::number_of_axes;
+ static constexpr int number_of_axes = Grid::number_of_axes;
 
  private:
-  cairowindow::Rectangle geometry_;             // The geometry passed to the constructor.
+  cairowindow::Geometry geometry_;             // The geometry passed to the constructor.
                                                 // This is the path used for the large rectangle around the plot area.
   double tick_length_;
   bool draw_grid_;
   draw::Grid grid_;
 
   std::array<std::array<std::shared_ptr<LayerRegion>, 2>, number_of_axes> axes_;
-  std::array<std::array<double, 2>, number_of_axes> range_{{{0, 1}, {0, 1}}};
+ std::array<std::array<double, 2>, number_of_axes> range_{{{0, 1}, {0, 1}}};
 
  public:
-  PlotArea(cairowindow::Rectangle const& geometry, PlotAreaStyle style) :
+  PlotArea(cairowindow::Geometry const& geometry, PlotAreaStyle style) :
     MultiRegion(style.axes_color(), style.axes_line_width()), geometry_(geometry), tick_length_(geometry.width() / 100.0),
     draw_grid_(!style.color().is_transparent()), grid_(geometry, style) { }
 
   void set_range(int axis, double range_min, double range_max, int ticks);
-  void set_geometry(cairowindow::Rectangle const& geometry)
+  void set_geometry(cairowindow::Geometry const& geometry)
   {
     geometry_ = geometry;
     grid_.set_geometry(geometry);
   }
 
-  cairowindow::Rectangle const& geometry() const { return geometry_; }
+  cairowindow::Geometry const& geometry() const { return geometry_; }
 
   static int calculate_range_ticks(Range& range);
 
