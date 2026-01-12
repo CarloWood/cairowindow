@@ -1,13 +1,20 @@
 #pragma once
 
 #include "LineStyle.h"
-#include "ShapePosition.h"
 #include "cairowindow/LayerRegion.h"
 #include "cairowindow/Color.h"
 #include "cairowindow/Rectangle.h"
 #include "utils/square.h"
 
 namespace cairowindow::draw {
+
+enum ShapePosition
+{
+  undefined_shape_position,
+  at_center,
+  at_corner,
+  at_tip
+};
 
 enum ShapeEnum
 {
