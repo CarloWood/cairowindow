@@ -7,9 +7,12 @@
 // Forward declarations.
 namespace cairowindow {
 
+class LayerRegion;
+
 namespace draw {
 // Forward declare the draw object.
 class Rectangle;
+class Polyline;
 } // namespace draw
 
 template<CS> class CoordinateSystem;
@@ -37,7 +40,7 @@ class Rectangle : public cairowindow::cs::Rectangle<cs>
 
  public:
   friend class Plot;
-  mutable std::shared_ptr<draw::Rectangle> draw_object_;
+  mutable std::shared_ptr<cairowindow::LayerRegion> draw_object_;
 
  public:
   template<typename... Args>
@@ -46,9 +49,15 @@ class Rectangle : public cairowindow::cs::Rectangle<cs>
     draw_object_ = std::make_shared<cairowindow::draw::Rectangle>(std::forward<Args>(args)...);
   }
 
+  template<typename... Args>
+  void create_polyline_draw_object(utils::Badge<Plot, cairowindow::CoordinateSystem<cs>>, Args&&... args) const
+  {
+    draw_object_ = std::make_shared<cairowindow::draw::Polyline>(std::forward<Args>(args)...);
+  }
+
   // Accessor for the draw object; used by Plot and CoordinateSystem.
 
-  std::shared_ptr<cairowindow::draw::Rectangle> const& draw_object() const
+  std::shared_ptr<cairowindow::LayerRegion> const& draw_object() const
   {
     return draw_object_;
   }
