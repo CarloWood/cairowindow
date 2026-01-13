@@ -111,7 +111,7 @@ bool BezierCurve::quadratic_from(Direction D0, Direction D1)
   Vector const P0{m_.coefficient[0]};
   Vector const P1{m_.coefficient[1]};
 
-  Direction N1 = D1.rotate_90_degrees();
+  Direction N1 = D1.rotated_90_degrees();
   double D0_dot_N1 = D0.dot(N1);
 
   if (std::abs(D0_dot_N1) < 10e-9)
@@ -425,7 +425,7 @@ bool BezierCurve::quadratic_from(double v0qa, double v1qa)
 
   // Work with a rotation and translation invariant basis.
   Vector Q1 = P1 - P0;
-  Vector N1 = Q1.rotate_90_degrees();
+  Vector N1 = Q1.rotated_90_degrees();
 
   // Note that P0 + 0.5 * V0 is the control point (which is at the intersection of the tangent lines at P0 and P1).
   // To get the length of |0.5 * V0| we can simply use the sine law:

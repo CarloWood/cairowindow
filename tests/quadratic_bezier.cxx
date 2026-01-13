@@ -346,9 +346,9 @@ int main()
       // Velocity vector at t=v.
       Vector velocityv{m00 + 2.0 * v * m01, m10 + 2.0 * v * m11};
       Direction velocityv_dir = velocityv.direction();
-      Direction X = w_is_negative ? velocityv_dir.rotate_180_degrees() : velocityv_dir;
+      Direction X = w_is_negative ? velocityv_dir.rotated_180_degrees() : velocityv_dir;
       Direction perpendicular_to_symmetry_line_dir = X;
-      Direction symmetry_line_dir = perpendicular_to_symmetry_line_dir.rotate_90_degrees();
+      Direction symmetry_line_dir = perpendicular_to_symmetry_line_dir.rotated_90_degrees();
       phi = M_PI - 2.0 * (M_PI - velocityv_dir.as_angle());
       Point new_Q = P0P1_circle_center + 0.5 * Direction{phi};
       static_cast<plot::Draggable&>(plot_Q).moved(&plot, new_Q);

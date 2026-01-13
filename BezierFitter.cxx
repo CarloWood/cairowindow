@@ -178,11 +178,11 @@ void BezierFitter::solve(std::function<void(Point p, Vector v)> const& draw_line
     Vector D1 =
       orientation == Orientation::horizontal ? Direction::right
                                              : orientation == Orientation::vertical ? Direction::up
-                                                                                    : T(t1).raw().rotate_90_degrees();
+                                                                                    : T(t1).raw().rotated_90_degrees();
     Vector D3 =
       orientation == Orientation::horizontal ? Direction::right
                                              : orientation == Orientation::vertical ? Direction::up
-                                                                                    : T(t3).raw().rotate_90_degrees();
+                                                                                    : T(t3).raw().rotated_90_degrees();
     double max_distance_squared =
       utils::square(fraction * (orientation == Orientation::vertical ? viewport.y2() - viewport.y1() : viewport.x2() - viewport.x1()));
 

@@ -186,7 +186,7 @@ int main()
       Dout(dc::notice, "arc01_1 = " << arc01_1 << "; arc12_1 = " << arc12_1 << "; arc12_1 - arc01_1 = " << (arc12_1 - arc01_1));
 
       Vector Q1 = plot_P1 - plot_P0;
-      Vector N1 = Q1.rotate_90_degrees();
+      Vector N1 = Q1.rotated_90_degrees();
 
       Dout(dc::notice, "Q1 = " << Q1);
       Dout(dc::notice, "N1 = " << N1);
@@ -265,7 +265,7 @@ int main()
       }
 
       Vector Q2 = plot_P2 - plot_P1;
-      Vector N2 = Q2.rotate_90_degrees();
+      Vector N2 = Q2.rotated_90_degrees();
       auto plot_arrow_Q2 = plot.create_connector(second_layer, connector_style({.line_color = color::blue}), plot_P1, plot_P1 + Q2);
       auto arrow_Q2_label = plot.create_text(second_layer, label_style({.position = draw::centered_right_of}), plot_P1 + 0.5 * Q2, "Q₂");
       auto plot_arrow_N2 = plot.create_connector(second_layer, connector_style({.line_color = color::blue}), plot_P1, plot_P1 + N2);
