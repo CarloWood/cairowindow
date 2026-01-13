@@ -22,7 +22,7 @@ class LayerRegion
  public:
   LayerRegion() : layer_(nullptr) { }
   LayerRegion(std::function<StrokeExtents(cairo_t*)> user_draw) : layer_(nullptr), draw_(user_draw) { }
-  ~LayerRegion();
+  virtual ~LayerRegion();
 
   StrokeExtents draw_to(cairo_t* cr, Layer* layer);
   void draw(Layer* layer);
