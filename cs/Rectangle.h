@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Point.h"              // Point, Size
-#include <cairo/cairo.h>
 #include "debug.h"
 
 namespace cairowindow::cs {
@@ -10,34 +9,35 @@ template<CS cs>
 class Rectangle
 {
  private:
-  cairo_rectangle_t geometry_;
+  Point<cs> top_left_;
+  Size<cs> size_;
 
  public:
-  Rectangle() : geometry_{} { }
-  Rectangle(double offset_x, double offset_y, double width, double height) : geometry_{offset_x, offset_y, width, height}
+  Rectangle() : top_left_{}, size_{0.0, 0.0} { }
+  Rectangle(double offset_x, double offset_y, double width, double height) : top_left_{offset_x, offset_y}, size_{width, height}
   {
     ASSERT(width >= 0.0 && height >= 0.0);
   }
-  Rectangle(Point<cs> const& top_left, Size<cs> const& size) : geometry_{top_left.x(), top_left.y(), size.width(), size.height()} { }
+  Rectangle(Point<cs> const& top_left, Size<cs> const& size) : top_left_{top_left}, size_{size} { }
 
-  double offset_x() const { return geometry_.x; }
-  double offset_y() const { return geometry_.y; }
-  double width() const { return geometry_.width; }
-  double height() const { return geometry_.height; }
+  double offset_x() const { return top_left_.x(); }
+  double offset_y() const { return top_left_.y(); }
+  double width() const { return size_.width(); }
+  double height() const { return size_.height(); }
 
-  bool is_defined() const { return geometry_.width > 0.0 && geometry_.height > 0.0; }
+  bool is_defined() const { return size_.width() > 0.0 && size_.height() > 0.0; }
 
-  double area() const { ASSERT(is_defined()); return geometry_.width * geometry_.height; }
+  double area() const { ASSERT(is_defined()); return size_.width() * size_.height(); }
 
   bool contains(int x, int y) const
   {
-    return geometry_.x <= x && x < (geometry_.x + geometry_.width) && geometry_.y <= y && y < geometry_.y + geometry_.height;
+    return top_left_.x() <= x && x < (top_left_.x() + size_.width()) && top_left_.y() <= y && y < top_left_.y() + size_.height();
   }
 
 #ifdef CWDEBUG
   void print_on(std::ostream& os) const
   {
-    os << utils::to_string(cs) << ":" << '{' << geometry_.x << ", " << geometry_.y << ", " << geometry_.width << ", " << geometry_.height << '}';
+    os << utils::to_string(cs) << ":" << '{' << top_left_.x() << ", " << top_left_.y() << ", " << size_.width() << ", " << size_.height() << '}';
   }
 #endif
 };
