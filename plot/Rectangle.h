@@ -26,10 +26,10 @@ class Plot;
 namespace cs {
 
 //-----------------------------------------------------------------------------
-// plot::Rectangle
+// plot::cs::Rectangle
 //
 // A handle keeping a plotted Rectangle alive.
-// Returned by Plot::create_rectangle(layer, rectangle_style, <args to construct a plot::Rectangle>).
+// Returned by Plot::create_rectangle(layer, rectangle_style, <args to construct a plot::cs::Rectangle>).
 //
 template<CS cs>
 class Rectangle : public cairowindow::cs::Rectangle<cs>
@@ -40,24 +40,24 @@ class Rectangle : public cairowindow::cs::Rectangle<cs>
 
  public:
   friend class Plot;
-  mutable std::shared_ptr<cairowindow::LayerRegion> draw_object_;       // Points to a draw::Rectangle or a draw::Polyline.
+  mutable std::shared_ptr<LayerRegion> draw_object_;       // Points to a draw::Rectangle or a draw::Polyline.
 
  public:
   template<typename... Args>
-  void create_draw_object(utils::Badge<Plot, cairowindow::CoordinateSystem<cs>>, Args&&... args) const
+  void create_draw_object(utils::Badge<Plot, CoordinateSystem<cs>>, Args&&... args) const
   {
-    draw_object_ = std::make_shared<cairowindow::draw::Rectangle>(std::forward<Args>(args)...);
+    draw_object_ = std::make_shared<draw::Rectangle>(std::forward<Args>(args)...);
   }
 
   template<typename... Args>
-  void create_polyline_draw_object(utils::Badge<Plot, cairowindow::CoordinateSystem<cs>>, Args&&... args) const
+  void create_polyline_draw_object(utils::Badge<Plot, CoordinateSystem<cs>>, Args&&... args) const
   {
-    draw_object_ = std::make_shared<cairowindow::draw::Polyline>(std::forward<Args>(args)...);
+    draw_object_ = std::make_shared<draw::Polyline>(std::forward<Args>(args)...);
   }
 
   // Accessor for the draw object; used by Plot and CoordinateSystem.
 
-  std::shared_ptr<cairowindow::LayerRegion> const& draw_object() const
+  std::shared_ptr<LayerRegion> const& draw_object() const
   {
     return draw_object_;
   }
