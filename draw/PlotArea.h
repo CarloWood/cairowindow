@@ -48,7 +48,7 @@ class PlotArea : public MultiRegion
   static constexpr int y_axis = plot::y_axis;
   static constexpr int min_range = plot::min_range;
   static constexpr int max_range = plot::max_range;
- static constexpr int number_of_axes = Grid::number_of_axes;
+  static constexpr int number_of_axes = Grid::number_of_axes;
 
  private:
   cairowindow::Geometry geometry_;             // The geometry passed to the constructor.
@@ -58,7 +58,7 @@ class PlotArea : public MultiRegion
   draw::Grid grid_;
 
   std::array<std::array<std::shared_ptr<LayerRegion>, 2>, number_of_axes> axes_;
- std::array<std::array<double, 2>, number_of_axes> range_{{{0, 1}, {0, 1}}};
+  std::array<std::array<double, 2>, number_of_axes> range_{{{0, 1}, {0, 1}}};
 
  public:
   PlotArea(cairowindow::Geometry const& geometry, PlotAreaStyle style) :

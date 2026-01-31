@@ -17,6 +17,7 @@ class EventLoop
 
  public:
   EventLoop(Window* window, void (*thread_function)(Window*));
+  EventLoop(EventLoop&& event_loop) = default;
   ~EventLoop();
 
   void set_cleanly_terminated() { cleanly_terminated_ = true; }

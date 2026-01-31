@@ -197,6 +197,8 @@ void Window::event_loop_thread(Window* self)
   Debug(NAMESPACE_DEBUG::init_thread("XEventLoop"));
   Debug(libcw_do.off());
   self->event_loop();
+  Debug(libcw_do.on());
+  Dout(dc::cairowindow, "Leaving Window::event_loop_thread(" << self << ")");
 }
 
 struct ExposeEventRect
@@ -217,6 +219,8 @@ void Window::event_loop()
   int keypress_events = 0;
   // Event loop.
   XEvent event;
+  // It makes no sense to get here without running_ being true.
+  ASSERT(running_);
   while (running_)
   {
     // Block till the next X11 event.
@@ -271,6 +275,7 @@ void Window::event_loop()
             push_message(msg);
             break;
           }
+          Dout(dc::notice, "Setting running_ = false in KeyPress with keycode " << (int)key_event->keycode);
           running_ = false;           // Exit on any other key press.
           ++keypress_events;
         }
@@ -326,7 +331,10 @@ void Window::event_loop()
       case ClientMessage:
       {
         if (static_cast<unsigned long>(event.xclient.data.l[0]) == wm_delete_window_)
+        {
+          Dout(dc::notice, "Setting running_ = false in ClientMessage 'wm_delete_window_'.");
           running_ = false;
+        }
         else if (static_cast<Atom>(event.xclient.message_type) == custom_mouse_event_)
         {
           Dout(dc::notice, "Received custom_mouse_event_");
@@ -337,6 +345,8 @@ void Window::event_loop()
       }
     }
   }
+  Dout(dc::cairowindow, "Exited main loop: terminating program [" << this << "]");
+
   Message msg{InputEvent::terminate_program};
   push_message(msg);
 
@@ -373,6 +383,7 @@ void Window::send_custom_event(uint32_t data, unsigned int button)
 
 void Window::close()
 {
+  DoutEntering(dc::cairowindow, "Window::close()");
   running_ = false;
   send_close_event();
 }
