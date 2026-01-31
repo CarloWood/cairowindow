@@ -378,10 +378,8 @@ void Plot::add_line(boost::intrusive_ptr<Layer> const& layer,
   double x2 = intersections[second].coordinate(0);
   double y2 = intersections[second].coordinate(1);
 
-  plot_line.draw_object_ = std::make_shared<draw::Line>(
-      convert_x(x1), convert_y(y1), convert_x(x2), convert_y(y2),
-      line_style);
-  draw_layer_region_on(layer, plot_line.draw_object_);
+  plot_line.create_draw_object({}, convert_x(x1), convert_y(y1), convert_x(x2), convert_y(y2), line_style);
+  draw_layer_region_on(layer, plot_line.draw_object());
 }
 
 //--------------------------------------------------------------------------

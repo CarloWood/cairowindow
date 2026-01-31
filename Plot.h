@@ -14,6 +14,7 @@
 #include "plot/Point.h"
 #include "plot/Rectangle.h"
 #include "plot/LinePiece.h"
+#include "plot/Line.h"
 #include "cs/Point.h"
 #include "draw/PlotArea.h"
 #include "draw/Text.h"
