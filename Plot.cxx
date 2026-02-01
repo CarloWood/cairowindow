@@ -582,7 +582,7 @@ Curve Plot::create_curve(boost::intrusive_ptr<Layer> const& layer,
 cairowindow::Geometry Plot::update_grabbed(utils::Badge<Window>, ClickableIndex grabbed_point, double pixel_x, double pixel_y)
 {
   Draggable* draggable = draggables_[grabbed_point];
-  // If convert is not true then pixel_x, pixel_y are actually Point coordinates.
+  // If convert is not true then pixel_x, pixel_y are actually cairowindow::Point coordinates (aka CS::plot).
   cairowindow::Point new_position = draggable->convert() ? convert_from_pixel(Pixel{pixel_x, pixel_y}) : cairowindow::Point{pixel_x, pixel_y};
 
   if (draggable_restrictions_[grabbed_point])

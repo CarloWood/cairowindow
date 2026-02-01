@@ -7,6 +7,7 @@
 #include "Message.h"
 #include "Point.h"
 #include "Draggable.h"
+#include "plot/Point.h"
 #include "utils/AIAlert.h"
 #include "utils/threading/Semaphore.h"
 #include "utils/threading/FIFOBuffer.h"
@@ -37,6 +38,8 @@ namespace plot {
 class Plot;
 class Draggable;
 } // namespace plot
+
+template<CS> class CoordinateSystem;
 
 class Layer;
 class Printable;
@@ -79,6 +82,8 @@ class Window
   // Dragging.
   utils::Vector<Geometry, ClickableIndex> clickable_rectangles_;
   utils::Vector<plot::Plot*, ClickableIndex> clickable_plots_;
+  utils::Vector<std::function<Geometry(double, double)>, ClickableIndex> draggable_update_;     // Stores lambdas that convert the new position, (x,y) in pixels,
+                                                                                                // to the new bounding box in pixels.
   ClickableIndex grab_index_;           // The index of the object (Point) that was grabbed.
   unsigned int grab_button_;            // The mouse button that did the grabbing (only valid when grab_index is not undefined).
 
@@ -198,12 +203,26 @@ class Window
   // Called by Point::move.
   void move_draggable(plot::Draggable* draggable, ClickableIndex clickable_index, Point new_position);
 
+  template<CS cs>
+  void register_draggable(CoordinateSystem<cs>& coordinate_system,
+      plot::cs::Point<cs>* plot_point_cs,
+      std::function<cs::Point<cs> (cs::Point<cs> const&)> restriction = {})
+  {
+    // Convert a new position (x,y), in pixels, to the relocated bounding box in pixels.
+    auto update_grabbed_pixels = [&coordinate_system, plot_point_cs, restriction = std::move(restriction)](double pixel_x, double pixel_y) -> Geometry {
+      return coordinate_system.update_grabbed(plot_point_cs, pixel_x, pixel_y, restriction);
+    };
+    register_draggable_impl(plot_point_cs, std::move(update_grabbed_pixels));
+  }
+
  private:
   void send_close_event();
   void grab_mouse(unsigned int button);
   void release_mouse();
 
   ClickableIndex grab_draggable(double x, double y);
+
+  void register_draggable_impl(plot::Draggable* draggable, std::function<Geometry(double, double)> update_pixels);
 };
 
 } // namespace cairowindow

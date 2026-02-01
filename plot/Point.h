@@ -44,9 +44,11 @@ class Point : public cairowindow::cs::Point<cs>, public Draggable
   // Drawable associated with this logical point; populated by CoordinateSystem::add_point or Plot::add_point.
   mutable std::shared_ptr<draw::Point> draw_object_;
 
- private:
+ public:
   // Implementation of Draggable.
   cairowindow::Geometry const& geometry() const override;
+
+ private:
   void moved(Plot* plot, cairowindow::cs::Point<CS::plot> const& new_position) override;
   void set_position(cairowindow::cs::Point<CS::plot> const& new_position) override
   {

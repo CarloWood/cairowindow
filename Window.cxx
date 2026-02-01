@@ -391,9 +391,20 @@ void Window::close()
 void Window::register_draggable(plot::Plot& plot, plot::Draggable* draggable, std::function<Point (Point const&)> restriction)
 {
   DoutEntering(dc::cairowindow, "Window::register_draggable(@" << *draggable << ")");
+  draggable_update_.emplace_back();
   clickable_rectangles_.push_back(draggable->geometry());
   clickable_plots_.push_back(&plot);
   plot.register_draggable({}, draggable, std::move(restriction));
+}
+
+void Window::register_draggable_impl(plot::Draggable* draggable, std::function<Geometry(double, double)> update_grabbed_pixels)
+{
+  DoutEntering(dc::cairowindow, "Window::register_draggable(@" << *draggable << ")");
+  ClickableIndex index = clickable_rectangles_.iend();
+  draggable_update_.push_back(std::move(update_grabbed_pixels));
+  clickable_rectangles_.push_back(draggable->geometry());
+  clickable_plots_.push_back(nullptr);
+  draggable->set_index(index);
 }
 
 ClickableIndex Window::grab_draggable(double x, double y)
@@ -426,14 +437,18 @@ ClickableIndex Window::grab_draggable(double x, double y)
 bool Window::update_grabbed(ClickableIndex grabbed_point, double pixel_x, double pixel_y)
 {
   plot::Plot* plot = clickable_plots_[grabbed_point];
-  Geometry new_geometry = plot->update_grabbed({}, grabbed_point, pixel_x, pixel_y);
-  if (new_geometry.is_defined())
-  {
-    // Update the geometry of a draggable Point, called after it was moved.
-    clickable_rectangles_[grabbed_point] = new_geometry;
-    return true;
-  }
-  return false;
+  Geometry new_geometry;
+  if (plot)
+    new_geometry = plot->update_grabbed({}, grabbed_point, pixel_x, pixel_y);
+  else if (draggable_update_[grabbed_point])
+    new_geometry = draggable_update_[grabbed_point](pixel_x, pixel_y);
+
+  if (!new_geometry.is_defined())
+    return false;
+
+  // Update the geometry of a draggable Point, called after it was moved.
+  clickable_rectangles_[grabbed_point] = new_geometry;
+  return true;
 }
 
 void Window::move_draggable(plot::Draggable* draggable, ClickableIndex clickable_index, Point new_position)
@@ -441,6 +456,7 @@ void Window::move_draggable(plot::Draggable* draggable, ClickableIndex clickable
   // draggable must have been registered as draggable by calling register_draggable first.
   ASSERT(!clickable_index.undefined());
   plot::Plot* plot = clickable_plots_[clickable_index];
+  ASSERT(plot);
   draggable->set_position(new_position);        // Because we want to apply restrictions, if any, relative to the new position.
   plot->apply_restrictions({}, clickable_index, new_position);
   draggable->moved(plot, new_position);
