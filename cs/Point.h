@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Size.h"
+#include "math/TranslationVector.h"
 #include "math/Point.h"
 
 namespace cairowindow::cs {
@@ -54,6 +55,12 @@ class Point : public math::PointOps<PointTypes<cs>>
   // Accessors to the underlying math::Point (required for math::PointOps).
   math::Point<2>& raw() { return raw_; }
   math::Point<2> const& raw() const { return raw_; }
+
+  // Implicit converstion to math::TranslationVector<cs>, so we can pass a Point<cs> to math::Transform<>::translate.
+  operator math::TranslationVector<cs>() const
+  {
+    return math::TranslationVector<cs>::create_from_cs_values(raw_);
+  }
 
 #ifdef CWDEBUG
   void print_on(std::ostream& os) const

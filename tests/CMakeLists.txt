@@ -100,8 +100,8 @@ target_link_libraries(scale_test AICxx::cairowindow AICxx::symbolic AICxx::math 
 
 add_executable(brute_force_index_first_root brute_force_index_first_root.cxx)
 
-add_executable(4d_3d_cat 4d_3d_cat.cxx)
-target_link_libraries(4d_3d_cat AICxx::cairowindow AICxx::symbolic AICxx::math ${AICXX_OBJECTS_LIST} Eigen3::Eigen)
+#add_executable(4d_3d_cat 4d_3d_cat.cxx)
+#target_link_libraries(4d_3d_cat AICxx::cairowindow AICxx::symbolic AICxx::math ${AICXX_OBJECTS_LIST} Eigen3::Eigen)
 
 add_executable(cubic_bezier2 cubic_bezier2.cxx)
 target_link_libraries(cubic_bezier2 AICxx::cairowindow AICxx::symbolic AICxx::math ${AICXX_OBJECTS_LIST} Eigen3::Eigen)
