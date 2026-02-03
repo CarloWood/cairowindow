@@ -4,17 +4,17 @@
 
 namespace cairowindow::plot::cs {
 
-// Definition of the specialization for cs = CS::plot.
+// Definition of the specialization for cs = csid::plot.
 
 template<>
-void Point<CS::plot>::moved(Plot* plot, cairowindow::cs::Point<CS::plot> const& new_position)
+void Point<csid::plot>::moved(Plot* plot, cairowindow::cs::Point<csid::plot> const& new_position)
 {
   *this = new_position;
   plot->add_point(draw_object_->layer(), draw_object_->point_style(), *this);
 }
 
 template<>
-void Point<CS::plot>::move(Plot& UNUSED_ARG(plot), cairowindow::cs::Point<CS::plot> const& new_position)
+void Point<csid::plot>::move(Plot& UNUSED_ARG(plot), cairowindow::cs::Point<csid::plot> const& new_position)
 {
   Layer* layer = draw_object_->layer();
   Window* window = layer->window();

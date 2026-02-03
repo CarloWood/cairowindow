@@ -3,5 +3,5 @@
 #include "cs/Direction.h"
 
 namespace cairowindow {
-using Direction = cs::Direction<CS::plot>;
+using Direction = cs::Direction<csid::plot>;
 } // namespace cairowindow

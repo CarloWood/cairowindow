@@ -55,11 +55,11 @@ DECLARE_STYLE_WITH_BASE(Polyline, Line, PolylineStyleParamsDefault);
 class Polyline : public LayerRegion
 {
  private:
-  std::vector<cs::Point<CS::pixels>> points_;
+  std::vector<cs::Point<csid::pixels>> points_;
   PolylineStyle style_;
 
  public:
-  Polyline(std::vector<cs::Point<CS::pixels>> points, PolylineStyle const& style) :
+  Polyline(std::vector<cs::Point<csid::pixels>> points, PolylineStyle const& style) :
     points_(std::move(points)), style_(style)
   {
     ASSERT(points_.size() >= 2);

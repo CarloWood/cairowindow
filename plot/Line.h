@@ -66,6 +66,6 @@ class Line : public cairowindow::cs::Line<cs>
 
 // The current namespace is cairowindow::plot!
 //
-using Line = cs::Line<CS::plot>;
+using Line = cs::Line<csid::plot>;
 
 } // namespace cairowindow::plot

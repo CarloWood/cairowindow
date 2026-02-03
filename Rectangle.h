@@ -3,6 +3,6 @@
 #include "cs/Rectangle.h"
 
 namespace cairowindow {
-using Rectangle = cs::Rectangle<CS::plot>;
-using Geometry = cs::Rectangle<CS::pixels>;
+using Rectangle = cs::Rectangle<csid::plot>;
+using Geometry = cs::Rectangle<csid::pixels>;
 } // namespace cairowindow

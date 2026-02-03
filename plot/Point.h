@@ -49,8 +49,8 @@ class Point : public cairowindow::cs::Point<cs>, public Draggable
   cairowindow::Geometry const& geometry() const override;
 
  private:
-  void moved(Plot* plot, cairowindow::cs::Point<CS::plot> const& new_position) override;
-  void set_position(cairowindow::cs::Point<CS::plot> const& new_position) override
+  void moved(Plot* plot, cairowindow::cs::Point<csid::plot> const& new_position) override;
+  void set_position(cairowindow::cs::Point<csid::plot> const& new_position) override
   {
     this->x() = new_position.x();
     this->y() = new_position.y();
@@ -71,7 +71,7 @@ class Point : public cairowindow::cs::Point<cs>, public Draggable
   }
 
  public:
-  void move(Plot& plot, cairowindow::cs::Point<CS::plot> const& new_position);
+  void move(Plot& plot, cairowindow::cs::Point<csid::plot> const& new_position);
 
 #ifdef CWDEBUG
  public:
@@ -82,30 +82,30 @@ class Point : public cairowindow::cs::Point<cs>, public Draggable
 template<CS cs>
 cairowindow::Geometry const& Point<cs>::geometry() const
 {
-  // Geometry is in CS::pixels.
+  // Geometry is in csid::pixels.
   return draw_object_->geometry();
 }
 
 template<CS cs>
-void Point<cs>::moved(Plot* plot, cairowindow::cs::Point<CS::plot> const& new_position)
+void Point<cs>::moved(Plot* plot, cairowindow::cs::Point<csid::plot> const& new_position)
 {
-  // Should never call `moved` for a Point that isn't using CS::plot coordinates.
+  // Should never call `moved` for a Point that isn't using csid::plot coordinates.
   ASSERT(false);
 }
 
-// Declare specializations of moved and move for CS::plot.
+// Declare specializations of moved and move for csid::plot.
 
 template<>
-void Point<CS::plot>::moved(Plot* plot, cairowindow::cs::Point<CS::plot> const& new_position);
+void Point<csid::plot>::moved(Plot* plot, cairowindow::cs::Point<csid::plot> const& new_position);
 
 template<>
-void Point<CS::plot>::move(Plot& UNUSED_ARG(plot), cairowindow::cs::Point<CS::plot> const& new_position);
+void Point<csid::plot>::move(Plot& UNUSED_ARG(plot), cairowindow::cs::Point<csid::plot> const& new_position);
 
 } // namespace cs
 
 // The current namespace is cairowindow::plot!
 //
 // See remark above plot::cs::Point.
-using Point = cs::Point<CS::plot>;
+using Point = cs::Point<csid::plot>;
 
 } // namespace cairowindow::plot

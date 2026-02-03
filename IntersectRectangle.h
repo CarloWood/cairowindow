@@ -10,7 +10,7 @@ using utils::has_print_on::operator<<;
 class StrokeExtents;
 
 template<CS cs>
-requires (cs == CS::pixels || cs == CS::plot)
+requires (cs == csid::pixels || cs == csid::plot)
 class IntersectRectangle
 {
  private:
@@ -22,7 +22,7 @@ class IntersectRectangle
  public:
   IntersectRectangle() = default;
 
-  inline IntersectRectangle(StrokeExtents const& stroke_extents) requires (cs == CS::pixels);   // Defined after StrokeExtents.
+  inline IntersectRectangle(StrokeExtents const& stroke_extents) requires (cs == csid::pixels);   // Defined after StrokeExtents.
 
   IntersectRectangle(cs::Rectangle<cs> const& rectangle) :
     x1_(rectangle.offset_x()), y1_(rectangle.offset_y()),

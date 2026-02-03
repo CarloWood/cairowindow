@@ -51,7 +51,7 @@ class Vector : public math::VectorOps<VectorTypes<cs>>
   explicit Vector(math::Vector<2> const& raw) : raw_(raw) { }
 
   // Convert the vector to a Pixel.
-  Point<CS::pixels> as_pixel() const { return {this->x(), this->y()}; }
+  Point<csid::pixels> as_pixel() const { return {this->x(), this->y()}; }
 
   math::Vector<2>& raw() { return raw_; }
   math::Vector<2> const& raw() const { return raw_; }

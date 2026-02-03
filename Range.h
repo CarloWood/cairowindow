@@ -1,7 +1,7 @@
 #pragma once
 
-#include <cmath>
 #include "utils/has_print_on.h"
+#include <cmath>
 #include <iostream>
 
 namespace cairowindow {

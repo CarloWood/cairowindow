@@ -70,6 +70,6 @@ class Rectangle : public cairowindow::cs::Rectangle<cs>
 
 // The current namespace is cairowindow::plot!
 //
-using Rectangle = cs::Rectangle<CS::plot>;
+using Rectangle = cs::Rectangle<csid::plot>;
 
 } // namespace cairowindow::plot

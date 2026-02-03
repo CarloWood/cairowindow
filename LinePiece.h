@@ -3,5 +3,5 @@
 #include "cs/LinePiece.h"
 
 namespace cairowindow {
-using LinePiece = cs::LinePiece<CS::plot>;
+using LinePiece = cs::LinePiece<csid::plot>;
 } // namespace cairowindow

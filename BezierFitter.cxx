@@ -55,7 +55,7 @@ void vals2coeffs7(std::array<Vector, 7>& out, Vector P0, Vector P1, Vector P2, V
 
 } // namespace
 
-void BezierFitter::solve(std::function<Point(double)> const& func, IntersectRectangle<CS::plot> const& viewport, double tolerance,
+void BezierFitter::solve(std::function<Point(double)> const& func, IntersectRectangle<csid::plot> const& viewport, double tolerance,
     double const t0, double const t6, BezierCurve::Vector const P0, BezierCurve::Vector const P3, BezierCurve::Vector const P6)
 {
   using Vector = BezierCurve::Vector;
@@ -64,7 +64,7 @@ void BezierFitter::solve(std::function<Point(double)> const& func, IntersectRect
   static constexpr double chebpt7_5 = 0.5 + 0.25 * sqrt3;
 
   double td = t6 - t0;
-  // Use .raw() here: we drop the knowledge about the fact that this is in CS::plot coordinates, and just work with math:: types.
+  // Use .raw() here: we drop the knowledge about the fact that this is in csid::plot coordinates, and just work with math:: types.
   Vector P1{func(t0 + td * chebpt7_1).raw()};
   Vector P2{func(t0 + td * 0.25).raw()};
   Vector P4{func(t0 + td * 0.75).raw()};
@@ -143,7 +143,7 @@ void BezierFitter::solve(std::function<Point(double)>&& func, Range const& domai
 
 void BezierFitter::solve(std::function<void(Point p, Vector v)> const& draw_line,
     std::function<Point(double)> const& P, std::function<Vector(double)> const& T,
-    IntersectRectangle<CS::plot> const& viewport, double fraction, Orientation orientation,
+    IntersectRectangle<csid::plot> const& viewport, double fraction, Orientation orientation,
     double t0, double t4, BezierCurve::Point P0, BezierCurve::Vector T0, BezierCurve::Point P2, BezierCurve::Point P4, BezierCurve::Vector T4)
 {
   DoutEntering(dc::notice, "BezierFitter::solve(P, T, " << viewport << ", " << fraction << ", " << orientation << ", " <<
@@ -160,7 +160,7 @@ void BezierFitter::solve(std::function<void(Point p, Vector v)> const& draw_line
   double t1             = 0.5 * (t0 + t2);  // 1 is in between 0 and 2.
   double         t3     = 0.5 * (t2 + t4);  // 3 is in between 2 and 4.
 
-  // Use .raw() here: we drop the knowledge about the fact that this is in CS::plot coordinates, and just work with math:: types.
+  // Use .raw() here: we drop the knowledge about the fact that this is in csid::plot coordinates, and just work with math:: types.
   Point P1{P(t1).raw()};        // The point at t1.
   Vector T2{T(t2).raw()};       // The tangent of P2 (P2 itself is provided as input).
   Point P3{P(t3).raw()};        // The point at t3.
@@ -219,7 +219,7 @@ void BezierFitter::solve(std::function<void(Point p, Vector v)> const& draw_line
   double t0 = domain.min();
   double t1 = domain.max();
   depth_ = 0;
-  // Use .raw() here: we drop the knowledge about the fact that this is in CS::plot coordinates, and just work with math:: types.
+  // Use .raw() here: we drop the knowledge about the fact that this is in csid::plot coordinates, and just work with math:: types.
   solve(draw_line, P, T, viewport, fraction, orientation, t0, t1, P(t0).raw(), T(t0).raw(), P(0.5 * (t0 + t1)).raw(), P(t1).raw(), T(t1).raw());
 }
 

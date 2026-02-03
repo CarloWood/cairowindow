@@ -48,7 +48,7 @@ class StrokeExtents
 
   bool clip(Geometry const& geometry)
   {
-    IntersectRectangle<CS::pixels> intersection(geometry, *this);
+    IntersectRectangle<csid::pixels> intersection(geometry, *this);
     double width = intersection.x2() - intersection.x1();
     double height = intersection.y2() - intersection.y1();
     if (width <= 0.0 || height <= 0.0)
@@ -102,10 +102,10 @@ class StrokeExtents
   }
 };
 
-// Specialization for CS::pixels.
+// Specialization for csid::pixels.
 template<CS cs>
-requires (cs == CS::pixels || cs == CS::plot)
-IntersectRectangle<cs>::IntersectRectangle(StrokeExtents const& stroke_extents) requires (cs == CS::pixels) :
+requires (cs == csid::pixels || cs == csid::plot)
+IntersectRectangle<cs>::IntersectRectangle(StrokeExtents const& stroke_extents) requires (cs == csid::pixels) :
   x1_(stroke_extents.x1()), y1_(stroke_extents.y1()),
   x2_(x1_ + stroke_extents.width()), y2_(y1_ + stroke_extents.height()) { }
 

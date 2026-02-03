@@ -357,8 +357,8 @@ void Plot::add_line(boost::intrusive_ptr<Layer> const& layer,
     draw::LineStyle const& line_style,
     plot::Line const& plot_line)
 {
-  cairowindow::cs::Direction<CS::plot> const& direction = plot_line.direction();
-  cairowindow::cs::Point<CS::plot> const& point = plot_line.point();
+  cairowindow::cs::Direction<csid::plot> const& direction = plot_line.direction();
+  cairowindow::cs::Point<csid::plot> const& point = plot_line.point();
 
   double normal_x = -direction.y();
   double normal_y = direction.x();
@@ -582,7 +582,7 @@ Curve Plot::create_curve(boost::intrusive_ptr<Layer> const& layer,
 cairowindow::Geometry Plot::update_grabbed(utils::Badge<Window>, ClickableIndex grabbed_point, double pixel_x, double pixel_y)
 {
   Draggable* draggable = draggables_[grabbed_point];
-  // If convert is not true then pixel_x, pixel_y are actually cairowindow::Point coordinates (aka CS::plot).
+  // If convert is not true then pixel_x, pixel_y are actually cairowindow::Point coordinates (aka csid::plot).
   cairowindow::Point new_position = draggable->convert() ? convert_from_pixel(Pixel{pixel_x, pixel_y}) : cairowindow::Point{pixel_x, pixel_y};
 
   if (draggable_restrictions_[grabbed_point])
