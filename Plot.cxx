@@ -130,6 +130,18 @@ void Plot::add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio)
     draw_layer_region_on(layer, ylabel_);
   }
 
+  // Initialize plot_transform_pixels_ such that it replaces convert_x/convert_y.
+  // x' = (x - xmin) / xrange * width + offset_x
+  // y' = (ymax - y) / yrange * height + offset_y
+  cairowindow::Geometry const& g = plot_area_.geometry();
+  double const sx = g.width() / range_[x_axis].size();
+  double const sy = g.height() / range_[y_axis].size();
+  double const tx = g.offset_x() - range_[x_axis].min() * sx;
+  double const ty = g.offset_y() + range_[y_axis].max() * sy;
+  plot_transform_pixels_ = math::Transform<csid::plot, csid::pixels>{}
+    .translate(math::TranslationVector<csid::pixels>::create_from_cs_values(tx, ty))
+    .scale(sx, -sy);
+
   // Register this plot and its geometry with the associated Window so that we can find which printable is under the mouse if needed.
   layer->window()->add_printable(this);
 }
@@ -268,7 +280,8 @@ void Plot::add_point(boost::intrusive_ptr<Layer> const& layer,
   double x = plot_point.x();
   double y = plot_point.y();
 
-  plot_point.create_draw_object({}, convert_x(x), convert_y(y), point_style);
+  auto const [pixel_x, pixel_y] = plot_transform_pixels_.map_point(x, y);
+  plot_point.create_draw_object({}, pixel_x, pixel_y, point_style);
   draw_layer_region_on(layer, plot_point.draw_object());
 }
 
@@ -579,7 +592,7 @@ Curve Plot::create_curve(boost::intrusive_ptr<Layer> const& layer,
   return plot_curve;
 }
 
-cairowindow::Geometry Plot::update_grabbed(utils::Badge<Window>, ClickableIndex grabbed_point, double pixel_x, double pixel_y)
+cairowindow::Geometry Plot::update_grabbed(utils::Badge<Window> badge, ClickableIndex grabbed_point, double pixel_x, double pixel_y)
 {
   Draggable* draggable = draggables_[grabbed_point];
   // If convert is not true then pixel_x, pixel_y are actually cairowindow::Point coordinates (aka csid::plot).
@@ -588,8 +601,24 @@ cairowindow::Geometry Plot::update_grabbed(utils::Badge<Window>, ClickableIndex 
   if (draggable_restrictions_[grabbed_point])
     new_position = draggable_restrictions_[grabbed_point](new_position);
 
-  draggable->moved(this, new_position);
+  return update_draggable(badge, grabbed_point, new_position);
+}
 
+// Called by Window when the user dragged a draggable to new_position.
+cairowindow::Geometry Plot::update_draggable(utils::Badge<Window>, ClickableIndex draggable_index, cairowindow::Point const& new_position)
+{
+  Draggable* draggable = draggables_[draggable_index];
+
+  // Points need to be redrawn using Plot::add_point (because conversion to pixels is Plot specific).
+  if (auto* plot_point = dynamic_cast<Point*>(draggable))
+  {
+    *plot_point = new_position;
+    auto const& draw_object = plot_point->draw_object();
+    add_point(draw_object->layer(), draw_object->point_style(), *plot_point);
+    return plot_point->geometry();
+  }
+
+  draggable->moved(new_position);
   return draggable->geometry();
 }
 

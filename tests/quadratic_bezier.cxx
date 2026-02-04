@@ -351,7 +351,9 @@ int main()
       Direction symmetry_line_dir = perpendicular_to_symmetry_line_dir.rotated_90_degrees();
       phi = M_PI - 2.0 * (M_PI - velocityv_dir.as_angle());
       Point new_Q = P0P1_circle_center + 0.5 * Direction{phi};
-      static_cast<plot::Draggable&>(plot_Q).moved(&plot, new_Q);
+      plot_Q = new_Q;
+      auto const& draw_object = plot_Q.draw_object();
+      plot.add_point(draw_object->layer(), draw_object->point_style(), plot_Q);
 
       // Draw a label for Q.
       auto Q_label = plot.create_text(second_layer, label_style, plot_Q, "Q");

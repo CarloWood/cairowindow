@@ -15,6 +15,7 @@
 #include "draw/Circle.h"
 #include "draw/Connector.h"
 #include "intersection_points.h"
+#include "Printable.h"
 #include "math/Hyperblock.h"
 #include "math/Transform.h"
 #include <boost/intrusive_ptr.hpp>
@@ -71,7 +72,7 @@ namespace cairowindow {
 //     Call once per CoordinateSystem instance.
 //
 template<CS cs>
-class CoordinateSystem
+class CoordinateSystem : public Printable
 {
   static constexpr int x_axis = 0;
   static constexpr int y_axis = 1;
@@ -111,6 +112,11 @@ class CoordinateSystem
   ~CoordinateSystem()
   {
     DoutEntering(dc::notice, "CoordinateSystem::~CoordinateSystem() [" << this << "]");
+  }
+
+  Geometry const& geometry() const override
+  {
+    return window_geometry_;
   }
 
   void set_range(int axis, cs::Range<cs> range)
@@ -564,7 +570,7 @@ void CoordinateSystem<cs>::add_point(LayerPtr const& layer, draw::PointStyle con
   cs::Point<csid::pixels> point_pixels = plot_point_cs * cs_transform_pixels_;
 
   plot_point_cs.create_draw_object({}, point_pixels.x(), point_pixels.y(), point_style);
-  layer->draw(plot_point_cs.draw_object());
+  draw_layer_region_on(layer, plot_point_cs.draw_object());
 }
 
 template<CS cs>
@@ -696,11 +702,17 @@ Size<to_cs>
 operator*(Size<from_cs> const& size, math::Transform<from_cs, to_cs, inverted, AffineTransformBackend> const& transform)
 {
   // Just scale; scale the X and Y axis vectors by the full linear part.
-  double const scale = transform.scale();
   if constexpr (!inverted)
-    return {size.width() * scale, size.height() * scale};
+  {
+    auto const [sx, sy] = transform.scale_factors();
+    return {size.width() * sx, size.height() * sy};
+  }
   else
-    return {size.width() / scale, size.height() / scale};
+  {
+    auto const inv = transform.inverted();
+    auto const [sx, sy] = inv.scale_factors();
+    return {size.width() * sx, size.height() * sy};
+  }
 }
 
 template<CS from_cs, CS to_cs, bool inverted, math::AffineTransformConcept AffineTransformBackend>

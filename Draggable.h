@@ -19,7 +19,6 @@ using utils::has_print_on::operator<<;
 using ClickableIndex = utils::VectorIndex<Rectangle>;
 
 namespace plot {
-class Plot;
 
 namespace cs {
 template<CS cs> class Point;            // Forward declaration of plot::cs::Point.
@@ -33,7 +32,7 @@ struct Draggable
 
   virtual cairowindow::Geometry const& geometry() const = 0;
   virtual void set_position(cairowindow::Point const& new_position) = 0;
-  virtual void moved(Plot* plot, cairowindow::Point const& new_position) = 0;
+  virtual void moved(cairowindow::Point const& new_position) = 0;
   virtual bool convert() const { return true; }
 
   void set_index(ClickableIndex index)

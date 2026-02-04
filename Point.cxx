@@ -1,16 +1,15 @@
 #include "sys.h"
-#include "Plot.h"
 #include "Layer.h"
+#include "plot/Point.h"
 
 namespace cairowindow::plot::cs {
 
 // Definition of the specialization for cs = csid::plot.
 
 template<>
-void Point<csid::plot>::moved(Plot* plot, cairowindow::cs::Point<csid::plot> const& new_position)
+void Point<csid::plot>::moved(cairowindow::Point const& new_position)
 {
   *this = new_position;
-  plot->add_point(draw_object_->layer(), draw_object_->point_style(), *this);
 }
 
 template<>

@@ -27,7 +27,7 @@ namespace cs {
 // Note that adding and/or subtracting a Vector and/or Direction to/from this Point class
 // returns a cairowindow::cs::Point<cs>, an object outside of namespace plot.
 // The reason for that is that this object, inside namespace plot, represents a *plotted* point.
-// Doing calculations with, does not magically plot the result as well.
+// Doing calculations with it, does not magically plot the result as well.
 //
 template<CS cs>
 class Point : public cairowindow::cs::Point<cs>, public Draggable
@@ -49,8 +49,8 @@ class Point : public cairowindow::cs::Point<cs>, public Draggable
   cairowindow::Geometry const& geometry() const override;
 
  private:
-  void moved(Plot* plot, cairowindow::cs::Point<csid::plot> const& new_position) override;
-  void set_position(cairowindow::cs::Point<csid::plot> const& new_position) override
+  void moved(cairowindow::Point const& new_position) override;
+  void set_position(cairowindow::Point const& new_position) override
   {
     this->x() = new_position.x();
     this->y() = new_position.y();
@@ -87,7 +87,7 @@ cairowindow::Geometry const& Point<cs>::geometry() const
 }
 
 template<CS cs>
-void Point<cs>::moved(Plot* plot, cairowindow::cs::Point<csid::plot> const& new_position)
+void Point<cs>::moved(cairowindow::Point const& new_position)
 {
   // Should never call `moved` for a Point that isn't using csid::plot coordinates.
   ASSERT(false);
@@ -96,7 +96,7 @@ void Point<cs>::moved(Plot* plot, cairowindow::cs::Point<csid::plot> const& new_
 // Declare specializations of moved and move for csid::plot.
 
 template<>
-void Point<csid::plot>::moved(Plot* plot, cairowindow::cs::Point<csid::plot> const& new_position);
+void Point<csid::plot>::moved(cairowindow::Point const& new_position);
 
 template<>
 void Point<csid::plot>::move(Plot& UNUSED_ARG(plot), cairowindow::cs::Point<csid::plot> const& new_position);

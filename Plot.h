@@ -27,6 +27,7 @@
 #include "draw/BezierCurve.h"
 #include "draw/BezierFitter.h"
 #include "draw/Slider.h"
+#include "math/Transform.h"
 #include "utils/Vector.h"
 #include "utils/Badge.h"
 #include <boost/intrusive_ptr.hpp>
@@ -239,6 +240,9 @@ class Plot : public Printable
   double convert_x(double x) const;
   double convert_y(double y) const;
   Pixel convert_to_pixel(cairowindow::Point const& point) const;
+
+  // Transformation from plot coordinates to pixels. This is initialized in Plot::add_to.
+  math::Transform<csid::plot, csid::pixels> plot_transform_pixels_;
 
   double convert_from_pixel_x(double pixel_x) const;
   double convert_from_pixel_y(double pixel_y) const;
@@ -632,6 +636,8 @@ class Plot : public Printable
     draggable->set_index(next_index);
     draggable_restrictions_.emplace_back(std::move(restriction));
   }
+  // Called from Window::update_grabbed and Window::move_draggable.
+  cairowindow::Geometry update_draggable(utils::Badge<Window>, ClickableIndex draggable_index, cairowindow::Point const& new_position);
   cairowindow::Geometry update_grabbed(utils::Badge<Window>, ClickableIndex grabbed_point, double pixel_x, double pixel_y);
   void apply_restrictions(utils::Badge<Window>, ClickableIndex clickable_index, cairowindow::Point& new_position);
 

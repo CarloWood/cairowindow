@@ -67,7 +67,7 @@ void Slider::draw_regions_on(Layer* layer)
   layer->draw(handle_);
 }
 
-void Slider::moved(plot::Plot* plot, cs::Point<csid::plot> const& new_position)
+void Slider::moved(cairowindow::Point const& new_position)
 {
   bool orientation = track_->orientation();
   if (orientation == SliderTrack::horizontal)

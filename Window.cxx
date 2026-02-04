@@ -459,8 +459,7 @@ void Window::move_draggable(plot::Draggable* draggable, ClickableIndex clickable
   ASSERT(plot);
   draggable->set_position(new_position);        // Because we want to apply restrictions, if any, relative to the new position.
   plot->apply_restrictions({}, clickable_index, new_position);
-  draggable->moved(plot, new_position);
-  clickable_rectangles_[clickable_index] = draggable->geometry();
+  clickable_rectangles_[clickable_index] = plot->update_draggable({}, clickable_index, new_position);
 }
 
 Printable* Window::find_printable(int mouse_x, int mouse_y)

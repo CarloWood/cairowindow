@@ -137,7 +137,7 @@ class Slider : public MultiRegion, public plot::Draggable
 
   // Implementation of plot::Draggable.
   cairowindow::Geometry const& geometry() const override { return handle_->geometry(); }
-  void moved(plot::Plot* plot, cairowindow::Point const& new_position) override;
+  void moved(cairowindow::Point const& new_position) override;
   void set_position(cairowindow::Point const& new_position) override
   {
     // Moving a slider with a Point value not implemented.
