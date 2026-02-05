@@ -16,7 +16,7 @@
 
 namespace cairowindow {
 
-// Type passed to CoordinateMapper<cs>::add_line_piece; determines if a line piece is extended beyond the given end points.
+// Type passed to CoordinateMapper<cs>::add_clipped_line_piece; determines if a line piece is extended beyond the given end points.
 enum class LineExtend
 {
   none = 0,
@@ -82,7 +82,7 @@ class CoordinateMapper : public Printable
   // LinePiece
 
   // Add and draw cs_line_piece on layer using line_style and line_extend, clipped to clip_rectangle_cs.
-  void add_line_piece(LayerPtr const& layer, draw::LineStyle const& line_style, LineExtend line_extend,
+  void add_clipped_line_piece(LayerPtr const& layer, draw::LineStyle const& line_style, LineExtend line_extend,
       LinePieceHandle const& plot_line_piece_cs, math::Hyperblock<2> const& clip_rectangle_cs);
 };
 
@@ -243,7 +243,7 @@ inline void apply_line_extend(double& x1, double& y1, double& x2, double& y2, Li
 } // namespace detail
 
 template<CS cs>
-void CoordinateMapper<cs>::add_line_piece(LayerPtr const& layer, draw::LineStyle const& line_style, LineExtend line_extend,
+void CoordinateMapper<cs>::add_clipped_line_piece(LayerPtr const& layer, draw::LineStyle const& line_style, LineExtend line_extend,
     LinePieceHandle const& plot_line_piece_cs, math::Hyperblock<2> const& clip_rectangle_cs)
 {
   cs::Point<cs> const& from = plot_line_piece_cs.from();

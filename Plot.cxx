@@ -279,24 +279,14 @@ void Plot::convert_to_pixels(cairowindow::Point const* data_in, Pixel* data_out,
 }
 
 //--------------------------------------------------------------------------
-// Point
-
-void Plot::add_point(boost::intrusive_ptr<Layer> const& layer,
-    draw::PointStyle const& point_style,
-    plot::Point const& plot_point)
-{
-  CoordinateMapper<csid::plot>::add_point(layer, point_style, plot_point);
-}
-
-//--------------------------------------------------------------------------
 // LinePiece
 
-void Plot::add_line(boost::intrusive_ptr<Layer> const& layer,
+void Plot::add_line_piece(boost::intrusive_ptr<Layer> const& layer,
     draw::LineStyle const& line_style, LineExtend line_extend,
     LinePiece const& plot_line_piece)
 {
   math::Hyperblock<2> rectangle({range_[x_axis].min(), range_[y_axis].min()}, {range_[x_axis].max(), range_[y_axis].max()});
-  add_line_piece(layer, line_style, line_extend, plot_line_piece, rectangle);
+  add_clipped_line_piece(layer, line_style, line_extend, plot_line_piece, rectangle);
 }
 
 //--------------------------------------------------------------------------
@@ -331,15 +321,6 @@ void Plot::add_line(boost::intrusive_ptr<Layer> const& layer,
 {
   math::Hyperblock<2> rectangle({range_[x_axis].min(), range_[y_axis].min()}, {range_[x_axis].max(), range_[y_axis].max()});
   add_clipped_line(layer, line_style, plot_line, rectangle);
-}
-
-//--------------------------------------------------------------------------
-// Rectangle
-
-void Plot::add_rectangle(boost::intrusive_ptr<Layer> const& layer,
-    draw::RectangleStyle const& rectangle_style, Rectangle const& plot_rectangle)
-{
-  CoordinateMapper<csid::plot>::add_rectangle(layer, rectangle_style, plot_rectangle);
 }
 
 //--------------------------------------------------------------------------

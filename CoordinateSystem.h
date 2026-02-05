@@ -88,16 +88,16 @@ class CoordinateSystem : public CoordinateMapper<cs>
 
  private:
   using LayerPtr = boost::intrusive_ptr<Layer>;
+
   using PointHandle     = plot::cs::Point<cs>;
   using RectangleHandle = plot::cs::Rectangle<cs>;
   using LineHandle      = plot::cs::Line<cs>;
+
  protected:
   // Bring base class members into scope (dependent base).
   using CoordinateMapper<cs>::cs_transform_pixels_;
 
  public:
-  using CoordinateMapper<cs>::add_point;
-  using CoordinateMapper<cs>::update_grabbed;
 //  using LinePiecePtr = std::shared_ptr<LinePiece<cs>>;
 //  using CirclePtr = std::shared_ptr<Circle<cs>>;
 //  using ArcPtr = std::shared_ptr<Arc<cs>>;
@@ -271,12 +271,6 @@ class CoordinateSystem : public CoordinateMapper<cs>
     add_line(layer, line_style, plot_line_cs);
     return plot_line_cs;
   }
-
-  //--------------------------------------------------------------------------
-  // Rectangle
-
-  // Add and draw plot_rectangle_cs on layer, using rectangle_style.
-  void add_rectangle(LayerPtr const& layer, draw::RectangleStyle const& rectangle_style, RectangleHandle const& plot_rectangle_cs);
 
  public:
   // Create and draw a rectangle on layer, using args... and rectangle_style.
@@ -586,15 +580,6 @@ void CoordinateSystem<cs>::add_line(LayerPtr const& layer, draw::LineStyle const
       {rectangle_cs.offset_x(), rectangle_cs.offset_y()},
       {rectangle_cs.offset_x() + rectangle_cs.width(), rectangle_cs.offset_y() + rectangle_cs.height()});
   this->add_clipped_line(layer, line_style, plot_line_cs, clip_rectangle_cs);
-}
-
-//--------------------------------------------------------------------------
-// Rectangle
-
-template<CS cs>
-void CoordinateSystem<cs>::add_rectangle(LayerPtr const& layer, draw::RectangleStyle const& rectangle_style, RectangleHandle const& plot_rectangle_cs)
-{
-  CoordinateMapper<cs>::add_rectangle(layer, rectangle_style, plot_rectangle_cs);
 }
 
 #if 0

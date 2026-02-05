@@ -248,14 +248,6 @@ class Plot : public CoordinateMapper<csid::plot>
     convert_to_pixels(in.data(), out.data(), size);
   }
 
-  //--------------------------------------------------------------------------
-  // Point
-
-  // Add and draw plot_point on layer using point_style.
-  void add_point(boost::intrusive_ptr<Layer> const& layer,
-      draw::PointStyle const& point_style,
-      plot::Point const& plot_point);
-
  public:
   // Create and draw a point on layer at x,y using point_style.
   [[nodiscard]] plot::Point create_point(boost::intrusive_ptr<Layer> const& layer,
@@ -271,15 +263,9 @@ class Plot : public CoordinateMapper<csid::plot>
   // LinePiece
 
   // Add and draw plot_line_piece on layer using line_style and line_extend.
-  void add_line(boost::intrusive_ptr<Layer> const& layer,
+  void add_line_piece(boost::intrusive_ptr<Layer> const& layer,
       draw::LineStyle const& line_style, LineExtend line_extend,
       LinePiece const& plot_line_piece);
-
- private:
-  void add_line( // Do not pass a cairowindow::LinePiece to this function! It must be a plot::LinePiece.
-      boost::intrusive_ptr<Layer> const& layer,
-      draw::LineStyle const& line_style, LineExtend line_extend,
-      LinePiece&& plot_line_piece);
 
  public:
   // Create and draw a line piece between points from and to using line_style and line_extend.
@@ -290,7 +276,7 @@ class Plot : public CoordinateMapper<csid::plot>
     requires requires(Args&&... args) { LinePiece{std::forward<Args>(args)...}; }
   {
     LinePiece plot_line_piece(std::forward<Args>(args)...);
-    add_line(layer, line_style, line_extend, plot_line_piece);
+    add_line_piece(layer, line_style, line_extend, plot_line_piece);
     return plot_line_piece;
   }
 
@@ -302,7 +288,7 @@ class Plot : public CoordinateMapper<csid::plot>
     requires requires(Args&&... args) { LinePiece{std::forward<Args>(args)...}; }
   {
     LinePiece plot_line_piece(std::forward<Args>(args)...);
-    add_line(layer, line_style, LineExtend::none, plot_line_piece);
+    add_line_piece(layer, line_style, LineExtend::none, plot_line_piece);
     return plot_line_piece;
   }
 
@@ -380,16 +366,6 @@ class Plot : public CoordinateMapper<csid::plot>
     add_line(layer, line_style, plot_line);
     return plot_line;
   }
-
-  //--------------------------------------------------------------------------
-  // Rectangle
-
-  // Add and draw plot_rectangle on layer, using rectangle_style.
-  void add_rectangle(boost::intrusive_ptr<Layer> const& layer, draw::RectangleStyle const& rectangle_style, Rectangle const& plot_rectangle);
-
- private:
-  void add_rectangle( // Do not pass a cairowindow::Rectangle to this function! It must be a plot::Rectangle.
-      boost::intrusive_ptr<Layer> const& layer, draw::RectangleStyle const& rectangle_style, Rectangle&& plot_rectangle);
 
  public:
   // Create and draw a rectangle on layer, using args... and rectangle_style.
