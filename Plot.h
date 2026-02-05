@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Printable.h"
+#include "CoordinateMapper.h"
 #include "Range.h"
 #include "Circle.h"
 #include "Text.h"
@@ -27,7 +27,6 @@
 #include "draw/BezierCurve.h"
 #include "draw/BezierFitter.h"
 #include "draw/Slider.h"
-#include "math/Transform.h"
 #include "utils/Vector.h"
 #include "utils/Badge.h"
 #include <boost/intrusive_ptr.hpp>
@@ -174,7 +173,7 @@ DECLARE_STYLE_WITH_BASE(Label, TextBase, plot::LabelStyleDefaults)
 } // namespace draw
 namespace plot {
 
-class Plot : public Printable
+class Plot : public CoordinateMapper<csid::plot>
 {
  public:
   using Vector = math::Vector<2>;
@@ -218,6 +217,7 @@ class Plot : public Printable
     range_[axis] = range;
     range_ticks_[axis] = draw::PlotArea::calculate_range_ticks(range_[axis]);
     Dout(dc::cairowindow, "range_[" << axis << "] = " << range_[axis] << "; range_ticks_[" << axis << "] = " << range_ticks_[axis]);
+    update_plot_transform_pixels();
   }
 
   void set_xrange(Range x_range) { set_range(x_axis, x_range); }
@@ -240,9 +240,6 @@ class Plot : public Printable
   double convert_x(double x) const;
   double convert_y(double y) const;
   Pixel convert_to_pixel(cairowindow::Point const& point) const;
-
-  // Transformation from plot coordinates to pixels. This is initialized in Plot::add_to.
-  math::Transform<csid::plot, csid::pixels> plot_transform_pixels_;
 
   double convert_from_pixel_x(double pixel_x) const;
   double convert_from_pixel_y(double pixel_y) const;
@@ -616,6 +613,7 @@ class Plot : public Printable
   //--------------------------------------------------------------------------
 
  private:
+  void update_plot_transform_pixels();
   void curve_to_bezier_curves(boost::intrusive_ptr<Layer> const& layer,
       Curve const& plot_curve, draw::BezierCurveStyle const& bezier_curve_style);
 

@@ -15,7 +15,7 @@
 #include "draw/Circle.h"
 #include "draw/Connector.h"
 #include "intersection_points.h"
-#include "Printable.h"
+#include "CoordinateMapper.h"
 #include "math/Hyperblock.h"
 #include "math/Transform.h"
 #include <boost/intrusive_ptr.hpp>
@@ -72,14 +72,13 @@ namespace cairowindow {
 //     Call once per CoordinateSystem instance.
 //
 template<CS cs>
-class CoordinateSystem : public Printable
+class CoordinateSystem : public CoordinateMapper<cs>
 {
   static constexpr int x_axis = 0;
   static constexpr int y_axis = 1;
   static constexpr int number_of_axes = 2;
 
  private:
-  math::Transform<cs, csid::pixels> cs_transform_pixels_;                       // The Transform defining this CoordinateSystem.
   cs::Point<csid::pixels> csOrigin_pixels_;                                     // The origin in pixels.
   std::array<cs::Direction<csid::pixels>, number_of_axes> csAxisDirection_;     // The direction of the x-axis and y-axis (in csid::pixels).
   std::vector<std::shared_ptr<draw::Line>> lines_;                              // To keep drawn lines alive.
@@ -92,6 +91,13 @@ class CoordinateSystem : public Printable
   using PointHandle     = plot::cs::Point<cs>;
   using RectangleHandle = plot::cs::Rectangle<cs>;
   using LineHandle      = plot::cs::Line<cs>;
+ protected:
+  // Bring base class members into scope (dependent base).
+  using CoordinateMapper<cs>::cs_transform_pixels_;
+
+ public:
+  using CoordinateMapper<cs>::add_point;
+  using CoordinateMapper<cs>::update_grabbed;
 //  using LinePiecePtr = std::shared_ptr<LinePiece<cs>>;
 //  using CirclePtr = std::shared_ptr<Circle<cs>>;
 //  using ArcPtr = std::shared_ptr<Arc<cs>>;
@@ -154,12 +160,6 @@ class CoordinateSystem : public Printable
 
   //--------------------------------------------------------------------------
   // Point
-
-  // Add and draw cs_point on layer using point_style.
-  void add_point(LayerPtr const& layer, draw::PointStyle const& point_style, PointHandle const& plot_point_cs);
-
-  // Called by Window::update_grabbed through the lambda defined in Window::register_draggable<cs> when a Draggable plot_point_cs was moved to (pixel_x, pixel_y).
-  Geometry update_grabbed(plot::cs::Point<cs>* plot_point_cs, double pixel_x, double pixel_y, std::function<cs::Point<cs> (cs::Point<cs> const&)> const& restriction);
 
  public:
   // Create and draw a point on layer at x,y using point_style.
@@ -415,7 +415,7 @@ std::tuple<int, std::array<cs::Point<cs>, 2>> intersect(cs::Line<cs> line_cs, ma
 
 template<CS cs>
 CoordinateSystem<cs>::CoordinateSystem(math::Transform<cs, csid::pixels> const cs_transform_pixels, Geometry window_geometry) :
-  cs_transform_pixels_(cs_transform_pixels), window_geometry_(window_geometry)
+  CoordinateMapper<cs>(cs_transform_pixels), window_geometry_(window_geometry)
 {
   DoutEntering(dc::notice, "CoordinateSystem::CoordinateSystem(" << cs_transform_pixels << ") [" << this << "]");
 
@@ -561,37 +561,6 @@ void CoordinateSystem<cs>::display(LayerPtr const& layer, draw::LineStyle const&
 }
 
 //--------------------------------------------------------------------------
-// Point
-
-template<CS cs>
-void CoordinateSystem<cs>::add_point(LayerPtr const& layer, draw::PointStyle const& point_style, PointHandle const& plot_point_cs)
-{
-  // Convert from the coordinate-system space to pixels using the transform supplied at construction.
-  cs::Point<csid::pixels> point_pixels = plot_point_cs * cs_transform_pixels_;
-
-  plot_point_cs.create_draw_object({}, point_pixels.x(), point_pixels.y(), point_style);
-  draw_layer_region_on(layer, plot_point_cs.draw_object());
-}
-
-template<CS cs>
-Geometry CoordinateSystem<cs>::update_grabbed(plot::cs::Point<cs>* plot_point_cs, double pixel_x, double pixel_y, std::function<cs::Point<cs> (cs::Point<cs> const&)> const& restriction)
-{
-  cs::Point<csid::pixels> const new_position_pixels{pixel_x, pixel_y};
-  cs::Point<cs> new_position_cs = new_position_pixels * cs_transform_pixels_.inverse();
-
-  if (restriction)
-    new_position_cs = restriction(new_position_cs);
-
-  *plot_point_cs = new_position_cs;
-
-  auto const& draw_object = plot_point_cs->draw_object();
-  add_point(draw_object->layer(), draw_object->point_style(), *plot_point_cs);
-
-  return plot_point_cs->geometry();
-};
-
-
-//--------------------------------------------------------------------------
 // Line
 
 template<CS cs>
@@ -613,26 +582,10 @@ void CoordinateSystem<cs>::add_line(LayerPtr const& layer, draw::LineStyle const
     2 * range_[x_axis].size(),
     2 * range_[y_axis].size()
   };
-  // Convert that rectangle to a HyperBlock and calculate the intersection points with the line.
-  math::Hyperblock<2> rectangle({rectangle_cs.offset_x(), rectangle_cs.offset_y()}, {rectangle_cs.offset_x() + rectangle_cs.width(), rectangle_cs.offset_y() + rectangle_cs.height()});
-  auto intersections = rectangle.intersection_points(line);
-
-  // Is the line outside the plot area?
-  if (intersections.empty())
-    return;
-
-  constexpr math::Hyperblock<2>::IntersectionPointIndex first{size_t{0}};
-  constexpr math::Hyperblock<2>::IntersectionPointIndex second{size_t{1}};
-  math::Vector<2> const& intersection1{intersections[first]};
-  math::Vector<2> const& intersection2{intersections[second]};
-  cs::Point<cs> const intersection1_cs(intersection1.as_point());
-  cs::Point<cs> const intersection2_cs(intersection2.as_point());
-
-  cs::Point<csid::pixels> intersection1_pixels = intersection1_cs * cs_transform_pixels_;
-  cs::Point<csid::pixels> intersection2_pixels = intersection2_cs * cs_transform_pixels_;
-
-  plot_line_cs.create_draw_object({}, intersection1_pixels.x(), intersection1_pixels.y(), intersection2_pixels.x(), intersection2_pixels.y(), line_style);
-  layer->draw(plot_line_cs.draw_object());
+  math::Hyperblock<2> const clip_rectangle_cs(
+      {rectangle_cs.offset_x(), rectangle_cs.offset_y()},
+      {rectangle_cs.offset_x() + rectangle_cs.width(), rectangle_cs.offset_y() + rectangle_cs.height()});
+  this->add_clipped_line(layer, line_style, plot_line_cs, clip_rectangle_cs);
 }
 
 //--------------------------------------------------------------------------
@@ -641,22 +594,7 @@ void CoordinateSystem<cs>::add_line(LayerPtr const& layer, draw::LineStyle const
 template<CS cs>
 void CoordinateSystem<cs>::add_rectangle(LayerPtr const& layer, draw::RectangleStyle const& rectangle_style, RectangleHandle const& plot_rectangle_cs)
 {
-  // Convert from the coordinate-system space to pixels using the transform supplied at construction.
-  cs::Point<cs> const topleft_cs(plot_rectangle_cs.offset_x(), plot_rectangle_cs.offset_y());
-  cs::Point<cs> const topright_cs(plot_rectangle_cs.offset_x() + plot_rectangle_cs.width(), plot_rectangle_cs.offset_y());
-  cs::Point<cs> const bottomright_cs(plot_rectangle_cs.offset_x() + plot_rectangle_cs.width(), plot_rectangle_cs.offset_y() + plot_rectangle_cs.height());
-  cs::Point<cs> const bottomleft_cs(plot_rectangle_cs.offset_x(), plot_rectangle_cs.offset_y() + plot_rectangle_cs.height());
-
-  std::vector<cs::Point<csid::pixels>> points_pixels = {
-    topleft_cs * cs_transform_pixels_,
-    topright_cs * cs_transform_pixels_,
-    bottomright_cs * cs_transform_pixels_,
-    bottomleft_cs * cs_transform_pixels_
-  };
-
-  draw::PolylineStyle polyline_style(rectangle_style);
-  plot_rectangle_cs.create_polyline_draw_object({}, std::move(points_pixels), polyline_style({.closed = true}));
-  layer->draw(plot_rectangle_cs.draw_object());
+  CoordinateMapper<cs>::add_rectangle(layer, rectangle_style, plot_rectangle_cs);
 }
 
 #if 0
@@ -674,59 +612,4 @@ void CoordinateSystem<cs>::add_text(LayerPtr const& layer, TextStyle const& text
 }
 #endif
 
-//--------------------------------------------------------------------------
-// Transform
-//
-
-namespace cs {
-
-template<CS from_cs, CS to_cs, bool inverted, math::AffineTransformConcept AffineTransformBackend>
-Point<to_cs>
-operator*(Point<from_cs> const& point, math::Transform<from_cs, to_cs, inverted, AffineTransformBackend> const& transform)
-{
-  if constexpr (!inverted)
-  {
-    auto const [x, y] = transform.map_point(point.x(), point.y());
-    return {x, y};
-  }
-  else
-  {
-    auto const inv = transform.inverted();
-    auto const [x, y] = inv.map_point(point.x(), point.y());
-    return {x, y};
-  }
-}
-
-template<CS from_cs, CS to_cs, bool inverted, math::AffineTransformConcept AffineTransformBackend>
-Size<to_cs>
-operator*(Size<from_cs> const& size, math::Transform<from_cs, to_cs, inverted, AffineTransformBackend> const& transform)
-{
-  // Just scale; scale the X and Y axis vectors by the full linear part.
-  if constexpr (!inverted)
-  {
-    auto const [sx, sy] = transform.scale_factors();
-    return {size.width() * sx, size.height() * sy};
-  }
-  else
-  {
-    auto const inv = transform.inverted();
-    auto const [sx, sy] = inv.scale_factors();
-    return {size.width() * sx, size.height() * sy};
-  }
-}
-
-template<CS from_cs, CS to_cs, bool inverted, math::AffineTransformConcept AffineTransformBackend>
-Rectangle<to_cs>
-operator*(Rectangle<from_cs> const& rectangle, math::Transform<from_cs, to_cs, inverted, AffineTransformBackend> const& transform)
-{
-  Point<from_cs> p_from_cs{rectangle.offset_x(), rectangle.offset_y()};
-  Size<from_cs> s_from_cs{rectangle.width(), rectangle.height()};
-
-  Point<to_cs> p_to_cs = p_from_cs * transform;
-  Size<to_cs> s_to_cs = s_from_cs * transform;
-
-  return {p_to_cs, s_to_cs};
-}
-
-} // namespace cs
 } // namespace cairowindow

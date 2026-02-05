@@ -13,6 +13,7 @@ class Line;
 } // namespace draw
 
 template<CS> class CoordinateSystem;
+template<CS> class CoordinateMapper;
 
 } // namespace cairowindow
 
@@ -46,7 +47,7 @@ class Line : public cairowindow::cs::Line<cs>
 
  public:
   template<typename... Args>
-  void create_draw_object(utils::Badge<Plot, cairowindow::CoordinateSystem<cs>>, Args&&... args) const
+  void create_draw_object(utils::Badge<Plot, cairowindow::CoordinateSystem<cs>, cairowindow::CoordinateMapper<cs>>, Args&&... args) const
   {
     draw_object_ = std::make_shared<draw::Line>(std::forward<Args>(args)...);
   }

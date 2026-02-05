@@ -16,6 +16,7 @@ class Polyline;
 } // namespace draw
 
 template<CS> class CoordinateSystem;
+template<CS> class CoordinateMapper;
 
 } // namespace cairowindow
 
@@ -44,13 +45,13 @@ class Rectangle : public cairowindow::cs::Rectangle<cs>
 
  public:
   template<typename... Args>
-  void create_draw_object(utils::Badge<Plot, CoordinateSystem<cs>>, Args&&... args) const
+  void create_draw_object(utils::Badge<Plot, CoordinateSystem<cs>, CoordinateMapper<cs>>, Args&&... args) const
   {
     draw_object_ = std::make_shared<draw::Rectangle>(std::forward<Args>(args)...);
   }
 
   template<typename... Args>
-  void create_polyline_draw_object(utils::Badge<Plot, CoordinateSystem<cs>>, Args&&... args) const
+  void create_polyline_draw_object(utils::Badge<Plot, CoordinateSystem<cs>, CoordinateMapper<cs>>, Args&&... args) const
   {
     draw_object_ = std::make_shared<draw::Polyline>(std::forward<Args>(args)...);
   }

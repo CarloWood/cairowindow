@@ -9,6 +9,7 @@
 namespace cairowindow {
 
 template<CS> class CoordinateSystem;
+template<CS> class CoordinateMapper;
 
 } // namespace cairowindow
 
@@ -58,7 +59,7 @@ class Point : public cairowindow::cs::Point<cs>, public Draggable
 
  public:
   template<typename... Args>
-  void create_draw_object(utils::Badge<Plot, cairowindow::CoordinateSystem<cs>>, Args&&... args) const
+  void create_draw_object(utils::Badge<Plot, cairowindow::CoordinateSystem<cs>, cairowindow::CoordinateMapper<cs>>, Args&&... args) const
   {
     draw_object_ = std::make_shared<cairowindow::draw::Point>(std::forward<Args>(args)...);
   }

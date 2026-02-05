@@ -45,6 +45,24 @@ cairowindow::Geometry Plot::axes_geometry(cairowindow::Geometry const& geometry,
   return { top_left_x, top_left_y, bottom_right_x - top_left_x, bottom_right_y - top_left_y };
 }
 
+void Plot::update_plot_transform_pixels()
+{
+  if (range_[x_axis].size() == 0.0 || range_[y_axis].size() == 0.0)
+    return;
+
+  // Initialize cs_transform_pixels_ such that it replaces convert_x/convert_y.
+  // x' = (x - xmin) / xrange * width + offset_x
+  // y' = (ymax - y) / yrange * height + offset_y
+  cairowindow::Geometry const& g = plot_area_.geometry();
+  double const sx = g.width() / range_[x_axis].size();
+  double const sy = g.height() / range_[y_axis].size();
+  double const tx = g.offset_x() - range_[x_axis].min() * sx;
+  double const ty = g.offset_y() + range_[y_axis].max() * sy;
+  cs_transform_pixels_ = math::Transform<csid::plot, csid::pixels>{}
+    .translate(math::TranslationVector<csid::pixels>::create_from_cs_values(tx, ty))
+    .scale(sx, -sy);
+}
+
 void Plot::add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio)
 {
   if (keep_ratio)
@@ -130,17 +148,7 @@ void Plot::add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio)
     draw_layer_region_on(layer, ylabel_);
   }
 
-  // Initialize plot_transform_pixels_ such that it replaces convert_x/convert_y.
-  // x' = (x - xmin) / xrange * width + offset_x
-  // y' = (ymax - y) / yrange * height + offset_y
-  cairowindow::Geometry const& g = plot_area_.geometry();
-  double const sx = g.width() / range_[x_axis].size();
-  double const sy = g.height() / range_[y_axis].size();
-  double const tx = g.offset_x() - range_[x_axis].min() * sx;
-  double const ty = g.offset_y() + range_[y_axis].max() * sy;
-  plot_transform_pixels_ = math::Transform<csid::plot, csid::pixels>{}
-    .translate(math::TranslationVector<csid::pixels>::create_from_cs_values(tx, ty))
-    .scale(sx, -sy);
+  update_plot_transform_pixels();
 
   // Register this plot and its geometry with the associated Window so that we can find which printable is under the mouse if needed.
   layer->window()->add_printable(this);
@@ -277,12 +285,7 @@ void Plot::add_point(boost::intrusive_ptr<Layer> const& layer,
     draw::PointStyle const& point_style,
     plot::Point const& plot_point)
 {
-  double x = plot_point.x();
-  double y = plot_point.y();
-
-  auto const [pixel_x, pixel_y] = plot_transform_pixels_.map_point(x, y);
-  plot_point.create_draw_object({}, pixel_x, pixel_y, point_style);
-  draw_layer_region_on(layer, plot_point.draw_object());
+  CoordinateMapper<csid::plot>::add_point(layer, point_style, plot_point);
 }
 
 //--------------------------------------------------------------------------
@@ -370,29 +373,8 @@ void Plot::add_line(boost::intrusive_ptr<Layer> const& layer,
     draw::LineStyle const& line_style,
     plot::Line const& plot_line)
 {
-  cairowindow::cs::Direction<csid::plot> const& direction = plot_line.direction();
-  cairowindow::cs::Point<csid::plot> const& point = plot_line.point();
-
-  double normal_x = -direction.y();
-  double normal_y = direction.x();
-  math::Hyperplane<2> line({normal_x, normal_y}, -(normal_x * point.x() + normal_y * point.y()));
   math::Hyperblock<2> rectangle({range_[x_axis].min(), range_[y_axis].min()}, {range_[x_axis].max(), range_[y_axis].max()});
-  auto intersections = rectangle.intersection_points(line);
-
-  // Is the line outside the plot area?
-  if (intersections.empty())
-    return;
-
-  constexpr math::Hyperblock<2>::IntersectionPointIndex first{size_t{0}};
-  constexpr math::Hyperblock<2>::IntersectionPointIndex second{size_t{1}};
-
-  double x1 = intersections[first].coordinate(0);
-  double y1 = intersections[first].coordinate(1);
-  double x2 = intersections[second].coordinate(0);
-  double y2 = intersections[second].coordinate(1);
-
-  plot_line.create_draw_object({}, convert_x(x1), convert_y(y1), convert_x(x2), convert_y(y2), line_style);
-  draw_layer_region_on(layer, plot_line.draw_object());
+  add_clipped_line(layer, line_style, plot_line, rectangle);
 }
 
 //--------------------------------------------------------------------------
@@ -401,15 +383,7 @@ void Plot::add_line(boost::intrusive_ptr<Layer> const& layer,
 void Plot::add_rectangle(boost::intrusive_ptr<Layer> const& layer,
     draw::RectangleStyle const& rectangle_style, Rectangle const& plot_rectangle)
 {
-  double offset_x = plot_rectangle.offset_x();
-  double offset_y = plot_rectangle.offset_y();
-  double width = plot_rectangle.width();
-  double height = plot_rectangle.height();
-
-  plot_rectangle.draw_object_ = std::make_shared<draw::Rectangle>(
-      convert_x(offset_x), convert_y(offset_y), convert_x(offset_x + width), convert_y(offset_y + height),
-      rectangle_style);
-  draw_layer_region_on(layer, plot_rectangle.draw_object_);
+  CoordinateMapper<csid::plot>::add_rectangle(layer, rectangle_style, plot_rectangle);
 }
 
 //--------------------------------------------------------------------------
