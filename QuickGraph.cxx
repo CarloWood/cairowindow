@@ -137,7 +137,7 @@ void QuickGraph::add_line(cs::LinePiece<csid::plot> const& L, draw::LineStyle co
   }
 
   window_.set_send_expose_events(false);
-  plot_.add_line(second_layer_, line_style, plot::LineExtend::none, plot_line_pieces_.back());
+  plot_.add_line(second_layer_, line_style, LineExtend::none, plot_line_pieces_.back());
   window_.set_send_expose_events(true);
 }
 

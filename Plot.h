@@ -96,14 +96,6 @@ class Curve : public cairowindow::Curve
   mutable std::shared_ptr<draw::Curve> draw_object_;
 };
 
-enum class LineExtend
-{
-  none = 0,
-  from = 1,
-  to = 2,
-  both = from|to
-};
-
 namespace {
 
 template<typename Tuple, std::size_t... Indices>
@@ -641,7 +633,6 @@ class Plot : public CoordinateMapper<csid::plot>
 
  private:
   cairowindow::Geometry axes_geometry(cairowindow::Geometry const& geometry, double axes_line_width);
-  void apply_line_extend(double& x1, double& y1, double& x2, double& y2, LineExtend line_extend);
 
  public:
 #ifdef CWDEBUG

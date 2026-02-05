@@ -118,10 +118,10 @@ int main()
       auto Q_label = plot.create_text(second_layer, label_style, plot_Q, "Q");
 
       // Draw line through P₀ and Pᵧ.
-      auto plot_line_P0Pgamm = plot.create_line(second_layer, line_style, plot::LineExtend::both, plot_P0, plot_P_gamma);
+      auto plot_line_P0Pgamm = plot.create_line(second_layer, line_style, LineExtend::both, plot_P0, plot_P_gamma);
 
       // Draw line through P₁ and Pᵧ.
-      auto plot_line_P1Pgamma = plot.create_line(second_layer, line_style, plot::LineExtend::both, plot_P1, plot_P_gamma);
+      auto plot_line_P1Pgamma = plot.create_line(second_layer, line_style, LineExtend::both, plot_P1, plot_P_gamma);
 
       // Draw an arrow from P₀ to D₀.
 //      auto plot_D0_arrow = plot.create_connector(second_layer, line_style({.line_color = color::orange}), plot_P0, plot_D0);

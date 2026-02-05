@@ -1,35 +1,71 @@
 #pragma once
 
-#include "cairowindow/LinePiece.h"
+#include "cairowindow/cs/LinePiece.h"
+#include "cairowindow/draw/Line.h"
+#include "utils/Badge.h"
 #include <memory>
 
-namespace cairowindow::draw {
-// Forward declare the draw object.
-class Line;
-} // namespace cairowindow::draw
+// Forward declarations.
+namespace cairowindow {
+
+template<CS> class CoordinateSystem;
+template<CS> class CoordinateMapper;
+
+} // namespace cairowindow
 
 namespace cairowindow::plot {
 // Forward declaration.
 class Plot;
 
+namespace cs {
+
 //-----------------------------------------------------------------------------
-// plot::LinePiece
+// plot::cs::LinePiece
 //
 // A handle keeping a plotted LinePiece alive.
-// Returned by Plot::create_line(layer, line_style, [line_extend,] <args to construct a plot::LinePiece>).
+// Returned by Plot::create_line(layer, line_style, [line_extend,] <args to construct a cs::LinePiece<cs>>).
 //
-class LinePiece : public cairowindow::LinePiece
+template<CS cs>
+class LinePiece : public cairowindow::cs::LinePiece<cs>
 {
  public:
-  explicit LinePiece(cairowindow::LinePiece const& line_piece) : cairowindow::LinePiece(line_piece) { }
-  using cairowindow::LinePiece::LinePiece;
+  // Default constructor creates an uninitialized LinePiece.
+  LinePiece() = default;
+  explicit LinePiece(cairowindow::cs::LinePiece<cs> const& line_piece) : cairowindow::cs::LinePiece<cs>(line_piece) { }
+  using cairowindow::cs::LinePiece<cs>::LinePiece;
 
- private:
+ protected:
   friend class Plot;
   mutable std::shared_ptr<draw::Line> draw_object_;
+
+ public:
+  template<typename... Args>
+  void create_draw_object(utils::Badge<Plot, cairowindow::CoordinateSystem<cs>, cairowindow::CoordinateMapper<cs>>, Args&&... args) const
+  {
+    draw_object_ = std::make_shared<draw::Line>(std::forward<Args>(args)...);
+  }
+
+  // Erase the draw object, created with create_draw_object, if any.
+  void reset()
+  {
+    draw_object_.reset();
+  }
+
+  // Accessor for the draw object; used by Plot and CoordinateSystem.
+
+  std::shared_ptr<draw::Line> const& draw_object() const
+  {
+    return draw_object_;
+  }
 };
+
+} // namespace cs
 
 //
 //-----------------------------------------------------------------------------
+
+// The current namespace is cairowindow::plot!
+//
+using LinePiece = cs::LinePiece<csid::plot>;
 
 } // namespace cairowindow::plot

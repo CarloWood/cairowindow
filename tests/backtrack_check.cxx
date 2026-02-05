@@ -139,7 +139,7 @@ int main()
       auto P1_label = plot.create_text(second_layer, label_style({.position = draw::centered_right_of}), plot_P1, "P₁");
 
       // Draw line through P₀ and P₁.
-      auto plot_line_P0P1 = plot.create_line(second_layer, line_style, plot::LineExtend::both, plot_P0, plot_P1);
+      auto plot_line_P0P1 = plot.create_line(second_layer, line_style, LineExtend::both, plot_P0, plot_P1);
 
       // Get w₁.
       double w1 = plot_P1.x();

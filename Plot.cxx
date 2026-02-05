@@ -291,56 +291,12 @@ void Plot::add_point(boost::intrusive_ptr<Layer> const& layer,
 //--------------------------------------------------------------------------
 // LinePiece
 
-void Plot::apply_line_extend(double& x1, double& y1, double& x2, double& y2, LineExtend line_extend)
-{
-  if (line_extend != LineExtend::none)
-  {
-    double dx = x2 - x1;
-    double dy = y2 - y1;
-    double normal_x = dy;
-    double normal_y = -dx;
-    math::Hyperplane<2> line({normal_x, normal_y}, -(normal_x * x1 + normal_y * y1));
-    math::Hyperblock<2> rectangle({range_[x_axis].min(), range_[y_axis].min()}, {range_[x_axis].max(), range_[y_axis].max()});
-    auto intersections = rectangle.intersection_points(line);
-    constexpr math::Hyperblock<2>::IntersectionPointIndex first{size_t{0}};
-    constexpr math::Hyperblock<2>::IntersectionPointIndex second{size_t{1}};
-    if (!intersections.empty())
-    {
-      // It is not known which intersection with the bounding rectangle ends up where in the intersections array.
-      // Therefore look at the sign of the dot product between the line piece and the line between the two intersections.
-      auto index_to = (dx * (intersections[second].coordinate(0) - intersections[first].coordinate(0)) +
-                       dy * (intersections[second].coordinate(1) - intersections[first].coordinate(1))) < 0.0 ? second : first;
-      if (line_extend == LineExtend::from || line_extend == LineExtend::both)
-      {
-        x1 = intersections[index_to].coordinate(0);
-        y1 = intersections[index_to].coordinate(1);
-      }
-      if (line_extend == LineExtend::to || line_extend == LineExtend::both)
-      {
-        x2 = intersections[size_t{1} - index_to].coordinate(0);
-        y2 = intersections[size_t{1} - index_to].coordinate(1);
-      }
-    }
-  }
-}
-
 void Plot::add_line(boost::intrusive_ptr<Layer> const& layer,
     draw::LineStyle const& line_style, LineExtend line_extend,
     LinePiece const& plot_line_piece)
 {
-  cairowindow::Point const& from = plot_line_piece.from();
-  cairowindow::Point const& to = plot_line_piece.to();
-
-  double x1 = from.x();
-  double y1 = from.y();
-  double x2 = to.x();
-  double y2 = to.y();
-
-  apply_line_extend(x1, y1, x2, y2, line_extend);
-  plot_line_piece.draw_object_ = std::make_shared<draw::Line>(
-      convert_x(x1), convert_y(y1), convert_x(x2), convert_y(y2),
-      line_style);
-  draw_layer_region_on(layer, plot_line_piece.draw_object_);
+  math::Hyperblock<2> rectangle({range_[x_axis].min(), range_[y_axis].min()}, {range_[x_axis].max(), range_[y_axis].max()});
+  add_line_piece(layer, line_style, line_extend, plot_line_piece, rectangle);
 }
 
 //--------------------------------------------------------------------------

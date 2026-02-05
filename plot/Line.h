@@ -33,13 +33,10 @@ template<CS cs>
 class Line : public cairowindow::cs::Line<cs>
 {
  public:
+  // Default constructor creates an uninitialized Line.
+  Line() = default;
   explicit Line(cairowindow::cs::Line<cs> const& line) : cairowindow::cs::Line<cs>(line) { }
   using cairowindow::cs::Line<cs>::Line;
-
-  void reset()
-  {
-    draw_object_.reset();
-  }
 
  protected:
   friend class Plot;
@@ -50,6 +47,12 @@ class Line : public cairowindow::cs::Line<cs>
   void create_draw_object(utils::Badge<Plot, cairowindow::CoordinateSystem<cs>, cairowindow::CoordinateMapper<cs>>, Args&&... args) const
   {
     draw_object_ = std::make_shared<draw::Line>(std::forward<Args>(args)...);
+  }
+
+  // Erase the draw object, created with create_draw_object, if any.
+  void reset()
+  {
+    draw_object_.reset();
   }
 
   // Accessor for the draw object; used by Plot and CoordinateSystem.

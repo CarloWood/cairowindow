@@ -4,15 +4,26 @@
 #include "cs/Point.h"
 #include "cs/TransformOperators.h"
 #include "plot/Line.h"
+#include "plot/LinePiece.h"
 #include "plot/Point.h"
 #include "plot/Rectangle.h"
 #include "draw/Rectangle.h"
 #include "draw/Polyline.h"
+#include "draw/Line.h"
 #include "math/Hyperblock.h"
 #include "math/Transform.h"
 #include <functional>
 
 namespace cairowindow {
+
+// Type passed to CoordinateMapper<cs>::add_line_piece; determines if a line piece is extended beyond the given end points.
+enum class LineExtend
+{
+  none = 0,
+  from = 1,
+  to = 2,
+  both = from | to
+};
 
 //-----------------------------------------------------------------------------
 // CoordinateMapper
@@ -29,6 +40,7 @@ class CoordinateMapper : public Printable
   using PointHandle = plot::cs::Point<cs>;
   using RectangleHandle = plot::cs::Rectangle<cs>;
   using LineHandle = plot::cs::Line<cs>;
+  using LinePieceHandle = plot::cs::LinePiece<cs>;
 
  protected:
   math::Transform<cs, csid::pixels> cs_transform_pixels_;
@@ -65,6 +77,13 @@ class CoordinateMapper : public Printable
 
   // Add and draw cs_line on layer using line_style, clipped to clip_rectangle_cs.
   void add_clipped_line(LayerPtr const& layer, draw::LineStyle const& line_style, LineHandle const& plot_line_cs, math::Hyperblock<2> const& clip_rectangle_cs);
+
+  //--------------------------------------------------------------------------
+  // LinePiece
+
+  // Add and draw cs_line_piece on layer using line_style and line_extend, clipped to clip_rectangle_cs.
+  void add_line_piece(LayerPtr const& layer, draw::LineStyle const& line_style, LineExtend line_extend,
+      LinePieceHandle const& plot_line_piece_cs, math::Hyperblock<2> const& clip_rectangle_cs);
 };
 
 //----------------------------------------------------------------------------
@@ -182,6 +201,66 @@ void CoordinateMapper<cs>::add_clipped_line(LayerPtr const& layer, draw::LineSty
 
   plot_line_cs.create_draw_object({}, intersection1_pixels.x(), intersection1_pixels.y(), intersection2_pixels.x(), intersection2_pixels.y(), line_style);
   draw_layer_region_on(layer, plot_line_cs.draw_object());
+}
+
+//----------------------------------------------------------------------------
+// CoordinateMapper::LinePiece
+
+namespace detail {
+
+inline void apply_line_extend(double& x1, double& y1, double& x2, double& y2, LineExtend line_extend, math::Hyperblock<2> const& clip_rectangle)
+{
+  if (line_extend == LineExtend::none)
+    return;
+
+  double dx = x2 - x1;
+  double dy = y2 - y1;
+  double normal_x = dy;
+  double normal_y = -dx;
+  math::Hyperplane<2> line({normal_x, normal_y}, -(normal_x * x1 + normal_y * y1));
+  auto intersections = clip_rectangle.intersection_points(line);
+  constexpr math::Hyperblock<2>::IntersectionPointIndex first{size_t{0}};
+  constexpr math::Hyperblock<2>::IntersectionPointIndex second{size_t{1}};
+  if (!intersections.empty())
+  {
+    // It is not known which intersection with the bounding rectangle ends up where in the intersections array.
+    // Therefore look at the sign of the dot product between the line piece and the line between the two intersections.
+    auto index_to = (dx * (intersections[second].coordinate(0) - intersections[first].coordinate(0)) +
+                     dy * (intersections[second].coordinate(1) - intersections[first].coordinate(1))) < 0.0 ? second : first;
+    if (line_extend == LineExtend::from || line_extend == LineExtend::both)
+    {
+      x1 = intersections[index_to].coordinate(0);
+      y1 = intersections[index_to].coordinate(1);
+    }
+    if (line_extend == LineExtend::to || line_extend == LineExtend::both)
+    {
+      x2 = intersections[size_t{1} - index_to].coordinate(0);
+      y2 = intersections[size_t{1} - index_to].coordinate(1);
+    }
+  }
+}
+
+} // namespace detail
+
+template<CS cs>
+void CoordinateMapper<cs>::add_line_piece(LayerPtr const& layer, draw::LineStyle const& line_style, LineExtend line_extend,
+    LinePieceHandle const& plot_line_piece_cs, math::Hyperblock<2> const& clip_rectangle_cs)
+{
+  cs::Point<cs> const& from = plot_line_piece_cs.from();
+  cs::Point<cs> const& to = plot_line_piece_cs.to();
+
+  double x1 = from.x();
+  double y1 = from.y();
+  double x2 = to.x();
+  double y2 = to.y();
+
+  detail::apply_line_extend(x1, y1, x2, y2, line_extend, clip_rectangle_cs);
+
+  cs::Point<csid::pixels> const p1_pixels = cs::Point<cs>{x1, y1} * cs_transform_pixels_;
+  cs::Point<csid::pixels> const p2_pixels = cs::Point<cs>{x2, y2} * cs_transform_pixels_;
+
+  plot_line_piece_cs.create_draw_object({}, p1_pixels.x(), p1_pixels.y(), p2_pixels.x(), p2_pixels.y(), line_style);
+  draw_layer_region_on(layer, plot_line_piece_cs.draw_object());
 }
 
 } // namespace cairowindow
