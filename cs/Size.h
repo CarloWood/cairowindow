@@ -32,6 +32,11 @@ class Size
     return math::TranslationVector<cs>::create_from_cs_values(width_, height_);
   }
 
+  friend Size operator*(double scale, Size const& size)
+  {
+    return {scale * size.width(), scale * size.height()};
+  }
+
 #ifdef CWDEBUG
   void print_on(std::ostream& os) const
   {

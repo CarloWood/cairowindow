@@ -19,6 +19,7 @@
 #include "math/Hyperblock.h"
 #include "math/Transform.h"
 #include <boost/intrusive_ptr.hpp>
+#include <algorithm>
 #include <cmath>
 #include <string>
 #include <vector>
@@ -112,6 +113,30 @@ class CoordinateSystem : public CoordinateMapper<cs>
   std::array<cs::NiceDelta<cs>, number_of_axes> range_ticks_;                   // The number of tick marks on the visible segment of the respective axis.
                                                                                 // Invalid (default constructed) means: don't draw ticks.
 /*  std::array<std::vector<std::shared_ptr<Text>>, number_of_axes> labels_;*/
+
+ private:
+  // Return an axis-aligned bounding box (aabb) in cs coordinates of the current window geometry.
+  // This is used to clip/extend lines drawn in rotated/sheared coordinate systems.
+  math::Hyperblock<2> window_aabb_cs() const
+  {
+    cs::Point<csid::pixels> const tl_pixels{window_geometry_.offset_x(), window_geometry_.offset_y()};
+    cs::Point<csid::pixels> const tr_pixels{window_geometry_.offset_x() + window_geometry_.width(), window_geometry_.offset_y()};
+    cs::Point<csid::pixels> const br_pixels{window_geometry_.offset_x() + window_geometry_.width(), window_geometry_.offset_y() + window_geometry_.height()};
+    cs::Point<csid::pixels> const bl_pixels{window_geometry_.offset_x(), window_geometry_.offset_y() + window_geometry_.height()};
+
+    auto const& pixels_transform_cs = cs_transform_pixels_.inverse();
+    cs::Point<cs> const tl_cs = tl_pixels * pixels_transform_cs;
+    cs::Point<cs> const tr_cs = tr_pixels * pixels_transform_cs;
+    cs::Point<cs> const br_cs = br_pixels * pixels_transform_cs;
+    cs::Point<cs> const bl_cs = bl_pixels * pixels_transform_cs;
+
+    double const min_x = std::min({tl_cs.x(), tr_cs.x(), br_cs.x(), bl_cs.x()});
+    double const max_x = std::max({tl_cs.x(), tr_cs.x(), br_cs.x(), bl_cs.x()});
+    double const min_y = std::min({tl_cs.y(), tr_cs.y(), br_cs.y(), bl_cs.y()});
+    double const max_y = std::max({tl_cs.y(), tr_cs.y(), br_cs.y(), bl_cs.y()});
+
+    return math::Hyperblock<2>({min_x, min_y}, {max_x, max_y});
+  }
 
  public:
   CoordinateSystem(math::Transform<cs, csid::pixels> const reference_transform, Geometry window_geometry);
@@ -554,27 +579,7 @@ void CoordinateSystem<cs>::display(LayerPtr const& layer, draw::LineStyle const&
 template<CS cs>
 void CoordinateSystem<cs>::add_line(LayerPtr const& layer, draw::LineStyle const& line_style, LineHandle const& plot_line_cs)
 {
-  cs::Direction<cs> const& direction_cs = plot_line_cs.direction();
-  cs::Point<cs> const& point_cs = plot_line_cs.point();
-
-  // Convert the line through `point` with direction `direction` into a HyperPlane.
-  double normal_x = -direction_cs.y();
-  double normal_y = direction_cs.x();
-  math::Hyperplane<2> line_cs({normal_x, normal_y}, -(normal_x * point_cs.x()+ normal_y * point_cs.y()));
-
-  // Construct a Rectangle aligned with the axes that captures the range of the axes.
-  // Make the rectangle twice as big relative to its center.
-  cs::Rectangle<cs> rectangle_cs{
-    range_[x_axis].center() - range_[x_axis].size(),
-    range_[y_axis].center() - range_[y_axis].size(),
-    2 * range_[x_axis].size(),
-    2 * range_[y_axis].size()
-  };
-  math::Hyperblock<2> const clip_rectangle_cs(
-      {rectangle_cs.offset_x(), rectangle_cs.offset_y()},
-      {rectangle_cs.offset_x() + rectangle_cs.width(), rectangle_cs.offset_y() + rectangle_cs.height()});
-
-  this->add_clipped_line(layer, line_style, plot_line_cs, clip_rectangle_cs);
+  this->add_clipped_line(layer, line_style, plot_line_cs, window_aabb_cs());
 }
 
 //--------------------------------------------------------------------------
@@ -583,28 +588,7 @@ void CoordinateSystem<cs>::add_line(LayerPtr const& layer, draw::LineStyle const
 template<CS cs>
 void CoordinateSystem<cs>::add_line_piece(LayerPtr const& layer, draw::LineStyle const& line_style, LineExtend line_extend, LinePieceHandle const& plot_line_piece_cs)
 {
-  cs::Point<cs> const& from_cs = plot_line_piece_cs.from();
-  cs::Point<cs> const& to_cs = plot_line_piece_cs.to();
-  cs::Direction<cs> const direction_cs(from_cs, to_cs);
-
-  // Convert the line through `from_cs` with direction `direction` into a HyperPlane.
-  double normal_x = -direction_cs.y();
-  double normal_y = direction_cs.x();
-  math::Hyperplane<2> line_cs({normal_x, normal_y}, -(normal_x * from_cs.x()+ normal_y * from_cs.y()));
-
-  // Construct a Rectangle aligned with the axes that captures the range of the axes.
-  // Make the rectangle twice as big relative to its center.
-  cs::Rectangle<cs> rectangle_cs{
-    range_[x_axis].center() - range_[x_axis].size(),
-    range_[y_axis].center() - range_[y_axis].size(),
-    2 * range_[x_axis].size(),
-    2 * range_[y_axis].size()
-  };
-  math::Hyperblock<2> const clip_rectangle_cs(
-      {rectangle_cs.offset_x(), rectangle_cs.offset_y()},
-      {rectangle_cs.offset_x() + rectangle_cs.width(), rectangle_cs.offset_y() + rectangle_cs.height()});
-
-  this->add_clipped_line_piece(layer, line_style, line_extend, plot_line_piece_cs, clip_rectangle_cs);
+  this->add_clipped_line_piece(layer, line_style, line_extend, plot_line_piece_cs, window_aabb_cs());
 }
 
 #if 0
