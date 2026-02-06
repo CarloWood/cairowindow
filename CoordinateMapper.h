@@ -343,18 +343,18 @@ template<CS cs>
 void CoordinateMapper<cs>::add_clipped_line_piece(LayerPtr const& layer, draw::LineStyle const& line_style, LineExtend line_extend,
     LinePieceHandle const& plot_line_piece_cs, math::Hyperblock<2> const& clip_rectangle_cs)
 {
-  cs::Point<cs> const& from = plot_line_piece_cs.from();
-  cs::Point<cs> const& to = plot_line_piece_cs.to();
+  cs::Point<cs> const& from_cs = plot_line_piece_cs.from();
+  cs::Point<cs> const& to_cs = plot_line_piece_cs.to();
 
-  double x1 = from.x();
-  double y1 = from.y();
-  double x2 = to.x();
-  double y2 = to.y();
-
-  detail::apply_line_extend(x1, y1, x2, y2, line_extend, clip_rectangle_cs);
-
-  cs::Point<csid::pixels> const p1_pixels = cs::Point<cs>{x1, y1} * cs_transform_pixels_;
-  cs::Point<csid::pixels> const p2_pixels = cs::Point<cs>{x2, y2} * cs_transform_pixels_;
+  // apply_line_extend can change these initial values.
+  double x1_cs = from_cs.x();
+  double y1_cs = from_cs.y();
+  double x2_cs = to_cs.x();
+  double y2_cs = to_cs.y();
+  detail::apply_line_extend(x1_cs, y1_cs, x2_cs, y2_cs, line_extend, clip_rectangle_cs);
+  // Convert the result to pixels.
+  cs::Point<csid::pixels> const p1_pixels = cs::Point<cs>{x1_cs, y1_cs} * cs_transform_pixels_;
+  cs::Point<csid::pixels> const p2_pixels = cs::Point<cs>{x2_cs, y2_cs} * cs_transform_pixels_;
 
   plot_line_piece_cs.create_draw_object({}, p1_pixels.x(), p1_pixels.y(), p2_pixels.x(), p2_pixels.y(), line_style);
   draw_layer_region_on(layer, plot_line_piece_cs.draw_object());

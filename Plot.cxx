@@ -285,8 +285,8 @@ void Plot::add_line_piece(boost::intrusive_ptr<Layer> const& layer,
     draw::LineStyle const& line_style, LineExtend line_extend,
     LinePiece const& plot_line_piece)
 {
-  math::Hyperblock<2> rectangle({range_[x_axis].min(), range_[y_axis].min()}, {range_[x_axis].max(), range_[y_axis].max()});
-  add_clipped_line_piece(layer, line_style, line_extend, plot_line_piece, rectangle);
+  math::Hyperblock<2> clip_rectangle({range_[x_axis].min(), range_[y_axis].min()}, {range_[x_axis].max(), range_[y_axis].max()});
+  add_clipped_line_piece(layer, line_style, line_extend, plot_line_piece, clip_rectangle);
 }
 
 //--------------------------------------------------------------------------
@@ -296,8 +296,8 @@ void Plot::add_line(boost::intrusive_ptr<Layer> const& layer,
     draw::LineStyle const& line_style,
     plot::Line const& plot_line)
 {
-  math::Hyperblock<2> rectangle({range_[x_axis].min(), range_[y_axis].min()}, {range_[x_axis].max(), range_[y_axis].max()});
-  add_clipped_line(layer, line_style, plot_line, rectangle);
+  math::Hyperblock<2> clip_rectangle({range_[x_axis].min(), range_[y_axis].min()}, {range_[x_axis].max(), range_[y_axis].max()});
+  add_clipped_line(layer, line_style, plot_line, clip_rectangle);
 }
 
 //--------------------------------------------------------------------------

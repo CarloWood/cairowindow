@@ -92,6 +92,7 @@ class CoordinateSystem : public CoordinateMapper<cs>
   using PointHandle     = plot::cs::Point<cs>;
   using RectangleHandle = plot::cs::Rectangle<cs>;
   using LineHandle      = plot::cs::Line<cs>;
+  using LinePieceHandle = plot::cs::LinePiece<cs>;
 
  protected:
   // Bring base class members into scope (dependent base).
@@ -172,38 +173,6 @@ class CoordinateSystem : public CoordinateMapper<cs>
 
 #if 0
   //--------------------------------------------------------------------------
-  // LinePiece
-
-  // Add and draw cs_line_piece on layer using line_style and line_extend.
-  void add_line(LayerPtr const& layer, LineStyle const& line_style, LineExtend line_extend, LinePiecePtr const& cs_line_piece);
-
- private:
-  void add_line(LayerPtr const& layer, LineStyle const& line_style, LineExtend line_extend, LinePiecePtr&& cs_line_piece);
-
- public:
-  // Create and draw a line piece between points from and to using line_style and line_extend.
-  template<typename... Args>
-  [[nodiscard]] LinePiecePtr create_line(LayerPtr const& layer, LineStyle const& line_style, LineExtend line_extend, Args&&... args)
-    requires requires(Args&&... args) { LinePiece<cs>{std::forward<Args>(args)...}; }
-  {
-    LinePiecePtr cs_line_piece = std::make_shared<LinePiece<cs>>(std::forward<Args>(args)...);
-    add_line(layer, line_style, line_extend, cs_line_piece);
-    return cs_line_piece;
-  }
-
-  // Same, but without a line_extend.
-  template<typename... Args>
-  [[nodiscard]] LinePiecePtr create_line(LayerPtr const& layer, LineStyle const& line_style, Args&&... args)
-    requires requires(Args&&... args) { LinePiece<cs>{std::forward<Args>(args)...}; }
-  {
-    LinePiecePtr cs_line_piece = std::make_shared<LinePiece<cs>>(std::forward<Args>(args)...);
-    add_line(layer, line_style, LineExtend::none, cs_line_piece);
-    return cs_line_piece;
-  }
-#endif
-
-#if 0
-  //--------------------------------------------------------------------------
   // Connector
 
   // Add and draw cs_connector on layer, using line_style, fill_color, arrow_head_shape_from and arrow_head_shape_to.
@@ -280,6 +249,31 @@ class CoordinateSystem : public CoordinateMapper<cs>
     RectangleHandle plot_rectangle_cs(std::forward<Args>(args)...);
     add_rectangle(layer, rectangle_style, plot_rectangle_cs);
     return plot_rectangle_cs;
+  }
+
+  //--------------------------------------------------------------------------
+  // LinePiece
+
+  // Add and draw plot_line_piece_cs on layer using line_style and line_extend.
+  void add_line_piece(LayerPtr const& layer, draw::LineStyle const& line_style, LineExtend line_extend, LinePieceHandle const& plot_line_piece_cs);
+
+ public:
+  // Create and draw a line piece between points from and to using line_style and line_extend.
+  template<typename... Args>
+  [[nodiscard]] LinePieceHandle create_line_piece(LayerPtr const& layer, draw::LineStyle const& line_style, LineExtend line_extend, Args&&... args)
+  {
+    LinePieceHandle plot_line_piece_cs(std::forward<Args>(args)...);
+    add_line_piece(layer, line_style, line_extend, plot_line_piece_cs);
+    return plot_line_piece_cs;
+  }
+
+  // Same, but without a line_extend.
+  template<typename... Args>
+  [[nodiscard]] LinePieceHandle create_line_piece(LayerPtr const& layer, draw::LineStyle const& line_style, Args&&... args)
+  {
+    LinePieceHandle plot_line_piece_cs(std::forward<Args>(args)...);
+    add_line_piece(layer, line_style, LineExtend::none, plot_line_piece_cs);
+    return plot_line_piece_cs;
   }
 
 #if 0
@@ -560,13 +554,13 @@ void CoordinateSystem<cs>::display(LayerPtr const& layer, draw::LineStyle const&
 template<CS cs>
 void CoordinateSystem<cs>::add_line(LayerPtr const& layer, draw::LineStyle const& line_style, LineHandle const& plot_line_cs)
 {
-  cs::Direction<cs> const& direction = plot_line_cs.direction();
-  cs::Point<cs> const& point = plot_line_cs.point();
+  cs::Direction<cs> const& direction_cs = plot_line_cs.direction();
+  cs::Point<cs> const& point_cs = plot_line_cs.point();
 
   // Convert the line through `point` with direction `direction` into a HyperPlane.
-  double normal_x = -direction.y();
-  double normal_y = direction.x();
-  math::Hyperplane<2> line({normal_x, normal_y}, -(normal_x * point.x()+ normal_y * point.y()));
+  double normal_x = -direction_cs.y();
+  double normal_y = direction_cs.x();
+  math::Hyperplane<2> line_cs({normal_x, normal_y}, -(normal_x * point_cs.x()+ normal_y * point_cs.y()));
 
   // Construct a Rectangle aligned with the axes that captures the range of the axes.
   // Make the rectangle twice as big relative to its center.
@@ -579,7 +573,38 @@ void CoordinateSystem<cs>::add_line(LayerPtr const& layer, draw::LineStyle const
   math::Hyperblock<2> const clip_rectangle_cs(
       {rectangle_cs.offset_x(), rectangle_cs.offset_y()},
       {rectangle_cs.offset_x() + rectangle_cs.width(), rectangle_cs.offset_y() + rectangle_cs.height()});
+
   this->add_clipped_line(layer, line_style, plot_line_cs, clip_rectangle_cs);
+}
+
+//--------------------------------------------------------------------------
+// LinePiece
+
+template<CS cs>
+void CoordinateSystem<cs>::add_line_piece(LayerPtr const& layer, draw::LineStyle const& line_style, LineExtend line_extend, LinePieceHandle const& plot_line_piece_cs)
+{
+  cs::Point<cs> const& from_cs = plot_line_piece_cs.from();
+  cs::Point<cs> const& to_cs = plot_line_piece_cs.to();
+  cs::Direction<cs> const direction_cs(from_cs, to_cs);
+
+  // Convert the line through `from_cs` with direction `direction` into a HyperPlane.
+  double normal_x = -direction_cs.y();
+  double normal_y = direction_cs.x();
+  math::Hyperplane<2> line_cs({normal_x, normal_y}, -(normal_x * from_cs.x()+ normal_y * from_cs.y()));
+
+  // Construct a Rectangle aligned with the axes that captures the range of the axes.
+  // Make the rectangle twice as big relative to its center.
+  cs::Rectangle<cs> rectangle_cs{
+    range_[x_axis].center() - range_[x_axis].size(),
+    range_[y_axis].center() - range_[y_axis].size(),
+    2 * range_[x_axis].size(),
+    2 * range_[y_axis].size()
+  };
+  math::Hyperblock<2> const clip_rectangle_cs(
+      {rectangle_cs.offset_x(), rectangle_cs.offset_y()},
+      {rectangle_cs.offset_x() + rectangle_cs.width(), rectangle_cs.offset_y() + rectangle_cs.height()});
+
+  this->add_clipped_line_piece(layer, line_style, line_extend, plot_line_piece_cs, clip_rectangle_cs);
 }
 
 #if 0
