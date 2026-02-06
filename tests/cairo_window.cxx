@@ -2,6 +2,7 @@
 #include "cairowindow/Window.h"
 #include "cairowindow/Layer.h"
 #include "cairowindow/Plot.h"
+#include "cairowindow/Direction.h"
 #include "cairowindow/Connector.h"
 #include "cairowindow/draw/Shape.h"
 #include "cairowindow/draw/Line.h"
@@ -86,6 +87,7 @@ int main()
     draw::LineStyle solid_line_style({.line_color = color::black, .line_width = 1.0});
     draw::LineStyle line_style({.line_color = color::black, .line_width = 1.0, .dashes = {10.0, 5.0}});
     draw::ConnectorStyle connector_style(line_style({.line_color = color::coral, .dashes = {3.0, 3.0}}));
+    draw::CircleStyle circle_style(draw::ShapeStyle(line_style, {.position = draw::at_center}));
 
 //    for (int j = 0; j < 100; ++j)
     for (int i = 50; i < 150; ++i)
@@ -154,7 +156,7 @@ int main()
 
       // Draw a cirle around the midpoint of P₀P₁ with radius |P₀P₁|/2.
       Vector P0P1(P0, P1);
-      auto circle = plot.create_circle(second_layer, line_style, P0 + 0.5 * P0P1, P0P1.norm() / 2);
+      auto circle = plot.create_circle(second_layer, circle_style, P0 + 0.5 * P0P1, P0P1.norm() / 2);
 
       // Draw a line through P₁ and H (horizontal because H has the same y coordinate as P₁).
 //      auto horizontal_line_through_P1_and_H = plot.create_line(second_layer, line_style, P1, H);

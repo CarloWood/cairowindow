@@ -73,7 +73,6 @@ class Slider
   void set_value(double value);
 
  public:
-  friend class Plot;
   mutable std::shared_ptr<draw::Slider> draw_object_;
 };
 
@@ -91,7 +90,6 @@ class Curve : public cairowindow::Curve
   using cairowindow::Curve::Curve;
 
  public:
-  friend class Plot;
   mutable std::shared_ptr<draw::Curve> draw_object_;
 };
 
@@ -371,17 +369,6 @@ class Plot : public CoordinateMapper<csid::plot>
   //--------------------------------------------------------------------------
   // Circle
 
-  // Add and draw plot_circle on layer with center and radius using circle_style.
-  void add_circle(boost::intrusive_ptr<Layer> const& layer,
-      draw::CircleStyle const& circle_style,
-      Circle const& plot_circle);
-
- private:
-  void add_circle( // Do not pass a cairowindow::Circle to this function! It must be a plot::Circle.
-      boost::intrusive_ptr<Layer> const& layer,
-      draw::CircleStyle const& circle_style,
-      Circle&& plot_circle);
-
  public:
   // Create and draw a circle on layer with center and radius using circle_style.
   template<typename... Args>
@@ -406,17 +393,6 @@ class Plot : public CoordinateMapper<csid::plot>
 
   //--------------------------------------------------------------------------
   // Arc
-
-  // Add and draw plot_arc on layer using arc_style.
-  void add_arc(boost::intrusive_ptr<Layer> const& layer,
-      draw::ArcStyle const& arc_style,
-      Arc const& plot_arc);
-
- private:
-  void add_arc( // Do not pass a cairowindow::Arc to this function! It must be a plot::Arc.
-      boost::intrusive_ptr<Layer> const& layer,
-      draw::ArcStyle const& arc_style,
-      Arc&& plot_arc);
 
  public:
   // Create and draw an arc on layer width center, radius and start- and end_angle, using arc_style.

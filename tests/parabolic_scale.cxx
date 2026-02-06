@@ -3,6 +3,7 @@
 #include "cairowindow/Window.h"
 #include "cairowindow/Layer.h"
 #include "cairowindow/Plot.h"
+#include "cairowindow/Direction.h"
 #include "cairowindow/symbolic/symbolic.h"
 #include "utils/almost_equal.h"
 #include "utils/square.h"

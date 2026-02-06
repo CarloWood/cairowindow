@@ -3,6 +3,7 @@
 #include "cairowindow/Window.h"
 #include "cairowindow/Layer.h"
 #include "cairowindow/Plot.h"
+#include "cairowindow/Direction.h"
 #include "cairowindow/QuadraticEnergy.h"
 #include "cairowindow/draw/Shape.h"
 #include "cairowindow/draw/Line.h"

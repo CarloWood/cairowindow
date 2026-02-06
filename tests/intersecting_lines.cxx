@@ -1,6 +1,7 @@
 #include "sys.h"
 #include "cairowindow/Window.h"
 #include "cairowindow/Plot.h"
+#include "cairowindow/Direction.h"
 #include "cairowindow/LinePiece.h"
 #include "utils/AIAlert.h"
 #include "utils/debug_ostream_operators.h"

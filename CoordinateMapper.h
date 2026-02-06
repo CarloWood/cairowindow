@@ -3,11 +3,15 @@
 #include "Printable.h"
 #include "cs/Point.h"
 #include "cs/TransformOperators.h"
+#include "plot/Arc.h"
+#include "plot/Circle.h"
 #include "plot/Connector.h"
 #include "plot/Rectangle.h"
 #include "plot/LinePiece.h"
 #include "plot/Line.h"
 #include "plot/Point.h"
+#include "draw/Arc.h"
+#include "draw/Circle.h"
 #include "draw/Connector.h"
 #include "draw/Rectangle.h"
 #include "draw/Polyline.h"
@@ -15,6 +19,7 @@
 #include "draw/Point.h"
 #include "math/Hyperblock.h"
 #include "math/Transform.h"
+#include <cmath>
 #include <functional>
 
 namespace cairowindow {
@@ -44,6 +49,8 @@ class CoordinateMapper : public Printable
   using RectangleHandle = plot::cs::Rectangle<cs>;
   using LineHandle = plot::cs::Line<cs>;
   using LinePieceHandle = plot::cs::LinePiece<cs>;
+  using CircleHandle = plot::cs::Circle<cs>;
+  using ArcHandle = plot::cs::Arc<cs>;
   using ConnectorHandle = plot::cs::Connector<cs>;
 
  protected:
@@ -75,6 +82,18 @@ class CoordinateMapper : public Printable
 
   // Add and draw plot_rectangle_cs on layer using rectangle_style. Handles rotation by drawing a polyline.
   void add_rectangle(LayerPtr const& layer, draw::RectangleStyle const& rectangle_style, RectangleHandle const& plot_rectangle_cs);
+
+  //--------------------------------------------------------------------------
+  // Circle
+
+  // Add and draw plot_circle_cs, with its center and radius in cs coordinates, on layer using circle_style.
+  void add_circle(LayerPtr const& layer, draw::CircleStyle const& circle_style, CircleHandle const& plot_circle_cs);
+
+  //--------------------------------------------------------------------------
+  // Arc
+
+  // Add and draw plot_arc_cs on layer using arc_style.
+  void add_arc(LayerPtr const& layer, draw::ArcStyle const& arc_style, ArcHandle const& plot_arc_cs);
 
   //--------------------------------------------------------------------------
   // Line (infinite, clipped)
@@ -175,6 +194,73 @@ void CoordinateMapper<cs>::add_rectangle(LayerPtr const& layer, draw::RectangleS
   draw::PolylineStyle polyline_style(rectangle_style);
   plot_rectangle_cs.create_polyline_draw_object({}, std::move(points_pixels), polyline_style({.closed = true}));
   draw_layer_region_on(layer, plot_rectangle_cs.draw_object());
+}
+
+//----------------------------------------------------------------------------
+// CircleHandle
+
+template<CS cs>
+void CoordinateMapper<cs>::add_circle(LayerPtr const& layer, draw::CircleStyle const& circle_style, CircleHandle const& plot_circle_cs)
+{
+  cs::Point<cs> const& center = plot_circle_cs.center();
+  double const radius = plot_circle_cs.radius();
+
+  cs::Point<csid::pixels> const center_pixels = center * cs_transform_pixels_;
+
+  auto const [rx_x, rx_y] = cs_transform_pixels_.map_vector(radius, 0.0);
+  auto const [ry_x, ry_y] = cs_transform_pixels_.map_vector(0.0, radius);
+  double const radius_x_pixels = std::hypot(rx_x, rx_y);
+  double const radius_y_pixels = std::hypot(ry_x, ry_y);
+
+  cairowindow::Geometry geometry;
+  switch (circle_style.position())
+  {
+    case draw::at_center:
+      geometry = {center_pixels.x() - radius_x_pixels, center_pixels.y() - radius_y_pixels, 2.0 * radius_x_pixels, 2.0 * radius_y_pixels};
+      break;
+    case draw::at_corner:
+    default:
+      geometry = {center_pixels.x(), center_pixels.y(), radius_x_pixels, radius_y_pixels};
+      break;
+  }
+
+  plot_circle_cs.create_draw_object({}, geometry, circle_style);
+  draw_layer_region_on(layer, plot_circle_cs.draw_object());
+}
+
+//----------------------------------------------------------------------------
+// ArcHandle
+
+template<CS cs>
+void CoordinateMapper<cs>::add_arc(LayerPtr const& layer, draw::ArcStyle const& arc_style, ArcHandle const& plot_arc_cs)
+{
+  cs::Point<cs> const& center_cs = plot_arc_cs.center();
+  double const radius_cs = plot_arc_cs.radius();
+  double const start_angle = plot_arc_cs.start_angle();
+  double const end_angle = plot_arc_cs.end_angle();
+
+  cs::Point<csid::pixels> const center_pixels = center_cs * cs_transform_pixels_;
+
+  auto const [rx_x, rx_y] = cs_transform_pixels_.map_vector(radius_cs, 0.0);
+  auto const [ry_x, ry_y] = cs_transform_pixels_.map_vector(0.0, radius_cs);
+  double const radius_pixels = std::max(std::hypot(rx_x, rx_y), std::hypot(ry_x, ry_y));
+
+  auto const [sx_x, sx_y] = cs_transform_pixels_.map_vector(std::cos(start_angle), std::sin(start_angle));
+  auto const [ex_x, ex_y] = cs_transform_pixels_.map_vector(std::cos(end_angle), std::sin(end_angle));
+  double const start_angle_pixels = std::atan2(sx_y, sx_x);
+  double const end_angle_pixels = std::atan2(ex_y, ex_x);
+
+  auto const [bx_x, bx_y] = cs_transform_pixels_.map_vector(1.0, 0.0);
+  auto const [by_x, by_y] = cs_transform_pixels_.map_vector(0.0, 1.0);
+  double const det = bx_x * by_y - bx_y * by_x;
+
+  double pixel_start_angle = start_angle_pixels;
+  double pixel_end_angle = end_angle_pixels;
+  if (det < 0.0)
+    std::swap(pixel_start_angle, pixel_end_angle);
+
+  plot_arc_cs.create_draw_object({}, center_pixels.x(), center_pixels.y(), pixel_start_angle, pixel_end_angle, radius_pixels, arc_style);
+  draw_layer_region_on(layer, plot_arc_cs.draw_object());
 }
 
 //----------------------------------------------------------------------------

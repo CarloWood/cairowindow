@@ -37,7 +37,6 @@ class Line : public cairowindow::cs::Line<cs>
   using cairowindow::cs::Line<cs>::Line;
 
  protected:
-  friend class Plot;
   mutable std::shared_ptr<draw::Line> draw_object_;
 
  public:

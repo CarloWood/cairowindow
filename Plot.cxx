@@ -303,38 +303,6 @@ void Plot::add_line(boost::intrusive_ptr<Layer> const& layer,
 //--------------------------------------------------------------------------
 // Circle
 
-void Plot::add_circle(boost::intrusive_ptr<Layer> const& layer,
-    draw::CircleStyle const& circle_style,
-    Circle const& plot_circle)
-{
-  cairowindow::Point const& center = plot_circle.center();
-  double radius = plot_circle.radius();
-
-  plot_circle.draw_object_ = std::make_shared<draw::Circle>(
-      cairowindow::Geometry{convert_x(center.x()), convert_y(center.y()), convert_x(radius) - convert_x(0), convert_y(0) - convert_y(radius)},
-      circle_style);
-  draw_layer_region_on(layer, plot_circle.draw_object_);
-}
-
-//--------------------------------------------------------------------------
-// Arc
-
-void Plot::add_arc(boost::intrusive_ptr<Layer> const& layer,
-    draw::ArcStyle const& arc_style,
-    Arc const& plot_arc)
-{
-  cairowindow::Point const& center = plot_arc.center();
-  double radius = plot_arc.radius();
-  double start_angle = plot_arc.start_angle();
-  double end_angle = plot_arc.end_angle();
-
-  plot_arc.draw_object_ = std::make_shared<draw::Arc>(
-      convert_x(center.x()), convert_y(center.y()), -end_angle, -start_angle,
-      std::max(convert_x(radius) - convert_x(0), convert_y(radius) - convert_y(0)),
-      arc_style);
-  draw_layer_region_on(layer, plot_arc.draw_object_);
-}
-
 //--------------------------------------------------------------------------
 // BezierCurve
 

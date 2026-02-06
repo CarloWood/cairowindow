@@ -40,7 +40,6 @@ class Rectangle : public cairowindow::cs::Rectangle<cs>
   using cairowindow::cs::Rectangle<cs>::Rectangle;
 
  public:
-  friend class Plot;
   mutable std::shared_ptr<LayerRegion> draw_object_;       // Points to a draw::Rectangle or a draw::Polyline.
 
  public:

@@ -8,6 +8,7 @@
 #include "cairowindow/BezierFitter.h"
 #include "cairowindow/Line.h"
 #include "cairowindow/Plot.h"
+#include "cairowindow/Direction.h"
 #include "cairowindow/draw/Point.h"
 #include "cairowindow/draw/Text.h"
 #include "cairowindow/draw/Connector.h"

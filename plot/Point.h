@@ -43,7 +43,6 @@ class Point : public cairowindow::cs::Point<cs>, public Draggable
   using cairowindow::cs::Point<cs>::operator=;
 
  protected:
-  friend class Plot;
   // Drawable associated with this logical point; populated by CoordinateSystem::add_point or Plot::add_point.
   mutable std::shared_ptr<draw::Point> draw_object_;
 

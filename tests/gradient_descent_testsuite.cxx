@@ -5,6 +5,7 @@
 #include "cairowindow/Layer.h"
 #include "cairowindow/Range.h"
 #include "cairowindow/Plot.h"
+#include "cairowindow/Direction.h"
 #include "cairowindow/draw/Line.h"
 #include "cairowindow/symbolic/symbolic.h"
 #include "utils/almost_equal.h"

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Line.h"
 #include "cairowindow/LayerRegion.h"
 #include "cairowindow/Color.h"
 #include "cairowindow/StrokeExtents.h"
