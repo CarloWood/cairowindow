@@ -4,13 +4,12 @@
 #include "Range.h"
 #include "Circle.h"
 #include "Text.h"
-#include "Line.h"
 #include "Curve.h"
-#include "Connector.h"
 #include "Arc.h"
 #include "BezierCurve.h"
 #include "BezierFitter.h"
 #include "Draggable.h"
+#include "plot/Connector.h"
 #include "plot/Point.h"
 #include "plot/Rectangle.h"
 #include "plot/LinePiece.h"
@@ -250,11 +249,11 @@ class Plot : public CoordinateMapper<csid::plot>
 
  public:
   // Create and draw a point on layer at x,y using point_style.
-  [[nodiscard]] plot::Point create_point(boost::intrusive_ptr<Layer> const& layer,
+  [[nodiscard]] Point create_point(boost::intrusive_ptr<Layer> const& layer,
       draw::PointStyle const& point_style,
       cairowindow::Point const& point)
   {
-    plot::Point plot_point(point);
+    Point plot_point(point);
     add_point(layer, point_style, plot_point);
     return plot_point;
   }
@@ -294,15 +293,6 @@ class Plot : public CoordinateMapper<csid::plot>
 
   //--------------------------------------------------------------------------
   // Connector
-
-  // Add and draw plot_connector on layer, using line_style, fill_color, arrow_head_shape_from and arrow_head_shape_to.
-  void add_connector(boost::intrusive_ptr<Layer> const& layer,
-      draw::ConnectorStyle const& style, Connector const& plot_connector);
-
- private:
-  void add_connector( // Do not pass a cairowindow::Connector to this function! It must be a plot::Connector.
-      boost::intrusive_ptr<Layer> const& layer,
-      draw::ConnectorStyle const& style, Connector&& plot_connector);
 
  private:
   template<typename... Args>
@@ -353,7 +343,7 @@ class Plot : public CoordinateMapper<csid::plot>
   // Add and draw plot_line using line_style.
   void add_line(boost::intrusive_ptr<Layer> const& layer,
       draw::LineStyle const& line_style,
-      plot::Line const& plot_line);
+      Line const& plot_line);
 
  public:
   // Create and draw a line through point in direction using line_style.

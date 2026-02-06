@@ -1,12 +1,14 @@
 #pragma once
 
 #include "cairowindow/Draggable.h"
-#include "cairowindow/draw/Point.h"
 #include "utils/Badge.h"
 #include <memory>
 
 // Forward declarations.
 namespace cairowindow {
+namespace draw {
+class Point;
+} // namespace draw
 
 template<CS> class CoordinateSystem;
 template<CS> class CoordinateMapper;
@@ -81,13 +83,6 @@ class Point : public cairowindow::cs::Point<cs>, public Draggable
 };
 
 template<CS cs>
-cairowindow::Geometry const& Point<cs>::geometry() const
-{
-  // Geometry is in csid::pixels.
-  return draw_object_->geometry();
-}
-
-template<CS cs>
 void Point<cs>::moved(cairowindow::Point const& new_position)
 {
   // Should never call `moved` for a Point that isn't using csid::plot coordinates.
@@ -110,3 +105,16 @@ void Point<csid::plot>::move(Plot& UNUSED_ARG(plot), cairowindow::cs::Point<csid
 using Point = cs::Point<csid::plot>;
 
 } // namespace cairowindow::plot
+
+#include "cairowindow/draw/Point.h"
+
+namespace cairowindow::plot::cs {
+
+template<CS cs>
+cairowindow::Geometry const& Point<cs>::geometry() const
+{
+  // Geometry is in csid::pixels.
+  return draw_object_->geometry();
+}
+
+} // namespace cairowindow::plot::cs

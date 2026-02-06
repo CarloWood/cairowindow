@@ -6,9 +6,7 @@
 
 // Forward declarations.
 namespace cairowindow {
-
 namespace draw {
-// Forward declare the draw object.
 class Line;
 } // namespace draw
 

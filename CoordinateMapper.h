@@ -3,13 +3,16 @@
 #include "Printable.h"
 #include "cs/Point.h"
 #include "cs/TransformOperators.h"
-#include "plot/Line.h"
-#include "plot/LinePiece.h"
-#include "plot/Point.h"
+#include "plot/Connector.h"
 #include "plot/Rectangle.h"
+#include "plot/LinePiece.h"
+#include "plot/Line.h"
+#include "plot/Point.h"
+#include "draw/Connector.h"
 #include "draw/Rectangle.h"
 #include "draw/Polyline.h"
 #include "draw/Line.h"
+#include "draw/Point.h"
 #include "math/Hyperblock.h"
 #include "math/Transform.h"
 #include <functional>
@@ -41,6 +44,7 @@ class CoordinateMapper : public Printable
   using RectangleHandle = plot::cs::Rectangle<cs>;
   using LineHandle = plot::cs::Line<cs>;
   using LinePieceHandle = plot::cs::LinePiece<cs>;
+  using ConnectorHandle = plot::cs::Connector<cs>;
 
  protected:
   math::Transform<cs, csid::pixels> cs_transform_pixels_;
@@ -59,7 +63,7 @@ class CoordinateMapper : public Printable
   //--------------------------------------------------------------------------
   // Point
 
-  // Add and draw cs_point on layer using point_style.
+  // Add and draw plot_point_cs on layer using point_style.
   void add_point(LayerPtr const& layer, draw::PointStyle const& point_style, PointHandle const& plot_point_cs);
 
   // Called by Window::update_grabbed through the lambda defined in Window::register_draggable<cs> when a Draggable plot_point_cs was moved to (pixel_x, pixel_y).
@@ -69,25 +73,32 @@ class CoordinateMapper : public Printable
   //--------------------------------------------------------------------------
   // Rectangle
 
-  // Add and draw cs_rectangle on layer using rectangle_style. Handles rotation by drawing a polyline.
+  // Add and draw plot_rectangle_cs on layer using rectangle_style. Handles rotation by drawing a polyline.
   void add_rectangle(LayerPtr const& layer, draw::RectangleStyle const& rectangle_style, RectangleHandle const& plot_rectangle_cs);
 
   //--------------------------------------------------------------------------
   // Line (infinite, clipped)
 
-  // Add and draw cs_line on layer using line_style, clipped to clip_rectangle_cs.
-  void add_clipped_line(LayerPtr const& layer, draw::LineStyle const& line_style, LineHandle const& plot_line_cs, math::Hyperblock<2> const& clip_rectangle_cs);
+  // Add and draw plot_line_cs on layer using line_style, clipped to clip_rectangle_cs.
+  void add_clipped_line(LayerPtr const& layer, draw::LineStyle const& line_style,
+      LineHandle const& plot_line_cs, math::Hyperblock<2> const& clip_rectangle_cs);
 
   //--------------------------------------------------------------------------
   // LinePiece
 
-  // Add and draw cs_line_piece on layer using line_style and line_extend, clipped to clip_rectangle_cs.
+  // Add and draw plot_line_piece_cs on layer using line_style and line_extend, clipped to clip_rectangle_cs.
   void add_clipped_line_piece(LayerPtr const& layer, draw::LineStyle const& line_style, LineExtend line_extend,
       LinePieceHandle const& plot_line_piece_cs, math::Hyperblock<2> const& clip_rectangle_cs);
+
+  //--------------------------------------------------------------------------
+  // Connector
+
+  // Add and draw plot_connector_cs on layer using connector_style.
+  void add_connector(LayerPtr const& layer, draw::ConnectorStyle const& connector_style, ConnectorHandle const& plot_connector_cs);
 };
 
 //----------------------------------------------------------------------------
-// CoordinateMapper::Point
+// PointHandle
 
 template<CS cs>
 void CoordinateMapper<cs>::add_point(LayerPtr const& layer, draw::PointStyle const& point_style, PointHandle const& plot_point_cs)
@@ -118,7 +129,7 @@ Geometry CoordinateMapper<cs>::update_grabbed(plot::cs::Point<cs>* plot_point_cs
 }
 
 //----------------------------------------------------------------------------
-// CoordinateMapper::Rectangle
+// RectangleHandle
 
 template<CS cs>
 void CoordinateMapper<cs>::add_rectangle(LayerPtr const& layer, draw::RectangleStyle const& rectangle_style, RectangleHandle const& plot_rectangle_cs)
@@ -167,7 +178,7 @@ void CoordinateMapper<cs>::add_rectangle(LayerPtr const& layer, draw::RectangleS
 }
 
 //----------------------------------------------------------------------------
-// CoordinateMapper::Line (infinite)
+// LineHandle (infinite)
 
 template<CS cs>
 void CoordinateMapper<cs>::add_clipped_line(LayerPtr const& layer, draw::LineStyle const& line_style, LineHandle const& plot_line_cs,
@@ -204,7 +215,7 @@ void CoordinateMapper<cs>::add_clipped_line(LayerPtr const& layer, draw::LineSty
 }
 
 //----------------------------------------------------------------------------
-// CoordinateMapper::LinePiece
+// LinePieceHandle
 
 namespace detail {
 
@@ -261,6 +272,33 @@ void CoordinateMapper<cs>::add_clipped_line_piece(LayerPtr const& layer, draw::L
 
   plot_line_piece_cs.create_draw_object({}, p1_pixels.x(), p1_pixels.y(), p2_pixels.x(), p2_pixels.y(), line_style);
   draw_layer_region_on(layer, plot_line_piece_cs.draw_object());
+}
+
+//----------------------------------------------------------------------------
+// ConnectorHandle
+
+template<CS cs>
+void CoordinateMapper<cs>::add_connector(LayerPtr const& layer, draw::ConnectorStyle const& connector_style, ConnectorHandle const& plot_connector_cs)
+{
+  cs::Point<cs> const& from = plot_connector_cs.from();
+  cs::Point<cs> const& to = plot_connector_cs.to();
+
+  auto const arrow_head_shape_from = static_cast<draw::Connector::ArrowHeadShape>(plot_connector_cs.arrow_head_shape_from());
+  auto const arrow_head_shape_to = static_cast<draw::Connector::ArrowHeadShape>(plot_connector_cs.arrow_head_shape_to());
+
+  cs::Point<csid::pixels> const from_pixels = from * cs_transform_pixels_;
+  cs::Point<csid::pixels> const to_pixels = to * cs_transform_pixels_;
+
+  plot_connector_cs.create_draw_object({},
+      from_pixels.x(), from_pixels.y(), to_pixels.x(), to_pixels.y(),
+      connector_style, arrow_head_shape_from, arrow_head_shape_to);
+
+  if (need_print_)
+    layer->start_printing_to(svg_cr_);
+  layer->draw(plot_connector_cs.draw_object());
+  plot_connector_cs.draw_object()->draw_arrow_heads(layer);
+  if (need_print_)
+    layer->stop_printing();
 }
 
 } // namespace cairowindow

@@ -3,7 +3,7 @@
 #include "Line.h"
 #include "Shape.h"
 #include "ArrowHead.h"
-#include "cairowindow/Connector.h"
+#include "cairowindow/cs/Connector.h"
 #include "cairowindow/Layer.h"
 #ifdef CWDEBUG
 #include "cairowindow/debug_channel.h"
@@ -42,7 +42,7 @@ class Connector : public Line
 {
  public:
   using Direction = cs::Direction<csid::pixels>;
-  using ArrowHeadShape = cairowindow::Connector::ArrowHeadShape;
+  using ArrowHeadShape = cairowindow::cs::Connector<csid::plot>::ArrowHeadShape;
   static ShapeEnum to_ShapeEnum(ArrowHeadShape arrow_head_shape) { return static_cast<ShapeEnum>(arrow_head_shape + number_of_shapes); }
 
  private:
@@ -57,7 +57,7 @@ class Connector : public Line
     // Don't draw arrow heads when the length of the Connector is near zero.
     if (std::abs(x2 - x1) < 0.01 && std::abs(y2 - y1) < 0.01)
       return;
-    if (arrow_header_shape_from != cairowindow::Connector::no_arrow)
+    if (arrow_header_shape_from != cairowindow::cs::Connector<csid::plot>::no_arrow)
     {
       Color line_color = connector_style.arrow_head_from().line_color();
       if (line_color.is_transparent())
@@ -70,7 +70,7 @@ class Connector : public Line
             connector_style.arrow_head_from()({.line_color = line_color, .fill_color = fill_color,
               .shape = to_ShapeEnum(arrow_header_shape_from)}));
     }
-    if (arrow_header_shape_to != cairowindow::Connector::no_arrow)
+    if (arrow_header_shape_to != cairowindow::cs::Connector<csid::plot>::no_arrow)
     {
       Color line_color = connector_style.arrow_head_to().line_color();
       if (line_color.is_transparent())
