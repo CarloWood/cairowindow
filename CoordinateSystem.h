@@ -257,16 +257,6 @@ class CoordinateSystem : public CoordinateMapper<cs>
     return plot_line_cs;
   }
 
- public:
-  // Create and draw a rectangle on layer, using args... and rectangle_style.
-  template<typename... Args>
-  [[nodiscard]] RectangleHandle create_rectangle(LayerPtr const& layer, draw::RectangleStyle const& rectangle_style, Args&&... args)
-  {
-    RectangleHandle plot_rectangle_cs(std::forward<Args>(args)...);
-    add_rectangle(layer, rectangle_style, plot_rectangle_cs);
-    return plot_rectangle_cs;
-  }
-
   //--------------------------------------------------------------------------
   // LinePiece
 

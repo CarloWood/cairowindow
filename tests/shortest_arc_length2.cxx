@@ -138,10 +138,10 @@ int main()
       auto P2_label = plot.create_text(second_layer, label_style({.position = draw::centered_right_of}), plot_P2, "P₂");
 
       // Draw line through P₀ and P₁.
-      auto plot_line_P0P1 = plot.create_line(second_layer, line_style, LineExtend::to, plot_P0, plot_P1);
+      auto plot_line_P0P1 = plot.create_line_piece(second_layer, line_style, LineExtend::to, plot_P0, plot_P1);
 
       // Draw line through P₁ and P₂.
-      auto plot_line_P1P2 = plot.create_line(second_layer, line_style, LineExtend::to, plot_P1, plot_P2);
+      auto plot_line_P1P2 = plot.create_line_piece(second_layer, line_style, LineExtend::to, plot_P1, plot_P2);
 
       Direction D0 = (plot_Q0 - plot_P0).direction();
       Direction D1 = (plot_Q1 - plot_P1).direction();

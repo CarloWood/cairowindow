@@ -141,7 +141,7 @@ int main()
       Dout(dc::notice, "phi1 = " << D1.as_angle());
 
       // Draw line through P₀ and P₁.
-      auto plot_line_P0P1 = plot.create_line(second_layer, line_style, LineExtend::both, plot_P0, plot_P1);
+      auto plot_line_P0P1 = plot.create_line_piece(second_layer, line_style, LineExtend::both, plot_P0, plot_P1);
 
       // Get w₀.
       double w0 = plot_P0.x();

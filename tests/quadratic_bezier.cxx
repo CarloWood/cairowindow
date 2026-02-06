@@ -76,7 +76,7 @@ int main()
     auto P1_label = plot.create_text(second_layer, label_style({.position = draw::centered_right_of}), P1, "P₁");
 
     // Draw a line through P₀ and P₁.
-    auto line_through_P0_and_P1 = plot.create_line(second_layer, solid_line_style, plot_P0, P1);
+    auto line_through_P0_and_P1 = plot.create_line_piece(second_layer, solid_line_style, plot_P0, P1);
 
     // Draw a cirle around the midpoint of P₀P₁ with radius |P₀P₁|/2.
     Vector P0P1(P1);
@@ -400,7 +400,7 @@ int main()
       // Draw a vertical line from V up 0.5.
       Point V6(V.x(), V.y() + 0.5);
       LinePiece foo(V, V6);
-      plot::LinePiece plot_foo = plot.create_line(second_layer, line_style, foo);
+      plot::LinePiece plot_foo = plot.create_line_piece(second_layer, line_style, foo);
 
       // Point on symmetry line at distance 1 from V.
       Point V1 = V + symmetry_line_dir;

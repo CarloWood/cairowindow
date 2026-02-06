@@ -345,20 +345,6 @@ class Plot : public CoordinateMapper<csid::plot>
   }
 
   //--------------------------------------------------------------------------
-  // Rectangle
-
- public:
-  // Create and draw a rectangle on layer, using args... and rectangle_style.
-  template<typename... Args>
-  [[nodiscard]] Rectangle create_rectangle(boost::intrusive_ptr<Layer> const& layer,
-      draw::RectangleStyle const& rectangle_style, Args&&... args)
-  {
-    Rectangle plot_rectangle(std::forward<Args>(args)...);
-    add_rectangle(layer, rectangle_style, plot_rectangle);
-    return plot_rectangle;
-  }
-
-  //--------------------------------------------------------------------------
   // Circle
 
  public:

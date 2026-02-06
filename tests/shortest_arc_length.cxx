@@ -89,10 +89,10 @@ int main()
       auto P_gamma_label = plot.create_text(second_layer, label_style({.position = draw::centered_right_of}), plot_P_gamma, "Pᵧ");
 
       // Draw line through P₀ and Pᵧ.
-      auto plot_line_P0Pgamma = plot.create_line(second_layer, line_style, LineExtend::both, plot_P0, plot_P_gamma);
+      auto plot_line_P0Pgamma = plot.create_line_piece(second_layer, line_style, LineExtend::both, plot_P0, plot_P_gamma);
 
       // Draw line through P₁ and Pᵧ.
-      auto plot_line_P1Pgamma = plot.create_line(second_layer, line_style, LineExtend::both, plot_P_gamma, plot_P1);
+      auto plot_line_P1Pgamma = plot.create_line_piece(second_layer, line_style, LineExtend::both, plot_P_gamma, plot_P1);
 
       Direction const D_gamma((Vector{plot_line_P0Pgamma.direction()} + Vector{plot_line_P1Pgamma.direction()}).direction());
       auto const& math_D_gamma{D_gamma.raw()};

@@ -91,6 +91,16 @@ class CoordinateMapper : public Printable
   // Add and draw plot_rectangle_cs on layer using rectangle_style. Handles rotation by drawing a polyline.
   void add_rectangle(LayerPtr const& layer, draw::RectangleStyle const& rectangle_style, RectangleHandle const& plot_rectangle_cs);
 
+  // Create and draw a rectangle on layer, using args... and rectangle_style.
+  template<typename... Args>
+  [[nodiscard]] RectangleHandle create_rectangle(LayerPtr const& layer, draw::RectangleStyle const& rectangle_style, Args&&... args)
+    requires requires(Args&&... args) { RectangleHandle{std::forward<Args>(args)...}; }
+  {
+    RectangleHandle plot_rectangle_cs(std::forward<Args>(args)...);
+    add_rectangle(layer, rectangle_style, plot_rectangle_cs);
+    return plot_rectangle_cs;
+  }
+
   //--------------------------------------------------------------------------
   // Circle
 

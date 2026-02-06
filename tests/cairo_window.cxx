@@ -162,7 +162,7 @@ int main()
 //      auto horizontal_line_through_P1_and_H = plot.create_line(second_layer, line_style, P1, H);
 
       // Draw a line through P₀ and P₁.
-      auto line_through_P0_and_P1 = plot.create_line(second_layer, solid_line_style, P0, P1);
+      auto line_through_P0_and_P1 = plot.create_line_piece(second_layer, solid_line_style, P0, P1);
 
       // Draw a line through P₁ perpendicular to the symmetry line of the parabola.
       auto line_through_p1_perpendicular_to_symmetry_line =
