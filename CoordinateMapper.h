@@ -73,6 +73,14 @@ class CoordinateMapper : public Printable
   // Add and draw plot_point_cs on layer using point_style.
   void add_point(LayerPtr const& layer, draw::PointStyle const& point_style, PointHandle const& plot_point_cs);
 
+  // Create and draw a point on layer using point_style.
+  [[nodiscard]] PointHandle create_point(LayerPtr const& layer, draw::PointStyle const& point_style, cs::Point<cs> const& point_cs)
+  {
+    PointHandle plot_point_cs{point_cs};
+    add_point(layer, point_style, plot_point_cs);
+    return plot_point_cs;
+  }
+
   // Called by Window::update_grabbed through the lambda defined in Window::register_draggable<cs> when a Draggable plot_point_cs was moved to (pixel_x, pixel_y).
   Geometry update_grabbed(plot::cs::Point<cs>* plot_point_cs, double pixel_x, double pixel_y,
       std::function<cs::Point<cs> (cs::Point<cs> const&)> const& restriction);

@@ -245,15 +245,24 @@ class Plot : public CoordinateMapper<csid::plot>
     convert_to_pixels(in.data(), out.data(), size);
   }
 
+  //--------------------------------------------------------------------------
+  // Line
+
+  // Add and draw plot_line using line_style.
+  void add_line(boost::intrusive_ptr<Layer> const& layer,
+      draw::LineStyle const& line_style,
+      Line const& plot_line);
+
  public:
-  // Create and draw a point on layer at x,y using point_style.
-  [[nodiscard]] Point create_point(boost::intrusive_ptr<Layer> const& layer,
-      draw::PointStyle const& point_style,
-      cairowindow::Point const& point)
+  // Create and draw a line through point in direction using line_style.
+  template<typename... Args>
+  [[nodiscard]] Line create_line(boost::intrusive_ptr<Layer> const& layer,
+      draw::LineStyle const& line_style,
+      Args&&... args)
   {
-    Point plot_point(point);
-    add_point(layer, point_style, plot_point);
-    return plot_point;
+    Line plot_line(std::forward<Args>(args)...);
+    add_line(layer, line_style, plot_line);
+    return plot_line;
   }
 
   //--------------------------------------------------------------------------
@@ -267,7 +276,7 @@ class Plot : public CoordinateMapper<csid::plot>
  public:
   // Create and draw a line piece between points from and to using line_style and line_extend.
   template<typename... Args>
-  [[nodiscard]] LinePiece create_line(boost::intrusive_ptr<Layer> const& layer,
+  [[nodiscard]] LinePiece create_line_piece(boost::intrusive_ptr<Layer> const& layer,
       draw::LineStyle const& line_style, LineExtend line_extend,
       Args&&... args)
     requires requires(Args&&... args) { LinePiece{std::forward<Args>(args)...}; }
@@ -279,7 +288,7 @@ class Plot : public CoordinateMapper<csid::plot>
 
   // Same, but without a line_extend.
   template<typename... Args>
-  [[nodiscard]] LinePiece create_line(boost::intrusive_ptr<Layer> const& layer,
+  [[nodiscard]] LinePiece create_line_piece(boost::intrusive_ptr<Layer> const& layer,
       draw::LineStyle const& line_style,
       Args&&... args)
     requires requires(Args&&... args) { LinePiece{std::forward<Args>(args)...}; }
@@ -336,24 +345,7 @@ class Plot : public CoordinateMapper<csid::plot>
   }
 
   //--------------------------------------------------------------------------
-  // Line
-
-  // Add and draw plot_line using line_style.
-  void add_line(boost::intrusive_ptr<Layer> const& layer,
-      draw::LineStyle const& line_style,
-      Line const& plot_line);
-
- public:
-  // Create and draw a line through point in direction using line_style.
-  template<typename... Args>
-  [[nodiscard]] Line create_line(boost::intrusive_ptr<Layer> const& layer,
-      draw::LineStyle const& line_style,
-      Args&&... args)
-  {
-    Line plot_line(std::forward<Args>(args)...);
-    add_line(layer, line_style, plot_line);
-    return plot_line;
-  }
+  // Rectangle
 
  public:
   // Create and draw a rectangle on layer, using args... and rectangle_style.

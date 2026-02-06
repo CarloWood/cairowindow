@@ -187,15 +187,6 @@ class CoordinateSystem : public CoordinateMapper<cs>
   //--------------------------------------------------------------------------
   // Point
 
- public:
-  // Create and draw a point on layer at x,y using point_style.
-  [[nodiscard]] PointHandle create_point(LayerPtr const& layer, draw::PointStyle const& point_style, cs::Point<cs> const& point_cs)
-  {
-    PointHandle plot_point_cs{point_cs};
-    add_point(layer, point_style, plot_point_cs);
-    return plot_point_cs;
-  }
-
 #if 0
   //--------------------------------------------------------------------------
   // Connector
