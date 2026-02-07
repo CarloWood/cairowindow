@@ -109,7 +109,7 @@ void QuickGraph::initialize()
   empty_ = false;
 }
 
-void QuickGraph::add_line(cs::Line<csid::plot> const& L, draw::LineStyle const& line_style)
+void QuickGraph::add_line(math::cs::Line<csid::plot> const& L, draw::LineStyle const& line_style)
 {
   plot_lines_.emplace_back(L.raw());
 
@@ -125,7 +125,7 @@ void QuickGraph::add_line(cs::Line<csid::plot> const& L, draw::LineStyle const& 
   window_.set_send_expose_events(true);
 }
 
-void QuickGraph::add_line(cs::LinePiece<csid::plot> const& L, draw::LineStyle const& line_style)
+void QuickGraph::add_line(math::cs::LinePiece<csid::plot> const& L, draw::LineStyle const& line_style)
 {
   plot_line_pieces_.emplace_back(L.raw());
 

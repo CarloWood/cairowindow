@@ -3,5 +3,5 @@
 #include "math/cs/Vector.h"
 
 namespace cairowindow {
-using Vector = cs::Vector<csid::plot>;
+using Vector = math::cs::Vector<csid::plot>;
 } // namespace cairowindow

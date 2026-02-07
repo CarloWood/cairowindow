@@ -4,5 +4,5 @@
 #include "math/cs/Point.h"
 
 namespace cairowindow {
-using Point = cs::Point<csid::plot>;
+using Point = math::cs::Point<csid::plot>;
 } // namespace cairowindow

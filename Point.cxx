@@ -13,7 +13,7 @@ void Point<csid::plot>::moved(cairowindow::Point const& new_position)
 }
 
 template<>
-void Point<csid::plot>::move(Plot& UNUSED_ARG(plot), cairowindow::cs::Point<csid::plot> const& new_position)
+void Point<csid::plot>::move(Plot& UNUSED_ARG(plot), math::cs::Point<csid::plot> const& new_position)
 {
   Layer* layer = draw_object_->layer();
   Window* window = layer->window();

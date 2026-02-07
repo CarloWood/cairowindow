@@ -206,7 +206,7 @@ class Window
   template<CS cs>
   void register_draggable(CoordinateSystem<cs>& coordinate_system,
       plot::cs::Point<cs>* plot_point_cs,
-      std::function<cs::Point<cs> (cs::Point<cs> const&)> restriction = {})
+      std::function<math::cs::Point<cs> (math::cs::Point<cs> const&)> restriction = {})
   {
     // Convert a new position (x,y), in pixels, to the relocated bounding box in pixels.
     auto update_grabbed_pixels = [&coordinate_system, plot_point_cs, restriction = std::move(restriction)](double pixel_x, double pixel_y) -> Geometry {

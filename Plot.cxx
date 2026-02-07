@@ -186,16 +186,16 @@ void Plot::add_bezier_curve(boost::intrusive_ptr<Layer> const& layer,
     draw::BezierCurveStyle const& bezier_curve_style,
     BezierCurve const& plot_bezier_curve)
 {
-  // Use explicit conversion from math::Point<2> to cairowindow::Point (aka cairowindow::cs::Point<csid::plot>).
+  // Use explicit conversion from math::Point<2> to cairowindow::Point (aka math::cs::Point<csid::plot>).
   cairowindow::Point const P0{plot_bezier_curve.P0()};
   cairowindow::Point const C0{plot_bezier_curve.C0()};
   cairowindow::Point const C1{plot_bezier_curve.C1()};
   cairowindow::Point const P1{plot_bezier_curve.P1()};
 
-  cairowindow::cs::Point<csid::pixels> const P0_pixels = P0 * cs_transform_pixels_;
-  cairowindow::cs::Point<csid::pixels> const C0_pixels = C0 * cs_transform_pixels_;
-  cairowindow::cs::Point<csid::pixels> const C1_pixels = C1 * cs_transform_pixels_;
-  cairowindow::cs::Point<csid::pixels> const P1_pixels = P1 * cs_transform_pixels_;
+  math::cs::Point<csid::pixels> const P0_pixels = P0 * cs_transform_pixels_;
+  math::cs::Point<csid::pixels> const C0_pixels = C0 * cs_transform_pixels_;
+  math::cs::Point<csid::pixels> const C1_pixels = C1 * cs_transform_pixels_;
+  math::cs::Point<csid::pixels> const P1_pixels = P1 * cs_transform_pixels_;
 
   plot_bezier_curve.draw_object_ =
       std::make_shared<draw::BezierCurve>(
@@ -326,7 +326,7 @@ cairowindow::Geometry Plot::update_grabbed(utils::Badge<Window> badge, Clickable
 
   // If convert is not true then pixel_x, pixel_y are already cairowindow::Point coordinates (aka csid::plot).
   cairowindow::Point new_position =
-    draggable->convert() ? cairowindow::cs::Point<csid::pixels>{x, y} * cs_transform_pixels_.inverse()
+    draggable->convert() ? math::cs::Point<csid::pixels>{x, y} * cs_transform_pixels_.inverse()
                          : cairowindow::Point{x, y};
 
   if (draggable_restrictions_[grabbed_point])

@@ -3,5 +3,5 @@
 #include "math/cs/Line.h"
 
 namespace cairowindow {
-using Line = cs::Line<csid::plot>;
+using Line = math::cs::Line<csid::plot>;
 } // namespace cairowindow

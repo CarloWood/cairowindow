@@ -26,13 +26,13 @@ namespace cs {
 // Returned by Plot::create_line(layer, line_style, [line_extend,] <args to construct a cs::LinePiece<cs>>).
 //
 template<CS cs>
-class LinePiece : public cairowindow::cs::LinePiece<cs>
+class LinePiece : public math::cs::LinePiece<cs>
 {
  public:
   // Default constructor creates an uninitialized LinePiece.
   LinePiece() = default;
-  explicit LinePiece(cairowindow::cs::LinePiece<cs> const& line_piece) : cairowindow::cs::LinePiece<cs>(line_piece) { }
-  using cairowindow::cs::LinePiece<cs>::LinePiece;
+  explicit LinePiece(math::cs::LinePiece<cs> const& line_piece) : math::cs::LinePiece<cs>(line_piece) { }
+  using math::cs::LinePiece<cs>::LinePiece;
 
  protected:
   mutable std::shared_ptr<draw::Line> draw_object_;

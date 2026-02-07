@@ -96,7 +96,7 @@ class CoordinateMapper : public Printable
   void add_point(LayerPtr const& layer, draw::PointStyle const& point_style, PointHandle const& plot_point_cs);
 
   // Create and draw a point on layer using point_style.
-  [[nodiscard]] PointHandle create_point(LayerPtr const& layer, draw::PointStyle const& point_style, cs::Point<cs> const& point_cs)
+  [[nodiscard]] PointHandle create_point(LayerPtr const& layer, draw::PointStyle const& point_style, math::cs::Point<cs> const& point_cs)
   {
     PointHandle plot_point_cs{point_cs};
     add_point(layer, point_style, plot_point_cs);
@@ -105,7 +105,7 @@ class CoordinateMapper : public Printable
 
   // Called by Window::update_grabbed through the lambda defined in Window::register_draggable<cs> when a Draggable plot_point_cs was moved to (pixel_x, pixel_y).
   Geometry update_grabbed(plot::cs::Point<cs>* plot_point_cs, double pixel_x, double pixel_y,
-      std::function<cs::Point<cs> (cs::Point<cs> const&)> const& restriction);
+      std::function<math::cs::Point<cs> (math::cs::Point<cs> const&)> const& restriction);
 
   //--------------------------------------------------------------------------
   // Text
@@ -115,9 +115,9 @@ class CoordinateMapper : public Printable
 
   // Create and draw text on layer at position using text_style.
   [[nodiscard]] TextHandle create_text(LayerPtr const& layer, draw::TextStyle const& text_style,
-      cs::Point<cs> const& position, std::string const& text)
+      math::cs::Point<cs> const& position, std::string const& text)
   {
-    cs::Point<csid::pixels> const position_pixels = position * cs_transform_pixels_;
+    math::cs::Point<csid::pixels> const position_pixels = position * cs_transform_pixels_;
     TextHandle plot_text(position_pixels, text);
     add_text(layer, text_style, plot_text);
     return plot_text;
@@ -258,7 +258,7 @@ template<CS cs>
 void CoordinateMapper<cs>::add_point(LayerPtr const& layer, draw::PointStyle const& point_style, PointHandle const& plot_point_cs)
 {
   // Convert from the coordinate-system space to pixels using the transform.
-  cs::Point<csid::pixels> point_pixels = plot_point_cs * cs_transform_pixels_;
+  math::cs::Point<csid::pixels> point_pixels = plot_point_cs * cs_transform_pixels_;
 
   plot_point_cs.create_draw_object({}, point_pixels.x(), point_pixels.y(), point_style);
   draw_layer_region_on(layer, plot_point_cs.draw_object());
@@ -266,10 +266,10 @@ void CoordinateMapper<cs>::add_point(LayerPtr const& layer, draw::PointStyle con
 
 template<CS cs>
 Geometry CoordinateMapper<cs>::update_grabbed(plot::cs::Point<cs>* plot_point_cs, double pixel_x, double pixel_y,
-    std::function<cs::Point<cs> (cs::Point<cs> const&)> const& restriction)
+    std::function<math::cs::Point<cs> (math::cs::Point<cs> const&)> const& restriction)
 {
-  cs::Point<csid::pixels> const new_position_pixels{pixel_x, pixel_y};
-  cs::Point<cs> new_position_cs = new_position_pixels * cs_transform_pixels_.inverse();
+  math::cs::Point<csid::pixels> const new_position_pixels{pixel_x, pixel_y};
+  math::cs::Point<cs> new_position_cs = new_position_pixels * cs_transform_pixels_.inverse();
 
   if (restriction)
     new_position_cs = restriction(new_position_cs);
@@ -316,23 +316,23 @@ void CoordinateMapper<cs>::add_rectangle(LayerPtr const& layer, draw::RectangleS
 
   if (basis_axis_aligned)
   {
-    cs::Point<cs> const p1_cs(plot_rectangle_cs.offset_x(), plot_rectangle_cs.offset_y());
-    cs::Point<cs> const p2_cs(plot_rectangle_cs.offset_x() + plot_rectangle_cs.width(), plot_rectangle_cs.offset_y() + plot_rectangle_cs.height());
+    math::cs::Point<cs> const p1_cs(plot_rectangle_cs.offset_x(), plot_rectangle_cs.offset_y());
+    math::cs::Point<cs> const p2_cs(plot_rectangle_cs.offset_x() + plot_rectangle_cs.width(), plot_rectangle_cs.offset_y() + plot_rectangle_cs.height());
 
-    cs::Point<csid::pixels> const p1_pixels = p1_cs * cs_transform_pixels_;
-    cs::Point<csid::pixels> const p2_pixels = p2_cs * cs_transform_pixels_;
+    math::cs::Point<csid::pixels> const p1_pixels = p1_cs * cs_transform_pixels_;
+    math::cs::Point<csid::pixels> const p2_pixels = p2_cs * cs_transform_pixels_;
 
     plot_rectangle_cs.create_draw_object({}, p1_pixels.x(), p1_pixels.y(), p2_pixels.x(), p2_pixels.y(), rectangle_style);
     draw_layer_region_on(layer, plot_rectangle_cs.draw_object());
     return;
   }
 
-  cs::Point<cs> const topleft_cs(plot_rectangle_cs.offset_x(), plot_rectangle_cs.offset_y());
-  cs::Point<cs> const topright_cs(plot_rectangle_cs.offset_x() + plot_rectangle_cs.width(), plot_rectangle_cs.offset_y());
-  cs::Point<cs> const bottomright_cs(plot_rectangle_cs.offset_x() + plot_rectangle_cs.width(), plot_rectangle_cs.offset_y() + plot_rectangle_cs.height());
-  cs::Point<cs> const bottomleft_cs(plot_rectangle_cs.offset_x(), plot_rectangle_cs.offset_y() + plot_rectangle_cs.height());
+  math::cs::Point<cs> const topleft_cs(plot_rectangle_cs.offset_x(), plot_rectangle_cs.offset_y());
+  math::cs::Point<cs> const topright_cs(plot_rectangle_cs.offset_x() + plot_rectangle_cs.width(), plot_rectangle_cs.offset_y());
+  math::cs::Point<cs> const bottomright_cs(plot_rectangle_cs.offset_x() + plot_rectangle_cs.width(), plot_rectangle_cs.offset_y() + plot_rectangle_cs.height());
+  math::cs::Point<cs> const bottomleft_cs(plot_rectangle_cs.offset_x(), plot_rectangle_cs.offset_y() + plot_rectangle_cs.height());
 
-  std::vector<cs::Point<csid::pixels>> points_pixels = {
+  std::vector<math::cs::Point<csid::pixels>> points_pixels = {
     topleft_cs * cs_transform_pixels_,
     topright_cs * cs_transform_pixels_,
     bottomright_cs * cs_transform_pixels_,
@@ -350,10 +350,10 @@ void CoordinateMapper<cs>::add_rectangle(LayerPtr const& layer, draw::RectangleS
 template<CS cs>
 void CoordinateMapper<cs>::add_circle(LayerPtr const& layer, draw::CircleStyle const& circle_style, CircleHandle const& plot_circle_cs)
 {
-  cs::Point<cs> const& center = plot_circle_cs.center();
+  math::cs::Point<cs> const& center = plot_circle_cs.center();
   double const radius = plot_circle_cs.radius();
 
-  cs::Point<csid::pixels> const center_pixels = center * cs_transform_pixels_;
+  math::cs::Point<csid::pixels> const center_pixels = center * cs_transform_pixels_;
 
   auto const [rx_x, rx_y] = cs_transform_pixels_.map_vector(radius, 0.0);
   auto const [ry_x, ry_y] = cs_transform_pixels_.map_vector(0.0, radius);
@@ -382,12 +382,12 @@ void CoordinateMapper<cs>::add_circle(LayerPtr const& layer, draw::CircleStyle c
 template<CS cs>
 void CoordinateMapper<cs>::add_arc(LayerPtr const& layer, draw::ArcStyle const& arc_style, ArcHandle const& plot_arc_cs)
 {
-  cs::Point<cs> const& center_cs = plot_arc_cs.center();
+  math::cs::Point<cs> const& center_cs = plot_arc_cs.center();
   double const radius_cs = plot_arc_cs.radius();
   double const start_angle = plot_arc_cs.start_angle();
   double const end_angle = plot_arc_cs.end_angle();
 
-  cs::Point<csid::pixels> const center_pixels = center_cs * cs_transform_pixels_;
+  math::cs::Point<csid::pixels> const center_pixels = center_cs * cs_transform_pixels_;
 
   auto const [rx_x, rx_y] = cs_transform_pixels_.map_vector(radius_cs, 0.0);
   auto const [ry_x, ry_y] = cs_transform_pixels_.map_vector(0.0, radius_cs);
@@ -418,8 +418,8 @@ template<CS cs>
 void CoordinateMapper<cs>::add_clipped_line(LayerPtr const& layer, draw::LineStyle const& line_style, LineHandle const& plot_line_cs,
     math::Hyperblock<2> const& clip_rectangle_cs)
 {
-  cs::Direction<cs> const& direction = plot_line_cs.direction();
-  cs::Point<cs> const& point = plot_line_cs.point();
+  math::cs::Direction<cs> const& direction = plot_line_cs.direction();
+  math::cs::Point<cs> const& point = plot_line_cs.point();
 
   double normal_x = -direction.y();
   double normal_y = direction.x();
@@ -438,11 +438,11 @@ void CoordinateMapper<cs>::add_clipped_line(LayerPtr const& layer, draw::LineSty
   double x2 = intersections[second].coordinate(0);
   double y2 = intersections[second].coordinate(1);
 
-  cs::Point<cs> const intersection1_cs{x1, y1};
-  cs::Point<cs> const intersection2_cs{x2, y2};
+  math::cs::Point<cs> const intersection1_cs{x1, y1};
+  math::cs::Point<cs> const intersection2_cs{x2, y2};
 
-  cs::Point<csid::pixels> intersection1_pixels = intersection1_cs * cs_transform_pixels_;
-  cs::Point<csid::pixels> intersection2_pixels = intersection2_cs * cs_transform_pixels_;
+  math::cs::Point<csid::pixels> intersection1_pixels = intersection1_cs * cs_transform_pixels_;
+  math::cs::Point<csid::pixels> intersection2_pixels = intersection2_cs * cs_transform_pixels_;
 
   plot_line_cs.create_draw_object({}, intersection1_pixels.x(), intersection1_pixels.y(), intersection2_pixels.x(), intersection2_pixels.y(), line_style);
   draw_layer_region_on(layer, plot_line_cs.draw_object());
@@ -491,8 +491,8 @@ template<CS cs>
 void CoordinateMapper<cs>::add_clipped_line_piece(LayerPtr const& layer, draw::LineStyle const& line_style, LineExtend line_extend,
     LinePieceHandle const& plot_line_piece_cs, math::Hyperblock<2> const& clip_rectangle_cs)
 {
-  cs::Point<cs> const& from_cs = plot_line_piece_cs.from();
-  cs::Point<cs> const& to_cs = plot_line_piece_cs.to();
+  math::cs::Point<cs> const& from_cs = plot_line_piece_cs.from();
+  math::cs::Point<cs> const& to_cs = plot_line_piece_cs.to();
 
   // apply_line_extend can change these initial values.
   double x1_cs = from_cs.x();
@@ -501,8 +501,8 @@ void CoordinateMapper<cs>::add_clipped_line_piece(LayerPtr const& layer, draw::L
   double y2_cs = to_cs.y();
   detail::apply_line_extend(x1_cs, y1_cs, x2_cs, y2_cs, line_extend, clip_rectangle_cs);
   // Convert the result to pixels.
-  cs::Point<csid::pixels> const p1_pixels = cs::Point<cs>{x1_cs, y1_cs} * cs_transform_pixels_;
-  cs::Point<csid::pixels> const p2_pixels = cs::Point<cs>{x2_cs, y2_cs} * cs_transform_pixels_;
+  math::cs::Point<csid::pixels> const p1_pixels = math::cs::Point<cs>{x1_cs, y1_cs} * cs_transform_pixels_;
+  math::cs::Point<csid::pixels> const p2_pixels = math::cs::Point<cs>{x2_cs, y2_cs} * cs_transform_pixels_;
 
   plot_line_piece_cs.create_draw_object({}, p1_pixels.x(), p1_pixels.y(), p2_pixels.x(), p2_pixels.y(), line_style);
   draw_layer_region_on(layer, plot_line_piece_cs.draw_object());
@@ -514,14 +514,14 @@ void CoordinateMapper<cs>::add_clipped_line_piece(LayerPtr const& layer, draw::L
 template<CS cs>
 void CoordinateMapper<cs>::add_connector(LayerPtr const& layer, draw::ConnectorStyle const& connector_style, ConnectorHandle const& plot_connector_cs)
 {
-  cs::Point<cs> const& from = plot_connector_cs.from();
-  cs::Point<cs> const& to = plot_connector_cs.to();
+  math::cs::Point<cs> const& from = plot_connector_cs.from();
+  math::cs::Point<cs> const& to = plot_connector_cs.to();
 
   auto const arrow_head_shape_from = static_cast<draw::Connector::ArrowHeadShape>(plot_connector_cs.arrow_head_shape_from());
   auto const arrow_head_shape_to = static_cast<draw::Connector::ArrowHeadShape>(plot_connector_cs.arrow_head_shape_to());
 
-  cs::Point<csid::pixels> const from_pixels = from * cs_transform_pixels_;
-  cs::Point<csid::pixels> const to_pixels = to * cs_transform_pixels_;
+  math::cs::Point<csid::pixels> const from_pixels = from * cs_transform_pixels_;
+  math::cs::Point<csid::pixels> const to_pixels = to * cs_transform_pixels_;
 
   plot_connector_cs.create_draw_object({},
       from_pixels.x(), from_pixels.y(), to_pixels.x(), to_pixels.y(),

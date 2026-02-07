@@ -1,16 +1,23 @@
 #pragma once
 
+#include "CS.h"
 #include "math/cs/Point.h"      // Point, Size
 #include "debug.h"
+#ifdef CWDEBUG
+#include "utils/has_print_on.h"
+#endif
 
 namespace cairowindow::cs {
+#ifdef CWDEBUG
+using utils::has_print_on::operator<<;
+#endif
 
 template<CS cs>
 class Rectangle
 {
  private:
-  Point<cs> top_left_;
-  Size<cs> size_;
+  math::cs::Point<cs> top_left_;
+  math::cs::Size<cs> size_;
 
  public:
   Rectangle() : top_left_{}, size_{0.0, 0.0} { }
@@ -18,7 +25,7 @@ class Rectangle
   {
     ASSERT(width >= 0.0 && height >= 0.0);
   }
-  Rectangle(Point<cs> const& top_left, Size<cs> const& size) : top_left_{top_left}, size_{size} { }
+  Rectangle(math::cs::Point<cs> const& top_left, math::cs::Size<cs> const& size) : top_left_{top_left}, size_{size} { }
 
   double offset_x() const { return top_left_.x(); }
   double offset_y() const { return top_left_.y(); }

@@ -11,7 +11,7 @@
 #endif
 
 namespace cairowindow {
-using Point = cs::Point<csid::plot>;
+using Point = math::cs::Point<csid::plot>;
 
 namespace draw {
 
@@ -30,7 +30,7 @@ class Line : public LayerRegion
     ASSERT(!std::isnan(x1) && !std::isnan(y1) && !std::isnan(x2) && !std::isnan(y2));
   }
 
-  inline Line(cairowindow::cs::Point<csid::pixels> const& point1, cairowindow::cs::Point<csid::pixels> const& point2, LineStyle const& style);
+  inline Line(math::cs::Point<csid::pixels> const& point1, math::cs::Point<csid::pixels> const& point2, LineStyle const& style);
 
   double length() const { return std::sqrt((x2_ - x1_) * (x2_ - x1_) + (y2_ - y1_) * (y2_ - y1_)); }
 
@@ -79,7 +79,7 @@ class Line : public LayerRegion
 namespace cairowindow::draw {
 
 //inline
-Line::Line(cairowindow::cs::Point<csid::pixels> const& point1, cairowindow::cs::Point<csid::pixels> const& point2, LineStyle const& style) :
+Line::Line(math::cs::Point<csid::pixels> const& point1, math::cs::Point<csid::pixels> const& point2, LineStyle const& style) :
   Line(point1.x(), point1.y(), point2.x(), point2.y(), style)
 {
 }

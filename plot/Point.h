@@ -28,19 +28,19 @@ namespace cs {
 // Returned by Plot::create_point(layer, point_style, <args to construct a plot::cs::Point<cs>>).
 //
 // Note that adding and/or subtracting a Vector and/or Direction to/from this Point class
-// returns a cairowindow::cs::Point<cs>, an object outside of namespace plot.
+// returns a math::cs::Point<cs>, an object outside of namespace plot.
 // The reason for that is that this object, inside namespace plot, represents a *plotted* point.
 // Doing calculations with it, does not magically plot the result as well.
 //
 template<CS cs>
-class Point : public cairowindow::cs::Point<cs>, public Draggable
+class Point : public math::cs::Point<cs>, public Draggable
 {
  public:
   // Default constructor creates a Point in the origin.
-  Point() : cairowindow::cs::Point<cs>(0.0, 0.0) { }
-  explicit Point(cairowindow::cs::Point<cs> const& point) : cairowindow::cs::Point<cs>(point) { }
-  using cairowindow::cs::Point<cs>::Point;
-  using cairowindow::cs::Point<cs>::operator=;
+  Point() : math::cs::Point<cs>(0.0, 0.0) { }
+  explicit Point(math::cs::Point<cs> const& point) : math::cs::Point<cs>(point) { }
+  using math::cs::Point<cs>::Point;
+  using math::cs::Point<cs>::operator=;
 
  protected:
   // Drawable associated with this logical point; populated by CoordinateSystem::add_point or Plot::add_point.
@@ -73,11 +73,11 @@ class Point : public cairowindow::cs::Point<cs>, public Draggable
   }
 
  public:
-  void move(Plot& plot, cairowindow::cs::Point<csid::plot> const& new_position);
+  void move(Plot& plot, math::cs::Point<csid::plot> const& new_position);
 
 #ifdef CWDEBUG
  public:
-  void print_on(std::ostream& os) const override { cairowindow::cs::Point<cs>::print_on(os); }
+  void print_on(std::ostream& os) const override { math::cs::Point<cs>::print_on(os); }
 #endif
 };
 
@@ -94,7 +94,7 @@ template<>
 void Point<csid::plot>::moved(cairowindow::Point const& new_position);
 
 template<>
-void Point<csid::plot>::move(Plot& UNUSED_ARG(plot), cairowindow::cs::Point<csid::plot> const& new_position);
+void Point<csid::plot>::move(Plot& UNUSED_ARG(plot), math::cs::Point<csid::plot> const& new_position);
 
 } // namespace cs
 

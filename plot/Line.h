@@ -28,13 +28,13 @@ namespace cs {
 // Returned by Plot::create_line(layer, line_style, <args to construct a plot::cs::Line>).
 //
 template<CS cs>
-class Line : public cairowindow::cs::Line<cs>
+class Line : public math::cs::Line<cs>
 {
  public:
   // Default constructor creates an uninitialized Line.
   Line() = default;
-  explicit Line(cairowindow::cs::Line<cs> const& line) : cairowindow::cs::Line<cs>(line) { }
-  using cairowindow::cs::Line<cs>::Line;
+  explicit Line(math::cs::Line<cs> const& line) : math::cs::Line<cs>(line) { }
+  using math::cs::Line<cs>::Line;
 
  protected:
   mutable std::shared_ptr<draw::Line> draw_object_;
