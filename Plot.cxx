@@ -254,17 +254,6 @@ void Plot::add_bezier_fitter(boost::intrusive_ptr<Layer> const& layer,
 //--------------------------------------------------------------------------
 // Text
 
-void Plot::add_text(boost::intrusive_ptr<Layer> const& layer,
-    draw::TextStyle const& text_style,
-    Text const& plot_text)
-{
-  cairowindow::Pixel position = plot_text.position();
-  std::string const& text = plot_text.text();
-
-  plot_text.draw_object_ = std::make_shared<draw::Text>(text, position.x(), position.y(), text_style);
-  draw_layer_region_on(layer, plot_text.draw_object_);
-}
-
 //--------------------------------------------------------------------------
 // Slider
 

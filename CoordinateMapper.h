@@ -3,6 +3,7 @@
 #include "Printable.h"
 #include "cs/Point.h"
 #include "cs/TransformOperators.h"
+#include "Text.h"
 #include "plot/Arc.h"
 #include "plot/Circle.h"
 #include "plot/Connector.h"
@@ -17,6 +18,7 @@
 #include "draw/Polyline.h"
 #include "draw/Line.h"
 #include "draw/Point.h"
+#include "draw/Text.h"
 #include "math/Hyperblock.h"
 #include "math/Transform.h"
 #include <cmath>
@@ -71,6 +73,7 @@ class CoordinateMapper : public Printable
   using CircleHandle = plot::cs::Circle<cs>;
   using ArcHandle = plot::cs::Arc<cs>;
   using ConnectorHandle = plot::cs::Connector<cs>;
+  using TextHandle = plot::Text;
 
  protected:
   math::Transform<cs, csid::pixels> cs_transform_pixels_;
@@ -103,6 +106,31 @@ class CoordinateMapper : public Printable
   // Called by Window::update_grabbed through the lambda defined in Window::register_draggable<cs> when a Draggable plot_point_cs was moved to (pixel_x, pixel_y).
   Geometry update_grabbed(plot::cs::Point<cs>* plot_point_cs, double pixel_x, double pixel_y,
       std::function<cs::Point<cs> (cs::Point<cs> const&)> const& restriction);
+
+  //--------------------------------------------------------------------------
+  // Text
+
+  // Add and draw plot_text on layer using text_style.
+  void add_text(LayerPtr const& layer, draw::TextStyle const& text_style, TextHandle const& plot_text);
+
+  // Create and draw text on layer at position using text_style.
+  [[nodiscard]] TextHandle create_text(LayerPtr const& layer, draw::TextStyle const& text_style,
+      cs::Point<cs> const& position, std::string const& text)
+  {
+    cs::Point<csid::pixels> const position_pixels = position * cs_transform_pixels_;
+    TextHandle plot_text(position_pixels, text);
+    add_text(layer, text_style, plot_text);
+    return plot_text;
+  }
+
+  // Same, but using pixel coordinates.
+  [[nodiscard]] TextHandle create_text(LayerPtr const& layer, draw::TextStyle const& text_style,
+      Pixel position, std::string const& text)
+  {
+    TextHandle plot_text(position, text);
+    add_text(layer, text_style, plot_text);
+    return plot_text;
+  }
 
   //--------------------------------------------------------------------------
   // Rectangle
@@ -252,6 +280,19 @@ Geometry CoordinateMapper<cs>::update_grabbed(plot::cs::Point<cs>* plot_point_cs
   add_point(draw_object->layer(), draw_object->point_style(), *plot_point_cs);
 
   return plot_point_cs->geometry();
+}
+
+//----------------------------------------------------------------------------
+// TextHandle
+
+template<CS cs>
+void CoordinateMapper<cs>::add_text(LayerPtr const& layer, draw::TextStyle const& text_style, TextHandle const& plot_text)
+{
+  cairowindow::Pixel const position = plot_text.position();
+  std::string const& text = plot_text.text();
+
+  plot_text.template create_draw_object<cs>({}, text, position.x(), position.y(), text_style);
+  draw_layer_region_on(layer, plot_text.draw_object());
 }
 
 //----------------------------------------------------------------------------

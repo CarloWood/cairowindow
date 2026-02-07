@@ -368,42 +368,6 @@ class Plot : public CoordinateMapper<csid::plot>
   }
 
   //--------------------------------------------------------------------------
-  // Text
-
-  // Add and draw plot_text on layer using text_style.
-  void add_text(boost::intrusive_ptr<Layer> const& layer,
-      draw::TextStyle const& text_style,
-      Text const& plot_text);
-
- private:
-  void add_text( // Do not pass a cairowindow::Text to this function! It must be a plot::Text.
-      boost::intrusive_ptr<Layer> const& layer,
-      draw::TextStyle const& text_style,
-      Text&& plot_text);
-
- public:
-  // Create and draw text on layer at position using text_style.
-  [[nodiscard]] Text create_text(boost::intrusive_ptr<Layer> const& layer,
-      draw::TextStyle const& text_style,
-      cairowindow::Point position, std::string const& text)
-  {
-    cairowindow::cs::Point<csid::pixels> const position_pixels = position * cs_transform_pixels_;
-    Text plot_text(position_pixels, text);
-    add_text(layer, text_style, plot_text);
-    return plot_text;
-  }
-
-  // Same, but using pixel coordinates.
-  [[nodiscard]] Text create_text(boost::intrusive_ptr<Layer> const& layer,
-      draw::TextStyle const& text_style,
-      cairowindow::Pixel position, std::string const& text)
-  {
-    Text plot_text(position, text);
-    add_text(layer, text_style, plot_text);
-    return plot_text;
-  }
-
-  //--------------------------------------------------------------------------
   // Slider
 
   [[nodiscard]] Slider create_slider(boost::intrusive_ptr<Layer> const& layer,
