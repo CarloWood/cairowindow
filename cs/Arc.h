@@ -9,7 +9,7 @@ template<CS cs>
 class Arc
 {
  public:
-  using Line = cairowindow::cs::Line<cs>;
+  using Line = cs::Line<cs>;
 
  private:
   Point<cs> center_;
