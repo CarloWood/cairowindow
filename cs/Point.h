@@ -5,6 +5,7 @@
 #include "math/Point.h"
 
 namespace cairowindow::cs {
+using CS = math::CS; //FIXME: remove once this namespace becomes math::cs
 
 template<CS cs>
 class Point;

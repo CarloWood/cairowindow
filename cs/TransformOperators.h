@@ -2,7 +2,6 @@
 
 #include "Point.h"
 #include "Size.h"
-#include "Rectangle.h"
 #include "math/Transform.h"
 
 namespace cairowindow::cs {
@@ -40,6 +39,7 @@ Size<to_cs> operator*(Size<from_cs> const& size, math::Transform<from_cs, to_cs,
   }
 }
 
+#if 0 //FIXME: move this to cairowindow
 template<CS from_cs, CS to_cs, bool inverted, math::AffineTransformConcept AffineTransformBackend>
 Rectangle<to_cs> operator*(Rectangle<from_cs> const& rectangle, math::Transform<from_cs, to_cs, inverted, AffineTransformBackend> const& transform)
 {
@@ -51,5 +51,6 @@ Rectangle<to_cs> operator*(Rectangle<from_cs> const& rectangle, math::Transform<
 
   return {p_to_cs, s_to_cs};
 }
+#endif
 
 } // namespace cairowindow::cs

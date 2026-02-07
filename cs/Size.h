@@ -12,7 +12,7 @@ namespace cairowindow::cs {
 using utils::has_print_on::operator<<;
 #endif
 
-template<CS cs>
+template<math::CS cs> //FIXME: remove 'math::' once this becomes namespace math::cs
 class Size
 {
  private:
