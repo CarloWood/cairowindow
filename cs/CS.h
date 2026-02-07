@@ -1,6 +1,6 @@
 #pragma once
 
-#include "math/CS.h"
+#include "math/cs/CS.h"
 
 namespace cairowindow {
 // cairowindow defines an uppercase CS as alias for math::cs.

@@ -3,7 +3,6 @@
 #include "Layer.h"
 #include "plot/Rectangle.h"
 #include "plot/Line.h"
-#include "cs/Vector.h"
 #include "cs/Range.h"
 #include "cs/NiceDelta.h"
 #include "draw/Point.h"
@@ -16,6 +15,7 @@
 #include "draw/Connector.h"
 #include "intersection_points.h"
 #include "CoordinateMapper.h"
+#include "math/cs/Vector.h"
 #include "math/Hyperblock.h"
 #include "math/Transform.h"
 #include <boost/intrusive_ptr.hpp>

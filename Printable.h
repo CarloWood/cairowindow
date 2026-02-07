@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Rectangle.h"
-#include "math/CS.h"
+#include "math/cs/CS.h"
 #include <cairo/cairo.h>
 #include <boost/intrusive_ptr.hpp>
 #include <memory>

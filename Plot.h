@@ -14,7 +14,6 @@
 #include "plot/Rectangle.h"
 #include "plot/LinePiece.h"
 #include "plot/Line.h"
-#include "cs/Point.h"
 #include "draw/PlotArea.h"
 #include "draw/Text.h"
 #include "draw/Point.h"
@@ -26,6 +25,7 @@
 #include "draw/BezierCurve.h"
 #include "draw/BezierFitter.h"
 #include "draw/Slider.h"
+#include "math/cs/Point.h"
 #include "utils/Vector.h"
 #include "utils/Badge.h"
 #include <boost/intrusive_ptr.hpp>

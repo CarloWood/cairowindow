@@ -1,6 +1,7 @@
 #pragma once
 
-#include "cs/Point.h"
+#include "cs/CS.h"
+#include "math/cs/Point.h"
 
 namespace cairowindow {
 using Point = cs::Point<csid::plot>;

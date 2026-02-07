@@ -4,7 +4,7 @@
 #include "LineStyle.h"
 #include "cairowindow/LayerRegion.h"
 #include "cairowindow/StrokeExtents.h"
-#include "cairowindow/cs/Point.h"
+#include "math/cs/Point.h"
 #ifdef CWDEBUG
 #include "cairowindow/debug_channel.h"
 #include "cairowindow/debugcairo.h"

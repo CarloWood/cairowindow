@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Point.h"              // Point, Size
+#include "math/cs/Point.h"      // Point, Size
 #include "debug.h"
 
 namespace cairowindow::cs {

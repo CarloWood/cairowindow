@@ -1,6 +1,6 @@
 #pragma once
 
-#include "cs/Direction.h"
+#include "math/cs/Direction.h"
 
 namespace cairowindow {
 using Direction = cs::Direction<csid::plot>;

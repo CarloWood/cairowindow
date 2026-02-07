@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Line.h"
+#include "math/cs/Line.h"
 #include <cmath>
 
 namespace cairowindow::cs {

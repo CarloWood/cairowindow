@@ -1,7 +1,7 @@
 #pragma once
 
-#include "cairowindow/cs/LinePiece.h"
 #include "cairowindow/draw/Line.h"
+#include "math/cs/LinePiece.h"
 #include "utils/Badge.h"
 #include <memory>
 

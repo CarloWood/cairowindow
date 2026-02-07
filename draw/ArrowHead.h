@@ -1,7 +1,7 @@
 #pragma once
 
-#include "cairowindow/cs/Direction.h"
 #include "Shape.h"
+#include "math/cs/Direction.h"
 #include <array>
 
 namespace cairowindow::draw {

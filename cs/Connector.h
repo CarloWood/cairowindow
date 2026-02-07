@@ -1,6 +1,6 @@
 #pragma once
 
-#include "LinePiece.h"
+#include "math/cs/LinePiece.h"
 
 namespace cairowindow::cs {
 

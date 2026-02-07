@@ -1,8 +1,6 @@
 #pragma once
 
 #include "Printable.h"
-#include "cs/Point.h"
-#include "cs/TransformOperators.h"
 #include "Text.h"
 #include "plot/Arc.h"
 #include "plot/Circle.h"
@@ -19,6 +17,8 @@
 #include "draw/Line.h"
 #include "draw/Point.h"
 #include "draw/Text.h"
+#include "math/cs/Point.h"
+#include "math/cs/TransformOperators.h"
 #include "math/Hyperblock.h"
 #include "math/Transform.h"
 #include <cmath>
