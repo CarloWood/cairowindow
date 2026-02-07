@@ -17,8 +17,8 @@
 #include "draw/Line.h"
 #include "draw/Point.h"
 #include "draw/Text.h"
+#include "cs/TransformOperators.h"
 #include "math/cs/Point.h"
-#include "math/cs/TransformOperators.h"
 #include "math/Hyperblock.h"
 #include "math/Transform.h"
 #include <cmath>
