@@ -97,10 +97,10 @@ class BezierCurve
   BezierCurve(BezierCurveMatrix const& m) : m_{m} { }
 
   // Accessors.
-  Vector P0() const { return m_.coefficient[0]; }
-  Vector C0() const { return m_.coefficient[1] / 3.0 + m_.coefficient[0]; }
-  Vector C1() const { return m_.coefficient[2] / 3.0 + 2.0 / 3.0 * m_.coefficient[1] + m_.coefficient[0]; }
-  Vector P1() const { return m_.coefficient[3] + m_.coefficient[2] + m_.coefficient[1] + m_.coefficient[0]; }
+  Point P0() const { return m_.coefficient[0].as_point(); }
+  Point C0() const { return P0() + m_.coefficient[1] / 3.0; }
+  Point C1() const { return P0() + m_.coefficient[2] / 3.0 + 2.0 / 3.0 * m_.coefficient[1]; }
+  Point P1() const { return P0() + m_.coefficient[3] + m_.coefficient[2] + m_.coefficient[1]; }
 
   // As matrix (coefficients of a polynomial in t).
   BezierCurveMatrix const& M() const { return m_; }

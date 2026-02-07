@@ -93,22 +93,6 @@ class Curve : public cairowindow::Curve
   mutable std::shared_ptr<draw::Curve> draw_object_;
 };
 
-namespace {
-
-template<typename Tuple, std::size_t... Indices>
-auto tuple_tail_impl(Tuple&& tuple, std::index_sequence<Indices...>)
-{
-  return std::make_tuple(std::get<Indices + 1>(std::forward<Tuple>(tuple))...);
-}
-
-template<typename... Args>
-auto tuple_tail(std::tuple<Args...>&& tuple)
-{
-  return tuple_tail_impl(std::forward<std::tuple<Args...>>(tuple), std::make_index_sequence<sizeof...(Args) - 1>{});
-}
-
-} // namespace
-
 struct TitleStyleDefaults : draw::TextStyleParamsDefault
 {
   static constexpr draw::TextPosition position = draw::centered;
@@ -164,9 +148,6 @@ namespace plot {
 
 class Plot : public CoordinateMapper<csid::plot>
 {
- public:
-  using Vector = math::Vector<2>;
-
  private:
   static constexpr int number_of_axes = draw::PlotArea::number_of_axes;
 
@@ -226,23 +207,14 @@ class Plot : public CoordinateMapper<csid::plot>
     return {range_[x_axis].min(), range_[y_axis].min(), range_[x_axis].size(), range_[y_axis].size()};
   }
 
-  double convert_x(double x) const;
-  double convert_y(double y) const;
-  Pixel convert_to_pixel(cairowindow::Point const& point) const;
-
-  double convert_from_pixel_x(double pixel_x) const;
-  double convert_from_pixel_y(double pixel_y) const;
-  cairowindow::Point convert_from_pixel(Pixel const& pixel) const;
-
-  double convert_horizontal_offset_from_pixel(double pixel_offset_x) const;
-  double convert_vertical_offset_from_pixel(double pixel_offset_y) const;
-
-  void convert_to_pixels(cairowindow::Point const* data_in, Pixel* data_out, std::size_t size);
-
-  template<std::size_t size>
-  [[gnu::always_inline]] void convert_to_pixels(std::array<cairowindow::Point, size> const& in, std::array<Pixel, size>& out)
+  double convert_horizontal_offset_from_pixel(double pixel_offset_x) const
   {
-    convert_to_pixels(in.data(), out.data(), size);
+    return pixel_offset_x / cs_transform_pixels_.x_scale();
+  }
+
+  double convert_vertical_offset_from_pixel(double pixel_offset_y) const
+  {
+    return pixel_offset_y / cs_transform_pixels_.y_scale();
   }
 
   //--------------------------------------------------------------------------
@@ -296,92 +268,6 @@ class Plot : public CoordinateMapper<csid::plot>
     LinePiece plot_line_piece(std::forward<Args>(args)...);
     add_line_piece(layer, line_style, LineExtend::none, plot_line_piece);
     return plot_line_piece;
-  }
-
-  //--------------------------------------------------------------------------
-  // Connector
-
- private:
-  template<typename... Args>
-  [[nodiscard]] Connector create_connector_helper(
-      Connector::ArrowHeadShape& default_arrow_head_shape_from,
-      Connector::ArrowHeadShape& default_arrow_head_shape_to,
-      boost::intrusive_ptr<Layer> const& layer,
-      draw::ConnectorStyle const& connector_style, std::tuple<Args...>&& args)
-  {
-    // Strip Connector::ArrowHeadShape arguments from args... and apply them to the defaults.
-    if constexpr (std::is_same_v<std::tuple_element_t<0, std::tuple<Args...>>, typename Connector::ArrowHeadShape>)
-    {
-      if constexpr (std::is_same_v<std::tuple_element_t<1, std::tuple<Args...>>, typename Connector::ArrowHeadShape>)
-        default_arrow_head_shape_from = std::get<0>(args);
-      else
-        default_arrow_head_shape_to = std::get<0>(args);
-      return create_connector_helper(default_arrow_head_shape_from, default_arrow_head_shape_to,
-          layer, connector_style, tuple_tail(std::move(args)));
-    }
-    else
-    {
-      // The defaults are now set. Construct a Connector from the remaining arguments and the default arrow head shapes.
-      Connector plot_connector = std::apply([&](auto&&... unpacked_args) -> Connector {
-        return {std::forward<decltype(unpacked_args)>(unpacked_args)..., default_arrow_head_shape_from, default_arrow_head_shape_to};
-      }, std::move(args));
-
-      add_connector(layer, connector_style, plot_connector);
-      return plot_connector;
-    }
-  }
-
- public:
-  // Create and draw a connector on layer, using args... and line_style.
-  // Args can optionally start with zero, one or two ArrowHeadShape arguments.
-  template<typename... Args>
-  [[nodiscard]] Connector create_connector(boost::intrusive_ptr<Layer> const& layer,
-      draw::ConnectorStyle const& connector_style, Args&&... args)
-  {
-    Connector::ArrowHeadShape arrow_head_shape_from = Connector::no_arrow;
-    Connector::ArrowHeadShape arrow_head_shape_to = Connector::open_arrow;
-    return create_connector_helper(arrow_head_shape_from, arrow_head_shape_to, layer,
-        connector_style, std::make_tuple(std::forward<Args>(args)...));
-  }
-
-  //--------------------------------------------------------------------------
-  // Circle
-
- public:
-  // Create and draw a circle on layer with center and radius using circle_style.
-  template<typename... Args>
-  [[nodiscard]] Circle create_circle(boost::intrusive_ptr<Layer> const& layer,
-      draw::CircleStyle const& circle_style,
-      Args&&... args)
-  {
-    Circle plot_circle(std::forward<Args>(args)...);
-    add_circle(layer, circle_style, plot_circle);
-    return plot_circle;
-  }
-
-  // Same as above but use line_style (no fill_color).
-  template<typename... Args>
-  [[nodiscard]] Circle create_circle(boost::intrusive_ptr<Layer> const& layer,
-      draw::LineStyle const& line_style,
-      Args&&... args)
-  {
-    return create_circle(layer, draw::CircleStyle({.line_color = line_style.line_color(), .line_width = line_style.line_width()}),
-        std::forward<Args>(args)...);
-  }
-
-  //--------------------------------------------------------------------------
-  // Arc
-
- public:
-  // Create and draw an arc on layer width center, radius and start- and end_angle, using arc_style.
-  template<typename... Args>
-  [[nodiscard]] Arc create_arc(boost::intrusive_ptr<Layer> const& layer,
-      draw::ArcStyle const& arc_style,
-      Args&&... args)
-  {
-    Arc plot_arc(std::forward<Args>(args)...);
-    add_arc(layer, arc_style, plot_arc);
-    return plot_arc;
   }
 
   //--------------------------------------------------------------------------
@@ -501,7 +387,8 @@ class Plot : public CoordinateMapper<csid::plot>
       draw::TextStyle const& text_style,
       cairowindow::Point position, std::string const& text)
   {
-    Text plot_text(convert_to_pixel(position), text);
+    cairowindow::cs::Point<csid::pixels> const position_pixels = position * cs_transform_pixels_;
+    Text plot_text(position_pixels, text);
     add_text(layer, text_style, plot_text);
     return plot_text;
   }

@@ -229,8 +229,8 @@ int main()
           curve_line_style({.line_color = reject ? color::red : color::black}), std::move(bezier_fitter));
 
       // BezierCurve also return math:: types. Need to convert them to plot coordinate types.
-      Point const C0{bezier_curve.C0().as_point()};
-      Point const C1{bezier_curve.C1().as_point()};
+      Point const C0{bezier_curve.C0()};
+      Point const C1{bezier_curve.C1()};
 
       plot::Point plot_C0 = plot.create_point(second_layer, C0_point_style, C0);
       plot::Point plot_C1 = plot.create_point(second_layer, C1_point_style, C1);

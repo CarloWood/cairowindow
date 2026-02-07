@@ -134,13 +134,13 @@ int main()
         }
         curve2 = plot.create_curve(second_layer, curve_line_style({.line_color = color::red}), std::move(curve_points));
 
-        Point const P0{bc.P(0.0)};
-        Point const P1{bc.P(1.0)};
+        Point const P0{bc.P0()};
+        Point const P1{bc.P1()};
         marker[0] = plot.create_point(second_layer, point_circle_style, P0);
         marker[1] = plot.create_point(second_layer, point_square_style, P1);
 
-        Point const C0{bc.C0().as_point()};
-        Point const C1{bc.C1().as_point()};
+        Point const C0{bc.C0()};
+        Point const C1{bc.C1()};
         control[0] = plot.create_connector(second_layer, line_style, plot_P0, C0);
         control[1] = plot.create_connector(second_layer, line_style, plot_P1, C1);
       }

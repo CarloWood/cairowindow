@@ -50,7 +50,7 @@ void Plot::update_plot_transform_pixels()
   if (range_[x_axis].size() == 0.0 || range_[y_axis].size() == 0.0)
     return;
 
-  // Initialize cs_transform_pixels_ such that it replaces convert_x/convert_y.
+  // Initialize cs_transform_pixels_.
   // x' = (x - xmin) / xrange * width + offset_x
   // y' = (ymax - y) / yrange * height + offset_y
   cairowindow::Geometry const& g = plot_area_.geometry();
@@ -154,130 +154,6 @@ void Plot::add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio)
   layer->window()->add_printable(this);
 }
 
-double Plot::convert_x(double x) const
-{
-  cairowindow::Geometry const& g = plot_area_.geometry();
-  x = (x - range_[x_axis].min()) / range_[x_axis].size();
-  x *= g.width();
-  x += g.offset_x();
-  return x;
-}
-
-double Plot::convert_y(double y) const
-{
-  cairowindow::Geometry const& g = plot_area_.geometry();
-  y = (range_[y_axis].max() - y) / range_[y_axis].size();
-  y *= g.height();
-  y += g.offset_y();
-  return y;
-}
-
-Pixel Plot::convert_to_pixel(cairowindow::Point const& point) const
-{
-  double x = point.x();
-  double y = point.y();
-
-  cairowindow::Geometry const& g = plot_area_.geometry();
-
-  x -= range_[x_axis].min();
-  x /= range_[x_axis].size();
-  x *= g.width();
-  x += g.offset_x();
-
-  y = range_[y_axis].max() - y;
-  y /= range_[y_axis].size();
-  y *= g.height();
-  y += g.offset_y();
-
-  return Pixel{x, y};
-}
-
-double Plot::convert_from_pixel_x(double pixel_x) const
-{
-  double x = pixel_x;
-
-  cairowindow::Geometry const& g = plot_area_.geometry();
-
-  x -= g.offset_x();
-  x /= g.width();
-  x *= range_[x_axis].size();
-  x += range_[x_axis].min();
-
-  return x;
-}
-
-double Plot::convert_from_pixel_y(double pixel_y) const
-{
-  double y = pixel_y;
-
-  cairowindow::Geometry const& g = plot_area_.geometry();
-
-  y -= g.offset_y();
-  y /= g.height();
-  y *= range_[y_axis].size();
-  y = range_[y_axis].max() - y;
-
-  return y;
-}
-
-cairowindow::Point Plot::convert_from_pixel(Pixel const& pixel) const
-{
-  double x = pixel.x();
-  double y = pixel.y();
-
-  cairowindow::Geometry const& g = plot_area_.geometry();
-
-  x -= g.offset_x();
-  x /= g.width();
-  x *= range_[x_axis].size();
-  x += range_[x_axis].min();
-
-  y -= g.offset_y();
-  y /= g.height();
-  y *= range_[y_axis].size();
-  y = range_[y_axis].max() - y;
-
-  return {x, y};
-}
-
-double Plot::convert_horizontal_offset_from_pixel(double pixel_offset_x) const
-{
-  cairowindow::Geometry const& g = plot_area_.geometry();
-  return pixel_offset_x / g.width() * range_[x_axis].size();
-}
-
-double Plot::convert_vertical_offset_from_pixel(double pixel_offset_y) const
-{
-  cairowindow::Geometry const& g = plot_area_.geometry();
-  return pixel_offset_y / g.height() * range_[y_axis].size();
-}
-
-void Plot::convert_to_pixels(cairowindow::Point const* data_in, Pixel* data_out, std::size_t size)
-{
-  cairowindow::Geometry const& g = plot_area_.geometry();
-  double const x_offset = -range_[x_axis].min();
-  double const y_offset = -range_[y_axis].max();
-  double const x_scale = g.width() / range_[x_axis].size();
-  double const y_scale = -g.height() / range_[y_axis].size();
-
-  for (std::size_t i = 0; i < size; ++i)
-  {
-    double x = data_in[i].x();
-    double y = data_in[i].y();
-
-    x += x_offset;
-    y += y_offset;
-
-    x *= x_scale;
-    y *= y_scale;
-
-    x += g.offset_x();
-    y += g.offset_y();
-
-    data_out[i] = Pixel{x, y};
-  }
-}
-
 //--------------------------------------------------------------------------
 // LinePiece
 
@@ -310,17 +186,23 @@ void Plot::add_bezier_curve(boost::intrusive_ptr<Layer> const& layer,
     draw::BezierCurveStyle const& bezier_curve_style,
     BezierCurve const& plot_bezier_curve)
 {
-  Vector const& P0 = plot_bezier_curve.P0();
-  Vector const& C0 = plot_bezier_curve.C0();
-  Vector const& C1 = plot_bezier_curve.C1();
-  Vector const& P1 = plot_bezier_curve.P1();
+  // Use explicit conversion from math::Point<2> to cairowindow::Point (aka cairowindow::cs::Point<csid::plot>).
+  cairowindow::Point const P0{plot_bezier_curve.P0()};
+  cairowindow::Point const C0{plot_bezier_curve.C0()};
+  cairowindow::Point const C1{plot_bezier_curve.C1()};
+  cairowindow::Point const P1{plot_bezier_curve.P1()};
+
+  cairowindow::cs::Point<csid::pixels> const P0_pixels = P0 * cs_transform_pixels_;
+  cairowindow::cs::Point<csid::pixels> const C0_pixels = C0 * cs_transform_pixels_;
+  cairowindow::cs::Point<csid::pixels> const C1_pixels = C1 * cs_transform_pixels_;
+  cairowindow::cs::Point<csid::pixels> const P1_pixels = P1 * cs_transform_pixels_;
 
   plot_bezier_curve.draw_object_ =
       std::make_shared<draw::BezierCurve>(
-        convert_x(P0.x()), convert_y(P0.y()),
-        convert_x(C0.x()), convert_y(C0.y()),
-        convert_x(C1.x()), convert_y(C1.y()),
-        convert_x(P1.x()), convert_y(P1.y()),
+        P0_pixels.x(), P0_pixels.y(),
+        C0_pixels.x(), C0_pixels.y(),
+        C1_pixels.x(), C1_pixels.y(),
+        P1_pixels.x(), P1_pixels.y(),
         bezier_curve_style);
   draw_layer_region_on(layer, plot_bezier_curve.draw_object_);
 }
@@ -329,17 +211,18 @@ void Plot::add_bezier_curve_in_px(boost::intrusive_ptr<Layer> const& layer,
     draw::BezierCurveStyle const& bezier_curve_style,
     BezierCurve const& plot_bezier_curve_in_px)
 {
-  Vector const& P0 = plot_bezier_curve_in_px.P0();
-  Vector const& C0 = plot_bezier_curve_in_px.C0();
-  Vector const& C1 = plot_bezier_curve_in_px.C1();
-  Vector const& P1 = plot_bezier_curve_in_px.P1();
+  // This BezierCurve is in pixels coordinates.
+  math::Point<2> const& P0_pixels = plot_bezier_curve_in_px.P0();
+  math::Point<2> const& C0_pixels = plot_bezier_curve_in_px.C0();
+  math::Point<2> const& C1_pixels = plot_bezier_curve_in_px.C1();
+  math::Point<2> const& P1_pixels = plot_bezier_curve_in_px.P1();
 
   plot_bezier_curve_in_px.draw_object_ =
       std::make_shared<draw::BezierCurve>(
-        P0.x(), P0.y(),
-        C0.x(), C0.y(),
-        C1.x(), C1.y(),
-        P1.x(), P1.y(),
+        P0_pixels.x(), P0_pixels.y(),
+        C0_pixels.x(), C0_pixels.y(),
+        C1_pixels.x(), C1_pixels.y(),
+        P1_pixels.x(), P1_pixels.y(),
         bezier_curve_style);
   draw_layer_region_on(layer, plot_bezier_curve_in_px.draw_object_);
 }
@@ -411,8 +294,8 @@ void Plot::curve_to_bezier_curves(boost::intrusive_ptr<Layer> const& layer,
   {
     // Draw a straight line: P(t) = P0 + t (P1 - P0)
     //   P(t) = B + V0 t + (A0/2) t² + J/6 t³
-    Vector B{plot_points[0].raw()};
-    Vector V0{plot_points[1].raw() - plot_points[0].raw()};
+    math::Vector<2> B{plot_points[0].raw()};
+    math::Vector<2> V0{plot_points[1].raw() - plot_points[0].raw()};
     BezierCurve bezier_curve(BezierCurveMatrix{{{B, V0, {}, {}}}});
     // Create and draw the draw object.
     add_bezier_curve(layer, bezier_curve_style, bezier_curve);
@@ -431,8 +314,8 @@ void Plot::curve_to_bezier_curves(boost::intrusive_ptr<Layer> const& layer,
 
   for (int i = 1; i < plot_points.size(); ++i)
   {
-    Vector B{plot_points[i - 1].raw()};
-    Vector V0{plot_points[i].raw() - plot_points[i - 1].raw()};
+    math::Vector<2> B{plot_points[i - 1].raw()};
+    math::Vector<2> V0{plot_points[i].raw() - plot_points[i - 1].raw()};
     BezierCurve bezier_curve(BezierCurveMatrix{{{B, V0, {}, {}}}});
     add_bezier_curve(layer, bezier_curve_style, bezier_curve);
     bezier_curves.emplace_back(std::move(bezier_curve.draw_object_));
@@ -448,11 +331,14 @@ Curve Plot::create_curve(boost::intrusive_ptr<Layer> const& layer,
   return plot_curve;
 }
 
-cairowindow::Geometry Plot::update_grabbed(utils::Badge<Window> badge, ClickableIndex grabbed_point, double pixel_x, double pixel_y)
+cairowindow::Geometry Plot::update_grabbed(utils::Badge<Window> badge, ClickableIndex grabbed_point, double x, double y)
 {
   Draggable* draggable = draggables_[grabbed_point];
-  // If convert is not true then pixel_x, pixel_y are actually cairowindow::Point coordinates (aka csid::plot).
-  cairowindow::Point new_position = draggable->convert() ? convert_from_pixel(Pixel{pixel_x, pixel_y}) : cairowindow::Point{pixel_x, pixel_y};
+
+  // If convert is not true then pixel_x, pixel_y are already cairowindow::Point coordinates (aka csid::plot).
+  cairowindow::Point new_position =
+    draggable->convert() ? cairowindow::cs::Point<csid::pixels>{x, y} * cs_transform_pixels_.inverse()
+                         : cairowindow::Point{x, y};
 
   if (draggable_restrictions_[grabbed_point])
     new_position = draggable_restrictions_[grabbed_point](new_position);

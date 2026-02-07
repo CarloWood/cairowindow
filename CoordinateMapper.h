@@ -21,6 +21,25 @@
 #include "math/Transform.h"
 #include <cmath>
 #include <functional>
+#include <tuple>
+#include <type_traits>
+#include <utility>
+
+namespace {
+
+template<typename Tuple, std::size_t... Indices>
+auto tuple_tail_impl(Tuple&& tuple, std::index_sequence<Indices...>)
+{
+  return std::make_tuple(std::get<Indices + 1>(std::forward<Tuple>(tuple))...);
+}
+
+template<typename... Args>
+auto tuple_tail(std::tuple<Args...>&& tuple)
+{
+  return tuple_tail_impl(std::forward<std::tuple<Args...>>(tuple), std::make_index_sequence<sizeof...(Args) - 1>{});
+}
+
+} // namespace
 
 namespace cairowindow {
 
@@ -107,11 +126,39 @@ class CoordinateMapper : public Printable
   // Add and draw plot_circle_cs, with its center and radius in cs coordinates, on layer using circle_style.
   void add_circle(LayerPtr const& layer, draw::CircleStyle const& circle_style, CircleHandle const& plot_circle_cs);
 
+  // Create and draw a circle on layer with center and radius using circle_style.
+  template<typename... Args>
+  [[nodiscard]] CircleHandle create_circle(LayerPtr const& layer, draw::CircleStyle const& circle_style, Args&&... args)
+    requires requires(Args&&... args) { CircleHandle{std::forward<Args>(args)...}; }
+  {
+    CircleHandle plot_circle_cs(std::forward<Args>(args)...);
+    add_circle(layer, circle_style, plot_circle_cs);
+    return plot_circle_cs;
+  }
+
+  // Same as above but use line_style (no fill_color).
+  template<typename... Args>
+  [[nodiscard]] CircleHandle create_circle(LayerPtr const& layer, draw::LineStyle const& line_style, Args&&... args)
+  {
+    return create_circle(layer, draw::CircleStyle({.line_color = line_style.line_color(), .line_width = line_style.line_width()}),
+        std::forward<Args>(args)...);
+  }
+
   //--------------------------------------------------------------------------
   // Arc
 
   // Add and draw plot_arc_cs on layer using arc_style.
   void add_arc(LayerPtr const& layer, draw::ArcStyle const& arc_style, ArcHandle const& plot_arc_cs);
+
+  // Create and draw an arc on layer with center, radius and start- and end_angle, using arc_style.
+  template<typename... Args>
+  [[nodiscard]] ArcHandle create_arc(LayerPtr const& layer, draw::ArcStyle const& arc_style, Args&&... args)
+    requires requires(Args&&... args) { ArcHandle{std::forward<Args>(args)...}; }
+  {
+    ArcHandle plot_arc_cs(std::forward<Args>(args)...);
+    add_arc(layer, arc_style, plot_arc_cs);
+    return plot_arc_cs;
+  }
 
   //--------------------------------------------------------------------------
   // Line (infinite, clipped)
@@ -132,6 +179,48 @@ class CoordinateMapper : public Printable
 
   // Add and draw plot_connector_cs on layer using connector_style.
   void add_connector(LayerPtr const& layer, draw::ConnectorStyle const& connector_style, ConnectorHandle const& plot_connector_cs);
+
+ private:
+  template<typename... Args>
+  [[nodiscard]] ConnectorHandle create_connector_helper(
+      typename ConnectorHandle::ArrowHeadShape& default_arrow_head_shape_from,
+      typename ConnectorHandle::ArrowHeadShape& default_arrow_head_shape_to,
+      LayerPtr const& layer,
+      draw::ConnectorStyle const& connector_style, std::tuple<Args...>&& args)
+  {
+    // Strip ConnectorHandle::ArrowHeadShape arguments from args... and apply them to the defaults.
+    if constexpr (std::is_same_v<std::tuple_element_t<0, std::tuple<Args...>>, typename ConnectorHandle::ArrowHeadShape>)
+    {
+      if constexpr (std::is_same_v<std::tuple_element_t<1, std::tuple<Args...>>, typename ConnectorHandle::ArrowHeadShape>)
+        default_arrow_head_shape_from = std::get<0>(args);
+      else
+        default_arrow_head_shape_to = std::get<0>(args);
+      return create_connector_helper(default_arrow_head_shape_from, default_arrow_head_shape_to,
+          layer, connector_style, tuple_tail(std::move(args)));
+    }
+    else
+    {
+      // The defaults are now set. Construct a ConnectorHandle from the remaining arguments and the default arrow head shapes.
+      ConnectorHandle plot_connector_cs = std::apply([&](auto&&... unpacked_args) -> ConnectorHandle {
+        return {std::forward<decltype(unpacked_args)>(unpacked_args)..., default_arrow_head_shape_from, default_arrow_head_shape_to};
+      }, std::move(args));
+
+      add_connector(layer, connector_style, plot_connector_cs);
+      return plot_connector_cs;
+    }
+  }
+
+ public:
+  // Create and draw a connector on layer, using args... and connector_style.
+  // Args can optionally start with zero, one or two ArrowHeadShape arguments.
+  template<typename... Args>
+  [[nodiscard]] ConnectorHandle create_connector(LayerPtr const& layer, draw::ConnectorStyle const& connector_style, Args&&... args)
+  {
+    typename ConnectorHandle::ArrowHeadShape arrow_head_shape_from = ConnectorHandle::no_arrow;
+    typename ConnectorHandle::ArrowHeadShape arrow_head_shape_to = ConnectorHandle::open_arrow;
+    return create_connector_helper(arrow_head_shape_from, arrow_head_shape_to, layer,
+        connector_style, std::make_tuple(std::forward<Args>(args)...));
+  }
 };
 
 //----------------------------------------------------------------------------
