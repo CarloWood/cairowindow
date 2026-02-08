@@ -462,7 +462,7 @@ void Window::move_draggable(plot::Draggable* draggable, ClickableIndex clickable
   clickable_rectangles_[clickable_index] = plot->update_draggable({}, clickable_index, new_position);
 }
 
-void Window::update_draggable_geometry(plot::Draggable* draggable)
+void Window::update_draggable_geometry(plot::Draggable const* draggable)
 {
   ASSERT(draggable);
   ASSERT(!draggable->index_.undefined());

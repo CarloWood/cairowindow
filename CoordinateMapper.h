@@ -16,6 +16,7 @@
 #include "draw/Polyline.h"
 #include "draw/Line.h"
 #include "draw/Point.h"
+#include "Layer.h"
 #include "draw/Text.h"
 #include "cs/TransformOperators.h"
 #include "math/cs/Point.h"
@@ -262,6 +263,11 @@ void CoordinateMapper<cs>::add_point(LayerPtr const& layer, draw::PointStyle con
 
   plot_point_cs.create_draw_object({}, point_pixels.x(), point_pixels.y(), point_style);
   draw_layer_region_on(layer, plot_point_cs.draw_object());
+
+  // Keep the clickable rectangle of a draggable point in sync when it is redrawn
+  // outside of a drag operation.
+  if (!plot_point_cs.index_.undefined())
+    layer->window()->update_draggable_geometry(&plot_point_cs);
 }
 
 template<CS cs>

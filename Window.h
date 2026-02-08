@@ -206,7 +206,7 @@ class Window
   // Update the clickable geometry for a draggable after it was moved programmatically.
   // This is needed when the draggable did not move through Window::update_grabbed (dragging)
   // or Window::move_draggable (plot::Point::move).
-  void update_draggable_geometry(plot::Draggable* draggable);
+  void update_draggable_geometry(plot::Draggable const* draggable);
 
   template<CS cs>
   void register_draggable(CoordinateSystem<cs>& coordinate_system,
