@@ -320,7 +320,7 @@ Curve Plot::create_curve(boost::intrusive_ptr<Layer> const& layer,
   return plot_curve;
 }
 
-cairowindow::Geometry Plot::update_grabbed(utils::Badge<Window> badge, ClickableIndex grabbed_point, double x, double y)
+cairowindow::Geometry Plot::update_grabbed_plot(utils::Badge<Window> badge, ClickableIndex grabbed_point, double x, double y)
 {
   Draggable* draggable = draggables_[grabbed_point];
 
@@ -332,11 +332,11 @@ cairowindow::Geometry Plot::update_grabbed(utils::Badge<Window> badge, Clickable
   if (draggable_restrictions_[grabbed_point])
     new_position = draggable_restrictions_[grabbed_point](new_position);
 
-  return update_draggable(badge, grabbed_point, new_position);
+  return update_draggable_plot(badge, grabbed_point, new_position);
 }
 
 // Called by Window when the user dragged a draggable to new_position.
-cairowindow::Geometry Plot::update_draggable(utils::Badge<Window>, ClickableIndex draggable_index, cairowindow::Point const& new_position)
+cairowindow::Geometry Plot::update_draggable_plot(utils::Badge<Window>, ClickableIndex draggable_index, cairowindow::Point const& new_position)
 {
   Draggable* draggable = draggables_[draggable_index];
 

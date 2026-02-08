@@ -394,7 +394,7 @@ void Window::register_draggable(plot::Plot& plot, plot::Draggable* draggable, st
   draggable_update_.emplace_back();
   clickable_rectangles_.push_back(draggable->geometry());
   clickable_plots_.push_back(&plot);
-  plot.register_draggable({}, draggable, std::move(restriction));
+  plot.register_draggable_plot({}, draggable, std::move(restriction));
 }
 
 void Window::register_draggable_impl(plot::Draggable* draggable, std::function<Geometry(double, double)> update_grabbed_pixels)
@@ -439,7 +439,7 @@ bool Window::update_grabbed(ClickableIndex grabbed_point, double pixel_x, double
   plot::Plot* plot = clickable_plots_[grabbed_point];
   Geometry new_geometry;
   if (plot)
-    new_geometry = plot->update_grabbed({}, grabbed_point, pixel_x, pixel_y);
+    new_geometry = plot->update_grabbed_plot({}, grabbed_point, pixel_x, pixel_y);
   else if (draggable_update_[grabbed_point])
     new_geometry = draggable_update_[grabbed_point](pixel_x, pixel_y);
 
@@ -459,7 +459,7 @@ void Window::move_draggable(plot::Draggable* draggable, ClickableIndex clickable
   ASSERT(plot);
   draggable->set_position(new_position);        // Because we want to apply restrictions, if any, relative to the new position.
   plot->apply_restrictions({}, clickable_index, new_position);
-  clickable_rectangles_[clickable_index] = plot->update_draggable({}, clickable_index, new_position);
+  clickable_rectangles_[clickable_index] = plot->update_draggable_plot({}, clickable_index, new_position);
 }
 
 void Window::update_draggable_geometry(plot::Draggable const* draggable)

@@ -389,7 +389,7 @@ class Plot : public CoordinateMapper<csid::plot>
   void add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio = false);
 
   // Called from Window::register_draggable.
-  void register_draggable(utils::Badge<Window>, Draggable* draggable,
+  void register_draggable_plot(utils::Badge<Window>, Draggable* draggable,
       std::function<cairowindow::Point (cairowindow::Point const&)>&& restriction)
   {
     ClickableIndex next_index = draggables_.iend();
@@ -398,8 +398,8 @@ class Plot : public CoordinateMapper<csid::plot>
     draggable_restrictions_.emplace_back(std::move(restriction));
   }
   // Called from Window::update_grabbed and Window::move_draggable.
-  cairowindow::Geometry update_draggable(utils::Badge<Window>, ClickableIndex draggable_index, cairowindow::Point const& new_position);
-  cairowindow::Geometry update_grabbed(utils::Badge<Window>, ClickableIndex grabbed_point, double pixel_x, double pixel_y);
+  cairowindow::Geometry update_draggable_plot(utils::Badge<Window>, ClickableIndex draggable_index, cairowindow::Point const& new_position);
+  cairowindow::Geometry update_grabbed_plot(utils::Badge<Window>, ClickableIndex grabbed_point, double pixel_x, double pixel_y);
   void apply_restrictions(utils::Badge<Window>, ClickableIndex clickable_index, cairowindow::Point& new_position);
 
  private:

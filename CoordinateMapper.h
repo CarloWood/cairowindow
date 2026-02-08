@@ -105,7 +105,7 @@ class CoordinateMapper : public Printable
   }
 
   // Called by Window::update_grabbed through the lambda defined in Window::register_draggable<cs> when a Draggable plot_point_cs was moved to (pixel_x, pixel_y).
-  Geometry update_grabbed(plot::cs::Point<cs>* plot_point_cs, double pixel_x, double pixel_y,
+  Geometry update_grabbed_cs(plot::cs::Point<cs>* plot_point_cs, double pixel_x, double pixel_y,
       std::function<math::cs::Point<cs> (math::cs::Point<cs> const&)> const& restriction);
 
   //--------------------------------------------------------------------------
@@ -264,14 +264,13 @@ void CoordinateMapper<cs>::add_point(LayerPtr const& layer, draw::PointStyle con
   plot_point_cs.create_draw_object({}, point_pixels.x(), point_pixels.y(), point_style);
   draw_layer_region_on(layer, plot_point_cs.draw_object());
 
-  // Keep the clickable rectangle of a draggable point in sync when it is redrawn
-  // outside of a drag operation.
+  // Keep the clickable rectangle of a draggable point in sync when it is redrawn outside of a drag operation.
   if (!plot_point_cs.index_.undefined())
     layer->window()->update_draggable_geometry(&plot_point_cs);
 }
 
 template<CS cs>
-Geometry CoordinateMapper<cs>::update_grabbed(plot::cs::Point<cs>* plot_point_cs, double pixel_x, double pixel_y,
+Geometry CoordinateMapper<cs>::update_grabbed_cs(plot::cs::Point<cs>* plot_point_cs, double pixel_x, double pixel_y,
     std::function<math::cs::Point<cs> (math::cs::Point<cs> const&)> const& restriction)
 {
   math::cs::Point<csid::pixels> const new_position_pixels{pixel_x, pixel_y};

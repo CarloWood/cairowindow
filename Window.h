@@ -215,7 +215,7 @@ class Window
   {
     // Convert a new position (x,y), in pixels, to the relocated bounding box in pixels.
     auto update_grabbed_pixels = [&coordinate_system, plot_point_cs, restriction = std::move(restriction)](double pixel_x, double pixel_y) -> Geometry {
-      return coordinate_system.update_grabbed(plot_point_cs, pixel_x, pixel_y, restriction);
+      return coordinate_system.update_grabbed_cs(plot_point_cs, pixel_x, pixel_y, restriction);
     };
     register_draggable_impl(plot_point_cs, std::move(update_grabbed_pixels));
   }
