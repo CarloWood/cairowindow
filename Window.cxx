@@ -462,6 +462,13 @@ void Window::move_draggable(plot::Draggable* draggable, ClickableIndex clickable
   clickable_rectangles_[clickable_index] = plot->update_draggable({}, clickable_index, new_position);
 }
 
+void Window::update_draggable_geometry(plot::Draggable* draggable)
+{
+  ASSERT(draggable);
+  ASSERT(!draggable->index_.undefined());
+  clickable_rectangles_[draggable->index_] = draggable->geometry();
+}
+
 Printable* Window::find_printable(int mouse_x, int mouse_y)
 {
   for (PrintableGeometries const& printable_geometries : printable_geometries_)
