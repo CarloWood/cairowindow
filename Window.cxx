@@ -69,6 +69,10 @@ Window::~Window()
 #ifdef CWDEBUG
   using namespace debugcairo;
 #endif
+  // Draggables can keep draw objects alive (via lambda captures). Those draw objects may trigger window updates
+  // from their destructors, so make sure they are destroyed while the X11 display and cairo surfaces still exist.
+  draggable_update_.clear();
+  clickable_geometries_.clear();
 #ifdef CAIROWINDOW_DEBUGWINDOW
   debug_window_.terminate();
 #endif
