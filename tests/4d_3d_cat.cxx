@@ -117,8 +117,8 @@ int main()
           if (new_position.x() <= plot_P3.x())
             result = Point{plot_P3.x() + 1e-6, new_position.y()};
           Direction const D4 = (plot_Q4 - plot_P4).direction();
-          plot_P4.move(plot, {result.x(), plot_P4.y()});
-          plot_Q4.move(plot, plot_P4 + circle_radius * D4);
+          plot_P4.move_to({result.x(), plot_P4.y()});
+          plot_Q4.move_to(plot_P4 + circle_radius * D4);
           return result;
         }
     );
@@ -139,7 +139,7 @@ int main()
           //Point new_P4{plot_P2.x(), new_position.y()};
           Point new_P4{new_position};
           auto translation = new_P4 - plot_P4;
-          plot_Q4.move(plot, plot_Q4 + translation);
+          plot_Q4.move_to(plot_Q4 + translation);
           return new_P4;
         }
     );

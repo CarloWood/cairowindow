@@ -67,15 +67,15 @@ void Slider::draw_regions_on(Layer* layer)
   layer->draw(handle_);
 }
 
-void Slider::moved(cairowindow::Point const& new_position)
+void Slider::moved(math::cs::Point<csid::pixels> const& new_position_pixels)
 {
   bool orientation = track_->orientation();
   if (orientation == SliderTrack::horizontal)
-    rel_value_ = (new_position.x() - track_->offset_x() - SliderTrack::stop_offset) /
+    rel_value_ = (new_position_pixels.x() - track_->offset_x() - SliderTrack::stop_offset) /
       (track_->length() - 2.0 * SliderTrack::stop_offset);
   else
   {
-    rel_value_ = (track_->offset_y() + track_->length() - SliderTrack::stop_offset - new_position.y()) /
+    rel_value_ = (track_->offset_y() + track_->length() - SliderTrack::stop_offset - new_position_pixels.y()) /
       (track_->length() - 2.0 * SliderTrack::stop_offset);
   }
   rel_value_ = std::clamp(rel_value_, 0.0, 1.0);
@@ -107,7 +107,7 @@ void Slider::set_value(double value, double min_value, double max_value)
     pixel_x += horizontal_position_pixels();
   else
     pixel_y += vertical_position_pixels();
-  window->update_grabbed(index_, pixel_x, pixel_y);
+  window->update_grabbed(index_, {pixel_x, pixel_y});
   redraw();
 }
 

@@ -49,9 +49,9 @@ class Point : public math::cs::Point<cs>, public Draggable
  public:
   // Implementation of Draggable.
   cairowindow::Geometry const& geometry() const override;
+  void moved(math::cs::Point<csid::pixels> const& new_position_pixels) override { /*no-op*/ }
 
  private:
-  void moved(cairowindow::Point const& new_position) override;
   void set_position(cairowindow::Point const& new_position) override
   {
     this->x() = new_position.x();
@@ -73,28 +73,13 @@ class Point : public math::cs::Point<cs>, public Draggable
   }
 
  public:
-  void move(Plot& plot, math::cs::Point<csid::plot> const& new_position);
+  void move_to(math::cs::Point<cs> const& new_position);
 
 #ifdef CWDEBUG
  public:
   void print_on(std::ostream& os) const override { math::cs::Point<cs>::print_on(os); }
 #endif
 };
-
-template<CS cs>
-void Point<cs>::moved(cairowindow::Point const& new_position)
-{
-  // Should never call `moved` for a Point that isn't using csid::plot coordinates.
-  ASSERT(false);
-}
-
-// Declare specializations of moved and move for csid::plot.
-
-template<>
-void Point<csid::plot>::moved(cairowindow::Point const& new_position);
-
-template<>
-void Point<csid::plot>::move(Plot& UNUSED_ARG(plot), math::cs::Point<csid::plot> const& new_position);
 
 } // namespace cs
 
@@ -106,6 +91,7 @@ using Point = cs::Point<csid::plot>;
 } // namespace cairowindow::plot
 
 #include "cairowindow/draw/Point.h"
+#include "cairowindow/Layer.h"
 
 namespace cairowindow::plot::cs {
 
@@ -114,6 +100,16 @@ cairowindow::Geometry const& Point<cs>::geometry() const
 {
   // Geometry is in csid::pixels.
   return draw_object_->geometry();
+}
+
+template<CS cs>
+void Point<cs>::move_to(math::cs::Point<cs> const& new_position)
+{
+  // Only call move_to on points that are (registered as) draggable.
+  ASSERT(!index_.undefined());
+  Layer* layer = draw_object_->layer();
+  Window* window = layer->window();
+  window->move_draggable(this, index_, new_position);
 }
 
 } // namespace cairowindow::plot::cs

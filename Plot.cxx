@@ -265,8 +265,12 @@ Slider Plot::create_slider(boost::intrusive_ptr<Layer> const& layer,
       start_value, min_value, max_value);
   static_cast<draw::MultiRegion&>(*plot_slider.draw_object_).draw_regions_on(layer.get());
   Window* window = layer->window();
-  std::shared_ptr<draw::Slider> slider_ptr = plot_slider.draw_object_;
-  window->register_draggable(*this, slider_ptr.get(), [slider_ptr](cairowindow::Point const& point) -> cairowindow::Point { return point; });
+  std::shared_ptr<draw::Slider> slider_ptr = plot_slider.draw_object_;  // Kept alive by the 'restriction' lambda below.
+  window->register_draggable(slider_ptr.get(),
+      [slider_ptr](math::cs::Point<csid::pixels> const& position_pixels) -> math::cs::Point<csid::pixels>
+      {
+        return position_pixels;
+      });
   return plot_slider;
 }
 
@@ -318,45 +322,6 @@ Curve Plot::create_curve(boost::intrusive_ptr<Layer> const& layer,
   Curve plot_curve(std::move(points), std::make_shared<draw::Curve>(bezier_curve_style));
   curve_to_bezier_curves(layer, plot_curve, bezier_curve_style);
   return plot_curve;
-}
-
-cairowindow::Geometry Plot::update_grabbed_plot(utils::Badge<Window> badge, ClickableIndex grabbed_point, double x, double y)
-{
-  Draggable* draggable = draggables_[grabbed_point];
-
-  // If convert is not true then pixel_x, pixel_y are already cairowindow::Point coordinates (aka csid::plot).
-  cairowindow::Point new_position =
-    draggable->convert() ? math::cs::Point<csid::pixels>{x, y} * cs_transform_pixels_.inverse()
-                         : cairowindow::Point{x, y};
-
-  if (draggable_restrictions_[grabbed_point])
-    new_position = draggable_restrictions_[grabbed_point](new_position);
-
-  return update_draggable_plot(badge, grabbed_point, new_position);
-}
-
-// Called by Window when the user dragged a draggable to new_position.
-cairowindow::Geometry Plot::update_draggable_plot(utils::Badge<Window>, ClickableIndex draggable_index, cairowindow::Point const& new_position)
-{
-  Draggable* draggable = draggables_[draggable_index];
-
-  // Points need to be redrawn using Plot::add_point (because conversion to pixels is Plot specific).
-  if (auto* plot_point = dynamic_cast<Point*>(draggable))
-  {
-    *plot_point = new_position;
-    auto const& draw_object = plot_point->draw_object();
-    add_point(draw_object->layer(), draw_object->point_style(), *plot_point);
-    return plot_point->geometry();
-  }
-
-  draggable->moved(new_position);
-  return draggable->geometry();
-}
-
-void Plot::apply_restrictions(utils::Badge<Window>, ClickableIndex clickable_index, cairowindow::Point& new_position)
-{
-  if (draggable_restrictions_[clickable_index])
-    new_position = draggable_restrictions_[clickable_index](new_position);
 }
 
 void Slider::set_value(double value)

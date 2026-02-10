@@ -388,42 +388,56 @@ void Window::close()
   send_close_event();
 }
 
-void Window::register_draggable(plot::Plot& plot, plot::Draggable* draggable, std::function<Point (Point const&)> restriction)
+ClickableIndex Window::register_draggable_impl(
+    std::function<Geometry(math::cs::Point<csid::pixels>)> update_grabbed_pixels,
+    std::function<void (ClickableIndex index, double x_cs, double y_cs)> update_cs,
+    Geometry const& current_geometry)
 {
-  DoutEntering(dc::cairowindow, "Window::register_draggable(@" << *draggable << ")");
-  draggable_update_.emplace_back();
-  clickable_rectangles_.push_back(draggable->geometry());
-  clickable_plots_.push_back(&plot);
-  plot.register_draggable_plot({}, draggable, std::move(restriction));
-}
+  DoutEntering(dc::cairowindow, "Window::register_draggable(update_grabbed_pixels, update_cs, " << current_geometry << ")");
 
-void Window::register_draggable_impl(plot::Draggable* draggable, std::function<Geometry(double, double)> update_grabbed_pixels)
-{
-  DoutEntering(dc::cairowindow, "Window::register_draggable(@" << *draggable << ")");
-  ClickableIndex index = clickable_rectangles_.iend();
+  // Determine the index of this new draggable.
+  ASSERT(draggable_update_.size() == clickable_geometries_.size() && draggable_update_.size() == draggable_update_cs_.size());
+  ClickableIndex index = clickable_geometries_.iend();
+
   draggable_update_.push_back(std::move(update_grabbed_pixels));
-  clickable_rectangles_.push_back(draggable->geometry());
-  clickable_plots_.push_back(nullptr);
-  draggable->set_index(index);
+  draggable_update_cs_.push_back(std::move(update_cs));
+  clickable_geometries_.push_back(current_geometry);
+
+  return index;
 }
 
-ClickableIndex Window::grab_draggable(double x, double y)
+ClickableIndex Window::grab_draggable(math::cs::Point<csid::pixels> const& mouse_position)
 {
-  DoutEntering(dc::cairowindow, "Window::grab_draggable(" << x << ", " << y << ")");
+  DoutEntering(dc::cairowindow, "Window::grab_draggable(" << mouse_position << ")");
   ClickableIndex found_index;
   double min_dist_squared = std::numeric_limits<double>::max();
-  for (ClickableIndex index = clickable_rectangles_.ibegin(); index != clickable_rectangles_.iend(); ++index)
+  for (ClickableIndex index = clickable_geometries_.ibegin(); index != clickable_geometries_.iend(); ++index)
   {
-    Geometry const& geometry = clickable_rectangles_[index];
+    Geometry const& geometry = clickable_geometries_[index];    // The shaded area in the drawing below.
+
     // A Point uses ShapePosition::at_corner.
-    double center_x = geometry.offset_x();
-    double center_y = geometry.offset_y();
-    double half_width = geometry.width();
-    double half_height = geometry.height();
-    if (center_x - half_width < x && x < center_x + half_width &&
-        center_y - half_width < y && y < center_y + half_height)
+    math::cs::Point<csid::pixels> const& center = geometry.top_left();
+    math::cs::Size<csid::pixels> const& half_size = geometry.size();
+    //
+    //   center.x()
+    //      v
+    // .----+----.  C: center of the Point.
+    // |    |    | //: geometry.
+    // |    |    |
+    // +----C----+ <-- center.y()
+    // |    |////|  ^
+    // |    |////|  |-- half_size.height()
+    // '----+----'  v
+    //       <-->
+    //  half_size.width()
+
+    // The distance from the center.
+    math::cs::Vector<csid::pixels> offset = mouse_position - center;
+
+    if (std::abs(offset.x()) < half_size.width() &&
+        std::abs(offset.y()) < half_size.height())
     {
-      double dist_squared = utils::square(center_x - x) + utils::square(center_y - y);
+      double dist_squared = offset.norm_squared();
       if (dist_squared < min_dist_squared)
       {
         min_dist_squared = dist_squared;
@@ -434,39 +448,19 @@ ClickableIndex Window::grab_draggable(double x, double y)
   return found_index;
 }
 
-bool Window::update_grabbed(ClickableIndex grabbed_point, double pixel_x, double pixel_y)
-{
-  plot::Plot* plot = clickable_plots_[grabbed_point];
-  Geometry new_geometry;
-  if (plot)
-    new_geometry = plot->update_grabbed_plot({}, grabbed_point, pixel_x, pixel_y);
-  else if (draggable_update_[grabbed_point])
-    new_geometry = draggable_update_[grabbed_point](pixel_x, pixel_y);
-
-  if (!new_geometry.is_defined())
-    return false;
-
-  // Update the geometry of a draggable Point, called after it was moved.
-  clickable_rectangles_[grabbed_point] = new_geometry;
-  return true;
-}
-
-void Window::move_draggable(plot::Draggable* draggable, ClickableIndex clickable_index, Point new_position)
+void Window::update_grabbed(ClickableIndex clickable_index, math::cs::Point<csid::pixels> new_position_pixels)
 {
   // draggable must have been registered as draggable by calling register_draggable first.
   ASSERT(!clickable_index.undefined());
-  plot::Plot* plot = clickable_plots_[clickable_index];
-  ASSERT(plot);
-  draggable->set_position(new_position);        // Because we want to apply restrictions, if any, relative to the new position.
-  plot->apply_restrictions({}, clickable_index, new_position);
-  clickable_rectangles_[clickable_index] = plot->update_draggable_plot({}, clickable_index, new_position);
+  // Update the geometry of a draggable Point, called after it was moved.
+  Geometry new_geometry = draggable_update_[clickable_index](new_position_pixels);
+  clickable_geometries_[clickable_index] = new_geometry;
 }
 
-void Window::update_draggable_geometry(plot::Draggable const* draggable)
+void Window::update_draggable_geometry(plot::Draggable const& draggable)
 {
-  ASSERT(draggable);
-  ASSERT(!draggable->index_.undefined());
-  clickable_rectangles_[draggable->index_] = draggable->geometry();
+  ASSERT(!draggable.index_.undefined());
+  clickable_geometries_[draggable.index_] = draggable.geometry();
 }
 
 Printable* Window::find_printable(int mouse_x, int mouse_y)
@@ -517,7 +511,9 @@ bool Window::handle_input_events()
       case InputEvent::button_press:
       {
         Dout(dc::cairowindow, "button: " << message->detail.button);
-        auto index = grab_draggable(message->mouse_x, message->mouse_y);
+        // Find the draggable object under the mouse, if any.
+        math::cs::Point<csid::pixels> mouse_position{static_cast<double>(message->mouse_x), static_cast<double>(message->mouse_y)};    // mouse_x and mouse_y are in csid::pixels.
+        auto index = grab_draggable(mouse_position);
         if (!index.undefined())
         {
           send_custom_event(custom_event_grab_mouse, message->detail.button);
@@ -536,9 +532,10 @@ bool Window::handle_input_events()
       case InputEvent::drag:
         if (!grab_index_.undefined())
         {
-          // Update the object with grab_index_ and return true if a redraw is necessary.
-          if (update_grabbed(grab_index_, message->mouse_x, message->mouse_y))
-            block = false;  // We have to redraw a part of the graph.
+          // Update the object with grab_index_.
+          math::cs::Point<csid::pixels> mouse_position{static_cast<double>(message->mouse_x), static_cast<double>(message->mouse_y)};    // mouse_x and mouse_y are in csid::pixels.
+          update_grabbed(grab_index_, mouse_position);
+          block = false;  // We have to redraw a part of the graph.
         }
         break;
     }

@@ -137,13 +137,12 @@ class Slider : public MultiRegion, public plot::Draggable
 
   // Implementation of plot::Draggable.
   cairowindow::Geometry const& geometry() const override { return handle_->geometry(); }
-  void moved(cairowindow::Point const& new_position) override;
+  void moved(math::cs::Point<csid::pixels> const& new_position_pixels) override;
   void set_position(cairowindow::Point const& new_position) override
   {
     // Moving a slider with a Point value not implemented.
     ASSERT(false);
   }
-  bool convert() const override { return false; }       // We want mouse coordinates.
 
 #ifdef CWDEBUG
   void print_on(std::ostream& os) const override

@@ -133,7 +133,7 @@ int main()
       auto plot_vertex_line = plot.create_line(second_layer, line_style, Point{parabola.vertex_x(), 0.0}, Direction::up);
 
       // Force P1 on that line.
-      plot_P1.move(plot, Point{parabola.vertex_x(), plot_P1.y()});
+      plot_P1.move_to(Point{parabola.vertex_x(), plot_P1.y()});
       Dout(dc::notice, "parabola.vertex_x() = " << parabola.vertex_x() << ", plot_P1 = " << plot_P1);
 
       // Draw a label for P₁.

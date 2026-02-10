@@ -27,6 +27,9 @@ class Rectangle
   }
   Rectangle(math::cs::Point<cs> const& top_left, math::cs::Size<cs> const& size) : top_left_{top_left}, size_{size} { }
 
+  math::cs::Point<cs> const& top_left() const { return top_left_; }
+  math::cs::Size<cs> const& size() const { return size_; }
+
   double offset_x() const { return top_left_.x(); }
   double offset_y() const { return top_left_.y(); }
   double width() const { return size_.width(); }

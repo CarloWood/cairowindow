@@ -32,8 +32,7 @@ struct Draggable
 
   virtual cairowindow::Geometry const& geometry() const = 0;
   virtual void set_position(cairowindow::Point const& new_position) = 0;
-  virtual void moved(cairowindow::Point const& new_position) = 0;
-  virtual bool convert() const { return true; }
+  virtual void moved(math::cs::Point<csid::pixels> const& new_position_pixels) = 0;
 
   void set_index(ClickableIndex index)
   {

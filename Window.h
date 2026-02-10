@@ -7,7 +7,6 @@
 #include "Message.h"
 #include "Point.h"
 #include "Draggable.h"
-#include "plot/Point.h"
 #include "utils/AIAlert.h"
 #include "utils/threading/Semaphore.h"
 #include "utils/threading/FIFOBuffer.h"
@@ -34,12 +33,15 @@ struct _XDisplay;                       // Forward declaration.
 }
 
 namespace cairowindow {
+using ClickableIndex = utils::VectorIndex<Rectangle>;
 namespace plot {
 class Plot;
-class Draggable;
+namespace cs {
+template<CS> class Point;
+} // namespace cs
 } // namespace plot
 
-template<CS> class CoordinateSystem;
+template<CS cs> class CoordinateMapper;
 
 class Layer;
 class Printable;
@@ -80,10 +82,12 @@ class Window
   utils::threading::FIFOBuffer<1, Message> message_buffer_{64};
 
   // Dragging.
-  utils::Vector<Geometry, ClickableIndex> clickable_rectangles_;
-  utils::Vector<plot::Plot*, ClickableIndex> clickable_plots_;
-  utils::Vector<std::function<Geometry(double, double)>, ClickableIndex> draggable_update_;     // Stores lambdas that convert the new position, (x,y) in pixels,
-                                                                                                // to the new bounding box in pixels.
+  utils::Vector<std::function<Geometry(math::cs::Point<csid::pixels>)>, ClickableIndex> draggable_update_;      // Stores lambdas that convert the new position, (x,y) in pixels,
+                                                                                                                // to the new bounding box in pixels.
+  utils::Vector<std::function<void(ClickableIndex, double, double)>, ClickableIndex> draggable_update_cs_;      // Stores lambdas that convert the new position, (x,y) in cs, to
+                                                                                                                // pixels and calls update_grabbed with that.
+  utils::Vector<Geometry, ClickableIndex> clickable_geometries_;
+
   ClickableIndex grab_index_;           // The index of the object (Point) that was grabbed.
   unsigned int grab_button_;            // The mouse button that did the grabbing (only valid when grab_index is not undefined).
 
@@ -190,34 +194,86 @@ class Window
 
   void send_custom_event(uint32_t data, unsigned int button);
 
-  // Allow dragging of point with the mouse.
-  void register_draggable(plot::Plot& plot, plot::Draggable* draggable, std::function<Point (Point const&)> restriction = {});
-
   // Block until a point was dragged by the user, a key or button was pressed or released.
   // Returns true when a redraw is required, false when the program should be terminated.
   bool handle_input_events();
 
   // Called by Slider::set_value.
-  bool update_grabbed(ClickableIndex grabbed_point, double pixel_x, double pixel_y);
+  void update_grabbed(ClickableIndex clickable_index, math::cs::Point<csid::pixels> new_position_pixels);
 
-  // Called by Point::move.
-  void move_draggable(plot::Draggable* draggable, ClickableIndex clickable_index, Point new_position);
+  // Called by Point::move_to.
+  template<CS cs>
+  void move_draggable(plot::cs::Point<cs> const* draggable, ClickableIndex clickable_index, math::cs::Point<cs> new_position_cs)
+  {
+    // Fake dragging by calling update_grabbed.
+    draggable_update_cs_[clickable_index](clickable_index, new_position_cs.x(), new_position_cs.y());
+  }
 
   // Update the clickable geometry for a draggable after it was moved programmatically.
-  // This is needed when the draggable did not move through Window::update_grabbed (dragging)
-  // or Window::move_draggable (plot::Point::move).
-  void update_draggable_geometry(plot::Draggable const* draggable);
+  // This is needed when the draggable did not move through Window::update_grabbed (dragging) or Window::move_draggable (plot::Point::move_to).
+  void update_draggable_geometry(plot::Draggable const& draggable);
 
   template<CS cs>
-  void register_draggable(CoordinateSystem<cs>& coordinate_system,
+  using RestrictionFunction = std::function<math::cs::Point<cs> (math::cs::Point<cs> const&)>;
+
+  // Allow dragging of a point with the mouse.
+  // Note: neither coordinate_mapper nor plot_point_cs, passed from the caller, maybe be destructed or moved in memory for as long as this draggable is active.
+  template<CS cs, typename L = std::nullptr_t>
+  void register_draggable(CoordinateMapper<cs>& coordinate_mapper,
       plot::cs::Point<cs>* plot_point_cs,
-      std::function<math::cs::Point<cs> (math::cs::Point<cs> const&)> restriction = {})
+      L const& restriction_cs = nullptr)
+  requires (
+    std::is_null_pointer_v<std::remove_cvref_t<L>> ||
+    requires { { std::declval<L const&>() } -> std::convertible_to<RestrictionFunction<cs>>; }
+  )
   {
-    // Convert a new position (x,y), in pixels, to the relocated bounding box in pixels.
-    auto update_grabbed_pixels = [&coordinate_system, plot_point_cs, restriction = std::move(restriction)](double pixel_x, double pixel_y) -> Geometry {
-      return coordinate_system.update_grabbed_cs(plot_point_cs, pixel_x, pixel_y, restriction);
+    RestrictionFunction<cs> restriction;
+    if constexpr (!std::is_same_v<L, std::nullptr_t>)
+      restriction = static_cast<RestrictionFunction<cs>>(restriction_cs);
+    // Convert a new position (x,y) in pixels, to the relocated bounding box in pixels, by calling update_grabbed_cs on the coordinate_mapper.
+    // CoordinateMapper<cs>::update_grabbed_cs converts the position to cs before passing it to restriction_cs and storing the new position in plot_point_cs.
+    auto update_grabbed_pixels = [&coordinate_mapper, plot_point_cs, restriction = std::move(restriction)](math::cs::Point<csid::pixels> position_pixels) -> Geometry {
+      return coordinate_mapper.update_grabbed_cs(plot_point_cs, position_pixels, restriction);
     };
-    register_draggable_impl(plot_point_cs, std::move(update_grabbed_pixels));
+    // Convert a moved to position (x,y) in cs to pixels and ...
+    auto update_cs = [this, &coordinate_mapper](ClickableIndex index, double position_x_cs, double position_y_cs) {
+      math::cs::Point<cs> const position_cs{position_x_cs, position_y_cs};
+      math::cs::Point<csid::pixels> new_position_pixels = position_cs * coordinate_mapper.cs_transform_pixels();
+      update_grabbed(index, new_position_pixels);
+    };
+    // Store the lambdas and clickable geometry in a Vector.
+    ClickableIndex index = register_draggable_impl(std::move(update_grabbed_pixels), std::move(update_cs), plot_point_cs->geometry());
+    plot_point_cs->set_index(index);
+  }
+
+  // Allow dragging of a draggable object that already lives in pixel coordinate space (for example draw::Slider).
+  template<typename L = std::nullptr_t>
+  void register_draggable(plot::Draggable* draggable,
+      L const& restriction_pixels = nullptr)
+  requires (
+    std::is_null_pointer_v<std::remove_cvref_t<L>> ||
+    requires { { std::declval<L const&>() } -> std::convertible_to<RestrictionFunction<csid::pixels>>; }
+  )
+  {
+    RestrictionFunction<csid::pixels> restriction;
+    if constexpr (!std::is_same_v<L, std::nullptr_t>)
+      restriction = static_cast<RestrictionFunction<csid::pixels>>(restriction_pixels);
+
+    // Convert a new position (x,y) in pixels to the relocated bounding box in pixels by calling Draggable::moved.
+    auto update_grabbed_pixels = [draggable, restriction = std::move(restriction)](math::cs::Point<csid::pixels> position_pixels) -> Geometry {
+      if (restriction)
+        position_pixels = restriction(position_pixels);
+      draggable->moved(position_pixels);
+      return draggable->geometry();
+    };
+    // Convert a moved to position (x,y) in cs to pixels... but since cs == csid::pixels, that just comes down to calling update_grabbed.
+    auto update_cs = [this](ClickableIndex index, double position_x_pixels, double position_y_pixels) {
+      math::cs::Point<csid::pixels> new_position_pixels{position_x_pixels, position_y_pixels};
+      update_grabbed(index, new_position_pixels);
+    };
+    // Store the lambdas and clickable geometry in a Vector.
+    ClickableIndex index = register_draggable_impl(std::move(update_grabbed_pixels), std::move(update_cs), draggable->geometry());
+    draggable->set_index(index);
   }
 
  private:
@@ -225,9 +281,11 @@ class Window
   void grab_mouse(unsigned int button);
   void release_mouse();
 
-  ClickableIndex grab_draggable(double x, double y);
-
-  void register_draggable_impl(plot::Draggable* draggable, std::function<Geometry(double, double)> update_pixels);
+  ClickableIndex grab_draggable(math::cs::Point<csid::pixels> const& mouse_position);
+  ClickableIndex register_draggable_impl(
+      std::function<Geometry (math::cs::Point<csid::pixels>)> update_grabbed_pixels,
+      std::function<void (ClickableIndex index, double x_cs, double y_cs)> update_cs,
+      Geometry const& current_geometry);
 };
 
 } // namespace cairowindow

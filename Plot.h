@@ -8,7 +8,6 @@
 #include "Arc.h"
 #include "BezierCurve.h"
 #include "BezierFitter.h"
-#include "Draggable.h"
 #include "plot/Connector.h"
 #include "plot/Point.h"
 #include "plot/Rectangle.h"
@@ -158,9 +157,6 @@ class Plot : public CoordinateMapper<csid::plot>
   std::array<Range, number_of_axes> range_;
   std::array<int, number_of_axes> range_ticks_{{10, 10}};
   std::array<std::vector<std::shared_ptr<draw::Text>>, number_of_axes> labels_;
-
-  utils::Vector<Draggable*, ClickableIndex> draggables_;
-  utils::Vector<std::function<cairowindow::Point (cairowindow::Point const&)>, ClickableIndex> draggable_restrictions_;
 
  public:
   Plot(cairowindow::Geometry const& geometry, draw::PlotAreaStyle plot_area_style, std::string title, draw::PlotTitleStyle title_style) :
@@ -387,20 +383,6 @@ class Plot : public CoordinateMapper<csid::plot>
 
   cairowindow::Geometry const& geometry() const override { return plot_area_.geometry(); }
   void add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio = false);
-
-  // Called from Window::register_draggable.
-  void register_draggable_plot(utils::Badge<Window>, Draggable* draggable,
-      std::function<cairowindow::Point (cairowindow::Point const&)>&& restriction)
-  {
-    ClickableIndex next_index = draggables_.iend();
-    draggables_.push_back(draggable);
-    draggable->set_index(next_index);
-    draggable_restrictions_.emplace_back(std::move(restriction));
-  }
-  // Called from Window::update_grabbed and Window::move_draggable.
-  cairowindow::Geometry update_draggable_plot(utils::Badge<Window>, ClickableIndex draggable_index, cairowindow::Point const& new_position);
-  cairowindow::Geometry update_grabbed_plot(utils::Badge<Window>, ClickableIndex grabbed_point, double pixel_x, double pixel_y);
-  void apply_restrictions(utils::Badge<Window>, ClickableIndex clickable_index, cairowindow::Point& new_position);
 
  private:
   cairowindow::Geometry axes_geometry(cairowindow::Geometry const& geometry, double axes_line_width);

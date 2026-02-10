@@ -106,7 +106,6 @@ target_sources(cairowindow_ObjLib
     "FontPangoContext.cxx"
     "Layer.cxx"
     "LayerRegion.cxx"
-    "Point.cxx"
     "Plot.cxx"
     "Printable.cxx"
     "QuadraticEnergy.cxx"

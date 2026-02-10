@@ -118,14 +118,14 @@ int main()
     window.register_draggable(plot, &plot_P0, [&plot, &plot_P0, &plot_Q0](Point const& new_position) -> Point
         {
           auto translation = new_position - plot_P0;
-          plot_Q0.move(plot, plot_Q0 + translation);
+          plot_Q0.move_to(plot_Q0 + translation);
           return new_position;
         }
     );
     window.register_draggable(plot, &plot_P1, [&plot, &plot_P1, &plot_Q1](Point const& new_position) -> Point
         {
           auto translation = new_position - plot_P1;
-          plot_Q1.move(plot, plot_Q1 + translation);
+          plot_Q1.move_to(plot_Q1 + translation);
           return new_position;
         }
     );

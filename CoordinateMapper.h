@@ -104,8 +104,9 @@ class CoordinateMapper : public Printable
     return plot_point_cs;
   }
 
-  // Called by Window::update_grabbed through the lambda defined in Window::register_draggable<cs> when a Draggable plot_point_cs was moved to (pixel_x, pixel_y).
-  Geometry update_grabbed_cs(plot::cs::Point<cs>* plot_point_cs, double pixel_x, double pixel_y,
+  // Called by Window::update_grabbed by calling the lambda `update_grabbed_pixels` defined in Window::register_draggable<cs>
+  // when a draggable plot_point_cs was moved to new_position_pixels.
+  Geometry update_grabbed_cs(plot::cs::Point<cs>* plot_point_cs, math::cs::Point<csid::pixels> const& new_position_pixels,
       std::function<math::cs::Point<cs> (math::cs::Point<cs> const&)> const& restriction);
 
   //--------------------------------------------------------------------------
@@ -266,14 +267,13 @@ void CoordinateMapper<cs>::add_point(LayerPtr const& layer, draw::PointStyle con
 
   // Keep the clickable rectangle of a draggable point in sync when it is redrawn outside of a drag operation.
   if (!plot_point_cs.index_.undefined())
-    layer->window()->update_draggable_geometry(&plot_point_cs);
+    layer->window()->update_draggable_geometry(plot_point_cs);
 }
 
 template<CS cs>
-Geometry CoordinateMapper<cs>::update_grabbed_cs(plot::cs::Point<cs>* plot_point_cs, double pixel_x, double pixel_y,
+Geometry CoordinateMapper<cs>::update_grabbed_cs(plot::cs::Point<cs>* plot_point_cs, math::cs::Point<csid::pixels> const& new_position_pixels,
     std::function<math::cs::Point<cs> (math::cs::Point<cs> const&)> const& restriction)
 {
-  math::cs::Point<csid::pixels> const new_position_pixels{pixel_x, pixel_y};
   math::cs::Point<cs> new_position_cs = new_position_pixels * cs_transform_pixels_.inverse();
 
   if (restriction)
@@ -283,6 +283,10 @@ Geometry CoordinateMapper<cs>::update_grabbed_cs(plot::cs::Point<cs>* plot_point
 
   auto const& draw_object = plot_point_cs->draw_object();
   add_point(draw_object->layer(), draw_object->point_style(), *plot_point_cs);
+
+  // Normally this is a no-op. But doing this call allows people to derive from plot::cs::Point<cs>
+  // and pass a pointer to the base classes.
+  plot_point_cs->moved(new_position_pixels);
 
   return plot_point_cs->geometry();
 }
