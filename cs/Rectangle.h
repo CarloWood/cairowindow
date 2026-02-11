@@ -1,7 +1,8 @@
 #pragma once
 
 #include "CS.h"
-#include "math/cs/Point.h"      // Point, Size
+#include "math/cs/Point.h"
+#include "math/cs/Size.h"
 #include "debug.h"
 #ifdef CWDEBUG
 #include "utils/has_print_on.h"
