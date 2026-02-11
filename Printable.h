@@ -38,7 +38,8 @@ class Printable
   void draw_layer_region_on(boost::intrusive_ptr<Layer> const& layer, std::shared_ptr<LayerRegion> const& layer_region);
   void draw_multi_region_on(boost::intrusive_ptr<Layer> const& layer, draw::MultiRegion* multi_region);
 
-  virtual Geometry const& geometry() const = 0;
+  // Returns the pixels-aligned rectangle representing the viewport that can and should be rendered.
+  virtual Geometry const& print_extent() const = 0;
 };
 
 } // namespace cairowindow

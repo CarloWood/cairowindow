@@ -381,7 +381,7 @@ class Plot : public CoordinateMapper<csid::plot>
       draw::BezierCurveStyle const& line_style,
       std::vector<cairowindow::Point>&& points);
 
-  cairowindow::Geometry const& geometry() const override { return plot_area_.geometry(); }
+  cairowindow::Geometry const& print_extent() const override { return plot_area_.geometry(); }
   void add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio = false);
 
  private:

@@ -51,7 +51,7 @@ class Diagram : public Printable
   Diagram(Geometry const& geometry, draw::ChessDiagramStyle chess_diagram_style) :
     chess_diagram_(calculate_geometry(geometry, chess_diagram_style), chess_diagram_style) { }
 
-  Geometry const& geometry() const override { return chess_diagram_.geometry(); }
+  Geometry const& print_extent() const override { return chess_diagram_.geometry(); }
   void add_to(boost::intrusive_ptr<Layer> const& layer);
 
   void place_piece(boost::intrusive_ptr<Layer> const& layer, EColor color, EPiece piece, int x, int y, draw::ChessPieceStyle const& style);

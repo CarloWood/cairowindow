@@ -88,8 +88,8 @@ Window::~Window()
 
 void Window::add_printable(Printable* printable)
 {
-  DoutEntering(dc::notice, "Window::add_printable(" << (void*)printable << ") with geometry " << printable->geometry());
-  printable_geometries_.emplace_back(printable->geometry(), printable);
+  DoutEntering(dc::notice, "Window::add_printable(" << (void*)printable << ") with geometry " << printable->print_extent());
+  printable_geometries_.emplace_back(printable->print_extent(), printable);
 }
 
 // Called by XEventLoop thread.

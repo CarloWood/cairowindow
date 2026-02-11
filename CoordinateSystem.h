@@ -58,15 +58,13 @@ namespace cairowindow {
 // API overview
 // ------------
 // - Constructor
-//     CoordinateSystem(math::Transform<cs, csid::pixels> cs_transform_pixels, Geometry window_geometry);
+//     CoordinateSystem(math::Transform<cs, csid::pixels> cs_transform_pixels, Geometry extent);
 //
-//   `cs_transform_pixels` converts from your logical coordinates `cs`
-//   to window pixels. The constructor uses this transform to compute
-//   where the x and y axes intersect the window rectangle
-//   `window_geometry`. The visible part of each
-//   axis is stored and `set_range` is called with the corresponding
-//   range in `cs` coordinates. Tick spacing and label formatting are
-//   chosen automatically using NiceDelta<cs>.
+//   `cs_transform_pixels` converts from your logical coordinates `cs` to window pixels.
+//   The constructor uses this transform to compute where the x and y axes intersect the
+//   extent geometry `extent`. The visible part of each axis is stored
+//   and `set_range` is called with the corresponding range in `cs` coordinates.
+//   Tick spacing and label formatting are chosen automatically using NiceDelta<cs>.
 //
 // - void display(LayerPtr const& layer, LineStyle const& axis_style);
 //     Draws the axes, tick marks and labels on `layer`.
@@ -85,7 +83,7 @@ class CoordinateSystem : public CoordinateMapper<cs>
   std::vector<std::shared_ptr<draw::Line>> lines_;                                      // To keep drawn lines alive.
   std::vector<std::shared_ptr<draw::Text>> texts_;                                      // To keep drawn texts alive.
   std::array<math::cs::LinePiece<csid::pixels>, number_of_axes> line_piece_;            // The visible part of the axes (in csid::pixels).
-  Geometry window_geometry_;                                                            // Geometry used to calculate visible axis segments.
+  Geometry extent_;                                                                     // Window-axes aligned geometry used to calculate visible area (in csid::pixels).
 
  private:
   using LayerPtr = boost::intrusive_ptr<Layer>;
@@ -115,14 +113,14 @@ class CoordinateSystem : public CoordinateMapper<cs>
 /*  std::array<std::vector<std::shared_ptr<Text>>, number_of_axes> labels_;*/
 
  private:
-  // Return an axis-aligned bounding box (aabb) in cs coordinates of the current window geometry.
+  // Return an axis-aligned bounding box (aabb) in cs coordinates of the current extent geometry.
   // This is used to clip/extend lines drawn in rotated/sheared coordinate systems.
   math::Hyperblock<2> window_aabb_cs() const
   {
-    math::cs::Point<csid::pixels> const tl_pixels{window_geometry_.offset_x(), window_geometry_.offset_y()};
-    math::cs::Point<csid::pixels> const tr_pixels{window_geometry_.offset_x() + window_geometry_.width(), window_geometry_.offset_y()};
-    math::cs::Point<csid::pixels> const br_pixels{window_geometry_.offset_x() + window_geometry_.width(), window_geometry_.offset_y() + window_geometry_.height()};
-    math::cs::Point<csid::pixels> const bl_pixels{window_geometry_.offset_x(), window_geometry_.offset_y() + window_geometry_.height()};
+    math::cs::Point<csid::pixels> const tl_pixels{extent_.offset_x(),                   extent_.offset_y()};
+    math::cs::Point<csid::pixels> const tr_pixels{extent_.offset_x() + extent_.width(), extent_.offset_y()};
+    math::cs::Point<csid::pixels> const br_pixels{extent_.offset_x() + extent_.width(), extent_.offset_y() + extent_.height()};
+    math::cs::Point<csid::pixels> const bl_pixels{extent_.offset_x(),                   extent_.offset_y() + extent_.height()};
 
     auto const& pixels_transform_cs = cs_transform_pixels_.inverse();
     math::cs::Point<cs> const tl_cs = tl_pixels * pixels_transform_cs;
@@ -139,16 +137,16 @@ class CoordinateSystem : public CoordinateMapper<cs>
   }
 
  public:
-  CoordinateSystem(math::Transform<cs, csid::pixels> const reference_transform, Geometry window_geometry);
+  CoordinateSystem(math::Transform<cs, csid::pixels> const reference_transform, Geometry extent);
 
   ~CoordinateSystem()
   {
     DoutEntering(dc::notice, "CoordinateSystem::~CoordinateSystem() [" << this << "]");
   }
 
-  Geometry const& geometry() const override
+  Geometry const& print_extent() const override
   {
-    return window_geometry_;
+    return extent_;
   }
 
   void set_range(int axis, cs::Range<cs> range)
@@ -253,12 +251,12 @@ std::tuple<int, std::array<math::cs::Point<cs>, 2>> intersect(math::cs::Line<cs>
 } // namespace detail
 
 template<CS cs>
-CoordinateSystem<cs>::CoordinateSystem(math::Transform<cs, csid::pixels> const cs_transform_pixels, Geometry window_geometry) :
-  CoordinateMapper<cs>(cs_transform_pixels), window_geometry_(window_geometry)
+CoordinateSystem<cs>::CoordinateSystem(math::Transform<cs, csid::pixels> const cs_transform_pixels, Geometry extent) :
+  CoordinateMapper<cs>(cs_transform_pixels), extent_(extent)
 {
   DoutEntering(dc::notice, "CoordinateSystem::CoordinateSystem(" << cs_transform_pixels << ") [" << this << "]");
 
-  // Calculate where the cs-axis intersect with the window geometry.
+  // Calculate where the cs-axis intersect with the extent geometry.
 
   // Construct three points on the CS axis.
   math::cs::Point<cs> csOrigin_cs;
@@ -281,7 +279,7 @@ CoordinateSystem<cs>::CoordinateSystem(math::Transform<cs, csid::pixels> const c
     // Determine where the axis intersects with the window rectangle (everything in pixels).
     auto [number_of_intersection_points, intersection_point_pixels] = detail::intersect<csid::pixels>(
         {csOrigin_pixels_, csAxisDirection_[axis]},     // The axis (pointing in the direction csAxisDirection_).
-        {{window_geometry_.offset_x(), window_geometry_.offset_y()}, {window_geometry_.width(), window_geometry_.height()}});   // The window rectangle.
+        {{extent_.offset_x(), extent_.offset_y()}, {extent_.width(), extent_.height()}});   // The window rectangle.
 
     // Is the line outside the window?
     if (number_of_intersection_points < 2)

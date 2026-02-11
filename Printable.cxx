@@ -34,17 +34,17 @@ void Printable::create_svg_surface(std::string svg_filename, bool overwrite COMM
     // Add 'find_package(Boost COMPONENTS filesystem)' to the CMakeLists.txt file of the root project.
     svg_filename = utils::generate_unique_filename(svg_filename);
   }
-  Geometry const& geometry = this->geometry();
-  svg_surface_ = cairo_svg_surface_create(svg_filename.c_str(), geometry.width(), geometry.height() COMMA_CWDEBUG_ONLY(debug_name));
+  Geometry const& extent = this->print_extent();
+  svg_surface_ = cairo_svg_surface_create(svg_filename.c_str(), extent.width(), extent.height() COMMA_CWDEBUG_ONLY(debug_name));
   svg_cr_ = cairo_create(svg_surface_ COMMA_CWDEBUG_ONLY("Plot::svg_cr_:\"" + debug_name + "\""));
   // Define a clip path for the whole area.
-  cairo_rectangle(svg_cr_, 0, 0, geometry.width(), geometry.height());
+  cairo_rectangle(svg_cr_, 0, 0, extent.width(), extent.height());
   cairo_clip(svg_cr_);
   // And fill it entirely with a white background.
   cairo_set_source_rgb(svg_cr_, 1.0, 1.0, 1.0);
   cairo_paint(svg_cr_);
   // Set translate to move all drawing to the top-left corner of this SVG surface.
-  cairo_translate(svg_cr_, -geometry.offset_x(), -geometry.offset_y());
+  cairo_translate(svg_cr_, -extent.offset_x(), -extent.offset_y());
 }
 
 void Printable::draw_layer_region_on(boost::intrusive_ptr<Layer> const& layer, std::shared_ptr<LayerRegion> const& layer_region)
