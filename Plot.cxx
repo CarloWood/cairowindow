@@ -53,14 +53,38 @@ void Plot::update_plot_transform_pixels()
   // Initialize cs_transform_pixels_.
   // x' = (x - xmin) / xrange * width + offset_x
   // y' = (ymax - y) / yrange * height + offset_y
+  //
+  // window    x
+  // coords  ----->
+  //     .-------------------------------------------------------------.
+  //  |  |        offset_x          ^                                  |
+  // y|  |           |              |                                  |
+  //  |  |           v    geometry  |                                  | The window coordinates are the pixels coordinate system.
+  //  v  |offset_y-> .----------------------------------. ^            |
+  //     |           |       ymax_/||                   | |            | x_offset, y_offset, width and height (geometry) and dx,dy are in pixels.
+  //     |           |             |dy                  | |            |
+  //     |           |             ||                   | |            | xmin, xmax, ymin and ymax are in plot coordinates.
+  //     |           |             ||                   | |            |
+  //     |<----------|---dx------->|v          Plot     |height        |     xmin = range_[x_axis].min()
+  //     |           |-------------+--------------------| |            |     xmax = range_[x_axis].max()
+  //     |           |\            |                   /| |            |     ymin = range_[y_axis].min()
+  //     |           | \     ymin_ |                  / | |            |     ymax = range_[y_axis].max()
+  //     |           | xmin       \|               xmax | |            |     xmax - xmin = range_[x_axis].size()
+  //     |           `----------------------------------' v            |     ymax - ymin = range_[y_axis].size()
+  //     |           <-------------width---------------->              |
+  //     |                                                             |
+  //     `-------------------------------------------------------------'
+  //
   cairowindow::Geometry const& g = plot_area_.geometry();
-  double const sx = g.width() / range_[x_axis].size();
-  double const sy = g.height() / range_[y_axis].size();
-  double const tx = g.offset_x() - range_[x_axis].min() * sx;
-  double const ty = g.offset_y() + range_[y_axis].max() * sy;
-  cs_transform_pixels_ = math::Transform<csid::plot, csid::pixels>{}
-    .translate(math::TranslationVector<csid::pixels>::create_from_cs_values(tx, ty))
-    .scale(sx, -sy);
+  math::Vector<2> const scale{
+    g.width()  / range_[x_axis].size(),
+    g.height() / range_[y_axis].size()
+  };
+  math::cs::Vector<csid::pixels> const translation{
+    g.offset_x() - range_[x_axis].min() * scale.x(),
+    g.offset_y() + range_[y_axis].max() * scale.y()
+  };
+  cs_transform_pixels_ = math::Transform<csid::plot, csid::pixels>{}.translate(translation).scale(scale.x(), -scale.y());
 }
 
 void Plot::add_to(boost::intrusive_ptr<Layer> const& layer, bool keep_ratio)
