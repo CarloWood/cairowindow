@@ -122,7 +122,7 @@ class CoordinateSystem : public CoordinateMapper<cs>
     math::cs::Point<csid::pixels> const br_pixels{extent_.offset_x() + extent_.width(), extent_.offset_y() + extent_.height()};
     math::cs::Point<csid::pixels> const bl_pixels{extent_.offset_x(),                   extent_.offset_y() + extent_.height()};
 
-    auto const& pixels_transform_cs = cs_transform_pixels_.inverse();
+    auto const& pixels_transform_cs = cs_transform_pixels_.inverted();
     math::cs::Point<cs> const tl_cs = tl_pixels * pixels_transform_cs;
     math::cs::Point<cs> const tr_cs = tr_pixels * pixels_transform_cs;
     math::cs::Point<cs> const br_cs = br_pixels * pixels_transform_cs;
@@ -271,7 +271,7 @@ CoordinateSystem<cs>::CoordinateSystem(math::Transform<cs, csid::pixels> const c
   csAxisDirection_[y_axis] = math::cs::Direction<csid::pixels>(csOrigin_pixels_, csYAxisUnit_pixels);
 
   // The inverse transform.
-  auto const& pixels_transform_cs = cs_transform_pixels.inverse();
+  auto const pixels_transform_cs = cs_transform_pixels.inverted();
 
   // Calcuate the visible length of each CS axis, in pixels.
   for (int axis = x_axis; axis <= y_axis; ++axis)

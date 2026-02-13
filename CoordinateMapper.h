@@ -274,7 +274,7 @@ template<CS cs>
 Geometry CoordinateMapper<cs>::update_grabbed_cs(plot::cs::Point<cs>* plot_point_cs, math::cs::Point<csid::pixels> const& new_position_pixels,
     std::function<math::cs::Point<cs> (math::cs::Point<cs> const&)> const& restriction)
 {
-  math::cs::Point<cs> new_position_cs = new_position_pixels * cs_transform_pixels_.inverse();
+  math::cs::Point<cs> new_position_cs = new_position_pixels * cs_transform_pixels_.inverted();
 
   if (restriction)
     new_position_cs = restriction(new_position_cs);
