@@ -4,7 +4,7 @@
 
 namespace gradient_descent {
 
-struct HistoryIndexCategory;
+struct HistoryIndexCategory { };
 using HistoryIndex = utils::ArrayIndex<HistoryIndexCategory>;
 
 } // namespace gradient_descent
