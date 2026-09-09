@@ -72,6 +72,7 @@ target_compile_features(symbolic_ObjLib
 target_link_libraries(symbolic_ObjLib
   PRIVATE
     AICxx::utils
+    AICxx::cwds
 )
 
 # Create an ALIAS target.

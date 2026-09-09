@@ -86,7 +86,7 @@ SampleNode::iterator ExtremeChain::insert(Sample&& new_sample)
 void ExtremeChain::dump(Algorithm const* algorithm) const
 {
   Dout(dc::notice, "Current chain:");
-  NAMESPACE_DEBUG::Indent indent(2);
+  libcwd::Indent indent(2);
 
   SampleNode::const_iterator node = sample_node_list_.begin();
   SampleNode::const_iterator end = sample_node_list_.end();
@@ -122,7 +122,7 @@ void ExtremeChain::dump(Algorithm const* algorithm) const
     Dout(dc::finish, " " << node->scale());
     if (node->type() != CubicToNextSampleType::unknown)
     {
-      NAMESPACE_DEBUG::Indent indent(2);
+      libcwd::Indent indent(2);
       Dout(dc::notice|continued_cf, std::left << std::setw(5) << to_utf8_art(node->type()) << '+' << std::setw(10) << node->step() << node->cubic());
       if (node == algorithm->debug_cubic_used())
         Dout(dc::continued, " [cubic_used_]");

@@ -12,7 +12,7 @@
 
 #ifdef CWDEBUG
 NAMESPACE_DEBUG_CHANNELS_START
-extern channel_ct symbolic;
+extern Channel symbolic;
 NAMESPACE_DEBUG_CHANNELS_END
 #endif
 

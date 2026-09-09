@@ -10,7 +10,7 @@
 
 #ifdef CWDEBUG
 NAMESPACE_DEBUG_CHANNELS_START
-channel_ct cairo("CAIRO");
+Channel cairo("CAIRO");
 NAMESPACE_DEBUG_CHANNELS_END
 #endif
 

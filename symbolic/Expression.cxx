@@ -8,7 +8,7 @@
 
 #ifdef CWDEBUG
 NAMESPACE_DEBUG_CHANNELS_START
-channel_ct symbolic("SYMBOLIC");
+Channel symbolic("SYMBOLIC");
 NAMESPACE_DEBUG_CHANNELS_END
 #endif
 

@@ -143,10 +143,8 @@ if (OptionEnableLibcwd)
 endif ()
 
 # Required include search-paths.
-get_target_property(CWDS_INTERFACE_INCLUDE_DIRECTORIES AICxx::cwds INTERFACE_INCLUDE_DIRECTORIES)
 target_include_directories(cairowindow_ObjLib
   PUBLIC
-    "${CWDS_INTERFACE_INCLUDE_DIRECTORIES}" # For sys.h and debug.h.
     "${top_objdir}"                         # For cairowindow/config.h.
     "${PANGOCAIRO_INCLUDE_DIRS}"
 )
@@ -163,6 +161,7 @@ target_link_libraries(cairowindow_ObjLib
     AICxx::chess
     AICxx::math
     AICxx::utils
+    AICxx::cwds
     Eigen3::Eigen
   INTERFACE
     ${PANGOCAIRO_LIBRARIES}
